@@ -1,0 +1,97 @@
+[
+  {
+    "id": "STATE-BACKSPACE-001",
+    "initial_state": "idle",
+    "actions": [
+      "type:zhongwen",
+      "Backspace"
+    ],
+    "expected": [
+      "preedit_is:zhongwe",
+      "candidate_refreshes",
+      "no_crash"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "STATE-BACKSPACE-002",
+    "initial_state": "composing",
+    "actions": [
+      "type:ni",
+      "Backspace",
+      "Backspace"
+    ],
+    "expected": [
+      "preedit_empty",
+      "candidate_window_hidden",
+      "state_idle"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "STATE-ESC-001",
+    "initial_state": "composing_with_candidates",
+    "actions": [
+      "Escape"
+    ],
+    "expected": [
+      "composition_cancelled_or_product_defined_first_stage",
+      "no_unexpected_commit"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "STATE-SPACE-001",
+    "initial_state": "composing_with_candidates",
+    "actions": [
+      "Space"
+    ],
+    "expected": [
+      "first_candidate_committed",
+      "state_idle"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "STATE-ENTER-001",
+    "initial_state": "composing_with_candidates",
+    "actions": [
+      "Enter"
+    ],
+    "expected": [
+      "behavior_matches_product_policy",
+      "no_duplicate_commit"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "STATE-ARROW-001",
+    "initial_state": "composing",
+    "actions": [
+      "type:zhongwen",
+      "ArrowLeft",
+      "ArrowLeft",
+      "type:g"
+    ],
+    "expected": [
+      "edit_at_caret",
+      "candidate_refreshes",
+      "caret_valid"
+    ],
+    "priority": "P1"
+  },
+  {
+    "id": "STATE-MIXED-001",
+    "initial_state": "chinese_mode",
+    "actions": [
+      "type:PCIe",
+      "type:Space",
+      "type:6.0"
+    ],
+    "expected": [
+      "english_direct_input_or_product_defined_mixed_mode",
+      "no_pinyin_garbling"
+    ],
+    "priority": "P0"
+  }
+]

@@ -1,0 +1,99 @@
+[
+  {
+    "domain": "PCIe/Firmware",
+    "text": "事务层负责生成和解析事务层数据包。",
+    "pinyin_syllables": [
+      "shi",
+      "wu",
+      "ceng",
+      "fu",
+      "ze",
+      "sheng",
+      "cheng",
+      "he",
+      "jie",
+      "xi",
+      "shi",
+      "wu",
+      "ceng",
+      "shu",
+      "ju",
+      "bao"
+    ]
+  },
+  {
+    "domain": "PCIe/Firmware",
+    "text": "设备固件需要正确处理配置空间和中断请求。",
+    "pinyin_syllables": [
+      "she",
+      "bei",
+      "gu",
+      "jian",
+      "xu",
+      "yao",
+      "zheng",
+      "que",
+      "chu",
+      "li",
+      "pei",
+      "zhi",
+      "kong",
+      "jian",
+      "he",
+      "zhong",
+      "duan",
+      "qing",
+      "qiu"
+    ]
+  },
+  {
+    "domain": "PCIe/Firmware",
+    "text": "可调整基地址寄存器用于配置设备的地址空间。",
+    "pinyin_syllables": [
+      "ke",
+      "tiao",
+      "zheng",
+      "ji",
+      "di",
+      "zhi",
+      "ji",
+      "cun",
+      "qi",
+      "yong",
+      "yu",
+      "pei",
+      "zhi",
+      "she",
+      "bei",
+      "de",
+      "di",
+      "zhi",
+      "kong",
+      "jian"
+    ]
+  },
+  {
+    "domain": "Software",
+    "text": "输入法需要正确处理候选排序和光标移动。",
+    "pinyin_syllables": [
+      "shu",
+      "ru",
+      "fa",
+      "xu",
+      "yao",
+      "zheng",
+      "que",
+      "chu",
+      "li",
+      "hou",
+      "xuan",
+      "pai",
+      "xu",
+      "he",
+      "guang",
+      "biao",
+      "yi",
+      "dong"
+    ]
+  }
+]

@@ -1,0 +1,4525 @@
+[
+  {
+    "id": "FP-SYL-001",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "a",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-002",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "ai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-003",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "an",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-004",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "ang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-005",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "ao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-006",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "e",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-007",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "ei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-008",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "en",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-009",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "eng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-010",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "er",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-011",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "o",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-012",
+    "category": "syllable_inventory",
+    "group": "zero",
+    "input_sequence": "ou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-013",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "ba",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-014",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-015",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "ban",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-016",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-017",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-018",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-019",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "ben",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-020",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "beng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-021",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-022",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-023",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "biao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-024",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-025",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bin",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-026",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bing",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-027",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-028",
+    "category": "syllable_inventory",
+    "group": "b",
+    "input_sequence": "bu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-029",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pa",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-030",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-031",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-032",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-033",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-034",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-035",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-036",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "peng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-037",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-038",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-039",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "piao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-040",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-041",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pin",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-042",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "ping",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-043",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "po",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-044",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-045",
+    "category": "syllable_inventory",
+    "group": "p",
+    "input_sequence": "pu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-046",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "ma",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-047",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-048",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "man",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-049",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-050",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-051",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "me",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-052",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-053",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "men",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-054",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "meng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-055",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-056",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-057",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "miao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-058",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-059",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "min",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-060",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "ming",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-061",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "miu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-062",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-063",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-064",
+    "category": "syllable_inventory",
+    "group": "m",
+    "input_sequence": "mu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-065",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "fa",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-066",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "fan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-067",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "fang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-068",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "fei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-069",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "fen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-070",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "feng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-071",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "fo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-072",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "fou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-073",
+    "category": "syllable_inventory",
+    "group": "f",
+    "input_sequence": "fu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-074",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "da",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-075",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-076",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-077",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-078",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-079",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "de",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-080",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-081",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "den",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-082",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "deng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-083",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "di",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-084",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dia",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-085",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-086",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "diao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-087",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "die",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-088",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "ding",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-089",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "diu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-090",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-091",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-092",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "du",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-093",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "duan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-094",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-095",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "dun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-096",
+    "category": "syllable_inventory",
+    "group": "d",
+    "input_sequence": "duo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-097",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "ta",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-098",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-099",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-100",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-101",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-102",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "te",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-103",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-104",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "teng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-105",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "ti",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-106",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-107",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tiao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-108",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-109",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "ting",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-110",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-111",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-112",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-113",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-114",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-115",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-116",
+    "category": "syllable_inventory",
+    "group": "t",
+    "input_sequence": "tuo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-117",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "na",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-118",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-119",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-120",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-121",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-122",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "ne",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-123",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-124",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-125",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "neng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-126",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "ni",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-127",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-128",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "niang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-129",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "niao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-130",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-131",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nin",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-132",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "ning",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-133",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "niu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-134",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-135",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-136",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-137",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-138",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nuo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-139",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nv",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-140",
+    "category": "syllable_inventory",
+    "group": "n",
+    "input_sequence": "nve",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-141",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "la",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-142",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-143",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-144",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-145",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-146",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "le",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-147",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-148",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "leng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-149",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "li",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-150",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lia",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-151",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-152",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "liang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-153",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "liao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-154",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-155",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lin",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-156",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "ling",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-157",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "liu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-158",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "long",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-159",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-160",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-161",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "luan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-162",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-163",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "luo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-164",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lv",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-165",
+    "category": "syllable_inventory",
+    "group": "l",
+    "input_sequence": "lve",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-166",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "ga",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-167",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-168",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-169",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-170",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-171",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "ge",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-172",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-173",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-174",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "geng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-175",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-176",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-177",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-178",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gua",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-179",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "guai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-180",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "guan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-181",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "guang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-182",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-183",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "gun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-184",
+    "category": "syllable_inventory",
+    "group": "g",
+    "input_sequence": "guo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-185",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "ka",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-186",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-187",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-188",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-189",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-190",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "ke",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-191",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "ken",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-192",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "keng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-193",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-194",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-195",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "ku",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-196",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kua",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-197",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kuai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-198",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-199",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kuang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-200",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-201",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-202",
+    "category": "syllable_inventory",
+    "group": "k",
+    "input_sequence": "kuo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-203",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "ha",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-204",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-205",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "han",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-206",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-207",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-208",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "he",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-209",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-210",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-211",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "heng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-212",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-213",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-214",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-215",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hua",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-216",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "huai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-217",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "huan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-218",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "huang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-219",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-220",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "hun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-221",
+    "category": "syllable_inventory",
+    "group": "h",
+    "input_sequence": "huo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-222",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "ji",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-223",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jia",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-224",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-225",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jiang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-226",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jiao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-227",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-228",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jin",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-229",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jing",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-230",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jiong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-231",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jiu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-232",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "ju",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-233",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "juan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-234",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jue",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-235",
+    "category": "syllable_inventory",
+    "group": "j",
+    "input_sequence": "jun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-236",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-237",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qia",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-238",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-239",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qiang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-240",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qiao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-241",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-242",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qin",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-243",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qing",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-244",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qiong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-245",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qiu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-246",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-247",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "quan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-248",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "que",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-249",
+    "category": "syllable_inventory",
+    "group": "q",
+    "input_sequence": "qun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-250",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-251",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xia",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-252",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xian",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-253",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xiang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-254",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xiao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-255",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xie",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-256",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xin",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-257",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xing",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-258",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xiong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-259",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xiu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-260",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-261",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-262",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xue",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-263",
+    "category": "syllable_inventory",
+    "group": "x",
+    "input_sequence": "xun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-264",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zha",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-265",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-266",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-267",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-268",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-269",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhe",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-270",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-271",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-272",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zheng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-273",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-274",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-275",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-276",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-277",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhua",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-278",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhuai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-279",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-280",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhuang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-281",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-282",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-283",
+    "category": "syllable_inventory",
+    "group": "zh",
+    "input_sequence": "zhuo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-284",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "cha",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-285",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-286",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-287",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-288",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-289",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "che",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-290",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-291",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "cheng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-292",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-293",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-294",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-295",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-296",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chua",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-297",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chuai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-298",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-299",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chuang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-300",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-301",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-302",
+    "category": "syllable_inventory",
+    "group": "ch",
+    "input_sequence": "chuo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-303",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "sha",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-304",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-305",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-306",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-307",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-308",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "she",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-309",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-310",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-311",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "sheng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-312",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-313",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-314",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-315",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shua",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-316",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shuai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-317",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-318",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shuang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-319",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-320",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-321",
+    "category": "syllable_inventory",
+    "group": "sh",
+    "input_sequence": "shuo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-322",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "ran",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-323",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "rang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-324",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "rao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-325",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "re",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-326",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "ren",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-327",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "reng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-328",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "ri",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-329",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "rong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-330",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "rou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-331",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "ru",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-332",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "ruan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-333",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "rui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-334",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "run",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-335",
+    "category": "syllable_inventory",
+    "group": "r",
+    "input_sequence": "ruo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-336",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "za",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-337",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-338",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-339",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-340",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-341",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "ze",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-342",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-343",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-344",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zeng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-345",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-346",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-347",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-348",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-349",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-350",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-351",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-352",
+    "category": "syllable_inventory",
+    "group": "z",
+    "input_sequence": "zuo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-353",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "ca",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-354",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-355",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "can",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-356",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-357",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-358",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "ce",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-359",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-360",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "ceng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-361",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "ci",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-362",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-363",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-364",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-365",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-366",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-367",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-368",
+    "category": "syllable_inventory",
+    "group": "c",
+    "input_sequence": "cuo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-369",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "sa",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-370",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "sai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-371",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "san",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-372",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "sang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-373",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "sao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-374",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "se",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-375",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "sen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-376",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "seng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-377",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "si",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-378",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "song",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-379",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "sou",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-380",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "su",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-381",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "suan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-382",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "sui",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-383",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "sun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-384",
+    "category": "syllable_inventory",
+    "group": "s",
+    "input_sequence": "suo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-385",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "ya",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-386",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-387",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-388",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yao",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-389",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "ye",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-390",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yi",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-391",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yin",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-392",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "ying",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-393",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yong",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-394",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "you",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-395",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-396",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yuan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-397",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yue",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-398",
+    "category": "syllable_inventory",
+    "group": "y",
+    "input_sequence": "yun",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-399",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "wa",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-400",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "wai",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-401",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "wan",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-402",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "wang",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-403",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "wei",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-404",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "wen",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-405",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "weng",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-406",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "wo",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-SYL-407",
+    "category": "syllable_inventory",
+    "group": "w",
+    "input_sequence": "wu",
+    "expected": {
+      "accepted_as_pinyin": true,
+      "candidate_window": "should_open_if_dictionary_has_entry"
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-APOSTROPHE-001",
+    "category": "apostrophe",
+    "input_sequence": "xi'an",
+    "target_text": "西安",
+    "expected": {
+      "forced_syllable_split": [
+        "xi",
+        "an"
+      ]
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-APOSTROPHE-002",
+    "category": "apostrophe",
+    "input_sequence": "fang'an",
+    "target_text": "方案",
+    "expected": {
+      "forced_syllable_split": [
+        "fang",
+        "an"
+      ]
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-INVALID-001",
+    "category": "invalid_input",
+    "input_sequence": "zzzzz",
+    "expected": {
+      "must_not_crash": true,
+      "must_allow_backspace": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FP-INVALID-002",
+    "category": "invalid_input",
+    "input_sequence": "aaaaaaaaaa",
+    "expected": {
+      "must_not_crash": true,
+      "must_allow_raw_commit_or_clear": true
+    },
+    "priority": "P1"
+  }
+]

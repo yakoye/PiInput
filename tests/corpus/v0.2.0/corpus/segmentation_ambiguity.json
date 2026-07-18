@@ -1,0 +1,168 @@
+[
+  {
+    "id": "SEG-001",
+    "input": "xian",
+    "target": "西安",
+    "forced_input": "xi'an",
+    "possible_paths": [
+      "xian",
+      "xi+an"
+    ],
+    "context": "我准备明天去西安。"
+  },
+  {
+    "id": "SEG-002",
+    "input": "fangan",
+    "target": "方案",
+    "forced_input": "fang'an",
+    "possible_paths": [
+      "fang+an",
+      "fan+gan"
+    ],
+    "context": "请确认最终方案。"
+  },
+  {
+    "id": "SEG-003",
+    "input": "pingan",
+    "target": "平安",
+    "forced_input": "ping'an",
+    "possible_paths": [
+      "ping+an",
+      "pin+gan"
+    ],
+    "context": "祝你一路平安。"
+  },
+  {
+    "id": "SEG-004",
+    "input": "changan",
+    "target": "长安",
+    "forced_input": "chang'an",
+    "possible_paths": [
+      "chang+an",
+      "chan+gan"
+    ],
+    "context": "长安是历史地名。"
+  },
+  {
+    "id": "SEG-005",
+    "input": "tiananmen",
+    "target": "天安门",
+    "forced_input": "tian'an'men",
+    "possible_paths": [
+      "tian+an+men"
+    ],
+    "context": "游客来到天安门。"
+  },
+  {
+    "id": "SEG-006",
+    "input": "jiefang",
+    "target": "解放",
+    "forced_input": null,
+    "possible_paths": [
+      "jie+fang"
+    ],
+    "context": "这座城市迎来解放。"
+  },
+  {
+    "id": "SEG-007",
+    "input": "jiefang",
+    "target": "街坊",
+    "forced_input": null,
+    "possible_paths": [
+      "jie+fang"
+    ],
+    "context": "老街坊正在门口聊天。"
+  },
+  {
+    "id": "SEG-008",
+    "input": "shangan",
+    "target": "上岸",
+    "forced_input": "shang'an",
+    "possible_paths": [
+      "shang+an",
+      "shan+gan"
+    ],
+    "context": "游泳的人已经上岸。"
+  },
+  {
+    "id": "SEG-009",
+    "input": "jintianxiawu",
+    "target": "今天下午",
+    "forced_input": null,
+    "possible_paths": [
+      "jin+tian+xia+wu",
+      "jin+tianxia+wu"
+    ],
+    "context": "我今天下午去开会。"
+  },
+  {
+    "id": "SEG-010",
+    "input": "shijian",
+    "target": "时间",
+    "forced_input": null,
+    "possible_paths": [
+      "shi+jian"
+    ],
+    "context": "请确认会议时间。"
+  },
+  {
+    "id": "SEG-011",
+    "input": "shijian",
+    "target": "事件",
+    "forced_input": null,
+    "possible_paths": [
+      "shi+jian"
+    ],
+    "context": "系统记录了异常事件。"
+  },
+  {
+    "id": "SEG-012",
+    "input": "gongshi",
+    "target": "公式",
+    "forced_input": null,
+    "possible_paths": [
+      "gong+shi"
+    ],
+    "context": "请检查计算公式。"
+  },
+  {
+    "id": "SEG-013",
+    "input": "gongshi",
+    "target": "公示",
+    "forced_input": null,
+    "possible_paths": [
+      "gong+shi"
+    ],
+    "context": "结果将在网站公示。"
+  },
+  {
+    "id": "SEG-014",
+    "input": "shuzhi",
+    "target": "数值",
+    "forced_input": null,
+    "possible_paths": [
+      "shu+zhi"
+    ],
+    "context": "寄存器数值已经更新。"
+  },
+  {
+    "id": "SEG-015",
+    "input": "jieguo",
+    "target": "结果",
+    "forced_input": null,
+    "possible_paths": [
+      "jie+guo"
+    ],
+    "context": "测试结果符合预期。"
+  },
+  {
+    "id": "SEG-016",
+    "input": "xiangmu",
+    "target": "项目",
+    "forced_input": null,
+    "possible_paths": [
+      "xiang+mu"
+    ],
+    "context": "这个项目已经完成。"
+  }
+]

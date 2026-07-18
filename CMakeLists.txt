@@ -32,6 +32,7 @@ add_library(liteime_core STATIC
     src/candidate_paging.cpp
     src/input_mode.cpp
     src/pinyin.cpp
+    src/pinyin_prefix.cpp
     src/shuangpin.cpp
     src/engine.cpp
     src/symbols.cpp
@@ -132,10 +133,24 @@ if(WIN32)
     target_link_libraries(liteime-profile PRIVATE liteime_core ole32 shell32 uuid)
     liteime_enable_warnings(liteime-profile)
 
+    add_executable(LiteIME-Install WIN32
+        platform/windows/installer/main.cpp
+        platform/windows/installer/install_layout.cpp
+    )
+    target_include_directories(LiteIME-Install PRIVATE
+        include
+        platform/windows/installer
+        platform/windows/tsf
+    )
+    target_compile_definitions(LiteIME-Install PRIVATE LITEIME_VERSION=L"${PROJECT_VERSION}")
+    target_link_libraries(LiteIME-Install PRIVATE ole32 shell32 advapi32 user32)
+    liteime_enable_warnings(LiteIME-Install)
+
     install(TARGETS
         liteime-preview
         liteime-profile
         LiteImeTSF
+        LiteIME-Install
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION bin
     )
@@ -156,7 +171,20 @@ if(LITEIME_BUILD_TESTS)
     )
     liteime_enable_warnings(liteime-core-tests)
 
+    if(WIN32)
+        add_executable(liteime-installer-layout-tests
+            tests/installer_layout_tests.cpp
+            platform/windows/installer/install_layout.cpp
+        )
+        target_include_directories(liteime-installer-layout-tests PRIVATE platform/windows/installer)
+        liteime_enable_warnings(liteime-installer-layout-tests)
+    endif()
+
     add_test(NAME liteime-core-tests COMMAND liteime-core-tests)
+
+    if(WIN32)
+        add_test(NAME liteime-installer-layout-tests COMMAND liteime-installer-layout-tests)
+    endif()
 
     add_test(
         NAME liteime-windows-source-regression
@@ -169,6 +197,12 @@ if(LITEIME_BUILD_TESTS)
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
             -P ${CMAKE_SOURCE_DIR}/tests/dictionary_script_regression.cmake
+    )
+    add_test(
+        NAME liteime-corpus-regression
+        COMMAND "${CMAKE_COMMAND}"
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -P ${CMAKE_SOURCE_DIR}/tests/corpus_regression.cmake
     )
     add_test(
         NAME liteime-performance-smoke

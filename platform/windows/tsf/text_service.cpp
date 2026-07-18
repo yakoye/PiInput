@@ -109,6 +109,54 @@ private:
     return key == VK_SHIFT || key == VK_LSHIFT || key == VK_RSHIFT;
 }
 
+[[nodiscard]] bool shift_is_down() {
+    return (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+}
+
+[[nodiscard]] bool is_punctuation_key(const WPARAM key) {
+    if (key >= static_cast<WPARAM>('0') && key <= static_cast<WPARAM>('9')) {
+        return shift_is_down();
+    }
+    switch (key) {
+    case VK_OEM_1:
+    case VK_OEM_PLUS:
+    case VK_OEM_COMMA:
+    case VK_OEM_MINUS:
+    case VK_OEM_PERIOD:
+    case VK_OEM_2:
+    case VK_OEM_3:
+    case VK_OEM_4:
+    case VK_OEM_5:
+    case VK_OEM_6:
+    case VK_OEM_7:
+    case VK_OEM_102:
+        return true;
+    default:
+        return false;
+    }
+}
+
+[[nodiscard]] char punctuation_base_key(const WPARAM key) {
+    if (key >= static_cast<WPARAM>('0') && key <= static_cast<WPARAM>('9')) {
+        return static_cast<char>(key);
+    }
+    switch (key) {
+    case VK_OEM_1: return ';';
+    case VK_OEM_PLUS: return '=';
+    case VK_OEM_COMMA: return ',';
+    case VK_OEM_MINUS: return '-';
+    case VK_OEM_PERIOD: return '.';
+    case VK_OEM_2: return '/';
+    case VK_OEM_3: return '`';
+    case VK_OEM_4: return '[';
+    case VK_OEM_5:
+    case VK_OEM_102: return '\\';
+    case VK_OEM_6: return ']';
+    case VK_OEM_7: return '\'';
+    default: return '\0';
+    }
+}
+
 }  // namespace
 
 TextService::TextService(const HINSTANCE module) : module_(module) {
@@ -315,11 +363,19 @@ bool TextService::should_eat_key(const WPARAM wparam) const {
         return false;
     }
     const bool composing = !session_->snapshot().input.empty();
+    const bool shifted = shift_is_down();
+    if (is_punctuation_key(wparam)) {
+        if (composing && !shifted &&
+            (wparam == VK_OEM_MINUS || wparam == VK_OEM_PLUS || wparam == VK_OEM_7)) {
+            return true;
+        }
+        return true;
+    }
     if (!composing) {
-        if ((GetKeyState(VK_SHIFT) & 0x8000) != 0) {
+        if (shifted) {
             return false;
         }
-        return is_ascii_letter(wparam) || wparam == VK_OEM_7 || wparam == VK_OEM_1;
+        return is_ascii_letter(wparam);
     }
     if (is_ascii_letter(wparam) || is_number_key(wparam)) {
         return true;
@@ -359,7 +415,9 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
         refresh_candidate_window();
         return;
     }
-    if (wparam == VK_OEM_7) {
+    const bool shifted = shift_is_down();
+    const bool composing = !session_->snapshot().input.empty();
+    if (wparam == VK_OEM_7 && composing && !shifted) {
         session_->insert('\'');
         selected_index_ = 0U;
         page_start_ = 0U;
@@ -367,10 +425,20 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
         refresh_candidate_window();
         return;
     }
-    if (wparam == VK_OEM_1 && session_->snapshot().input.empty()) {
-        session_->insert(';');
-        request_update(context);
-        refresh_candidate_window();
+    if (is_punctuation_key(wparam) &&
+        !(composing && !shifted && (wparam == VK_OEM_MINUS || wparam == VK_OEM_PLUS))) {
+        const char base_key = punctuation_base_key(wparam);
+        if (base_key == '\0') {
+            return;
+        }
+        const std::string punctuation = punctuation_.transform(
+            base_key, PunctuationMode::chinese, shifted);
+        if (composing) {
+            if (!choose_candidate(context, selected_index_)) {
+                commit_raw_input(context);
+            }
+        }
+        request_commit(context, punctuation);
         return;
     }
     if (wparam == VK_BACK) {
@@ -707,6 +775,7 @@ std::size_t TextService::current_page_size() const {
 
 void TextService::toggle_input_mode(ITfContext* const context) {
     english_mode_ = !english_mode_;
+    punctuation_.reset_quotes();
     if (session_ != nullptr && !session_->snapshot().input.empty()) {
         session_->clear();
         selected_index_ = 0U;

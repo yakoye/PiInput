@@ -1,0 +1,2026 @@
+[
+  {
+    "id": "LM-LONG-DAILY-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "wojintianxiawuyaoquchaoshimaidianshuiguo",
+    "target_text": "我今天下午要去超市买点水果。",
+    "pinyin_syllables": [
+      "wo",
+      "jin",
+      "tian",
+      "xia",
+      "wu",
+      "yao",
+      "qu",
+      "chao",
+      "shi",
+      "mai",
+      "dian",
+      "shui",
+      "guo"
+    ],
+    "test_points": [
+      "长句切分",
+      "天下/今天下午边界",
+      "超市",
+      "水果",
+      "整句首候选"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-IME-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "jintianwomenkaishiceshizhongwenshurufa",
+    "target_text": "今天我们开始测试中文输入法。",
+    "pinyin_syllables": [
+      "jin",
+      "tian",
+      "wo",
+      "men",
+      "kai",
+      "shi",
+      "ce",
+      "shi",
+      "zhong",
+      "wen",
+      "shu",
+      "ru",
+      "fa"
+    ],
+    "test_points": [
+      "连续输入",
+      "中文输入法词组命中",
+      "候选首选"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-FW-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "gujiankaifaxuyaoshuxidicengjicunqipeizhihelianluzhuangtaiji",
+    "target_text": "固件开发需要熟悉底层寄存器配置和链路状态机。",
+    "pinyin_syllables": [
+      "gu",
+      "jian",
+      "kai",
+      "fa",
+      "xu",
+      "yao",
+      "shu",
+      "xi",
+      "di",
+      "ceng",
+      "ji",
+      "cun",
+      "qi",
+      "pei",
+      "zhi",
+      "he",
+      "lian",
+      "lu",
+      "zhuang",
+      "tai",
+      "ji"
+    ],
+    "test_points": [
+      "专业词库",
+      "固件",
+      "寄存器",
+      "配置",
+      "链路状态机"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-PCIE-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "lianluxunlianxuyaojianchazhuangtaijihejunhengguocheng",
+    "target_text": "链路训练需要检查状态机和均衡过程。",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "xun",
+      "lian",
+      "xu",
+      "yao",
+      "jian",
+      "cha",
+      "zhuang",
+      "tai",
+      "ji",
+      "he",
+      "jun",
+      "heng",
+      "guo",
+      "cheng"
+    ],
+    "test_points": [
+      "链路训练",
+      "状态机",
+      "均衡过程",
+      "专业上下文"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-IME-002",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "mingtianshangwuwomenyiqijianchashurufahouxuanpaixushifouzhengque",
+    "target_text": "明天上午我们一起检查输入法候选排序是否正确。",
+    "pinyin_syllables": [
+      "ming",
+      "tian",
+      "shang",
+      "wu",
+      "wo",
+      "men",
+      "yi",
+      "qi",
+      "jian",
+      "cha",
+      "shu",
+      "ru",
+      "fa",
+      "hou",
+      "xuan",
+      "pai",
+      "xu",
+      "shi",
+      "fou",
+      "zheng",
+      "que"
+    ],
+    "test_points": [
+      "长句切分",
+      "候选排序",
+      "是否/事实边界",
+      "整句首候选"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-IME-003",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "yonghulianxushuruchangjushiyinqingxuyaozhengqueqiefenpinyinyinjie",
+    "target_text": "用户连续输入长句时引擎需要正确切分拼音音节。",
+    "pinyin_syllables": [
+      "yong",
+      "hu",
+      "lian",
+      "xu",
+      "shu",
+      "ru",
+      "chang",
+      "ju",
+      "shi",
+      "yin",
+      "qing",
+      "xu",
+      "yao",
+      "zheng",
+      "que",
+      "qie",
+      "fen",
+      "pin",
+      "yin",
+      "yin",
+      "jie"
+    ],
+    "test_points": [
+      "连续输入",
+      "音节切分",
+      "引擎",
+      "拼音音节"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-IME-004",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "shanchuyigezimuyihouhouxuanchuangkouyinggailijishuaxin",
+    "target_text": "删除一个字母以后候选窗口应该立即刷新。",
+    "pinyin_syllables": [
+      "shan",
+      "chu",
+      "yi",
+      "ge",
+      "zi",
+      "mu",
+      "yi",
+      "hou",
+      "hou",
+      "xuan",
+      "chuang",
+      "kou",
+      "ying",
+      "gai",
+      "li",
+      "ji",
+      "shua",
+      "xin"
+    ],
+    "test_points": [
+      "组合串编辑",
+      "候选刷新",
+      "重复 hou 边界"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-IME-005",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "tongyigepinyinzaibutongshangxiawenzhongkenengduiyingbutongciyu",
+    "target_text": "同一个拼音在不同上下文中可能对应不同词语。",
+    "pinyin_syllables": [
+      "tong",
+      "yi",
+      "ge",
+      "pin",
+      "yin",
+      "zai",
+      "bu",
+      "tong",
+      "shang",
+      "xia",
+      "wen",
+      "zhong",
+      "ke",
+      "neng",
+      "dui",
+      "ying",
+      "bu",
+      "tong",
+      "ci",
+      "yu"
+    ],
+    "test_points": [
+      "上下文消歧",
+      "同音词",
+      "重复词组"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-IME-006",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "shurufayinggaijizhuyonghujingchangxuanzedezhuanyecihui",
+    "target_text": "输入法应该记住用户经常选择的专业词汇。",
+    "pinyin_syllables": [
+      "shu",
+      "ru",
+      "fa",
+      "ying",
+      "gai",
+      "ji",
+      "zhu",
+      "yong",
+      "hu",
+      "jing",
+      "chang",
+      "xuan",
+      "ze",
+      "de",
+      "zhuan",
+      "ye",
+      "ci",
+      "hui"
+    ],
+    "test_points": [
+      "用户学习",
+      "专业词汇",
+      "候选排序"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-FUZZY-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "guanbimohuyinyihoushurujieguobixuyangequfenqianhoubiyin",
+    "target_text": "关闭模糊音以后输入结果必须严格区分前后鼻音。",
+    "pinyin_syllables": [
+      "guan",
+      "bi",
+      "mo",
+      "hu",
+      "yin",
+      "yi",
+      "hou",
+      "shu",
+      "ru",
+      "jie",
+      "guo",
+      "bi",
+      "xu",
+      "yan",
+      "ge",
+      "qu",
+      "fen",
+      "qian",
+      "hou",
+      "bi",
+      "yin"
+    ],
+    "test_points": [
+      "模糊音开关",
+      "前后鼻音",
+      "严格模式"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-FW-002",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "gujianxuyaoduqupeizhikongjianbingchulilianluzhuangtaibianhua",
+    "target_text": "固件需要读取配置空间并处理链路状态变化。",
+    "pinyin_syllables": [
+      "gu",
+      "jian",
+      "xu",
+      "yao",
+      "du",
+      "qu",
+      "pei",
+      "zhi",
+      "kong",
+      "jian",
+      "bing",
+      "chu",
+      "li",
+      "lian",
+      "lu",
+      "zhuang",
+      "tai",
+      "bian",
+      "hua"
+    ],
+    "test_points": [
+      "固件",
+      "配置空间",
+      "链路状态",
+      "专业词库"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-PCIE-002",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "shebeijinruhuifuzhuangtaiyihouxuyaochongxinwanchenglianluxunlian",
+    "target_text": "设备进入恢复状态以后需要重新完成链路训练。",
+    "pinyin_syllables": [
+      "she",
+      "bei",
+      "jin",
+      "ru",
+      "hui",
+      "fu",
+      "zhuang",
+      "tai",
+      "yi",
+      "hou",
+      "xu",
+      "yao",
+      "chong",
+      "xin",
+      "wan",
+      "cheng",
+      "lian",
+      "lu",
+      "xun",
+      "lian"
+    ],
+    "test_points": [
+      "恢复状态",
+      "链路训练",
+      "专业上下文"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-DRIVER-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "qudongchengxutongguoneicunyingshefangwenshebeijicunqi",
+    "target_text": "驱动程序通过内存映射访问设备寄存器。",
+    "pinyin_syllables": [
+      "qu",
+      "dong",
+      "cheng",
+      "xu",
+      "tong",
+      "guo",
+      "nei",
+      "cun",
+      "ying",
+      "she",
+      "fang",
+      "wen",
+      "she",
+      "bei",
+      "ji",
+      "cun",
+      "qi"
+    ],
+    "test_points": [
+      "驱动程序",
+      "内存映射",
+      "设备寄存器"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-PCIE-003",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "shujulianlucengfuzekekaochuanshuhecuowuhuifu",
+    "target_text": "数据链路层负责可靠传输和错误恢复。",
+    "pinyin_syllables": [
+      "shu",
+      "ju",
+      "lian",
+      "lu",
+      "ceng",
+      "fu",
+      "ze",
+      "ke",
+      "kao",
+      "chuan",
+      "shu",
+      "he",
+      "cuo",
+      "wu",
+      "hui",
+      "fu"
+    ],
+    "test_points": [
+      "数据链路层",
+      "可靠传输",
+      "错误恢复"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-OS-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "caozuoxitongxuyaozhengquebaocunbinghuifushurufazhuangtai",
+    "target_text": "操作系统需要正确保存并恢复输入法状态。",
+    "pinyin_syllables": [
+      "cao",
+      "zuo",
+      "xi",
+      "tong",
+      "xu",
+      "yao",
+      "zheng",
+      "que",
+      "bao",
+      "cun",
+      "bing",
+      "hui",
+      "fu",
+      "shu",
+      "ru",
+      "fa",
+      "zhuang",
+      "tai"
+    ],
+    "test_points": [
+      "操作系统",
+      "状态恢复",
+      "输入法状态"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-OS-002",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "xianchengqiehuanbunengdaozhizuhezifuchuandiushihuochongfushangping",
+    "target_text": "线程切换不能导致组合字符串丢失或重复上屏。",
+    "pinyin_syllables": [
+      "xian",
+      "cheng",
+      "qie",
+      "huan",
+      "bu",
+      "neng",
+      "dao",
+      "zhi",
+      "zu",
+      "he",
+      "zi",
+      "fu",
+      "chuan",
+      "diu",
+      "shi",
+      "huo",
+      "chong",
+      "fu",
+      "shang",
+      "ping"
+    ],
+    "test_points": [
+      "线程切换",
+      "组合字符串",
+      "丢失",
+      "重复上屏"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-REPORT-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "zhegewenjianbaohanwanzhengdeceshiyonglihepingguzhibiao",
+    "target_text": "这个文件包含完整的测试用例和评估指标。",
+    "pinyin_syllables": [
+      "zhe",
+      "ge",
+      "wen",
+      "jian",
+      "bao",
+      "han",
+      "wan",
+      "zheng",
+      "de",
+      "ce",
+      "shi",
+      "yong",
+      "li",
+      "he",
+      "ping",
+      "gu",
+      "zhi",
+      "biao"
+    ],
+    "test_points": [
+      "文件/稳健消歧",
+      "测试用例",
+      "评估指标"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-BUILD-001",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "bianyiwanchengyihouqingjiancharizhizhongdecuowuxinxi",
+    "target_text": "编译完成以后请检查日志中的错误信息。",
+    "pinyin_syllables": [
+      "bian",
+      "yi",
+      "wan",
+      "cheng",
+      "yi",
+      "hou",
+      "qing",
+      "jian",
+      "cha",
+      "ri",
+      "zhi",
+      "zhong",
+      "de",
+      "cuo",
+      "wu",
+      "xin",
+      "xi"
+    ],
+    "test_points": [
+      "编译/便宜消歧",
+      "日志",
+      "错误信息"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-OS-003",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "xitongfashengzhongduanyihouzhongduanrengrankeyijixushuru",
+    "target_text": "系统发生中断以后终端仍然可以继续输入。",
+    "pinyin_syllables": [
+      "xi",
+      "tong",
+      "fa",
+      "sheng",
+      "zhong",
+      "duan",
+      "yi",
+      "hou",
+      "zhong",
+      "duan",
+      "reng",
+      "ran",
+      "ke",
+      "yi",
+      "ji",
+      "xu",
+      "shu",
+      "ru"
+    ],
+    "test_points": [
+      "中断/终端同音消歧",
+      "重复同音词",
+      "上下文"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-LONG-REPORT-002",
+    "category": "long_sentence",
+    "scheme": "full_pinyin",
+    "input_sequence": "ceshibaogaoxuyaojilumubiaohouxuandepaiminghexiangyingyanchi",
+    "target_text": "测试报告需要记录目标候选的排名和响应延迟。",
+    "pinyin_syllables": [
+      "ce",
+      "shi",
+      "bao",
+      "gao",
+      "xu",
+      "yao",
+      "ji",
+      "lu",
+      "mu",
+      "biao",
+      "hou",
+      "xuan",
+      "de",
+      "pai",
+      "ming",
+      "he",
+      "xiang",
+      "ying",
+      "yan",
+      "chi"
+    ],
+    "test_points": [
+      "候选排名",
+      "响应延迟",
+      "测试报告"
+    ],
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true,
+      "record_candidate_latency_ms": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-GUJIAN-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "GUJIAN",
+    "input_sequence": "shebeigujianxuyaojishishengji",
+    "ambiguous_input": "gujian",
+    "target_text": "设备固件需要及时升级。",
+    "target_word": "固件",
+    "contrast_word": "古剑",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-GUJIAN-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "GUJIAN",
+    "input_sequence": "tashoucangleyibagujian",
+    "ambiguous_input": "gujian",
+    "target_text": "他收藏了一把古剑。",
+    "target_word": "古剑",
+    "contrast_word": "固件",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-ZHONGDUAN-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "ZHONGDUAN",
+    "input_sequence": "xitongfashengzhongduan",
+    "ambiguous_input": "zhongduan",
+    "target_text": "系统发生中断。",
+    "target_word": "中断",
+    "contrast_word": "终端",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-ZHONGDUAN-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "ZHONGDUAN",
+    "input_sequence": "qingdakaiminglinghangzhongduan",
+    "ambiguous_input": "zhongduan",
+    "target_text": "请打开命令行终端。",
+    "target_word": "终端",
+    "contrast_word": "中断",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-DIZHI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "DIZHI",
+    "input_sequence": "qingjianchashebeidizhi",
+    "ambiguous_input": "dizhi",
+    "target_text": "请检查设备地址。",
+    "target_word": "地址",
+    "contrast_word": "地质",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-DIZHI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "DIZHI",
+    "input_sequence": "tazhengzaiyanjiudizhijiegou",
+    "ambiguous_input": "dizhi",
+    "target_text": "他正在研究地质结构。",
+    "target_word": "地质",
+    "contrast_word": "地址",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-WENJIAN-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "WENJIAN",
+    "input_sequence": "qingdakaizhegewenjian",
+    "ambiguous_input": "wenjian",
+    "target_text": "请打开这个文件。",
+    "target_word": "文件",
+    "contrast_word": "稳健",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-WENJIAN-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "WENJIAN",
+    "input_sequence": "zhegefangangengjiawenjian",
+    "ambiguous_input": "wenjian",
+    "target_text": "这个方案更加稳健。",
+    "target_word": "稳健",
+    "contrast_word": "文件",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-XIANCHENG-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "XIANCHENG",
+    "input_sequence": "chengxuchuangjianleyigexiancheng",
+    "ambiguous_input": "xiancheng",
+    "target_text": "程序创建了一个线程。",
+    "target_word": "线程",
+    "contrast_word": "县城",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-XIANCHENG-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "XIANCHENG",
+    "input_sequence": "tamenzhuzaiyigeanjingdexiancheng",
+    "ambiguous_input": "xiancheng",
+    "target_text": "他们住在一个安静的县城。",
+    "target_word": "县城",
+    "contrast_word": "线程",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-YICHANG-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "YICHANG",
+    "input_sequence": "xitongchuxianyichang",
+    "ambiguous_input": "yichang",
+    "target_text": "系统出现异常。",
+    "target_word": "异常",
+    "contrast_word": "一场",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-YICHANG-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "YICHANG",
+    "input_sequence": "xiawuyouyichangbisai",
+    "ambiguous_input": "yichang",
+    "target_text": "下午有一场比赛。",
+    "target_word": "一场",
+    "contrast_word": "异常",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-BIANYI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "BIANYI",
+    "input_sequence": "xuyaochongxinbianyichengxu",
+    "ambiguous_input": "bianyi",
+    "target_text": "需要重新编译程序。",
+    "target_word": "编译",
+    "contrast_word": "便宜",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-BIANYI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "BIANYI",
+    "input_sequence": "zhejianshangpinbijiaobianyi",
+    "ambiguous_input": "bianyi",
+    "target_text": "这件商品比较便宜。",
+    "target_word": "便宜",
+    "contrast_word": "编译",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-XIEYI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "XIEYI",
+    "input_sequence": "shuangfangzunxuntongxinxieyi",
+    "ambiguous_input": "xieyi",
+    "target_text": "双方遵循通信协议。",
+    "target_word": "协议",
+    "contrast_word": "谢意",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-XIEYI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "XIEYI",
+    "input_sequence": "taxiangdajiabiaodaxieyi",
+    "ambiguous_input": "xieyi",
+    "target_text": "他向大家表达谢意。",
+    "target_word": "谢意",
+    "contrast_word": "协议",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHIWU-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHIWU",
+    "input_sequence": "shujukuzhengzaitijiaoshiwu",
+    "ambiguous_input": "shiwu",
+    "target_text": "数据库正在提交事务。",
+    "target_word": "事务",
+    "contrast_word": "食物",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHIWU-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHIWU",
+    "input_sequence": "bingxianglihaiyouyixieshiwu",
+    "ambiguous_input": "shiwu",
+    "target_text": "冰箱里还有一些食物。",
+    "target_word": "食物",
+    "contrast_word": "事务",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHUJU-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHUJU",
+    "input_sequence": "qingfenxizhexieshuju",
+    "ambiguous_input": "shuju",
+    "target_text": "请分析这些数据。",
+    "target_word": "数据",
+    "contrast_word": "数句",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHUJU-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHUJU",
+    "input_sequence": "talangduleshujugushi",
+    "ambiguous_input": "shuju",
+    "target_text": "他朗读了数句古诗。",
+    "target_word": "数句",
+    "contrast_word": "数据",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-HUIFU-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "HUIFU",
+    "input_sequence": "xitongyijinghuifuzhengchang",
+    "ambiguous_input": "huifu",
+    "target_text": "系统已经恢复正常。",
+    "target_word": "恢复",
+    "contrast_word": "回复",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-HUIFU-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "HUIFU",
+    "input_sequence": "qingjinkuaihuifuyoujian",
+    "ambiguous_input": "huifu",
+    "target_text": "请尽快回复邮件。",
+    "target_word": "回复",
+    "contrast_word": "恢复",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-QIANYI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "QIANYI",
+    "input_sequence": "womenzhengzaiwanchengshujuqianyi",
+    "ambiguous_input": "qianyi",
+    "target_text": "我们正在完成数据迁移。",
+    "target_word": "迁移",
+    "contrast_word": "千亿",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-QIANYI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "QIANYI",
+    "input_sequence": "shichangguimoyijingdadaoqianyi",
+    "ambiguous_input": "qianyi",
+    "target_text": "市场规模已经达到千亿。",
+    "target_word": "千亿",
+    "contrast_word": "迁移",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-HEXIN-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "HEXIN",
+    "input_sequence": "zheshixitongdehexinmokuai",
+    "ambiguous_input": "hexin",
+    "target_text": "这是系统的核心模块。",
+    "target_word": "核心",
+    "contrast_word": "河心",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-HEXIN-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "HEXIN",
+    "input_sequence": "xiaochuanmanmanshixianghexin",
+    "ambiguous_input": "hexin",
+    "target_text": "小船慢慢驶向河心。",
+    "target_word": "河心",
+    "contrast_word": "核心",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-QUANLI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "QUANLI",
+    "input_sequence": "gongminyifaxiangyouhefaquanli",
+    "ambiguous_input": "quanli",
+    "target_text": "公民依法享有合法权利。",
+    "target_word": "权利",
+    "contrast_word": "权力",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-QUANLI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "QUANLI",
+    "input_sequence": "guanlirenyuanbunenglanyongquanli",
+    "ambiguous_input": "quanli",
+    "target_text": "管理人员不能滥用权力。",
+    "target_word": "权力",
+    "contrast_word": "权利",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHISHI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHISHI",
+    "input_sequence": "zheshiyixiangkeguanshishi",
+    "ambiguous_input": "shishi",
+    "target_text": "这是一项客观事实。",
+    "target_word": "事实",
+    "contrast_word": "实时",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHISHI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHISHI",
+    "input_sequence": "xitongzhengzaishishigengxin",
+    "ambiguous_input": "shishi",
+    "target_text": "系统正在实时更新。",
+    "target_word": "实时",
+    "contrast_word": "事实",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-XINGSHI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "XINGSHI",
+    "input_sequence": "huiyicaiyongxianshangxingshi",
+    "ambiguous_input": "xingshi",
+    "target_text": "会议采用线上形式。",
+    "target_word": "形式",
+    "contrast_word": "行事",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-XINGSHI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "XINGSHI",
+    "input_sequence": "tayixiangjinshenxingshi",
+    "ambiguous_input": "xingshi",
+    "target_text": "他一向谨慎行事。",
+    "target_word": "行事",
+    "contrast_word": "形式",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-JISHI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "JISHI",
+    "input_sequence": "xiaoxixuyaojishitongbu",
+    "ambiguous_input": "jishi",
+    "target_text": "消息需要即时同步。",
+    "target_word": "即时",
+    "contrast_word": "及时",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-JISHI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "JISHI",
+    "input_sequence": "faxianwentiyihoujishichuli",
+    "ambiguous_input": "jishi",
+    "target_text": "发现问题以后及时处理。",
+    "target_word": "及时",
+    "contrast_word": "即时",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-GONGSHI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "GONGSHI",
+    "input_sequence": "qingshiyongzhegejisuangongshi",
+    "ambiguous_input": "gongshi",
+    "target_text": "请使用这个计算公式。",
+    "target_word": "公式",
+    "contrast_word": "公示",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-GONGSHI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "GONGSHI",
+    "input_sequence": "jieguojiangzaimingtiangongshi",
+    "ambiguous_input": "gongshi",
+    "target_text": "结果将在明天公示。",
+    "target_word": "公示",
+    "contrast_word": "公式",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHIYAN-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHIYAN",
+    "input_sequence": "womenzhunbeijinxingshiyan",
+    "ambiguous_input": "shiyan",
+    "target_text": "我们准备进行实验。",
+    "target_word": "实验",
+    "contrast_word": "食盐",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHIYAN-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHIYAN",
+    "input_sequence": "chufanglixuyaoyixieshiyan",
+    "ambiguous_input": "shiyan",
+    "target_text": "厨房里需要一些食盐。",
+    "target_word": "食盐",
+    "contrast_word": "实验",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHUZHI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHUZHI",
+    "input_sequence": "qingduqujicunqishuzhi",
+    "ambiguous_input": "shuzhi",
+    "target_text": "请读取寄存器数值。",
+    "target_word": "数值",
+    "contrast_word": "树脂",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-SHUZHI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "SHUZHI",
+    "input_sequence": "zhegelingjianshiyongshuzhicailiao",
+    "ambiguous_input": "shuzhi",
+    "target_text": "这个零件使用树脂材料。",
+    "target_word": "树脂",
+    "contrast_word": "数值",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-JIEGUO-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "JIEGUO",
+    "input_sequence": "ceshijieguofuheyuqi",
+    "ambiguous_input": "jieguo",
+    "target_text": "测试结果符合预期。",
+    "target_word": "结果",
+    "contrast_word": "借过",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-JIEGUO-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "JIEGUO",
+    "input_sequence": "mafanjieguoyixia",
+    "ambiguous_input": "jieguo",
+    "target_text": "麻烦借过一下。",
+    "target_word": "借过",
+    "contrast_word": "结果",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-GUANJIAN-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "GUANJIAN",
+    "input_sequence": "zheshiyigeguanjianwenti",
+    "ambiguous_input": "guanjian",
+    "target_text": "这是一个关键问题。",
+    "target_word": "关键",
+    "contrast_word": "管见",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-GUANJIAN-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "GUANJIAN",
+    "input_sequence": "yishangzhishigerenguanjian",
+    "ambiguous_input": "guanjian",
+    "target_text": "以上只是个人管见。",
+    "target_word": "管见",
+    "contrast_word": "关键",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-XIANGMU-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "XIANGMU",
+    "input_sequence": "zhegexiangmuyijingwancheng",
+    "ambiguous_input": "xiangmu",
+    "target_text": "这个项目已经完成。",
+    "target_word": "项目",
+    "contrast_word": "橡木",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-XIANGMU-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "XIANGMU",
+    "input_sequence": "zhuozishiyongxiangmuzhizuo",
+    "ambiguous_input": "xiangmu",
+    "target_text": "桌子使用橡木制作。",
+    "target_word": "橡木",
+    "contrast_word": "项目",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-CESHI-A",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "CESHI",
+    "input_sequence": "xianzaikaishijinxingceshi",
+    "ambiguous_input": "ceshi",
+    "target_text": "现在开始进行测试。",
+    "target_word": "测试",
+    "contrast_word": "侧室",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-CTX-CESHI-B",
+    "category": "context_disambiguation",
+    "scheme": "full_pinyin",
+    "pair_id": "CESHI",
+    "input_sequence": "gudaizhaiyuanlisheyouceshi",
+    "ambiguous_input": "ceshi",
+    "target_text": "古代宅院里设有侧室。",
+    "target_word": "侧室",
+    "contrast_word": "测试",
+    "metrics": {
+      "record_top1": true,
+      "record_top5": true,
+      "record_target_rank": true,
+      "record_exact_match": true,
+      "record_character_error_rate": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-001",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "xian",
+    "target_text": "西安",
+    "context": "我准备明天去西安。",
+    "forced_input": "xi'an",
+    "possible_paths": [
+      "xian",
+      "xi+an"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-002",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "fangan",
+    "target_text": "方案",
+    "context": "请确认最终方案。",
+    "forced_input": "fang'an",
+    "possible_paths": [
+      "fang+an",
+      "fan+gan"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-003",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "pingan",
+    "target_text": "平安",
+    "context": "祝你一路平安。",
+    "forced_input": "ping'an",
+    "possible_paths": [
+      "ping+an",
+      "pin+gan"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-004",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "changan",
+    "target_text": "长安",
+    "context": "长安是历史地名。",
+    "forced_input": "chang'an",
+    "possible_paths": [
+      "chang+an",
+      "chan+gan"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-005",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "tiananmen",
+    "target_text": "天安门",
+    "context": "游客来到天安门。",
+    "forced_input": "tian'an'men",
+    "possible_paths": [
+      "tian+an+men"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-006",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "jiefang",
+    "target_text": "解放",
+    "context": "这座城市迎来解放。",
+    "forced_input": null,
+    "possible_paths": [
+      "jie+fang"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-007",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "jiefang",
+    "target_text": "街坊",
+    "context": "老街坊正在门口聊天。",
+    "forced_input": null,
+    "possible_paths": [
+      "jie+fang"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-008",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "shangan",
+    "target_text": "上岸",
+    "context": "游泳的人已经上岸。",
+    "forced_input": "shang'an",
+    "possible_paths": [
+      "shang+an",
+      "shan+gan"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-009",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "jintianxiawu",
+    "target_text": "今天下午",
+    "context": "我今天下午去开会。",
+    "forced_input": null,
+    "possible_paths": [
+      "jin+tian+xia+wu",
+      "jin+tianxia+wu"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-010",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "shijian",
+    "target_text": "时间",
+    "context": "请确认会议时间。",
+    "forced_input": null,
+    "possible_paths": [
+      "shi+jian"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-011",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "shijian",
+    "target_text": "事件",
+    "context": "系统记录了异常事件。",
+    "forced_input": null,
+    "possible_paths": [
+      "shi+jian"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-012",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "gongshi",
+    "target_text": "公式",
+    "context": "请检查计算公式。",
+    "forced_input": null,
+    "possible_paths": [
+      "gong+shi"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-013",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "gongshi",
+    "target_text": "公示",
+    "context": "结果将在网站公示。",
+    "forced_input": null,
+    "possible_paths": [
+      "gong+shi"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-014",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "shuzhi",
+    "target_text": "数值",
+    "context": "寄存器数值已经更新。",
+    "forced_input": null,
+    "possible_paths": [
+      "shu+zhi"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-015",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "jieguo",
+    "target_text": "结果",
+    "context": "测试结果符合预期。",
+    "forced_input": null,
+    "possible_paths": [
+      "jie+guo"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "LM-SEG-016",
+    "category": "segmentation_ambiguity",
+    "scheme": "full_pinyin",
+    "input_sequence": "xiangmu",
+    "target_text": "项目",
+    "context": "这个项目已经完成。",
+    "forced_input": null,
+    "possible_paths": [
+      "xiang+mu"
+    ],
+    "metrics": {
+      "record_target_rank": true,
+      "record_top5": true
+    },
+    "priority": "P1"
+  }
+]

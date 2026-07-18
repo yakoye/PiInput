@@ -1,0 +1,418 @@
+[
+  {
+    "id": "COR-SEED-001",
+    "scheme": "full_pinyin",
+    "target": "你好",
+    "pinyin_syllables": [
+      "ni",
+      "hao"
+    ],
+    "source_input": "nihao"
+  },
+  {
+    "id": "COR-SEED-002",
+    "scheme": "full_pinyin",
+    "target": "苹果",
+    "pinyin_syllables": [
+      "ping",
+      "guo"
+    ],
+    "source_input": "pingguo"
+  },
+  {
+    "id": "COR-SEED-003",
+    "scheme": "full_pinyin",
+    "target": "实际",
+    "pinyin_syllables": [
+      "shi",
+      "ji"
+    ],
+    "source_input": "shiji"
+  },
+  {
+    "id": "COR-SEED-004",
+    "scheme": "full_pinyin",
+    "target": "中国",
+    "pinyin_syllables": [
+      "zhong",
+      "guo"
+    ],
+    "source_input": "zhongguo"
+  },
+  {
+    "id": "COR-SEED-005",
+    "scheme": "full_pinyin",
+    "target": "我今天下午",
+    "pinyin_syllables": [
+      "wo",
+      "jin",
+      "tian",
+      "xia",
+      "wu"
+    ],
+    "source_input": "wojintianxiawu"
+  },
+  {
+    "id": "COR-SEED-006",
+    "scheme": "full_pinyin",
+    "target": "输入法",
+    "pinyin_syllables": [
+      "shu",
+      "ru",
+      "fa"
+    ],
+    "source_input": "shurufa"
+  },
+  {
+    "id": "COR-SEED-007",
+    "scheme": "full_pinyin",
+    "target": "候选窗口",
+    "pinyin_syllables": [
+      "hou",
+      "xuan",
+      "chuang",
+      "kou"
+    ],
+    "source_input": "houxuanchuangkou"
+  },
+  {
+    "id": "COR-SEED-008",
+    "scheme": "full_pinyin",
+    "target": "拼音方案",
+    "pinyin_syllables": [
+      "pin",
+      "yin",
+      "fang",
+      "an"
+    ],
+    "source_input": "pinyinfangan"
+  },
+  {
+    "id": "COR-SEED-009",
+    "scheme": "full_pinyin",
+    "target": "软件开发",
+    "pinyin_syllables": [
+      "ruan",
+      "jian",
+      "kai",
+      "fa"
+    ],
+    "source_input": "ruanjiankaifa"
+  },
+  {
+    "id": "COR-SEED-010",
+    "scheme": "full_pinyin",
+    "target": "数据结构",
+    "pinyin_syllables": [
+      "shu",
+      "ju",
+      "jie",
+      "gou"
+    ],
+    "source_input": "shujujiegou"
+  },
+  {
+    "id": "COR-SEED-011",
+    "scheme": "full_pinyin",
+    "target": "固件",
+    "pinyin_syllables": [
+      "gu",
+      "jian"
+    ],
+    "source_input": "gujian"
+  },
+  {
+    "id": "COR-SEED-012",
+    "scheme": "full_pinyin",
+    "target": "寄存器",
+    "pinyin_syllables": [
+      "ji",
+      "cun",
+      "qi"
+    ],
+    "source_input": "jicunqi"
+  },
+  {
+    "id": "COR-SEED-013",
+    "scheme": "full_pinyin",
+    "target": "配置空间",
+    "pinyin_syllables": [
+      "pei",
+      "zhi",
+      "kong",
+      "jian"
+    ],
+    "source_input": "peizhikongjian"
+  },
+  {
+    "id": "COR-SEED-014",
+    "scheme": "full_pinyin",
+    "target": "链路状态机",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "zhuang",
+      "tai",
+      "ji"
+    ],
+    "source_input": "lianluzhuangtaiji"
+  },
+  {
+    "id": "COR-SEED-015",
+    "scheme": "full_pinyin",
+    "target": "中断",
+    "pinyin_syllables": [
+      "zhong",
+      "duan"
+    ],
+    "source_input": "zhongduan"
+  },
+  {
+    "id": "COR-SEED-016",
+    "scheme": "full_pinyin",
+    "target": "文件",
+    "pinyin_syllables": [
+      "wen",
+      "jian"
+    ],
+    "source_input": "wenjian"
+  },
+  {
+    "id": "COR-SEED-017",
+    "scheme": "full_pinyin",
+    "target": "编译",
+    "pinyin_syllables": [
+      "bian",
+      "yi"
+    ],
+    "source_input": "bianyi"
+  },
+  {
+    "id": "COR-SEED-018",
+    "scheme": "full_pinyin",
+    "target": "协议",
+    "pinyin_syllables": [
+      "xie",
+      "yi"
+    ],
+    "source_input": "xieyi"
+  },
+  {
+    "id": "COR-SEED-019",
+    "scheme": "full_pinyin",
+    "target": "数据",
+    "pinyin_syllables": [
+      "shu",
+      "ju"
+    ],
+    "source_input": "shuju"
+  },
+  {
+    "id": "COR-SEED-020",
+    "scheme": "full_pinyin",
+    "target": "恢复",
+    "pinyin_syllables": [
+      "hui",
+      "fu"
+    ],
+    "source_input": "huifu"
+  },
+  {
+    "id": "COR-XH-SEED-001",
+    "scheme": "xiaohe",
+    "target": "你好",
+    "pinyin_syllables": [
+      "ni",
+      "hao"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-002",
+    "scheme": "xiaohe",
+    "target": "苹果",
+    "pinyin_syllables": [
+      "ping",
+      "guo"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-003",
+    "scheme": "xiaohe",
+    "target": "实际",
+    "pinyin_syllables": [
+      "shi",
+      "ji"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-004",
+    "scheme": "xiaohe",
+    "target": "中国",
+    "pinyin_syllables": [
+      "zhong",
+      "guo"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-005",
+    "scheme": "xiaohe",
+    "target": "我今天下午",
+    "pinyin_syllables": [
+      "wo",
+      "jin",
+      "tian",
+      "xia",
+      "wu"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-006",
+    "scheme": "xiaohe",
+    "target": "输入法",
+    "pinyin_syllables": [
+      "shu",
+      "ru",
+      "fa"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-007",
+    "scheme": "xiaohe",
+    "target": "候选窗口",
+    "pinyin_syllables": [
+      "hou",
+      "xuan",
+      "chuang",
+      "kou"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-008",
+    "scheme": "xiaohe",
+    "target": "拼音方案",
+    "pinyin_syllables": [
+      "pin",
+      "yin",
+      "fang",
+      "an"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-009",
+    "scheme": "xiaohe",
+    "target": "软件开发",
+    "pinyin_syllables": [
+      "ruan",
+      "jian",
+      "kai",
+      "fa"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-010",
+    "scheme": "xiaohe",
+    "target": "数据结构",
+    "pinyin_syllables": [
+      "shu",
+      "ju",
+      "jie",
+      "gou"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-011",
+    "scheme": "xiaohe",
+    "target": "固件",
+    "pinyin_syllables": [
+      "gu",
+      "jian"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-012",
+    "scheme": "xiaohe",
+    "target": "寄存器",
+    "pinyin_syllables": [
+      "ji",
+      "cun",
+      "qi"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-013",
+    "scheme": "xiaohe",
+    "target": "配置空间",
+    "pinyin_syllables": [
+      "pei",
+      "zhi",
+      "kong",
+      "jian"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-014",
+    "scheme": "xiaohe",
+    "target": "链路状态机",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "zhuang",
+      "tai",
+      "ji"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-015",
+    "scheme": "xiaohe",
+    "target": "中断",
+    "pinyin_syllables": [
+      "zhong",
+      "duan"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-016",
+    "scheme": "xiaohe",
+    "target": "文件",
+    "pinyin_syllables": [
+      "wen",
+      "jian"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-017",
+    "scheme": "xiaohe",
+    "target": "编译",
+    "pinyin_syllables": [
+      "bian",
+      "yi"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-018",
+    "scheme": "xiaohe",
+    "target": "协议",
+    "pinyin_syllables": [
+      "xie",
+      "yi"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-019",
+    "scheme": "xiaohe",
+    "target": "数据",
+    "pinyin_syllables": [
+      "shu",
+      "ju"
+    ]
+  },
+  {
+    "id": "COR-XH-SEED-020",
+    "scheme": "xiaohe",
+    "target": "恢复",
+    "pinyin_syllables": [
+      "hui",
+      "fu"
+    ]
+  }
+]

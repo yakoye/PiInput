@@ -1,0 +1,94 @@
+{
+  "summary": {
+    "sample_only": true,
+    "case_count": 8,
+    "top1_accuracy": 0.875,
+    "top5_accuracy": 1.0,
+    "exact_match_rate": 1.0,
+    "mean_character_error_rate": 0.0,
+    "candidate_latency_ms_p50": 16,
+    "candidate_latency_ms_p95": 24
+  },
+  "cases": [
+    {
+      "id": "LM-LONG-DAILY-001",
+      "target_text": "我今天下午要去超市买点水果。",
+      "target_rank": 1,
+      "top1": true,
+      "top5": true,
+      "exact_match": true,
+      "character_error_rate": 0.0,
+      "candidate_latency_ms": 18
+    },
+    {
+      "id": "LM-LONG-FW-001",
+      "target_text": "固件开发需要熟悉底层寄存器配置和链路状态机。",
+      "target_rank": 1,
+      "top1": true,
+      "top5": true,
+      "exact_match": true,
+      "character_error_rate": 0.0,
+      "candidate_latency_ms": 24
+    },
+    {
+      "id": "LM-CTX-GUJIAN-A",
+      "target_text": "设备固件需要及时升级。",
+      "target_rank": 1,
+      "top1": true,
+      "top5": true,
+      "exact_match": true,
+      "character_error_rate": 0.0,
+      "candidate_latency_ms": 16
+    },
+    {
+      "id": "LM-CTX-GUJIAN-B",
+      "target_text": "他收藏了一把古剑。",
+      "target_rank": 2,
+      "top1": false,
+      "top5": true,
+      "exact_match": true,
+      "character_error_rate": 0.0,
+      "candidate_latency_ms": 17
+    },
+    {
+      "id": "LM-CTX-ZHONGDUAN-A",
+      "target_text": "系统发生中断。",
+      "target_rank": 1,
+      "top1": true,
+      "top5": true,
+      "exact_match": true,
+      "character_error_rate": 0.0,
+      "candidate_latency_ms": 14
+    },
+    {
+      "id": "LM-CTX-ZHONGDUAN-B",
+      "target_text": "请打开命令行终端。",
+      "target_rank": 1,
+      "top1": true,
+      "top5": true,
+      "exact_match": true,
+      "character_error_rate": 0.0,
+      "candidate_latency_ms": 15
+    },
+    {
+      "id": "VOCAB-PRO-PCIE-003",
+      "target_text": "配置空间",
+      "target_rank": 1,
+      "top1": true,
+      "top5": true,
+      "exact_match": true,
+      "character_error_rate": 0.0,
+      "candidate_latency_ms": 11
+    },
+    {
+      "id": "VOCAB-PRO-IME-002",
+      "target_text": "候选排序",
+      "target_rank": 1,
+      "top1": true,
+      "top5": true,
+      "exact_match": true,
+      "character_error_rate": 0.0,
+      "candidate_latency_ms": 12
+    }
+  ]
+}

@@ -1,0 +1,237 @@
+中文输入法测试文本 v0.2.0
+
+【长句切分】
+我今天下午要去超市买点水果。
+wojintianxiawuyaoquchaoshimaidianshuiguo
+今天我们开始测试中文输入法。
+jintianwomenkaishiceshizhongwenshurufa
+固件开发需要熟悉底层寄存器配置和链路状态机。
+gujiankaifaxuyaoshuxidicengjicunqipeizhihelianluzhuangtaiji
+链路训练需要检查状态机和均衡过程。
+lianluxunlianxuyaojianchazhuangtaijihejunhengguocheng
+明天上午我们一起检查输入法候选排序是否正确。
+mingtianshangwuwomenyiqijianchashurufahouxuanpaixushifouzhengque
+用户连续输入长句时引擎需要正确切分拼音音节。
+yonghulianxushuruchangjushiyinqingxuyaozhengqueqiefenpinyinyinjie
+删除一个字母以后候选窗口应该立即刷新。
+shanchuyigezimuyihouhouxuanchuangkouyinggailijishuaxin
+同一个拼音在不同上下文中可能对应不同词语。
+tongyigepinyinzaibutongshangxiawenzhongkenengduiyingbutongciyu
+输入法应该记住用户经常选择的专业词汇。
+shurufayinggaijizhuyonghujingchangxuanzedezhuanyecihui
+关闭模糊音以后输入结果必须严格区分前后鼻音。
+guanbimohuyinyihoushurujieguobixuyangequfenqianhoubiyin
+固件需要读取配置空间并处理链路状态变化。
+gujianxuyaoduqupeizhikongjianbingchulilianluzhuangtaibianhua
+设备进入恢复状态以后需要重新完成链路训练。
+shebeijinruhuifuzhuangtaiyihouxuyaochongxinwanchenglianluxunlian
+驱动程序通过内存映射访问设备寄存器。
+qudongchengxutongguoneicunyingshefangwenshebeijicunqi
+数据链路层负责可靠传输和错误恢复。
+shujulianlucengfuzekekaochuanshuhecuowuhuifu
+操作系统需要正确保存并恢复输入法状态。
+caozuoxitongxuyaozhengquebaocunbinghuifushurufazhuangtai
+线程切换不能导致组合字符串丢失或重复上屏。
+xianchengqiehuanbunengdaozhizuhezifuchuandiushihuochongfushangping
+这个文件包含完整的测试用例和评估指标。
+zhegewenjianbaohanwanzhengdeceshiyonglihepingguzhibiao
+编译完成以后请检查日志中的错误信息。
+bianyiwanchengyihouqingjiancharizhizhongdecuowuxinxi
+系统发生中断以后终端仍然可以继续输入。
+xitongfashengzhongduanyihouzhongduanrengrankeyijixushuru
+测试报告需要记录目标候选的排名和响应延迟。
+ceshibaogaoxuyaojilumubiaohouxuandepaiminghexiangyingyanchi
+
+【上下文消歧】
+设备固件需要及时升级。
+shebeigujianxuyaojishishengji
+他收藏了一把古剑。
+tashoucangleyibagujian
+系统发生中断。
+xitongfashengzhongduan
+请打开命令行终端。
+qingdakaiminglinghangzhongduan
+请检查设备地址。
+qingjianchashebeidizhi
+他正在研究地质结构。
+tazhengzaiyanjiudizhijiegou
+请打开这个文件。
+qingdakaizhegewenjian
+这个方案更加稳健。
+zhegefangangengjiawenjian
+程序创建了一个线程。
+chengxuchuangjianleyigexiancheng
+他们住在一个安静的县城。
+tamenzhuzaiyigeanjingdexiancheng
+系统出现异常。
+xitongchuxianyichang
+下午有一场比赛。
+xiawuyouyichangbisai
+需要重新编译程序。
+xuyaochongxinbianyichengxu
+这件商品比较便宜。
+zhejianshangpinbijiaobianyi
+双方遵循通信协议。
+shuangfangzunxuntongxinxieyi
+他向大家表达谢意。
+taxiangdajiabiaodaxieyi
+数据库正在提交事务。
+shujukuzhengzaitijiaoshiwu
+冰箱里还有一些食物。
+bingxianglihaiyouyixieshiwu
+请分析这些数据。
+qingfenxizhexieshuju
+他朗读了数句古诗。
+talangduleshujugushi
+系统已经恢复正常。
+xitongyijinghuifuzhengchang
+请尽快回复邮件。
+qingjinkuaihuifuyoujian
+我们正在完成数据迁移。
+womenzhengzaiwanchengshujuqianyi
+市场规模已经达到千亿。
+shichangguimoyijingdadaoqianyi
+这是系统的核心模块。
+zheshixitongdehexinmokuai
+小船慢慢驶向河心。
+xiaochuanmanmanshixianghexin
+公民依法享有合法权利。
+gongminyifaxiangyouhefaquanli
+管理人员不能滥用权力。
+guanlirenyuanbunenglanyongquanli
+这是一项客观事实。
+zheshiyixiangkeguanshishi
+系统正在实时更新。
+xitongzhengzaishishigengxin
+会议采用线上形式。
+huiyicaiyongxianshangxingshi
+他一向谨慎行事。
+tayixiangjinshenxingshi
+消息需要即时同步。
+xiaoxixuyaojishitongbu
+发现问题以后及时处理。
+faxianwentiyihoujishichuli
+请使用这个计算公式。
+qingshiyongzhegejisuangongshi
+结果将在明天公示。
+jieguojiangzaimingtiangongshi
+我们准备进行实验。
+womenzhunbeijinxingshiyan
+厨房里需要一些食盐。
+chufanglixuyaoyixieshiyan
+请读取寄存器数值。
+qingduqujicunqishuzhi
+这个零件使用树脂材料。
+zhegelingjianshiyongshuzhicailiao
+测试结果符合预期。
+ceshijieguofuheyuqi
+麻烦借过一下。
+mafanjieguoyixia
+这是一个关键问题。
+zheshiyigeguanjianwenti
+以上只是个人管见。
+yishangzhishigerenguanjian
+这个项目已经完成。
+zhegexiangmuyijingwancheng
+桌子使用橡木制作。
+zhuozishiyongxiangmuzhizuo
+现在开始进行测试。
+xianzaikaishijinxingceshi
+古代宅院里设有侧室。
+gudaizhaiyuanlisheyouceshi
+
+【专业词库】
+固件  gujian
+寄存器  jicunqi
+配置空间  peizhikongjian
+链路状态机  lianluzhuangtaiji
+链路训练  lianluxunlian
+事务层  shiwuceng
+数据链路层  shujulianluceng
+物理层  wuliceng
+事务层数据包  shiwucengshujubao
+配置读请求  peizhiduqingqiu
+配置写请求  peizhixieqingqiu
+内存读请求  neicunduqingqiu
+内存写请求  neicunxieqingqiu
+完成报文  wanchengbaowen
+完成超时  wanchengchaoshi
+可调整基地址寄存器  ketiaozhengjidizhijicunqi
+高级错误报告  gaojicuowubaogao
+链路均衡  lianlujunheng
+接收端  jieshouduan
+发送端  fasongduan
+链路宽度  lianlukuandu
+链路速率  lianlusulv
+流量控制  liuliangkongzhi
+信用额度  xinyongedu
+中断请求  zhongduanqingqiu
+消息信号中断  xiaoxixinhaozhongduan
+输入输出内存管理单元  shurushuchuneicunguanlidanyuan
+地址转换服务  dizhizhuanhuanfuwu
+进程地址空间标识符  jinchengdizhikongjianbiaozhifu
+单根输入输出虚拟化  dangenshurushuchuxunihua
+操作系统  caozuoxitong
+设备驱动  shebeiqudong
+内存映射  neicunyingshe
+虚拟地址  xunidizhi
+物理地址  wulidizhi
+页表  yebiao
+中断处理  zhongduanchuli
+多线程  duoxiancheng
+互斥锁  huchisuo
+条件变量  tiaojianbianliang
+事件循环  shijianxunhuan
+状态机  zhuangtaiji
+缓存一致性  huancunyizhixing
+命令行终端  minglinghangzhongduan
+编译器  bianyiqi
+链接器  lianjieqi
+调试器  tiaoshiqi
+日志系统  rizhixitong
+错误恢复  cuowuhuifu
+候选窗口  houxuanchuangkou
+候选排序  houxuanpaixu
+拼音切分  pinyinqiefen
+用户词频  yonghucipin
+模糊音  mohuyin
+零声母  lingshengmu
+隔音符  geyinfu
+组合字符串  zuhezifuchuan
+文本提交  wenbentijiao
+光标位置  guangbiaoweizhi
+
+【模糊音】
+z/zh OFF zongwen -> 中文
+z/zh ON zongwen -> 中文
+c/ch OFF cengxu -> 程序
+c/ch ON cengxu -> 程序
+s/sh OFF sishi -> 事实
+s/sh ON sishi -> 事实
+n/l OFF nanse -> 蓝色
+n/l ON nanse -> 蓝色
+f/h OFF hangfa -> 方法
+f/h ON hangfa -> 方法
+an/ang OFF angquan -> 安全
+an/ang ON angquan -> 安全
+en/eng OFF zhenchang -> 正常
+en/eng ON zhenchang -> 正常
+in/ing OFF xinqi -> 星期
+in/ing ON xinqi -> 星期
+ian/iang OFF jiangkang -> 健康
+ian/iang ON jiangkang -> 健康
+uan/uang OFF guangbi -> 关闭
+uan/uang ON guangbi -> 关闭
+
+【字符、数字和混合输入】
+0123456789
+abcdefghijklmnopqrstuvwxyz
+ABCDEFGHIJKLMNOPQRSTUVWXYZ
+`1234567890-=
+~!@#$%^&*()_+
+[]\;',./
+{}|:"<>?
+中文 English 混合输入 2026。
+PCIe 6.0、GPU、CPU 和 AI 芯片。
+🙂 😂 👍 🚀 ❤️ 👍🏻 👨‍👩‍👧‍👦
+龘 鱻 麤 靐 齉 爨 彧 翀 昉 玥 𠮷 𠀀

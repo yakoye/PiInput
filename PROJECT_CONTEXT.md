@@ -45,6 +45,10 @@
 
 已确认的回归词包括：`接触`、`词汇`、`感觉`、`现在`、`中国`。完整真实长句语料与未来诊断项分别保存在 `tests/data/real_world_text_corpus.txt` 和 `tests/data/diagnostic_input_cases.tsv`。
 
+不完整输入也必须产生稳定候选。当前规则是精确解析优先；精确解析为空时，对最后一个未完成音节做有界前缀检索。已确认小鹤 `mkt→明天`、`rug→如果/入股`，全拼尾音节前缀使用同一机制。
+
+中文模式的完整 ASCII 标点已接入 TSF。组合状态的 `-`/`=` 仍用于翻页，单引号仍可作拼音边界；其他标点会先提交当前候选再提交中文标点。英文和程序员模式保持 ASCII。
+
 ## 3. 技术栈决策
 
 - 核心：C++20；
@@ -178,7 +182,18 @@ C:\...\lite-ime\lite-ime-dev
 
 ```text
 %LOCALAPPDATA%\LiteIME\Dev
+├── current.txt
+└── versions
+    └── <版本-构建号>
+        ├── bin
+        └── data
 ```
+
+开发安装必须使用 `LiteIME-Install.exe` 的版本并存方案。禁止重新覆盖 `%LOCALAPPDATA%\LiteIME\Dev\bin\LiteImeTSF.dll`，禁止为了更新 DLL 强制关闭用户应用。用户数据始终位于 `%LOCALAPPDATA%\LiteIME\UserData`，不能放进版本目录。
+
+## 10.1 v0.2.0 测试语料
+
+用户提供的 `lite-ime-test-corpus-v0.2.0.zip` 已完整纳入 `tests/corpus/v0.2.0`。语料包含 407 个标准全拼音节和 786 条结构化用例。当前能力作为阻断门禁；纠错、模糊音、V/U 模式和更完整的语言模型仅作为未来诊断，不得据此宣称已经支持。
 
 删除源码目录或升级开发包不能删除用户数据。
 

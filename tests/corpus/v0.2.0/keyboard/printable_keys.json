@@ -1,0 +1,22 @@
+{
+  "unshifted_rows": [
+    "`1234567890-=",
+    "qwertyuiop[]\\",
+    "asdfghjkl;'",
+    "zxcvbnm,./"
+  ],
+  "shifted_rows": [
+    "~!@#$%^&*()_+",
+    "QWERTYUIOP{}|",
+    "ASDFGHJKL:\"",
+    "ZXCVBNM<>?"
+  ],
+  "lowercase": "abcdefghijklmnopqrstuvwxyz",
+  "uppercase": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  "ascii_printable": "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+  "notes": [
+    "静态文本只验证可打印字符。",
+    "Backspace、Delete、修饰键、功能键和系统键必须通过交互用例验证。",
+    "ANSI/ISO/JIS 与 Windows/macOS 平台矩阵在 v0.5.0 完整实现。"
+  ]
+}

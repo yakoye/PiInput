@@ -17,6 +17,11 @@ public:
         const std::string& pinyin,
         std::size_t limit = 10U) const;
 
+    [[nodiscard]] std::vector<LexiconCandidate> query_prefix(
+        const std::string& pinyin_prefix,
+        std::size_t limit = 10U,
+        std::size_t scan_limit = 512U) const;
+
     [[nodiscard]] std::size_t entry_count() const noexcept;
 
 private:

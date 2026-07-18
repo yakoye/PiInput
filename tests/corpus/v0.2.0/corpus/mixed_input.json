@@ -1,0 +1,52 @@
+{
+  "english": [
+    "abcdefghijklmnopqrstuvwxyz",
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    "AbCdEfGhIjKlMnOpQrStUvWxYz"
+  ],
+  "numbers": [
+    "0123456789",
+    "1234567890",
+    "000001",
+    "999999",
+    "3.1415926",
+    "-128",
+    "+64",
+    "99.99%",
+    "0.001%",
+    "2026-07-19",
+    "2026/07/19",
+    "06:30",
+    "18:30:45",
+    "0x1234ABCD",
+    "0b10101010",
+    "1.25×10⁻³"
+  ],
+  "technical": [
+    "PCIe 6.0",
+    "64 GT/s",
+    "32.0 GHz",
+    "128 GB",
+    "C++",
+    "C#",
+    "Node.js",
+    "std::vector",
+    "foo_bar",
+    "camelCase",
+    "snake_case",
+    "UTF-8",
+    "Unicode"
+  ],
+  "url_email_path": [
+    "yakoye.github.io",
+    "user@example.com",
+    "https://example.com/path?a=1&b=2",
+    "C:\\Users\\color\\Documents",
+    "/Users/name/Documents"
+  ],
+  "mixed_sentences": [
+    "中文 English 混合输入 2026。",
+    "PCIe 6.0、GPU、CPU 和 AI 芯片。",
+    "请访问 https://example.com，然后发送邮件到 user@example.com。"
+  ]
+}

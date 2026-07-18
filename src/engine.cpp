@@ -1,4 +1,5 @@
 #include "liteime/engine.h"
+#include "liteime/pinyin_prefix.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,6 +13,8 @@ namespace {
 constexpr std::int64_t exact_phrase_bonus = 30'000'000;
 constexpr std::int64_t token_penalty = 12'000'000;
 constexpr std::int64_t joined_syllable_bonus = 4'000'000;
+constexpr std::int64_t incomplete_input_penalty = 8'000'000;
+constexpr std::int64_t completion_character_penalty = 100'000;
 
 [[nodiscard]] std::int64_t frequency_score(const std::uint32_t weight) {
     return static_cast<std::int64_t>(std::log1p(static_cast<double>(weight)) * 1'000'000.0);
@@ -66,6 +69,19 @@ std::vector<LexiconCandidate> Engine::query_exact(
     throw std::runtime_error("No lexicon has been loaded");
 }
 
+std::vector<LexiconCandidate> Engine::query_prefix(
+    const std::string& pinyin_prefix,
+    const std::size_t limit,
+    const std::size_t scan_limit) const {
+    if (const auto* tsv = std::get_if<DevLexicon>(&lexicon_)) {
+        return tsv->query_prefix(pinyin_prefix, limit, scan_limit);
+    }
+    if (const auto* binary = std::get_if<BinaryLexicon>(&lexicon_)) {
+        return binary->query_prefix(pinyin_prefix, limit, scan_limit);
+    }
+    throw std::runtime_error("No lexicon has been loaded");
+}
+
 std::vector<EngineCandidate> Engine::query(
     const std::string& input,
     const std::string& schema,
@@ -83,6 +99,30 @@ std::vector<EngineCandidate> Engine::query(
             best[key] = std::move(candidate);
         }
     };
+
+    if (segmentations.empty()) {
+        const auto prefixes = expand_input_prefix(input, schema, pinyin_, shuangpin_, 24U);
+        for (std::size_t prefix_index = 0U; prefix_index < prefixes.size(); ++prefix_index) {
+            const auto& prefix = prefixes[prefix_index];
+            const auto candidates = query_prefix(
+                prefix.canonical_prefix,
+                (std::max<std::size_t>)(limit * 16U, 64U),
+                4096U);
+            for (const auto& candidate : candidates) {
+                const std::size_t remaining = candidate.pinyin.size() - prefix.canonical_prefix.size();
+                submit(EngineCandidate{
+                    candidate.word,
+                    candidate.pinyin,
+                    candidate.weight,
+                    frequency_score(candidate.weight) +
+                        user_model_.score_adjustment(candidate.pinyin, candidate.word) +
+                        prefix.score - incomplete_input_penalty -
+                        static_cast<std::int64_t>(remaining) * completion_character_penalty -
+                        static_cast<std::int64_t>(prefix_index * 20U),
+                });
+            }
+        }
+    }
 
     for (std::size_t segmentation_index = 0U; segmentation_index < segmentations.size(); ++segmentation_index) {
         const auto& segmentation = segmentations[segmentation_index];

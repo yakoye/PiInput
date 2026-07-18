@@ -1,0 +1,1143 @@
+[
+  {
+    "id": "VOCAB-PRO-PCIE-001",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "gujian",
+    "target_text": "固件",
+    "pinyin_syllables": [
+      "gu",
+      "jian"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-002",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "jicunqi",
+    "target_text": "寄存器",
+    "pinyin_syllables": [
+      "ji",
+      "cun",
+      "qi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-003",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "peizhikongjian",
+    "target_text": "配置空间",
+    "pinyin_syllables": [
+      "pei",
+      "zhi",
+      "kong",
+      "jian"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-004",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "lianluzhuangtaiji",
+    "target_text": "链路状态机",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "zhuang",
+      "tai",
+      "ji"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-005",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "lianluxunlian",
+    "target_text": "链路训练",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "xun",
+      "lian"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-006",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "shiwuceng",
+    "target_text": "事务层",
+    "pinyin_syllables": [
+      "shi",
+      "wu",
+      "ceng"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-007",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "shujulianluceng",
+    "target_text": "数据链路层",
+    "pinyin_syllables": [
+      "shu",
+      "ju",
+      "lian",
+      "lu",
+      "ceng"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-008",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "wuliceng",
+    "target_text": "物理层",
+    "pinyin_syllables": [
+      "wu",
+      "li",
+      "ceng"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-009",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "shiwucengshujubao",
+    "target_text": "事务层数据包",
+    "pinyin_syllables": [
+      "shi",
+      "wu",
+      "ceng",
+      "shu",
+      "ju",
+      "bao"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-010",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "peizhiduqingqiu",
+    "target_text": "配置读请求",
+    "pinyin_syllables": [
+      "pei",
+      "zhi",
+      "du",
+      "qing",
+      "qiu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-011",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "peizhixieqingqiu",
+    "target_text": "配置写请求",
+    "pinyin_syllables": [
+      "pei",
+      "zhi",
+      "xie",
+      "qing",
+      "qiu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-012",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "neicunduqingqiu",
+    "target_text": "内存读请求",
+    "pinyin_syllables": [
+      "nei",
+      "cun",
+      "du",
+      "qing",
+      "qiu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-013",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "neicunxieqingqiu",
+    "target_text": "内存写请求",
+    "pinyin_syllables": [
+      "nei",
+      "cun",
+      "xie",
+      "qing",
+      "qiu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-014",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "wanchengbaowen",
+    "target_text": "完成报文",
+    "pinyin_syllables": [
+      "wan",
+      "cheng",
+      "bao",
+      "wen"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-015",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "wanchengchaoshi",
+    "target_text": "完成超时",
+    "pinyin_syllables": [
+      "wan",
+      "cheng",
+      "chao",
+      "shi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-016",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "ketiaozhengjidizhijicunqi",
+    "target_text": "可调整基地址寄存器",
+    "pinyin_syllables": [
+      "ke",
+      "tiao",
+      "zheng",
+      "ji",
+      "di",
+      "zhi",
+      "ji",
+      "cun",
+      "qi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-017",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "gaojicuowubaogao",
+    "target_text": "高级错误报告",
+    "pinyin_syllables": [
+      "gao",
+      "ji",
+      "cuo",
+      "wu",
+      "bao",
+      "gao"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-018",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "lianlujunheng",
+    "target_text": "链路均衡",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "jun",
+      "heng"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-019",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "jieshouduan",
+    "target_text": "接收端",
+    "pinyin_syllables": [
+      "jie",
+      "shou",
+      "duan"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-020",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "fasongduan",
+    "target_text": "发送端",
+    "pinyin_syllables": [
+      "fa",
+      "song",
+      "duan"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-021",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "lianlukuandu",
+    "target_text": "链路宽度",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "kuan",
+      "du"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-022",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "lianlusulv",
+    "target_text": "链路速率",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "su",
+      "lv"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-023",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "liuliangkongzhi",
+    "target_text": "流量控制",
+    "pinyin_syllables": [
+      "liu",
+      "liang",
+      "kong",
+      "zhi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-024",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "xinyongedu",
+    "target_text": "信用额度",
+    "pinyin_syllables": [
+      "xin",
+      "yong",
+      "e",
+      "du"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-025",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "zhongduanqingqiu",
+    "target_text": "中断请求",
+    "pinyin_syllables": [
+      "zhong",
+      "duan",
+      "qing",
+      "qiu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-026",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "xiaoxixinhaozhongduan",
+    "target_text": "消息信号中断",
+    "pinyin_syllables": [
+      "xiao",
+      "xi",
+      "xin",
+      "hao",
+      "zhong",
+      "duan"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-027",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "shurushuchuneicunguanlidanyuan",
+    "target_text": "输入输出内存管理单元",
+    "pinyin_syllables": [
+      "shu",
+      "ru",
+      "shu",
+      "chu",
+      "nei",
+      "cun",
+      "guan",
+      "li",
+      "dan",
+      "yuan"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-028",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "dizhizhuanhuanfuwu",
+    "target_text": "地址转换服务",
+    "pinyin_syllables": [
+      "di",
+      "zhi",
+      "zhuan",
+      "huan",
+      "fu",
+      "wu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-029",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "jinchengdizhikongjianbiaozhifu",
+    "target_text": "进程地址空间标识符",
+    "pinyin_syllables": [
+      "jin",
+      "cheng",
+      "di",
+      "zhi",
+      "kong",
+      "jian",
+      "biao",
+      "zhi",
+      "fu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-PCIE-030",
+    "category": "professional_vocabulary",
+    "domain": "PCIe/Firmware",
+    "scheme": "full_pinyin",
+    "input_sequence": "dangenshurushuchuxunihua",
+    "target_text": "单根输入输出虚拟化",
+    "pinyin_syllables": [
+      "dan",
+      "gen",
+      "shu",
+      "ru",
+      "shu",
+      "chu",
+      "xu",
+      "ni",
+      "hua"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-001",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "caozuoxitong",
+    "target_text": "操作系统",
+    "pinyin_syllables": [
+      "cao",
+      "zuo",
+      "xi",
+      "tong"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-002",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "shebeiqudong",
+    "target_text": "设备驱动",
+    "pinyin_syllables": [
+      "she",
+      "bei",
+      "qu",
+      "dong"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-003",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "neicunyingshe",
+    "target_text": "内存映射",
+    "pinyin_syllables": [
+      "nei",
+      "cun",
+      "ying",
+      "she"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-004",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "xunidizhi",
+    "target_text": "虚拟地址",
+    "pinyin_syllables": [
+      "xu",
+      "ni",
+      "di",
+      "zhi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-005",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "wulidizhi",
+    "target_text": "物理地址",
+    "pinyin_syllables": [
+      "wu",
+      "li",
+      "di",
+      "zhi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-006",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "yebiao",
+    "target_text": "页表",
+    "pinyin_syllables": [
+      "ye",
+      "biao"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-007",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "zhongduanchuli",
+    "target_text": "中断处理",
+    "pinyin_syllables": [
+      "zhong",
+      "duan",
+      "chu",
+      "li"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-008",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "duoxiancheng",
+    "target_text": "多线程",
+    "pinyin_syllables": [
+      "duo",
+      "xian",
+      "cheng"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-009",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "huchisuo",
+    "target_text": "互斥锁",
+    "pinyin_syllables": [
+      "hu",
+      "chi",
+      "suo"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-010",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "tiaojianbianliang",
+    "target_text": "条件变量",
+    "pinyin_syllables": [
+      "tiao",
+      "jian",
+      "bian",
+      "liang"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-011",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "shijianxunhuan",
+    "target_text": "事件循环",
+    "pinyin_syllables": [
+      "shi",
+      "jian",
+      "xun",
+      "huan"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-012",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "zhuangtaiji",
+    "target_text": "状态机",
+    "pinyin_syllables": [
+      "zhuang",
+      "tai",
+      "ji"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-013",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "huancunyizhixing",
+    "target_text": "缓存一致性",
+    "pinyin_syllables": [
+      "huan",
+      "cun",
+      "yi",
+      "zhi",
+      "xing"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-014",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "minglinghangzhongduan",
+    "target_text": "命令行终端",
+    "pinyin_syllables": [
+      "ming",
+      "ling",
+      "hang",
+      "zhong",
+      "duan"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-015",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "bianyiqi",
+    "target_text": "编译器",
+    "pinyin_syllables": [
+      "bian",
+      "yi",
+      "qi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-016",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "lianjieqi",
+    "target_text": "链接器",
+    "pinyin_syllables": [
+      "lian",
+      "jie",
+      "qi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-017",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "tiaoshiqi",
+    "target_text": "调试器",
+    "pinyin_syllables": [
+      "tiao",
+      "shi",
+      "qi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-018",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "rizhixitong",
+    "target_text": "日志系统",
+    "pinyin_syllables": [
+      "ri",
+      "zhi",
+      "xi",
+      "tong"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-SW-019",
+    "category": "professional_vocabulary",
+    "domain": "Software/OS",
+    "scheme": "full_pinyin",
+    "input_sequence": "cuowuhuifu",
+    "target_text": "错误恢复",
+    "pinyin_syllables": [
+      "cuo",
+      "wu",
+      "hui",
+      "fu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-001",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "houxuanchuangkou",
+    "target_text": "候选窗口",
+    "pinyin_syllables": [
+      "hou",
+      "xuan",
+      "chuang",
+      "kou"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-002",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "houxuanpaixu",
+    "target_text": "候选排序",
+    "pinyin_syllables": [
+      "hou",
+      "xuan",
+      "pai",
+      "xu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-003",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "pinyinqiefen",
+    "target_text": "拼音切分",
+    "pinyin_syllables": [
+      "pin",
+      "yin",
+      "qie",
+      "fen"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-004",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "yonghucipin",
+    "target_text": "用户词频",
+    "pinyin_syllables": [
+      "yong",
+      "hu",
+      "ci",
+      "pin"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-005",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "mohuyin",
+    "target_text": "模糊音",
+    "pinyin_syllables": [
+      "mo",
+      "hu",
+      "yin"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-006",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "lingshengmu",
+    "target_text": "零声母",
+    "pinyin_syllables": [
+      "ling",
+      "sheng",
+      "mu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-007",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "geyinfu",
+    "target_text": "隔音符",
+    "pinyin_syllables": [
+      "ge",
+      "yin",
+      "fu"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-008",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "zuhezifuchuan",
+    "target_text": "组合字符串",
+    "pinyin_syllables": [
+      "zu",
+      "he",
+      "zi",
+      "fu",
+      "chuan"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-009",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "wenbentijiao",
+    "target_text": "文本提交",
+    "pinyin_syllables": [
+      "wen",
+      "ben",
+      "ti",
+      "jiao"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "VOCAB-PRO-IME-010",
+    "category": "professional_vocabulary",
+    "domain": "Input Method",
+    "scheme": "full_pinyin",
+    "input_sequence": "guangbiaoweizhi",
+    "target_text": "光标位置",
+    "pinyin_syllables": [
+      "guang",
+      "biao",
+      "wei",
+      "zhi"
+    ],
+    "expected": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    },
+    "priority": "P1"
+  }
+]

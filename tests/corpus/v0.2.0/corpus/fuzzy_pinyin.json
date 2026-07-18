@@ -1,0 +1,302 @@
+[
+  {
+    "id": "FUZZY-Z-ZH-OFF",
+    "pair": "z/zh",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "中文",
+    "correct_input": "zhongwen",
+    "test_input": "zongwen",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-Z-ZH-ON",
+    "pair": "z/zh",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "中文",
+    "correct_input": "zhongwen",
+    "test_input": "zongwen",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-C-CH-OFF",
+    "pair": "c/ch",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "程序",
+    "correct_input": "chengxu",
+    "test_input": "cengxu",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-C-CH-ON",
+    "pair": "c/ch",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "程序",
+    "correct_input": "chengxu",
+    "test_input": "cengxu",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-S-SH-OFF",
+    "pair": "s/sh",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "事实",
+    "correct_input": "shishi",
+    "test_input": "sishi",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-S-SH-ON",
+    "pair": "s/sh",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "事实",
+    "correct_input": "shishi",
+    "test_input": "sishi",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-N-L-OFF",
+    "pair": "n/l",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "蓝色",
+    "correct_input": "lanse",
+    "test_input": "nanse",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-N-L-ON",
+    "pair": "n/l",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "蓝色",
+    "correct_input": "lanse",
+    "test_input": "nanse",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-F-H-OFF",
+    "pair": "f/h",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "方法",
+    "correct_input": "fangfa",
+    "test_input": "hangfa",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-F-H-ON",
+    "pair": "f/h",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "方法",
+    "correct_input": "fangfa",
+    "test_input": "hangfa",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-AN-ANG-OFF",
+    "pair": "an/ang",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "安全",
+    "correct_input": "anquan",
+    "test_input": "angquan",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-AN-ANG-ON",
+    "pair": "an/ang",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "安全",
+    "correct_input": "anquan",
+    "test_input": "angquan",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-EN-ENG-OFF",
+    "pair": "en/eng",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "正常",
+    "correct_input": "zhengchang",
+    "test_input": "zhenchang",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-EN-ENG-ON",
+    "pair": "en/eng",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "正常",
+    "correct_input": "zhengchang",
+    "test_input": "zhenchang",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-IN-ING-OFF",
+    "pair": "in/ing",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "星期",
+    "correct_input": "xingqi",
+    "test_input": "xinqi",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-IN-ING-ON",
+    "pair": "in/ing",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "星期",
+    "correct_input": "xingqi",
+    "test_input": "xinqi",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-IAN-IANG-OFF",
+    "pair": "ian/iang",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "健康",
+    "correct_input": "jiankang",
+    "test_input": "jiangkang",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-IAN-IANG-ON",
+    "pair": "ian/iang",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "健康",
+    "correct_input": "jiankang",
+    "test_input": "jiangkang",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "FUZZY-UAN-UANG-OFF",
+    "pair": "uan/uang",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": false,
+    "target": "关闭",
+    "correct_input": "guanbi",
+    "test_input": "guangbi",
+    "expected": {
+      "strict_distinction": true,
+      "target_not_required": true,
+      "no_crash": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "FUZZY-UAN-UANG-ON",
+    "pair": "uan/uang",
+    "scheme": "full_pinyin",
+    "fuzzy_enabled": true,
+    "target": "关闭",
+    "correct_input": "guanbi",
+    "test_input": "guangbi",
+    "expected": {
+      "target_should_be_reachable": true,
+      "recommended_max_rank": 5,
+      "no_crash": true
+    },
+    "priority": "P1"
+  }
+]

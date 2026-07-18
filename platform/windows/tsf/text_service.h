@@ -4,6 +4,7 @@
 #include "liteime/candidate_paging.h"
 #include "liteime/engine.h"
 #include "liteime/input_mode.h"
+#include "liteime/punctuation.h"
 #include "liteime/session.h"
 #include "liteime/symbols.h"
 #include "liteime_tsf_guids.h"
@@ -78,6 +79,7 @@ private:
     bool english_mode_{};
     WPARAM last_eaten_key_{};
     ShiftToggleState shift_toggle_;
+    PunctuationTransformer punctuation_;
 
     Engine engine_;
     SymbolIndex symbols_;

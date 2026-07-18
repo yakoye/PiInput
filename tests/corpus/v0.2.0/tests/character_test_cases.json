@@ -1,0 +1,51 @@
+[
+  {
+    "id": "CHAR-ASCII-001",
+    "input": "`1234567890-=",
+    "expected_same": true
+  },
+  {
+    "id": "CHAR-ASCII-002",
+    "input": "~!@#$%^&*()_+",
+    "expected_same": true
+  },
+  {
+    "id": "CHAR-ASCII-003",
+    "input": "[]\\;',./",
+    "expected_same": true
+  },
+  {
+    "id": "CHAR-ASCII-004",
+    "input": "{}|:\"<>?",
+    "expected_same": true
+  },
+  {
+    "id": "CHAR-UNICODE-001",
+    "input": "𠮷",
+    "expected": [
+      "single_visible_character",
+      "safe_caret",
+      "safe_delete"
+    ]
+  },
+  {
+    "id": "CHAR-UNICODE-002",
+    "input": "👨‍👩‍👧‍👦",
+    "expected": [
+      "grapheme_cluster_preserved",
+      "no_half_delete"
+    ]
+  },
+  {
+    "id": "CHAR-UNICODE-003",
+    "input": "é",
+    "expected": [
+      "combining_sequence_preserved"
+    ]
+  },
+  {
+    "id": "CHAR-PUNC-001",
+    "input": "，。；：？！“”‘’（）【】《》",
+    "expected_same": true
+  }
+]

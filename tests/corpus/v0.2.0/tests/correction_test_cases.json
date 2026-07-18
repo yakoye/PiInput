@@ -1,0 +1,4362 @@
+[
+  {
+    "id": "CORR-0001",
+    "seed_id": "COR-SEED-001",
+    "scheme": "full_pinyin",
+    "target_text": "你好",
+    "source_input": "nihao",
+    "mutated_input": "hihao",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "n",
+      "replacement": "h"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0002",
+    "seed_id": "COR-SEED-001",
+    "scheme": "full_pinyin",
+    "target_text": "你好",
+    "source_input": "nihao",
+    "mutated_input": "niao",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "h"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0003",
+    "seed_id": "COR-SEED-001",
+    "scheme": "full_pinyin",
+    "target_text": "你好",
+    "source_input": "nihao",
+    "mutated_input": "nihhao",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "h"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0004",
+    "seed_id": "COR-SEED-001",
+    "scheme": "full_pinyin",
+    "target_text": "你好",
+    "source_input": "nihao",
+    "mutated_input": "nhiao",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "ih"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0005",
+    "seed_id": "COR-SEED-002",
+    "scheme": "full_pinyin",
+    "target_text": "苹果",
+    "source_input": "pingguo",
+    "mutated_input": "oingguo",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "p",
+      "replacement": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0006",
+    "seed_id": "COR-SEED-002",
+    "scheme": "full_pinyin",
+    "target_text": "苹果",
+    "source_input": "pingguo",
+    "mutated_input": "pinguo",
+    "mutation_type": "missing_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "removed": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0007",
+    "seed_id": "COR-SEED-002",
+    "scheme": "full_pinyin",
+    "target_text": "苹果",
+    "source_input": "pingguo",
+    "mutated_input": "pinggguo",
+    "mutation_type": "repeated_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "repeated": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0008",
+    "seed_id": "COR-SEED-002",
+    "scheme": "full_pinyin",
+    "target_text": "苹果",
+    "source_input": "pingguo",
+    "mutated_input": "pignguo",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "pair": "ng"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0009",
+    "seed_id": "COR-SEED-003",
+    "scheme": "full_pinyin",
+    "target_text": "实际",
+    "source_input": "shiji",
+    "mutated_input": "whiji",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "s",
+      "replacement": "w"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0010",
+    "seed_id": "COR-SEED-003",
+    "scheme": "full_pinyin",
+    "target_text": "实际",
+    "source_input": "shiji",
+    "mutated_input": "shji",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "i"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0011",
+    "seed_id": "COR-SEED-003",
+    "scheme": "full_pinyin",
+    "target_text": "实际",
+    "source_input": "shiji",
+    "mutated_input": "shiiji",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "i"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0012",
+    "seed_id": "COR-SEED-003",
+    "scheme": "full_pinyin",
+    "target_text": "实际",
+    "source_input": "shiji",
+    "mutated_input": "sihji",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "hi"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0013",
+    "seed_id": "COR-SEED-004",
+    "scheme": "full_pinyin",
+    "target_text": "中国",
+    "source_input": "zhongguo",
+    "mutated_input": "ahongguo",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "z",
+      "replacement": "a"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0014",
+    "seed_id": "COR-SEED-004",
+    "scheme": "full_pinyin",
+    "target_text": "中国",
+    "source_input": "zhongguo",
+    "mutated_input": "zhonguo",
+    "mutation_type": "missing_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "removed": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0015",
+    "seed_id": "COR-SEED-004",
+    "scheme": "full_pinyin",
+    "target_text": "中国",
+    "source_input": "zhongguo",
+    "mutated_input": "zhonggguo",
+    "mutation_type": "repeated_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "repeated": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0016",
+    "seed_id": "COR-SEED-004",
+    "scheme": "full_pinyin",
+    "target_text": "中国",
+    "source_input": "zhongguo",
+    "mutated_input": "zhognguo",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "pair": "ng"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0017",
+    "seed_id": "COR-SEED-005",
+    "scheme": "full_pinyin",
+    "target_text": "我今天下午",
+    "source_input": "wojintianxiawu",
+    "mutated_input": "qojintianxiawu",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "w",
+      "replacement": "q"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0018",
+    "seed_id": "COR-SEED-005",
+    "scheme": "full_pinyin",
+    "target_text": "我今天下午",
+    "source_input": "wojintianxiawu",
+    "mutated_input": "wojintinxiawu",
+    "mutation_type": "missing_key",
+    "mutation_index": 7,
+    "mutation_detail": {
+      "removed": "a"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0019",
+    "seed_id": "COR-SEED-005",
+    "scheme": "full_pinyin",
+    "target_text": "我今天下午",
+    "source_input": "wojintianxiawu",
+    "mutated_input": "wojintiaanxiawu",
+    "mutation_type": "repeated_key",
+    "mutation_index": 7,
+    "mutation_detail": {
+      "repeated": "a"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0020",
+    "seed_id": "COR-SEED-005",
+    "scheme": "full_pinyin",
+    "target_text": "我今天下午",
+    "source_input": "wojintianxiawu",
+    "mutated_input": "wojintainxiawu",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 6,
+    "mutation_detail": {
+      "pair": "ia"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0021",
+    "seed_id": "COR-SEED-006",
+    "scheme": "full_pinyin",
+    "target_text": "输入法",
+    "source_input": "shurufa",
+    "mutated_input": "whurufa",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "s",
+      "replacement": "w"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0022",
+    "seed_id": "COR-SEED-006",
+    "scheme": "full_pinyin",
+    "target_text": "输入法",
+    "source_input": "shurufa",
+    "mutated_input": "shuufa",
+    "mutation_type": "missing_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "removed": "r"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0023",
+    "seed_id": "COR-SEED-006",
+    "scheme": "full_pinyin",
+    "target_text": "输入法",
+    "source_input": "shurufa",
+    "mutated_input": "shurrufa",
+    "mutation_type": "repeated_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "repeated": "r"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0024",
+    "seed_id": "COR-SEED-006",
+    "scheme": "full_pinyin",
+    "target_text": "输入法",
+    "source_input": "shurufa",
+    "mutated_input": "shruufa",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "pair": "ur"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0025",
+    "seed_id": "COR-SEED-007",
+    "scheme": "full_pinyin",
+    "target_text": "候选窗口",
+    "source_input": "houxuanchuangkou",
+    "mutated_input": "youxuanchuangkou",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "h",
+      "replacement": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0026",
+    "seed_id": "COR-SEED-007",
+    "scheme": "full_pinyin",
+    "target_text": "候选窗口",
+    "source_input": "houxuanchuangkou",
+    "mutated_input": "houxuancuangkou",
+    "mutation_type": "missing_key",
+    "mutation_index": 8,
+    "mutation_detail": {
+      "removed": "h"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0027",
+    "seed_id": "COR-SEED-007",
+    "scheme": "full_pinyin",
+    "target_text": "候选窗口",
+    "source_input": "houxuanchuangkou",
+    "mutated_input": "houxuanchhuangkou",
+    "mutation_type": "repeated_key",
+    "mutation_index": 8,
+    "mutation_detail": {
+      "repeated": "h"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0028",
+    "seed_id": "COR-SEED-007",
+    "scheme": "full_pinyin",
+    "target_text": "候选窗口",
+    "source_input": "houxuanchuangkou",
+    "mutated_input": "houxuanhcuangkou",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 7,
+    "mutation_detail": {
+      "pair": "ch"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0029",
+    "seed_id": "COR-SEED-008",
+    "scheme": "full_pinyin",
+    "target_text": "拼音方案",
+    "source_input": "pinyinfangan",
+    "mutated_input": "oinyinfangan",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "p",
+      "replacement": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0030",
+    "seed_id": "COR-SEED-008",
+    "scheme": "full_pinyin",
+    "target_text": "拼音方案",
+    "source_input": "pinyinfangan",
+    "mutated_input": "pinyinangan",
+    "mutation_type": "missing_key",
+    "mutation_index": 6,
+    "mutation_detail": {
+      "removed": "f"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0031",
+    "seed_id": "COR-SEED-008",
+    "scheme": "full_pinyin",
+    "target_text": "拼音方案",
+    "source_input": "pinyinfangan",
+    "mutated_input": "pinyinffangan",
+    "mutation_type": "repeated_key",
+    "mutation_index": 6,
+    "mutation_detail": {
+      "repeated": "f"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0032",
+    "seed_id": "COR-SEED-008",
+    "scheme": "full_pinyin",
+    "target_text": "拼音方案",
+    "source_input": "pinyinfangan",
+    "mutated_input": "pinyifnangan",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 5,
+    "mutation_detail": {
+      "pair": "nf"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0033",
+    "seed_id": "COR-SEED-009",
+    "scheme": "full_pinyin",
+    "target_text": "软件开发",
+    "source_input": "ruanjiankaifa",
+    "mutated_input": "euanjiankaifa",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "r",
+      "replacement": "e"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0034",
+    "seed_id": "COR-SEED-009",
+    "scheme": "full_pinyin",
+    "target_text": "软件开发",
+    "source_input": "ruanjiankaifa",
+    "mutated_input": "ruanjinkaifa",
+    "mutation_type": "missing_key",
+    "mutation_index": 6,
+    "mutation_detail": {
+      "removed": "a"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0035",
+    "seed_id": "COR-SEED-009",
+    "scheme": "full_pinyin",
+    "target_text": "软件开发",
+    "source_input": "ruanjiankaifa",
+    "mutated_input": "ruanjiaankaifa",
+    "mutation_type": "repeated_key",
+    "mutation_index": 6,
+    "mutation_detail": {
+      "repeated": "a"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0036",
+    "seed_id": "COR-SEED-009",
+    "scheme": "full_pinyin",
+    "target_text": "软件开发",
+    "source_input": "ruanjiankaifa",
+    "mutated_input": "ruanjainkaifa",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 5,
+    "mutation_detail": {
+      "pair": "ia"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0037",
+    "seed_id": "COR-SEED-010",
+    "scheme": "full_pinyin",
+    "target_text": "数据结构",
+    "source_input": "shujujiegou",
+    "mutated_input": "whujujiegou",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "s",
+      "replacement": "w"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0038",
+    "seed_id": "COR-SEED-010",
+    "scheme": "full_pinyin",
+    "target_text": "数据结构",
+    "source_input": "shujujiegou",
+    "mutated_input": "shujuiegou",
+    "mutation_type": "missing_key",
+    "mutation_index": 5,
+    "mutation_detail": {
+      "removed": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0039",
+    "seed_id": "COR-SEED-010",
+    "scheme": "full_pinyin",
+    "target_text": "数据结构",
+    "source_input": "shujujiegou",
+    "mutated_input": "shujujjiegou",
+    "mutation_type": "repeated_key",
+    "mutation_index": 5,
+    "mutation_detail": {
+      "repeated": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0040",
+    "seed_id": "COR-SEED-010",
+    "scheme": "full_pinyin",
+    "target_text": "数据结构",
+    "source_input": "shujujiegou",
+    "mutated_input": "shujjuiegou",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "pair": "uj"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0041",
+    "seed_id": "COR-SEED-011",
+    "scheme": "full_pinyin",
+    "target_text": "固件",
+    "source_input": "gujian",
+    "mutated_input": "tujian",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "g",
+      "replacement": "t"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0042",
+    "seed_id": "COR-SEED-011",
+    "scheme": "full_pinyin",
+    "target_text": "固件",
+    "source_input": "gujian",
+    "mutated_input": "gujan",
+    "mutation_type": "missing_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "removed": "i"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0043",
+    "seed_id": "COR-SEED-011",
+    "scheme": "full_pinyin",
+    "target_text": "固件",
+    "source_input": "gujian",
+    "mutated_input": "gujiian",
+    "mutation_type": "repeated_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "repeated": "i"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0044",
+    "seed_id": "COR-SEED-011",
+    "scheme": "full_pinyin",
+    "target_text": "固件",
+    "source_input": "gujian",
+    "mutated_input": "guijan",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "pair": "ji"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0045",
+    "seed_id": "COR-SEED-012",
+    "scheme": "full_pinyin",
+    "target_text": "寄存器",
+    "source_input": "jicunqi",
+    "mutated_input": "uicunqi",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "j",
+      "replacement": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0046",
+    "seed_id": "COR-SEED-012",
+    "scheme": "full_pinyin",
+    "target_text": "寄存器",
+    "source_input": "jicunqi",
+    "mutated_input": "jicnqi",
+    "mutation_type": "missing_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "removed": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0047",
+    "seed_id": "COR-SEED-012",
+    "scheme": "full_pinyin",
+    "target_text": "寄存器",
+    "source_input": "jicunqi",
+    "mutated_input": "jicuunqi",
+    "mutation_type": "repeated_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "repeated": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0048",
+    "seed_id": "COR-SEED-012",
+    "scheme": "full_pinyin",
+    "target_text": "寄存器",
+    "source_input": "jicunqi",
+    "mutated_input": "jiucnqi",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "pair": "cu"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0049",
+    "seed_id": "COR-SEED-013",
+    "scheme": "full_pinyin",
+    "target_text": "配置空间",
+    "source_input": "peizhikongjian",
+    "mutated_input": "oeizhikongjian",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "p",
+      "replacement": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0050",
+    "seed_id": "COR-SEED-013",
+    "scheme": "full_pinyin",
+    "target_text": "配置空间",
+    "source_input": "peizhikongjian",
+    "mutated_input": "peizhikngjian",
+    "mutation_type": "missing_key",
+    "mutation_index": 7,
+    "mutation_detail": {
+      "removed": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0051",
+    "seed_id": "COR-SEED-013",
+    "scheme": "full_pinyin",
+    "target_text": "配置空间",
+    "source_input": "peizhikongjian",
+    "mutated_input": "peizhikoongjian",
+    "mutation_type": "repeated_key",
+    "mutation_index": 7,
+    "mutation_detail": {
+      "repeated": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0052",
+    "seed_id": "COR-SEED-013",
+    "scheme": "full_pinyin",
+    "target_text": "配置空间",
+    "source_input": "peizhikongjian",
+    "mutated_input": "peizhiokngjian",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 6,
+    "mutation_detail": {
+      "pair": "ko"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0053",
+    "seed_id": "COR-SEED-014",
+    "scheme": "full_pinyin",
+    "target_text": "链路状态机",
+    "source_input": "lianluzhuangtaiji",
+    "mutated_input": "oianluzhuangtaiji",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "l",
+      "replacement": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0054",
+    "seed_id": "COR-SEED-014",
+    "scheme": "full_pinyin",
+    "target_text": "链路状态机",
+    "source_input": "lianluzhuangtaiji",
+    "mutated_input": "lianluzhangtaiji",
+    "mutation_type": "missing_key",
+    "mutation_index": 8,
+    "mutation_detail": {
+      "removed": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0055",
+    "seed_id": "COR-SEED-014",
+    "scheme": "full_pinyin",
+    "target_text": "链路状态机",
+    "source_input": "lianluzhuangtaiji",
+    "mutated_input": "lianluzhuuangtaiji",
+    "mutation_type": "repeated_key",
+    "mutation_index": 8,
+    "mutation_detail": {
+      "repeated": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0056",
+    "seed_id": "COR-SEED-014",
+    "scheme": "full_pinyin",
+    "target_text": "链路状态机",
+    "source_input": "lianluzhuangtaiji",
+    "mutated_input": "lianluzuhangtaiji",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 7,
+    "mutation_detail": {
+      "pair": "hu"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0057",
+    "seed_id": "COR-SEED-015",
+    "scheme": "full_pinyin",
+    "target_text": "中断",
+    "source_input": "zhongduan",
+    "mutated_input": "ahongduan",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "z",
+      "replacement": "a"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0058",
+    "seed_id": "COR-SEED-015",
+    "scheme": "full_pinyin",
+    "target_text": "中断",
+    "source_input": "zhongduan",
+    "mutated_input": "zhonduan",
+    "mutation_type": "missing_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "removed": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0059",
+    "seed_id": "COR-SEED-015",
+    "scheme": "full_pinyin",
+    "target_text": "中断",
+    "source_input": "zhongduan",
+    "mutated_input": "zhonggduan",
+    "mutation_type": "repeated_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "repeated": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0060",
+    "seed_id": "COR-SEED-015",
+    "scheme": "full_pinyin",
+    "target_text": "中断",
+    "source_input": "zhongduan",
+    "mutated_input": "zhognduan",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "pair": "ng"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0061",
+    "seed_id": "COR-SEED-016",
+    "scheme": "full_pinyin",
+    "target_text": "文件",
+    "source_input": "wenjian",
+    "mutated_input": "qenjian",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "w",
+      "replacement": "q"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0062",
+    "seed_id": "COR-SEED-016",
+    "scheme": "full_pinyin",
+    "target_text": "文件",
+    "source_input": "wenjian",
+    "mutated_input": "wenian",
+    "mutation_type": "missing_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "removed": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0063",
+    "seed_id": "COR-SEED-016",
+    "scheme": "full_pinyin",
+    "target_text": "文件",
+    "source_input": "wenjian",
+    "mutated_input": "wenjjian",
+    "mutation_type": "repeated_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "repeated": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0064",
+    "seed_id": "COR-SEED-016",
+    "scheme": "full_pinyin",
+    "target_text": "文件",
+    "source_input": "wenjian",
+    "mutated_input": "wejnian",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "pair": "nj"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0065",
+    "seed_id": "COR-SEED-017",
+    "scheme": "full_pinyin",
+    "target_text": "编译",
+    "source_input": "bianyi",
+    "mutated_input": "gianyi",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "b",
+      "replacement": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0066",
+    "seed_id": "COR-SEED-017",
+    "scheme": "full_pinyin",
+    "target_text": "编译",
+    "source_input": "bianyi",
+    "mutated_input": "biayi",
+    "mutation_type": "missing_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "removed": "n"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0067",
+    "seed_id": "COR-SEED-017",
+    "scheme": "full_pinyin",
+    "target_text": "编译",
+    "source_input": "bianyi",
+    "mutated_input": "biannyi",
+    "mutation_type": "repeated_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "repeated": "n"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0068",
+    "seed_id": "COR-SEED-017",
+    "scheme": "full_pinyin",
+    "target_text": "编译",
+    "source_input": "bianyi",
+    "mutated_input": "binayi",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "pair": "an"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0069",
+    "seed_id": "COR-SEED-018",
+    "scheme": "full_pinyin",
+    "target_text": "协议",
+    "source_input": "xieyi",
+    "mutated_input": "sieyi",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "x",
+      "replacement": "s"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0070",
+    "seed_id": "COR-SEED-018",
+    "scheme": "full_pinyin",
+    "target_text": "协议",
+    "source_input": "xieyi",
+    "mutated_input": "xiyi",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "e"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0071",
+    "seed_id": "COR-SEED-018",
+    "scheme": "full_pinyin",
+    "target_text": "协议",
+    "source_input": "xieyi",
+    "mutated_input": "xieeyi",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "e"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0072",
+    "seed_id": "COR-SEED-018",
+    "scheme": "full_pinyin",
+    "target_text": "协议",
+    "source_input": "xieyi",
+    "mutated_input": "xeiyi",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "ie"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0073",
+    "seed_id": "COR-SEED-019",
+    "scheme": "full_pinyin",
+    "target_text": "数据",
+    "source_input": "shuju",
+    "mutated_input": "whuju",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "s",
+      "replacement": "w"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0074",
+    "seed_id": "COR-SEED-019",
+    "scheme": "full_pinyin",
+    "target_text": "数据",
+    "source_input": "shuju",
+    "mutated_input": "shju",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0075",
+    "seed_id": "COR-SEED-019",
+    "scheme": "full_pinyin",
+    "target_text": "数据",
+    "source_input": "shuju",
+    "mutated_input": "shuuju",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0076",
+    "seed_id": "COR-SEED-019",
+    "scheme": "full_pinyin",
+    "target_text": "数据",
+    "source_input": "shuju",
+    "mutated_input": "suhju",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "hu"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0077",
+    "seed_id": "COR-SEED-020",
+    "scheme": "full_pinyin",
+    "target_text": "恢复",
+    "source_input": "huifu",
+    "mutated_input": "yuifu",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "h",
+      "replacement": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0078",
+    "seed_id": "COR-SEED-020",
+    "scheme": "full_pinyin",
+    "target_text": "恢复",
+    "source_input": "huifu",
+    "mutated_input": "hufu",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "i"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0079",
+    "seed_id": "COR-SEED-020",
+    "scheme": "full_pinyin",
+    "target_text": "恢复",
+    "source_input": "huifu",
+    "mutated_input": "huiifu",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "i"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0080",
+    "seed_id": "COR-SEED-020",
+    "scheme": "full_pinyin",
+    "target_text": "恢复",
+    "source_input": "huifu",
+    "mutated_input": "hiufu",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "ui"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0081",
+    "seed_id": "COR-XH-SEED-001",
+    "scheme": "xiaohe",
+    "target_text": "你好",
+    "source_input": "nihc",
+    "mutated_input": "hihc",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "n",
+      "replacement": "h"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0082",
+    "seed_id": "COR-XH-SEED-001",
+    "scheme": "xiaohe",
+    "target_text": "你好",
+    "source_input": "nihc",
+    "mutated_input": "nic",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "h"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0083",
+    "seed_id": "COR-XH-SEED-001",
+    "scheme": "xiaohe",
+    "target_text": "你好",
+    "source_input": "nihc",
+    "mutated_input": "nihhc",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "h"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0084",
+    "seed_id": "COR-XH-SEED-001",
+    "scheme": "xiaohe",
+    "target_text": "你好",
+    "source_input": "nihc",
+    "mutated_input": "nhic",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "ih"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0085",
+    "seed_id": "COR-XH-SEED-002",
+    "scheme": "xiaohe",
+    "target_text": "苹果",
+    "source_input": "pkgo",
+    "mutated_input": "okgo",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "p",
+      "replacement": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0086",
+    "seed_id": "COR-XH-SEED-002",
+    "scheme": "xiaohe",
+    "target_text": "苹果",
+    "source_input": "pkgo",
+    "mutated_input": "pko",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0087",
+    "seed_id": "COR-XH-SEED-002",
+    "scheme": "xiaohe",
+    "target_text": "苹果",
+    "source_input": "pkgo",
+    "mutated_input": "pkggo",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0088",
+    "seed_id": "COR-XH-SEED-002",
+    "scheme": "xiaohe",
+    "target_text": "苹果",
+    "source_input": "pkgo",
+    "mutated_input": "pgko",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "kg"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0089",
+    "seed_id": "COR-XH-SEED-003",
+    "scheme": "xiaohe",
+    "target_text": "实际",
+    "source_input": "uiji",
+    "mutated_input": "yiji",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "u",
+      "replacement": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0090",
+    "seed_id": "COR-XH-SEED-003",
+    "scheme": "xiaohe",
+    "target_text": "实际",
+    "source_input": "uiji",
+    "mutated_input": "uii",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0091",
+    "seed_id": "COR-XH-SEED-003",
+    "scheme": "xiaohe",
+    "target_text": "实际",
+    "source_input": "uiji",
+    "mutated_input": "uijji",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0092",
+    "seed_id": "COR-XH-SEED-003",
+    "scheme": "xiaohe",
+    "target_text": "实际",
+    "source_input": "uiji",
+    "mutated_input": "ujii",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "ij"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0093",
+    "seed_id": "COR-XH-SEED-004",
+    "scheme": "xiaohe",
+    "target_text": "中国",
+    "source_input": "vsgo",
+    "mutated_input": "fsgo",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "v",
+      "replacement": "f"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0094",
+    "seed_id": "COR-XH-SEED-004",
+    "scheme": "xiaohe",
+    "target_text": "中国",
+    "source_input": "vsgo",
+    "mutated_input": "vso",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0095",
+    "seed_id": "COR-XH-SEED-004",
+    "scheme": "xiaohe",
+    "target_text": "中国",
+    "source_input": "vsgo",
+    "mutated_input": "vsggo",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0096",
+    "seed_id": "COR-XH-SEED-004",
+    "scheme": "xiaohe",
+    "target_text": "中国",
+    "source_input": "vsgo",
+    "mutated_input": "vgso",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "sg"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0097",
+    "seed_id": "COR-XH-SEED-005",
+    "scheme": "xiaohe",
+    "target_text": "我今天下午",
+    "source_input": "wojbtmxxwu",
+    "mutated_input": "qojbtmxxwu",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "w",
+      "replacement": "q"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0098",
+    "seed_id": "COR-XH-SEED-005",
+    "scheme": "xiaohe",
+    "target_text": "我今天下午",
+    "source_input": "wojbtmxxwu",
+    "mutated_input": "wojbtxxwu",
+    "mutation_type": "missing_key",
+    "mutation_index": 5,
+    "mutation_detail": {
+      "removed": "m"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0099",
+    "seed_id": "COR-XH-SEED-005",
+    "scheme": "xiaohe",
+    "target_text": "我今天下午",
+    "source_input": "wojbtmxxwu",
+    "mutated_input": "wojbtmmxxwu",
+    "mutation_type": "repeated_key",
+    "mutation_index": 5,
+    "mutation_detail": {
+      "repeated": "m"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0100",
+    "seed_id": "COR-XH-SEED-005",
+    "scheme": "xiaohe",
+    "target_text": "我今天下午",
+    "source_input": "wojbtmxxwu",
+    "mutated_input": "wojbmtxxwu",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "pair": "tm"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0101",
+    "seed_id": "COR-XH-SEED-006",
+    "scheme": "xiaohe",
+    "target_text": "输入法",
+    "source_input": "uurufa",
+    "mutated_input": "yurufa",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "u",
+      "replacement": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0102",
+    "seed_id": "COR-XH-SEED-006",
+    "scheme": "xiaohe",
+    "target_text": "输入法",
+    "source_input": "uurufa",
+    "mutated_input": "uurfa",
+    "mutation_type": "missing_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "removed": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0103",
+    "seed_id": "COR-XH-SEED-006",
+    "scheme": "xiaohe",
+    "target_text": "输入法",
+    "source_input": "uurufa",
+    "mutated_input": "uuruufa",
+    "mutation_type": "repeated_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "repeated": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0104",
+    "seed_id": "COR-XH-SEED-006",
+    "scheme": "xiaohe",
+    "target_text": "输入法",
+    "source_input": "uurufa",
+    "mutated_input": "uuurfa",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "pair": "ru"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0105",
+    "seed_id": "COR-XH-SEED-007",
+    "scheme": "xiaohe",
+    "target_text": "候选窗口",
+    "source_input": "hzxrilkz",
+    "mutated_input": "yzxrilkz",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "h",
+      "replacement": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0106",
+    "seed_id": "COR-XH-SEED-007",
+    "scheme": "xiaohe",
+    "target_text": "候选窗口",
+    "source_input": "hzxrilkz",
+    "mutated_input": "hzxrlkz",
+    "mutation_type": "missing_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "removed": "i"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0107",
+    "seed_id": "COR-XH-SEED-007",
+    "scheme": "xiaohe",
+    "target_text": "候选窗口",
+    "source_input": "hzxrilkz",
+    "mutated_input": "hzxriilkz",
+    "mutation_type": "repeated_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "repeated": "i"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0108",
+    "seed_id": "COR-XH-SEED-007",
+    "scheme": "xiaohe",
+    "target_text": "候选窗口",
+    "source_input": "hzxrilkz",
+    "mutated_input": "hzxirlkz",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "pair": "ri"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0109",
+    "seed_id": "COR-XH-SEED-008",
+    "scheme": "xiaohe",
+    "target_text": "拼音方案",
+    "source_input": "pbybfhan",
+    "mutated_input": "obybfhan",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "p",
+      "replacement": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0110",
+    "seed_id": "COR-XH-SEED-008",
+    "scheme": "xiaohe",
+    "target_text": "拼音方案",
+    "source_input": "pbybfhan",
+    "mutated_input": "pbybhan",
+    "mutation_type": "missing_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "removed": "f"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0111",
+    "seed_id": "COR-XH-SEED-008",
+    "scheme": "xiaohe",
+    "target_text": "拼音方案",
+    "source_input": "pbybfhan",
+    "mutated_input": "pbybffhan",
+    "mutation_type": "repeated_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "repeated": "f"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0112",
+    "seed_id": "COR-XH-SEED-008",
+    "scheme": "xiaohe",
+    "target_text": "拼音方案",
+    "source_input": "pbybfhan",
+    "mutated_input": "pbyfbhan",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "pair": "bf"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0113",
+    "seed_id": "COR-XH-SEED-009",
+    "scheme": "xiaohe",
+    "target_text": "软件开发",
+    "source_input": "rrjmkdfa",
+    "mutated_input": "erjmkdfa",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "r",
+      "replacement": "e"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0114",
+    "seed_id": "COR-XH-SEED-009",
+    "scheme": "xiaohe",
+    "target_text": "软件开发",
+    "source_input": "rrjmkdfa",
+    "mutated_input": "rrjmdfa",
+    "mutation_type": "missing_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "removed": "k"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0115",
+    "seed_id": "COR-XH-SEED-009",
+    "scheme": "xiaohe",
+    "target_text": "软件开发",
+    "source_input": "rrjmkdfa",
+    "mutated_input": "rrjmkkdfa",
+    "mutation_type": "repeated_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "repeated": "k"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0116",
+    "seed_id": "COR-XH-SEED-009",
+    "scheme": "xiaohe",
+    "target_text": "软件开发",
+    "source_input": "rrjmkdfa",
+    "mutated_input": "rrjkmdfa",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "pair": "mk"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0117",
+    "seed_id": "COR-XH-SEED-010",
+    "scheme": "xiaohe",
+    "target_text": "数据结构",
+    "source_input": "uujujpgz",
+    "mutated_input": "yujujpgz",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "u",
+      "replacement": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0118",
+    "seed_id": "COR-XH-SEED-010",
+    "scheme": "xiaohe",
+    "target_text": "数据结构",
+    "source_input": "uujujpgz",
+    "mutated_input": "uujupgz",
+    "mutation_type": "missing_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "removed": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0119",
+    "seed_id": "COR-XH-SEED-010",
+    "scheme": "xiaohe",
+    "target_text": "数据结构",
+    "source_input": "uujujpgz",
+    "mutated_input": "uujujjpgz",
+    "mutation_type": "repeated_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "repeated": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0120",
+    "seed_id": "COR-XH-SEED-010",
+    "scheme": "xiaohe",
+    "target_text": "数据结构",
+    "source_input": "uujujpgz",
+    "mutated_input": "uujjupgz",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "pair": "uj"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0121",
+    "seed_id": "COR-XH-SEED-011",
+    "scheme": "xiaohe",
+    "target_text": "固件",
+    "source_input": "gujm",
+    "mutated_input": "tujm",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "g",
+      "replacement": "t"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0122",
+    "seed_id": "COR-XH-SEED-011",
+    "scheme": "xiaohe",
+    "target_text": "固件",
+    "source_input": "gujm",
+    "mutated_input": "gum",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0123",
+    "seed_id": "COR-XH-SEED-011",
+    "scheme": "xiaohe",
+    "target_text": "固件",
+    "source_input": "gujm",
+    "mutated_input": "gujjm",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0124",
+    "seed_id": "COR-XH-SEED-011",
+    "scheme": "xiaohe",
+    "target_text": "固件",
+    "source_input": "gujm",
+    "mutated_input": "gjum",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "uj"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0125",
+    "seed_id": "COR-XH-SEED-012",
+    "scheme": "xiaohe",
+    "target_text": "寄存器",
+    "source_input": "jicyqi",
+    "mutated_input": "uicyqi",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "j",
+      "replacement": "u"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0126",
+    "seed_id": "COR-XH-SEED-012",
+    "scheme": "xiaohe",
+    "target_text": "寄存器",
+    "source_input": "jicyqi",
+    "mutated_input": "jicqi",
+    "mutation_type": "missing_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "removed": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0127",
+    "seed_id": "COR-XH-SEED-012",
+    "scheme": "xiaohe",
+    "target_text": "寄存器",
+    "source_input": "jicyqi",
+    "mutated_input": "jicyyqi",
+    "mutation_type": "repeated_key",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "repeated": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0128",
+    "seed_id": "COR-XH-SEED-012",
+    "scheme": "xiaohe",
+    "target_text": "寄存器",
+    "source_input": "jicyqi",
+    "mutated_input": "jiycqi",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "pair": "cy"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0129",
+    "seed_id": "COR-XH-SEED-013",
+    "scheme": "xiaohe",
+    "target_text": "配置空间",
+    "source_input": "pwviksjm",
+    "mutated_input": "owviksjm",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "p",
+      "replacement": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0130",
+    "seed_id": "COR-XH-SEED-013",
+    "scheme": "xiaohe",
+    "target_text": "配置空间",
+    "source_input": "pwviksjm",
+    "mutated_input": "pwvisjm",
+    "mutation_type": "missing_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "removed": "k"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0131",
+    "seed_id": "COR-XH-SEED-013",
+    "scheme": "xiaohe",
+    "target_text": "配置空间",
+    "source_input": "pwviksjm",
+    "mutated_input": "pwvikksjm",
+    "mutation_type": "repeated_key",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "repeated": "k"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0132",
+    "seed_id": "COR-XH-SEED-013",
+    "scheme": "xiaohe",
+    "target_text": "配置空间",
+    "source_input": "pwviksjm",
+    "mutated_input": "pwvkisjm",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 3,
+    "mutation_detail": {
+      "pair": "ik"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0133",
+    "seed_id": "COR-XH-SEED-014",
+    "scheme": "xiaohe",
+    "target_text": "链路状态机",
+    "source_input": "lmluvltdji",
+    "mutated_input": "omluvltdji",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "l",
+      "replacement": "o"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0134",
+    "seed_id": "COR-XH-SEED-014",
+    "scheme": "xiaohe",
+    "target_text": "链路状态机",
+    "source_input": "lmluvltdji",
+    "mutated_input": "lmluvtdji",
+    "mutation_type": "missing_key",
+    "mutation_index": 5,
+    "mutation_detail": {
+      "removed": "l"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0135",
+    "seed_id": "COR-XH-SEED-014",
+    "scheme": "xiaohe",
+    "target_text": "链路状态机",
+    "source_input": "lmluvltdji",
+    "mutated_input": "lmluvlltdji",
+    "mutation_type": "repeated_key",
+    "mutation_index": 5,
+    "mutation_detail": {
+      "repeated": "l"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0136",
+    "seed_id": "COR-XH-SEED-014",
+    "scheme": "xiaohe",
+    "target_text": "链路状态机",
+    "source_input": "lmluvltdji",
+    "mutated_input": "lmlulvtdji",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 4,
+    "mutation_detail": {
+      "pair": "vl"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0137",
+    "seed_id": "COR-XH-SEED-015",
+    "scheme": "xiaohe",
+    "target_text": "中断",
+    "source_input": "vsdr",
+    "mutated_input": "fsdr",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "v",
+      "replacement": "f"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0138",
+    "seed_id": "COR-XH-SEED-015",
+    "scheme": "xiaohe",
+    "target_text": "中断",
+    "source_input": "vsdr",
+    "mutated_input": "vsr",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "d"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0139",
+    "seed_id": "COR-XH-SEED-015",
+    "scheme": "xiaohe",
+    "target_text": "中断",
+    "source_input": "vsdr",
+    "mutated_input": "vsddr",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "d"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0140",
+    "seed_id": "COR-XH-SEED-015",
+    "scheme": "xiaohe",
+    "target_text": "中断",
+    "source_input": "vsdr",
+    "mutated_input": "vdsr",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "sd"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0141",
+    "seed_id": "COR-XH-SEED-016",
+    "scheme": "xiaohe",
+    "target_text": "文件",
+    "source_input": "wfjm",
+    "mutated_input": "qfjm",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "w",
+      "replacement": "q"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0142",
+    "seed_id": "COR-XH-SEED-016",
+    "scheme": "xiaohe",
+    "target_text": "文件",
+    "source_input": "wfjm",
+    "mutated_input": "wfm",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0143",
+    "seed_id": "COR-XH-SEED-016",
+    "scheme": "xiaohe",
+    "target_text": "文件",
+    "source_input": "wfjm",
+    "mutated_input": "wfjjm",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0144",
+    "seed_id": "COR-XH-SEED-016",
+    "scheme": "xiaohe",
+    "target_text": "文件",
+    "source_input": "wfjm",
+    "mutated_input": "wjfm",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "fj"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0145",
+    "seed_id": "COR-XH-SEED-017",
+    "scheme": "xiaohe",
+    "target_text": "编译",
+    "source_input": "bmyi",
+    "mutated_input": "gmyi",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "b",
+      "replacement": "g"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0146",
+    "seed_id": "COR-XH-SEED-017",
+    "scheme": "xiaohe",
+    "target_text": "编译",
+    "source_input": "bmyi",
+    "mutated_input": "bmi",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0147",
+    "seed_id": "COR-XH-SEED-017",
+    "scheme": "xiaohe",
+    "target_text": "编译",
+    "source_input": "bmyi",
+    "mutated_input": "bmyyi",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0148",
+    "seed_id": "COR-XH-SEED-017",
+    "scheme": "xiaohe",
+    "target_text": "编译",
+    "source_input": "bmyi",
+    "mutated_input": "bymi",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "my"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0149",
+    "seed_id": "COR-XH-SEED-018",
+    "scheme": "xiaohe",
+    "target_text": "协议",
+    "source_input": "xpyi",
+    "mutated_input": "spyi",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "x",
+      "replacement": "s"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0150",
+    "seed_id": "COR-XH-SEED-018",
+    "scheme": "xiaohe",
+    "target_text": "协议",
+    "source_input": "xpyi",
+    "mutated_input": "xpi",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0151",
+    "seed_id": "COR-XH-SEED-018",
+    "scheme": "xiaohe",
+    "target_text": "协议",
+    "source_input": "xpyi",
+    "mutated_input": "xpyyi",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0152",
+    "seed_id": "COR-XH-SEED-018",
+    "scheme": "xiaohe",
+    "target_text": "协议",
+    "source_input": "xpyi",
+    "mutated_input": "xypi",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "py"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0153",
+    "seed_id": "COR-XH-SEED-019",
+    "scheme": "xiaohe",
+    "target_text": "数据",
+    "source_input": "uuju",
+    "mutated_input": "yuju",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "u",
+      "replacement": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0154",
+    "seed_id": "COR-XH-SEED-019",
+    "scheme": "xiaohe",
+    "target_text": "数据",
+    "source_input": "uuju",
+    "mutated_input": "uuu",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0155",
+    "seed_id": "COR-XH-SEED-019",
+    "scheme": "xiaohe",
+    "target_text": "数据",
+    "source_input": "uuju",
+    "mutated_input": "uujju",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "j"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0156",
+    "seed_id": "COR-XH-SEED-019",
+    "scheme": "xiaohe",
+    "target_text": "数据",
+    "source_input": "uuju",
+    "mutated_input": "ujuu",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "uj"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0157",
+    "seed_id": "COR-XH-SEED-020",
+    "scheme": "xiaohe",
+    "target_text": "恢复",
+    "source_input": "hvfu",
+    "mutated_input": "yvfu",
+    "mutation_type": "adjacent_replacement",
+    "mutation_index": 0,
+    "mutation_detail": {
+      "original": "h",
+      "replacement": "y"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0158",
+    "seed_id": "COR-XH-SEED-020",
+    "scheme": "xiaohe",
+    "target_text": "恢复",
+    "source_input": "hvfu",
+    "mutated_input": "hvu",
+    "mutation_type": "missing_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "removed": "f"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0159",
+    "seed_id": "COR-XH-SEED-020",
+    "scheme": "xiaohe",
+    "target_text": "恢复",
+    "source_input": "hvfu",
+    "mutated_input": "hvffu",
+    "mutation_type": "repeated_key",
+    "mutation_index": 2,
+    "mutation_detail": {
+      "repeated": "f"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  },
+  {
+    "id": "CORR-0160",
+    "seed_id": "COR-XH-SEED-020",
+    "scheme": "xiaohe",
+    "target_text": "恢复",
+    "source_input": "hvfu",
+    "mutated_input": "hfvu",
+    "mutation_type": "transposed_keys",
+    "mutation_index": 1,
+    "mutation_detail": {
+      "pair": "vf"
+    },
+    "edit_distance_expected": 1,
+    "expected": {
+      "correction_disabled": [
+        "stable_raw_behavior",
+        "no_crash",
+        "composition_can_be_cleared"
+      ],
+      "correction_enabled": [
+        "record_target_rank",
+        "target_reachability_is_product_policy",
+        "no_silent_data_loss"
+      ]
+    },
+    "priority": "P1"
+  }
+]

@@ -25,6 +25,10 @@ LiteIME 是一个以输入准确、候选稳定、响应迅速为第一目标的
 - 完整词匹配采用确定性奖励，修复“干觉”压过“感觉”、“先在”压过“现在”；
 - 词频使用对数缩放，避免不同长度路径直接相加原始权重；
 - 新增 `run-ime-tests.cmd`，一次验证小鹤、全拼、真实 SCEL、候选顺序和 `wo` 延迟。
+- 新增 `LiteIME-Install.exe`，使用版本并存安装，旧 DLL 被记事本、Explorer 或其他应用占用时也不再覆盖失败；
+- 不完整输入可立即给候选：小鹤 `mkt → 明天`、`rug → 如果/入股`，全拼尾音节前缀同样支持；
+- 中文标点已接入 TSF，英文和程序员模式保持 ASCII；
+- 纳入 `tests/corpus/v0.2.0` 的 407 个标准音节和 786 条结构化用例，按当前能力分层验证。
 
 双击 `update-dictionaries.cmd` 更新词库，双击 `run-ime-tests.cmd` 执行完整输入测试。详细说明见 [词库更新说明](docs/词库更新说明.md) 和 [v0.2.0 验证记录](docs/VERIFICATION_v0.2.0-dev.md)。
 
@@ -140,7 +144,8 @@ C:\Users\color\Downloads\lite-ime
 → Release 构建
 → 自动测试
 → 生成 EXE 与 LiteImeTSF.dll
-→ 安装到 %LOCALAPPDATA%\LiteIME\Dev
+→ 运行 LiteIME-Install.exe
+→ 安装到 %LOCALAPPDATA%\LiteIME\Dev\versions\<版本-构建号>
 → 编译内置基础词库
 → 导入相邻 dicts 中的 SCEL
 → 注册 TSF 文本服务
@@ -225,19 +230,21 @@ dist\windows-x64\bin\liteime-cli.exe
 dist\windows-x64\bin\liteime-benchmark.exe
 dist\windows-x64\bin\liteime-preview.exe
 dist\windows-x64\bin\liteime-profile.exe
+dist\windows-x64\bin\LiteIME-Install.exe
 dist\windows-x64\bin\LiteImeTSF.dll
 ```
 
+`LiteIME-Install.exe` 可以直接双击。它把新 DLL 安装到新的版本目录，切换 COM 注册后保留仍被旧应用占用的旧目录，不会强制关闭用户应用，也不会删除 `%LOCALAPPDATA%\LiteIME\UserData`。重新打开目标应用后即加载新版。
+
 ## 尚未达到正式发布质量的部分
 
-- Windows TSF 尚未在用户机器完成首次编译和运行验证；
 - 当前仅生成 x64 TSF DLL，32 位应用和 ARM64 尚未覆盖；
 - 候选窗仍使用最小 GDI 实现，未完成 DirectWrite/Direct2D、高 DPI、多显示器和深色模式；
-- 没有中英文状态切换按钮和状态栏；
-- 标点转换尚未接入 TSF 按键状态机；
+- 目前只有单独 Shift 切换中英文，尚无状态栏和设置界面；
+- 中文标点已接入；符号搜索需要重新设计不与中文分号冲突的可配置触发键；
 - 完整符号面板、收藏、最近和自定义尚未完成；
 - 通用词库仍很小，准确率尚未达到可替换成熟输入法的程度；
-- 设置 GUI、引擎独立进程、正式安装器、签名和应用兼容测试尚未完成。
+- 设置 GUI、引擎独立进程、面向正式发行的单文件签名安装包和全面应用兼容测试尚未完成。当前 `LiteIME-Install.exe` 是开发版并存安装器。
 
 ## 文档入口
 

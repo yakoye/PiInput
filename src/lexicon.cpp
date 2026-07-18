@@ -65,12 +65,13 @@ void DevLexicon::load_tsv(const std::filesystem::path& path) {
 
 void DevLexicon::load_entries(std::vector<LexiconCandidate> entries) {
     entries_by_pinyin_.clear();
+    pinyin_keys_.clear();
     entry_count_ = entries.size();
     for (auto& candidate : entries) {
         entries_by_pinyin_[candidate.pinyin].push_back(std::move(candidate));
     }
     for (auto& [pinyin, candidates] : entries_by_pinyin_) {
-        (void)pinyin;
+        pinyin_keys_.push_back(pinyin);
         std::stable_sort(candidates.begin(), candidates.end(), [](const LexiconCandidate& left, const LexiconCandidate& right) {
             if (left.weight != right.weight) {
                 return left.weight > right.weight;
@@ -78,6 +79,7 @@ void DevLexicon::load_entries(std::vector<LexiconCandidate> entries) {
             return left.word < right.word;
         });
     }
+    std::sort(pinyin_keys_.begin(), pinyin_keys_.end());
 }
 
 std::vector<LexiconCandidate> DevLexicon::query_exact(
@@ -91,6 +93,47 @@ std::vector<LexiconCandidate> DevLexicon::query_exact(
     return std::vector<LexiconCandidate>(
         found->second.begin(),
         found->second.begin() + static_cast<std::ptrdiff_t>(result_size));
+}
+
+std::vector<LexiconCandidate> DevLexicon::query_prefix(
+    const std::string& pinyin_prefix,
+    const std::size_t limit,
+    const std::size_t scan_limit) const {
+    if (pinyin_prefix.empty() || limit == 0U || scan_limit == 0U) {
+        return {};
+    }
+    std::vector<LexiconCandidate> results;
+    results.reserve((std::min)(limit, scan_limit));
+    std::size_t scanned = 0U;
+    auto key = std::lower_bound(pinyin_keys_.begin(), pinyin_keys_.end(), pinyin_prefix);
+    while (key != pinyin_keys_.end() && key->starts_with(pinyin_prefix) && scanned < scan_limit) {
+        const auto found = entries_by_pinyin_.find(*key);
+        if (found != entries_by_pinyin_.end()) {
+            for (const auto& candidate : found->second) {
+                if (scanned++ >= scan_limit) {
+                    break;
+                }
+                results.push_back(candidate);
+            }
+        }
+        ++key;
+    }
+    std::stable_sort(results.begin(), results.end(), [](const auto& left, const auto& right) {
+        if (left.weight != right.weight) {
+            return left.weight > right.weight;
+        }
+        if (left.pinyin.size() != right.pinyin.size()) {
+            return left.pinyin.size() < right.pinyin.size();
+        }
+        if (left.pinyin != right.pinyin) {
+            return left.pinyin < right.pinyin;
+        }
+        return left.word < right.word;
+    });
+    if (results.size() > limit) {
+        results.resize(limit);
+    }
+    return results;
 }
 
 std::size_t DevLexicon::entry_count() const noexcept {

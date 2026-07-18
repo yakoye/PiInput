@@ -1,0 +1,11 @@
+[
+  {
+    "id": "LM-LONG-DAILY-001",
+    "candidates": [
+      "候选1",
+      "候选2"
+    ],
+    "committed_text": "实际上屏文本",
+    "candidate_latency_ms": 0
+  }
+]

@@ -32,8 +32,13 @@
 - `tests/data/core_input_cases.tsv`：常用词、隔音符、长句切分与语义消歧发布门槛；
 - `tests/data/diagnostic_input_cases.tsv`：误触、漏键、模糊音、URL、V/U 模式等未来诊断项；
 - `tests/data/real_world_text_corpus.txt`：照护提醒、政策、沟通、新闻、论述和故事真实长句。
+- `tests/data/incremental_candidates.tsv`：全拼与小鹤未完成音节候选，例如 `mkt`、`rug`；
+- `tests/data/punctuation_cases.tsv`：中文、英文、程序员三种模式的完整 ASCII 标点映射；
+- `tests/corpus/v0.2.0/`：用户提供的 407 个标准全拼音节与 786 条结构化测试语料。
 
 `diagnostic_input_cases.tsv` 中的 `future` 行不会伪装成已经支持的功能，也不阻断当前版本发布。真实文本语料通过 `test-real-world-corpus.cmd` 生成 Top 10 命中率报告，结果保存在外部 `dicts/tests`，不会写入用户学习数据。
+
+外部测试语料采用分层门禁：当前已经实现的音节完整性、基础解析、候选和状态机进入阻断测试；纠错、模糊音、V/U 模式以及更完整的语言模型用例保留为后续诊断数据。不能因为文件已经纳入仓库就宣称这些未来能力已经实现。
 
 ### 候选与状态机回归
 
@@ -159,5 +164,13 @@ git add .; git commit -m "feat: add SCEL parser and dictionary conversion baseli
 4. 安装步骤成功；
 5. 发布清单中的每个预期产物都存在；
 6. 产物来自当前构建，不是旧输出目录残留。
+
+开发安装还必须验证：
+
+1. 注册路径指向 `%LOCALAPPDATA%\LiteIME\Dev\versions\...\bin\LiteImeTSF.dll`；
+2. 被旧应用占用的 DLL 不会被覆盖或强制删除；
+3. 安装器不强制关闭任何用户应用；
+4. profile 状态为 `registered=yes`、`enabled=yes`；
+5. `%LOCALAPPDATA%\LiteIME\UserData` 在升级后保持不变。
 
 某个测试程序通过时，其他独立工具仍可能编译失败，因此不得只依据 `100% tests passed` 宣称完整构建成功。

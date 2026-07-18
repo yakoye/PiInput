@@ -1,0 +1,966 @@
+[
+  {
+    "id": "PRO-PCIE-001",
+    "domain": "PCIe/Firmware",
+    "text": "固件",
+    "pinyin_syllables": [
+      "gu",
+      "jian"
+    ],
+    "full_pinyin_continuous": "gujian",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-002",
+    "domain": "PCIe/Firmware",
+    "text": "寄存器",
+    "pinyin_syllables": [
+      "ji",
+      "cun",
+      "qi"
+    ],
+    "full_pinyin_continuous": "jicunqi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-003",
+    "domain": "PCIe/Firmware",
+    "text": "配置空间",
+    "pinyin_syllables": [
+      "pei",
+      "zhi",
+      "kong",
+      "jian"
+    ],
+    "full_pinyin_continuous": "peizhikongjian",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-004",
+    "domain": "PCIe/Firmware",
+    "text": "链路状态机",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "zhuang",
+      "tai",
+      "ji"
+    ],
+    "full_pinyin_continuous": "lianluzhuangtaiji",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-005",
+    "domain": "PCIe/Firmware",
+    "text": "链路训练",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "xun",
+      "lian"
+    ],
+    "full_pinyin_continuous": "lianluxunlian",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-006",
+    "domain": "PCIe/Firmware",
+    "text": "事务层",
+    "pinyin_syllables": [
+      "shi",
+      "wu",
+      "ceng"
+    ],
+    "full_pinyin_continuous": "shiwuceng",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-007",
+    "domain": "PCIe/Firmware",
+    "text": "数据链路层",
+    "pinyin_syllables": [
+      "shu",
+      "ju",
+      "lian",
+      "lu",
+      "ceng"
+    ],
+    "full_pinyin_continuous": "shujulianluceng",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-008",
+    "domain": "PCIe/Firmware",
+    "text": "物理层",
+    "pinyin_syllables": [
+      "wu",
+      "li",
+      "ceng"
+    ],
+    "full_pinyin_continuous": "wuliceng",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-009",
+    "domain": "PCIe/Firmware",
+    "text": "事务层数据包",
+    "pinyin_syllables": [
+      "shi",
+      "wu",
+      "ceng",
+      "shu",
+      "ju",
+      "bao"
+    ],
+    "full_pinyin_continuous": "shiwucengshujubao",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-010",
+    "domain": "PCIe/Firmware",
+    "text": "配置读请求",
+    "pinyin_syllables": [
+      "pei",
+      "zhi",
+      "du",
+      "qing",
+      "qiu"
+    ],
+    "full_pinyin_continuous": "peizhiduqingqiu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-011",
+    "domain": "PCIe/Firmware",
+    "text": "配置写请求",
+    "pinyin_syllables": [
+      "pei",
+      "zhi",
+      "xie",
+      "qing",
+      "qiu"
+    ],
+    "full_pinyin_continuous": "peizhixieqingqiu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-012",
+    "domain": "PCIe/Firmware",
+    "text": "内存读请求",
+    "pinyin_syllables": [
+      "nei",
+      "cun",
+      "du",
+      "qing",
+      "qiu"
+    ],
+    "full_pinyin_continuous": "neicunduqingqiu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-013",
+    "domain": "PCIe/Firmware",
+    "text": "内存写请求",
+    "pinyin_syllables": [
+      "nei",
+      "cun",
+      "xie",
+      "qing",
+      "qiu"
+    ],
+    "full_pinyin_continuous": "neicunxieqingqiu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-014",
+    "domain": "PCIe/Firmware",
+    "text": "完成报文",
+    "pinyin_syllables": [
+      "wan",
+      "cheng",
+      "bao",
+      "wen"
+    ],
+    "full_pinyin_continuous": "wanchengbaowen",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-015",
+    "domain": "PCIe/Firmware",
+    "text": "完成超时",
+    "pinyin_syllables": [
+      "wan",
+      "cheng",
+      "chao",
+      "shi"
+    ],
+    "full_pinyin_continuous": "wanchengchaoshi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-016",
+    "domain": "PCIe/Firmware",
+    "text": "可调整基地址寄存器",
+    "pinyin_syllables": [
+      "ke",
+      "tiao",
+      "zheng",
+      "ji",
+      "di",
+      "zhi",
+      "ji",
+      "cun",
+      "qi"
+    ],
+    "full_pinyin_continuous": "ketiaozhengjidizhijicunqi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-017",
+    "domain": "PCIe/Firmware",
+    "text": "高级错误报告",
+    "pinyin_syllables": [
+      "gao",
+      "ji",
+      "cuo",
+      "wu",
+      "bao",
+      "gao"
+    ],
+    "full_pinyin_continuous": "gaojicuowubaogao",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-018",
+    "domain": "PCIe/Firmware",
+    "text": "链路均衡",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "jun",
+      "heng"
+    ],
+    "full_pinyin_continuous": "lianlujunheng",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-019",
+    "domain": "PCIe/Firmware",
+    "text": "接收端",
+    "pinyin_syllables": [
+      "jie",
+      "shou",
+      "duan"
+    ],
+    "full_pinyin_continuous": "jieshouduan",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-020",
+    "domain": "PCIe/Firmware",
+    "text": "发送端",
+    "pinyin_syllables": [
+      "fa",
+      "song",
+      "duan"
+    ],
+    "full_pinyin_continuous": "fasongduan",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-021",
+    "domain": "PCIe/Firmware",
+    "text": "链路宽度",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "kuan",
+      "du"
+    ],
+    "full_pinyin_continuous": "lianlukuandu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-022",
+    "domain": "PCIe/Firmware",
+    "text": "链路速率",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "su",
+      "lv"
+    ],
+    "full_pinyin_continuous": "lianlusulv",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-023",
+    "domain": "PCIe/Firmware",
+    "text": "流量控制",
+    "pinyin_syllables": [
+      "liu",
+      "liang",
+      "kong",
+      "zhi"
+    ],
+    "full_pinyin_continuous": "liuliangkongzhi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-024",
+    "domain": "PCIe/Firmware",
+    "text": "信用额度",
+    "pinyin_syllables": [
+      "xin",
+      "yong",
+      "e",
+      "du"
+    ],
+    "full_pinyin_continuous": "xinyongedu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-025",
+    "domain": "PCIe/Firmware",
+    "text": "中断请求",
+    "pinyin_syllables": [
+      "zhong",
+      "duan",
+      "qing",
+      "qiu"
+    ],
+    "full_pinyin_continuous": "zhongduanqingqiu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-026",
+    "domain": "PCIe/Firmware",
+    "text": "消息信号中断",
+    "pinyin_syllables": [
+      "xiao",
+      "xi",
+      "xin",
+      "hao",
+      "zhong",
+      "duan"
+    ],
+    "full_pinyin_continuous": "xiaoxixinhaozhongduan",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-027",
+    "domain": "PCIe/Firmware",
+    "text": "输入输出内存管理单元",
+    "pinyin_syllables": [
+      "shu",
+      "ru",
+      "shu",
+      "chu",
+      "nei",
+      "cun",
+      "guan",
+      "li",
+      "dan",
+      "yuan"
+    ],
+    "full_pinyin_continuous": "shurushuchuneicunguanlidanyuan",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-028",
+    "domain": "PCIe/Firmware",
+    "text": "地址转换服务",
+    "pinyin_syllables": [
+      "di",
+      "zhi",
+      "zhuan",
+      "huan",
+      "fu",
+      "wu"
+    ],
+    "full_pinyin_continuous": "dizhizhuanhuanfuwu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-029",
+    "domain": "PCIe/Firmware",
+    "text": "进程地址空间标识符",
+    "pinyin_syllables": [
+      "jin",
+      "cheng",
+      "di",
+      "zhi",
+      "kong",
+      "jian",
+      "biao",
+      "zhi",
+      "fu"
+    ],
+    "full_pinyin_continuous": "jinchengdizhikongjianbiaozhifu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-PCIE-030",
+    "domain": "PCIe/Firmware",
+    "text": "单根输入输出虚拟化",
+    "pinyin_syllables": [
+      "dan",
+      "gen",
+      "shu",
+      "ru",
+      "shu",
+      "chu",
+      "xu",
+      "ni",
+      "hua"
+    ],
+    "full_pinyin_continuous": "dangenshurushuchuxunihua",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 8
+    }
+  },
+  {
+    "id": "PRO-SW-001",
+    "domain": "Software/OS",
+    "text": "操作系统",
+    "pinyin_syllables": [
+      "cao",
+      "zuo",
+      "xi",
+      "tong"
+    ],
+    "full_pinyin_continuous": "caozuoxitong",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-002",
+    "domain": "Software/OS",
+    "text": "设备驱动",
+    "pinyin_syllables": [
+      "she",
+      "bei",
+      "qu",
+      "dong"
+    ],
+    "full_pinyin_continuous": "shebeiqudong",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-003",
+    "domain": "Software/OS",
+    "text": "内存映射",
+    "pinyin_syllables": [
+      "nei",
+      "cun",
+      "ying",
+      "she"
+    ],
+    "full_pinyin_continuous": "neicunyingshe",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-004",
+    "domain": "Software/OS",
+    "text": "虚拟地址",
+    "pinyin_syllables": [
+      "xu",
+      "ni",
+      "di",
+      "zhi"
+    ],
+    "full_pinyin_continuous": "xunidizhi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-005",
+    "domain": "Software/OS",
+    "text": "物理地址",
+    "pinyin_syllables": [
+      "wu",
+      "li",
+      "di",
+      "zhi"
+    ],
+    "full_pinyin_continuous": "wulidizhi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-006",
+    "domain": "Software/OS",
+    "text": "页表",
+    "pinyin_syllables": [
+      "ye",
+      "biao"
+    ],
+    "full_pinyin_continuous": "yebiao",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-007",
+    "domain": "Software/OS",
+    "text": "中断处理",
+    "pinyin_syllables": [
+      "zhong",
+      "duan",
+      "chu",
+      "li"
+    ],
+    "full_pinyin_continuous": "zhongduanchuli",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-008",
+    "domain": "Software/OS",
+    "text": "多线程",
+    "pinyin_syllables": [
+      "duo",
+      "xian",
+      "cheng"
+    ],
+    "full_pinyin_continuous": "duoxiancheng",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-009",
+    "domain": "Software/OS",
+    "text": "互斥锁",
+    "pinyin_syllables": [
+      "hu",
+      "chi",
+      "suo"
+    ],
+    "full_pinyin_continuous": "huchisuo",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-010",
+    "domain": "Software/OS",
+    "text": "条件变量",
+    "pinyin_syllables": [
+      "tiao",
+      "jian",
+      "bian",
+      "liang"
+    ],
+    "full_pinyin_continuous": "tiaojianbianliang",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-011",
+    "domain": "Software/OS",
+    "text": "事件循环",
+    "pinyin_syllables": [
+      "shi",
+      "jian",
+      "xun",
+      "huan"
+    ],
+    "full_pinyin_continuous": "shijianxunhuan",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-012",
+    "domain": "Software/OS",
+    "text": "状态机",
+    "pinyin_syllables": [
+      "zhuang",
+      "tai",
+      "ji"
+    ],
+    "full_pinyin_continuous": "zhuangtaiji",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-013",
+    "domain": "Software/OS",
+    "text": "缓存一致性",
+    "pinyin_syllables": [
+      "huan",
+      "cun",
+      "yi",
+      "zhi",
+      "xing"
+    ],
+    "full_pinyin_continuous": "huancunyizhixing",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-014",
+    "domain": "Software/OS",
+    "text": "命令行终端",
+    "pinyin_syllables": [
+      "ming",
+      "ling",
+      "hang",
+      "zhong",
+      "duan"
+    ],
+    "full_pinyin_continuous": "minglinghangzhongduan",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-015",
+    "domain": "Software/OS",
+    "text": "编译器",
+    "pinyin_syllables": [
+      "bian",
+      "yi",
+      "qi"
+    ],
+    "full_pinyin_continuous": "bianyiqi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-016",
+    "domain": "Software/OS",
+    "text": "链接器",
+    "pinyin_syllables": [
+      "lian",
+      "jie",
+      "qi"
+    ],
+    "full_pinyin_continuous": "lianjieqi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-017",
+    "domain": "Software/OS",
+    "text": "调试器",
+    "pinyin_syllables": [
+      "tiao",
+      "shi",
+      "qi"
+    ],
+    "full_pinyin_continuous": "tiaoshiqi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-018",
+    "domain": "Software/OS",
+    "text": "日志系统",
+    "pinyin_syllables": [
+      "ri",
+      "zhi",
+      "xi",
+      "tong"
+    ],
+    "full_pinyin_continuous": "rizhixitong",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-SW-019",
+    "domain": "Software/OS",
+    "text": "错误恢复",
+    "pinyin_syllables": [
+      "cuo",
+      "wu",
+      "hui",
+      "fu"
+    ],
+    "full_pinyin_continuous": "cuowuhuifu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-001",
+    "domain": "Input Method",
+    "text": "候选窗口",
+    "pinyin_syllables": [
+      "hou",
+      "xuan",
+      "chuang",
+      "kou"
+    ],
+    "full_pinyin_continuous": "houxuanchuangkou",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-002",
+    "domain": "Input Method",
+    "text": "候选排序",
+    "pinyin_syllables": [
+      "hou",
+      "xuan",
+      "pai",
+      "xu"
+    ],
+    "full_pinyin_continuous": "houxuanpaixu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-003",
+    "domain": "Input Method",
+    "text": "拼音切分",
+    "pinyin_syllables": [
+      "pin",
+      "yin",
+      "qie",
+      "fen"
+    ],
+    "full_pinyin_continuous": "pinyinqiefen",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-004",
+    "domain": "Input Method",
+    "text": "用户词频",
+    "pinyin_syllables": [
+      "yong",
+      "hu",
+      "ci",
+      "pin"
+    ],
+    "full_pinyin_continuous": "yonghucipin",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-005",
+    "domain": "Input Method",
+    "text": "模糊音",
+    "pinyin_syllables": [
+      "mo",
+      "hu",
+      "yin"
+    ],
+    "full_pinyin_continuous": "mohuyin",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-006",
+    "domain": "Input Method",
+    "text": "零声母",
+    "pinyin_syllables": [
+      "ling",
+      "sheng",
+      "mu"
+    ],
+    "full_pinyin_continuous": "lingshengmu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-007",
+    "domain": "Input Method",
+    "text": "隔音符",
+    "pinyin_syllables": [
+      "ge",
+      "yin",
+      "fu"
+    ],
+    "full_pinyin_continuous": "geyinfu",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-008",
+    "domain": "Input Method",
+    "text": "组合字符串",
+    "pinyin_syllables": [
+      "zu",
+      "he",
+      "zi",
+      "fu",
+      "chuan"
+    ],
+    "full_pinyin_continuous": "zuhezifuchuan",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-009",
+    "domain": "Input Method",
+    "text": "文本提交",
+    "pinyin_syllables": [
+      "wen",
+      "ben",
+      "ti",
+      "jiao"
+    ],
+    "full_pinyin_continuous": "wenbentijiao",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  },
+  {
+    "id": "PRO-IME-010",
+    "domain": "Input Method",
+    "text": "光标位置",
+    "pinyin_syllables": [
+      "guang",
+      "biao",
+      "wei",
+      "zhi"
+    ],
+    "full_pinyin_continuous": "guangbiaoweizhi",
+    "expected_metrics": {
+      "target_should_appear": true,
+      "recommended_max_rank": 5
+    }
+  }
+]

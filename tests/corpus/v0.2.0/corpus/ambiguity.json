@@ -1,0 +1,48 @@
+[
+  {
+    "id": "AMB-001",
+    "input": "xian",
+    "targets": [
+      "先",
+      "西安",
+      "县",
+      "线"
+    ],
+    "focus": "单音节与跨音节切分；使用 xi'an 强制得到西安"
+  },
+  {
+    "id": "AMB-002",
+    "input": "fangan",
+    "targets": [
+      "方案",
+      "方安"
+    ],
+    "focus": "fang+an 与 fan+gan 的词图路径"
+  },
+  {
+    "id": "AMB-003",
+    "input": "jiefang",
+    "targets": [
+      "解放",
+      "街坊"
+    ],
+    "focus": "上下文消歧"
+  },
+  {
+    "id": "AMB-004",
+    "input": "shangan",
+    "targets": [
+      "上岸",
+      "商案"
+    ],
+    "focus": "词频与上下文"
+  },
+  {
+    "id": "AMB-005",
+    "input": "jintianxiawu",
+    "targets": [
+      "今天下午"
+    ],
+    "focus": "避免把 tianxia 优先切成天下"
+  }
+]

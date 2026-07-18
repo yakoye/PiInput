@@ -121,6 +121,10 @@ void test_lexicon() {
     const auto results = lexicon.query_exact("ji'suan'ji", 10U);
     check(results.size() == 2U, "Exact pinyin query result count");
     check(!results.empty() && results.front().word == "计算机", "Candidate ordering by weight");
+    const auto prefix_results = lexicon.query_prefix("ji's", 10U, 32U);
+    check(prefix_results.size() == 3U, "Pinyin prefix query result count");
+    check(!prefix_results.empty() && prefix_results.front().word == "计算机",
+        "Pinyin prefix query keeps deterministic weight order");
     std::filesystem::remove(path);
 }
 
@@ -145,6 +149,8 @@ void test_binary_lexicon() {
     check(deduplicated.size() == 2U, "Binary lexicon de-duplicates identical word+pinyin pairs");
     check(!deduplicated.empty() && deduplicated.front().word == "计算机" && deduplicated.front().weight == 20000U,
         "Binary lexicon keeps the highest duplicate weight");
+    const auto prefix_results = binary.query_prefix("ji's", 5U, 32U);
+    check(prefix_results.size() == 3U, "Binary lexicon supports bounded prefix query");
     std::filesystem::remove(tsv);
     std::filesystem::remove(lex);
 }
@@ -251,6 +257,26 @@ void test_dictionary_builder() {
     std::filesystem::remove(output);
 }
 
+void verify_incremental_candidates(liteime::Engine& engine) {
+    for (const auto& row : read_test_table("incremental_candidates.tsv")) {
+        check(row.size() == 5U, "incremental candidate row has five columns");
+        if (row.size() != 5U) {
+            continue;
+        }
+        const std::size_t max_rank = static_cast<std::size_t>(std::stoul(row[4]));
+        const auto candidates = engine.query(row[1], row[0], max_rank);
+        const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const auto& candidate) {
+            return candidate.word == row[3] && candidate.pinyin.starts_with(row[2]);
+        });
+        check(found != candidates.end(),
+            row[0] + " incremental candidate " + row[1] + " contains " + row[3]);
+        if (found != candidates.end()) {
+            check(static_cast<std::size_t>(std::distance(candidates.begin(), found)) < max_rank,
+                row[0] + " incremental candidate rank for " + row[3]);
+        }
+    }
+}
+
 void verify_core_input_cases(liteime::Engine& engine) {
     for (const auto& row : read_test_table("core_input_cases.tsv")) {
         check(row.size() == 7U, "core_input_cases.tsv row has seven columns");
@@ -350,6 +376,7 @@ void test_builtin_base_lexicon() {
 
     verify_candidate_table(engine, "xiaohe_candidates.tsv", "flypy");
     verify_candidate_table(engine, "full_pinyin_candidates.tsv", "full");
+    verify_incremental_candidates(engine);
 }
 
 void test_external_dictionary(const std::filesystem::path& path) {
@@ -358,6 +385,7 @@ void test_external_dictionary(const std::filesystem::path& path) {
     check(engine.entry_count() >= 10000U, "External dictionary has useful coverage");
     verify_candidate_table(engine, "xiaohe_candidates.tsv", "flypy");
     verify_candidate_table(engine, "full_pinyin_candidates.tsv", "full");
+    verify_incremental_candidates(engine);
     verify_core_input_cases(engine);
 }
 
@@ -415,11 +443,28 @@ void test_symbols() {
 
 void test_punctuation() {
     liteime::PunctuationTransformer transformer;
-    check(transformer.transform(',', liteime::PunctuationMode::chinese, false) == "，", "Chinese comma");
-    check(transformer.transform('.', liteime::PunctuationMode::programmer, false) == ".", "Programmer period");
-    check(transformer.transform('1', liteime::PunctuationMode::chinese, true) == "！", "Chinese exclamation");
-    check(transformer.transform('\"', liteime::PunctuationMode::chinese, false) == "“", "Opening quote");
-    check(transformer.transform('\"', liteime::PunctuationMode::chinese, false) == "”", "Closing quote");
+    for (const auto& row : read_test_table("punctuation_cases.tsv")) {
+        check(row.size() == 4U, "punctuation row has four columns");
+        if (row.size() != 4U || row[0].size() != 1U) {
+            continue;
+        }
+        const char key = row[0].front();
+        const bool shift = row[1] == "1";
+        transformer.reset_quotes();
+        check(transformer.transform(key, liteime::PunctuationMode::chinese, shift) == row[2],
+            "Chinese punctuation mapping for " + row[0] + (shift ? " shifted" : ""));
+        transformer.reset_quotes();
+        check(transformer.transform(key, liteime::PunctuationMode::english, shift) == row[3],
+            "English punctuation passthrough for " + row[0] + (shift ? " shifted" : ""));
+        transformer.reset_quotes();
+        check(transformer.transform(key, liteime::PunctuationMode::programmer, shift) == row[3],
+            "Programmer punctuation passthrough for " + row[0] + (shift ? " shifted" : ""));
+    }
+    transformer.reset_quotes();
+    check(transformer.transform('\'', liteime::PunctuationMode::chinese, true) == "“", "Opening double quote");
+    check(transformer.transform('\'', liteime::PunctuationMode::chinese, true) == "”", "Closing double quote");
+    check(transformer.transform('\'', liteime::PunctuationMode::chinese, false) == "‘", "Opening single quote");
+    check(transformer.transform('\'', liteime::PunctuationMode::chinese, false) == "’", "Closing single quote");
 }
 
 

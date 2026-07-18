@@ -1,0 +1,175 @@
+[
+  {
+    "text": "的",
+    "pinyin": [
+      "de"
+    ],
+    "category": "high_frequency"
+  },
+  {
+    "text": "是",
+    "pinyin": [
+      "shi"
+    ],
+    "category": "high_frequency"
+  },
+  {
+    "text": "在",
+    "pinyin": [
+      "zai"
+    ],
+    "category": "high_frequency"
+  },
+  {
+    "text": "输入法",
+    "pinyin": [
+      "shu",
+      "ru",
+      "fa"
+    ],
+    "category": "ime"
+  },
+  {
+    "text": "候选窗口",
+    "pinyin": [
+      "hou",
+      "xuan",
+      "chuang",
+      "kou"
+    ],
+    "category": "ime"
+  },
+  {
+    "text": "拼音方案",
+    "pinyin": [
+      "pin",
+      "yin",
+      "fang",
+      "an"
+    ],
+    "category": "ime"
+  },
+  {
+    "text": "中文字符",
+    "pinyin": [
+      "zhong",
+      "wen",
+      "zi",
+      "fu"
+    ],
+    "category": "ime"
+  },
+  {
+    "text": "用户体验",
+    "pinyin": [
+      "yong",
+      "hu",
+      "ti",
+      "yan"
+    ],
+    "category": "product"
+  },
+  {
+    "text": "软件开发",
+    "pinyin": [
+      "ruan",
+      "jian",
+      "kai",
+      "fa"
+    ],
+    "category": "software"
+  },
+  {
+    "text": "数据结构",
+    "pinyin": [
+      "shu",
+      "ju",
+      "jie",
+      "gou"
+    ],
+    "category": "software"
+  },
+  {
+    "text": "人工智能",
+    "pinyin": [
+      "ren",
+      "gong",
+      "zhi",
+      "neng"
+    ],
+    "category": "technology"
+  },
+  {
+    "text": "操作系统",
+    "pinyin": [
+      "cao",
+      "zuo",
+      "xi",
+      "tong"
+    ],
+    "category": "technology"
+  },
+  {
+    "text": "阿",
+    "pinyin": [
+      "a"
+    ],
+    "category": "zero_initial"
+  },
+  {
+    "text": "哦",
+    "pinyin": [
+      "o"
+    ],
+    "category": "zero_initial"
+  },
+  {
+    "text": "额",
+    "pinyin": [
+      "e"
+    ],
+    "category": "zero_initial"
+  },
+  {
+    "text": "昂",
+    "pinyin": [
+      "ang"
+    ],
+    "category": "zero_initial"
+  },
+  {
+    "text": "恩",
+    "pinyin": [
+      "en"
+    ],
+    "category": "zero_initial"
+  },
+  {
+    "text": "欧",
+    "pinyin": [
+      "ou"
+    ],
+    "category": "zero_initial"
+  },
+  {
+    "text": "窗",
+    "pinyin": [
+      "chuang"
+    ],
+    "category": "long_syllable"
+  },
+  {
+    "text": "双",
+    "pinyin": [
+      "shuang"
+    ],
+    "category": "long_syllable"
+  },
+  {
+    "text": "强",
+    "pinyin": [
+      "qiang"
+    ],
+    "category": "long_syllable"
+  }
+]

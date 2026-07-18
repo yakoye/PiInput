@@ -46,6 +46,10 @@ private:
     [[nodiscard]] std::vector<LexiconCandidate> query_exact(
         const std::string& pinyin,
         std::size_t limit) const;
+    [[nodiscard]] std::vector<LexiconCandidate> query_prefix(
+        const std::string& pinyin_prefix,
+        std::size_t limit,
+        std::size_t scan_limit) const;
 
     std::variant<std::monostate, DevLexicon, BinaryLexicon> lexicon_;
     PinyinSegmenter pinyin_;

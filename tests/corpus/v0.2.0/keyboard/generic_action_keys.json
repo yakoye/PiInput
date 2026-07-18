@@ -1,0 +1,66 @@
+{
+  "editing": [
+    "Backspace",
+    "Delete",
+    "Insert",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight"
+  ],
+  "state": [
+    "Escape",
+    "Tab",
+    "Enter",
+    "Space",
+    "CapsLock"
+  ],
+  "modifiers": [
+    "LeftShift",
+    "RightShift",
+    "LeftControl",
+    "RightControl",
+    "LeftAlt",
+    "RightAlt",
+    "Meta/Command/Windows"
+  ],
+  "function": [
+    "F1",
+    "F2",
+    "F3",
+    "F4",
+    "F5",
+    "F6",
+    "F7",
+    "F8",
+    "F9",
+    "F10",
+    "F11",
+    "F12"
+  ],
+  "extended": [
+    "PrintScreen",
+    "ScrollLock",
+    "Pause",
+    "NumLock",
+    "Numpad0-9",
+    "NumpadAdd",
+    "NumpadSubtract",
+    "NumpadMultiply",
+    "NumpadDivide",
+    "NumpadDecimal",
+    "NumpadEnter"
+  ],
+  "hardware_or_vendor_specific": [
+    "Fn",
+    "Power",
+    "Brightness",
+    "Volume",
+    "VendorCustomKey"
+  ],
+  "note": "v0.1.0 定义通用行为；Windows/macOS 的逻辑键、物理键、修饰键映射和快捷键冲突在 v0.5.0 实现。"
+}

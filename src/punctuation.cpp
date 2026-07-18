@@ -1,20 +1,46 @@
 #include "liteime/punctuation.h"
 
 namespace liteime {
+namespace {
+
+[[nodiscard]] std::string ascii_symbol(const char key, const bool shift) {
+    if (!shift) {
+        return std::string(1U, key);
+    }
+    switch (key) {
+    case '`': return "~";
+    case '1': return "!";
+    case '2': return "@";
+    case '3': return "#";
+    case '4': return "$";
+    case '5': return "%";
+    case '6': return "^";
+    case '7': return "&";
+    case '8': return "*";
+    case '9': return "(";
+    case '0': return ")";
+    case '-': return "_";
+    case '=': return "+";
+    case '[': return "{";
+    case ']': return "}";
+    case '\\': return "|";
+    case ';': return ":";
+    case '\'': return "\"";
+    case ',': return "<";
+    case '.': return ">";
+    case '/': return "?";
+    default: return std::string(1U, key);
+    }
+}
+
+}  // namespace
 
 std::string PunctuationTransformer::transform(
     const char key,
     const PunctuationMode mode,
     const bool shift) const {
-    if (mode == PunctuationMode::english) {
-        return std::string(1U, key);
-    }
-    if (mode == PunctuationMode::programmer) {
-        switch (key) {
-        case ',': return shift ? "<" : ",";
-        case '.': return shift ? ">" : ".";
-        default: return std::string(1U, key);
-        }
+    if (mode == PunctuationMode::english || mode == PunctuationMode::programmer) {
+        return ascii_symbol(key, shift);
     }
 
     switch (key) {
@@ -25,25 +51,30 @@ std::string PunctuationTransformer::transform(
     case '\\': return shift ? "｜" : "、";
     case '-': return shift ? "——" : "－";
     case '=': return shift ? "＋" : "＝";
-    case '[': return shift ? "【" : "「";
-    case ']': return shift ? "】" : "」";
+    case '[': return shift ? "｛" : "【";
+    case ']': return shift ? "｝" : "】";
     case '`': return shift ? "～" : "·";
     case '1': return shift ? "！" : "1";
+    case '2': return shift ? "＠" : "2";
+    case '3': return shift ? "＃" : "3";
     case '4': return shift ? "￥" : "4";
+    case '5': return shift ? "％" : "5";
     case '6': return shift ? "……" : "6";
+    case '7': return shift ? "＆" : "7";
+    case '8': return shift ? "×" : "8";
     case '9': return shift ? "（" : "9";
     case '0': return shift ? "）" : "0";
-    case '\"': {
-        const std::string result = next_double_quote_open_ ? "“" : "”";
-        next_double_quote_open_ = !next_double_quote_open_;
-        return result;
-    }
     case '\'': {
+        if (shift) {
+            const std::string result = next_double_quote_open_ ? "“" : "”";
+            next_double_quote_open_ = !next_double_quote_open_;
+            return result;
+        }
         const std::string result = next_single_quote_open_ ? "‘" : "’";
         next_single_quote_open_ = !next_single_quote_open_;
         return result;
     }
-    default: return std::string(1U, key);
+    default: return ascii_symbol(key, shift);
     }
 }
 

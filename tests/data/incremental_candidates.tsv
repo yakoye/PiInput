@@ -1,0 +1,7 @@
+# schema	input	canonical_prefix	target	max_rank
+flypy	mkt	ming't	明天	6
+flypy	mktm	ming'tian	明天	1
+flypy	rug	ru'g	如果	6
+flypy	rugo	ru'guo	如果	1
+full	mingt	ming't	明天	6
+full	rug	ru'g	如果	6

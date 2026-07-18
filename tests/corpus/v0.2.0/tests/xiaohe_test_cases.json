@@ -1,0 +1,601 @@
+[
+  {
+    "id": "XH-WORD-001",
+    "category": "high_frequency",
+    "target_text": "的",
+    "pinyin_syllables": [
+      "de"
+    ],
+    "input_sequence": "de",
+    "syllable_codes": [
+      "de"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-002",
+    "category": "high_frequency",
+    "target_text": "是",
+    "pinyin_syllables": [
+      "shi"
+    ],
+    "input_sequence": "ui",
+    "syllable_codes": [
+      "ui"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-003",
+    "category": "high_frequency",
+    "target_text": "在",
+    "pinyin_syllables": [
+      "zai"
+    ],
+    "input_sequence": "zd",
+    "syllable_codes": [
+      "zd"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-004",
+    "category": "ime",
+    "target_text": "输入法",
+    "pinyin_syllables": [
+      "shu",
+      "ru",
+      "fa"
+    ],
+    "input_sequence": "uurufa",
+    "syllable_codes": [
+      "uu",
+      "ru",
+      "fa"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-005",
+    "category": "ime",
+    "target_text": "候选窗口",
+    "pinyin_syllables": [
+      "hou",
+      "xuan",
+      "chuang",
+      "kou"
+    ],
+    "input_sequence": "hzxrilkz",
+    "syllable_codes": [
+      "hz",
+      "xr",
+      "il",
+      "kz"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-006",
+    "category": "ime",
+    "target_text": "拼音方案",
+    "pinyin_syllables": [
+      "pin",
+      "yin",
+      "fang",
+      "an"
+    ],
+    "input_sequence": "pbybfhan",
+    "syllable_codes": [
+      "pb",
+      "yb",
+      "fh",
+      "an"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-007",
+    "category": "ime",
+    "target_text": "中文字符",
+    "pinyin_syllables": [
+      "zhong",
+      "wen",
+      "zi",
+      "fu"
+    ],
+    "input_sequence": "vswfzifu",
+    "syllable_codes": [
+      "vs",
+      "wf",
+      "zi",
+      "fu"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-008",
+    "category": "product",
+    "target_text": "用户体验",
+    "pinyin_syllables": [
+      "yong",
+      "hu",
+      "ti",
+      "yan"
+    ],
+    "input_sequence": "yshutiyj",
+    "syllable_codes": [
+      "ys",
+      "hu",
+      "ti",
+      "yj"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-009",
+    "category": "software",
+    "target_text": "软件开发",
+    "pinyin_syllables": [
+      "ruan",
+      "jian",
+      "kai",
+      "fa"
+    ],
+    "input_sequence": "rrjmkdfa",
+    "syllable_codes": [
+      "rr",
+      "jm",
+      "kd",
+      "fa"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-010",
+    "category": "software",
+    "target_text": "数据结构",
+    "pinyin_syllables": [
+      "shu",
+      "ju",
+      "jie",
+      "gou"
+    ],
+    "input_sequence": "uujujpgz",
+    "syllable_codes": [
+      "uu",
+      "ju",
+      "jp",
+      "gz"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-011",
+    "category": "technology",
+    "target_text": "人工智能",
+    "pinyin_syllables": [
+      "ren",
+      "gong",
+      "zhi",
+      "neng"
+    ],
+    "input_sequence": "rfgsving",
+    "syllable_codes": [
+      "rf",
+      "gs",
+      "vi",
+      "ng"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-012",
+    "category": "technology",
+    "target_text": "操作系统",
+    "pinyin_syllables": [
+      "cao",
+      "zuo",
+      "xi",
+      "tong"
+    ],
+    "input_sequence": "cczoxits",
+    "syllable_codes": [
+      "cc",
+      "zo",
+      "xi",
+      "ts"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-013",
+    "category": "zero_initial",
+    "target_text": "阿",
+    "pinyin_syllables": [
+      "a"
+    ],
+    "input_sequence": "aa",
+    "syllable_codes": [
+      "aa"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-014",
+    "category": "zero_initial",
+    "target_text": "哦",
+    "pinyin_syllables": [
+      "o"
+    ],
+    "input_sequence": "oo",
+    "syllable_codes": [
+      "oo"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-015",
+    "category": "zero_initial",
+    "target_text": "额",
+    "pinyin_syllables": [
+      "e"
+    ],
+    "input_sequence": "ee",
+    "syllable_codes": [
+      "ee"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-016",
+    "category": "zero_initial",
+    "target_text": "昂",
+    "pinyin_syllables": [
+      "ang"
+    ],
+    "input_sequence": "ah",
+    "syllable_codes": [
+      "ah"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-017",
+    "category": "zero_initial",
+    "target_text": "恩",
+    "pinyin_syllables": [
+      "en"
+    ],
+    "input_sequence": "en",
+    "syllable_codes": [
+      "en"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-018",
+    "category": "zero_initial",
+    "target_text": "欧",
+    "pinyin_syllables": [
+      "ou"
+    ],
+    "input_sequence": "ou",
+    "syllable_codes": [
+      "ou"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-019",
+    "category": "long_syllable",
+    "target_text": "窗",
+    "pinyin_syllables": [
+      "chuang"
+    ],
+    "input_sequence": "il",
+    "syllable_codes": [
+      "il"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-020",
+    "category": "long_syllable",
+    "target_text": "双",
+    "pinyin_syllables": [
+      "shuang"
+    ],
+    "input_sequence": "ul",
+    "syllable_codes": [
+      "ul"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-WORD-021",
+    "category": "long_syllable",
+    "target_text": "强",
+    "pinyin_syllables": [
+      "qiang"
+    ],
+    "input_sequence": "ql",
+    "syllable_codes": [
+      "ql"
+    ],
+    "expected": {
+      "target_should_appear": true
+    },
+    "priority": "P0"
+  },
+  {
+    "id": "XH-LONG-DAILY-001",
+    "category": "long_sentence",
+    "target_text": "我今天下午要去超市买点水果。",
+    "pinyin_syllables": [
+      "wo",
+      "jin",
+      "tian",
+      "xia",
+      "wu",
+      "yao",
+      "qu",
+      "chao",
+      "shi",
+      "mai",
+      "dian",
+      "shui",
+      "guo"
+    ],
+    "input_sequence": "wojbtmxxwuycquicuimddmuvgo",
+    "syllable_codes": [
+      "wo",
+      "jb",
+      "tm",
+      "xx",
+      "wu",
+      "yc",
+      "qu",
+      "ic",
+      "ui",
+      "md",
+      "dm",
+      "uv",
+      "go"
+    ],
+    "expected": {
+      "sentence_exact_match_preferred": true,
+      "must_not_crash": true
+    },
+    "test_points": [
+      "长句切分",
+      "天下/今天下午边界",
+      "超市",
+      "水果",
+      "整句首候选"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "XH-LONG-IME-001",
+    "category": "long_sentence",
+    "target_text": "今天我们开始测试中文输入法。",
+    "pinyin_syllables": [
+      "jin",
+      "tian",
+      "wo",
+      "men",
+      "kai",
+      "shi",
+      "ce",
+      "shi",
+      "zhong",
+      "wen",
+      "shu",
+      "ru",
+      "fa"
+    ],
+    "input_sequence": "jbtmwomfkduiceuivswfuurufa",
+    "syllable_codes": [
+      "jb",
+      "tm",
+      "wo",
+      "mf",
+      "kd",
+      "ui",
+      "ce",
+      "ui",
+      "vs",
+      "wf",
+      "uu",
+      "ru",
+      "fa"
+    ],
+    "expected": {
+      "sentence_exact_match_preferred": true,
+      "must_not_crash": true
+    },
+    "test_points": [
+      "连续输入",
+      "中文输入法词组命中",
+      "候选首选"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "XH-LONG-FW-001",
+    "category": "long_sentence",
+    "target_text": "固件开发需要熟悉底层寄存器配置和链路状态机。",
+    "pinyin_syllables": [
+      "gu",
+      "jian",
+      "kai",
+      "fa",
+      "xu",
+      "yao",
+      "shu",
+      "xi",
+      "di",
+      "ceng",
+      "ji",
+      "cun",
+      "qi",
+      "pei",
+      "zhi",
+      "he",
+      "lian",
+      "lu",
+      "zhuang",
+      "tai",
+      "ji"
+    ],
+    "input_sequence": "gujmkdfaxuycuuxidicgjicyqipwvihelmluvltdji",
+    "syllable_codes": [
+      "gu",
+      "jm",
+      "kd",
+      "fa",
+      "xu",
+      "yc",
+      "uu",
+      "xi",
+      "di",
+      "cg",
+      "ji",
+      "cy",
+      "qi",
+      "pw",
+      "vi",
+      "he",
+      "lm",
+      "lu",
+      "vl",
+      "td",
+      "ji"
+    ],
+    "expected": {
+      "sentence_exact_match_preferred": true,
+      "must_not_crash": true
+    },
+    "test_points": [
+      "专业词库",
+      "固件",
+      "寄存器",
+      "配置",
+      "链路状态机"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "XH-LONG-PCIE-001",
+    "category": "long_sentence",
+    "target_text": "链路训练需要检查状态机和均衡过程。",
+    "pinyin_syllables": [
+      "lian",
+      "lu",
+      "xun",
+      "lian",
+      "xu",
+      "yao",
+      "jian",
+      "cha",
+      "zhuang",
+      "tai",
+      "ji",
+      "he",
+      "jun",
+      "heng",
+      "guo",
+      "cheng"
+    ],
+    "input_sequence": "lmluxylmxuycjmiavltdjihejyhggoig",
+    "syllable_codes": [
+      "lm",
+      "lu",
+      "xy",
+      "lm",
+      "xu",
+      "yc",
+      "jm",
+      "ia",
+      "vl",
+      "td",
+      "ji",
+      "he",
+      "jy",
+      "hg",
+      "go",
+      "ig"
+    ],
+    "expected": {
+      "sentence_exact_match_preferred": true,
+      "must_not_crash": true
+    },
+    "test_points": [
+      "链路训练",
+      "状态机",
+      "均衡过程",
+      "专业上下文"
+    ],
+    "priority": "P0"
+  }
+]

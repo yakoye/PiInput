@@ -1,0 +1,1167 @@
+[
+  {
+    "id": "CTX-GUJIAN-A",
+    "pair_id": "GUJIAN",
+    "ambiguous_input": "gujian",
+    "target_word": "固件",
+    "contrast_word": "古剑",
+    "target_sentence": "设备固件需要及时升级。",
+    "pinyin_syllables": [
+      "she",
+      "bei",
+      "gu",
+      "jian",
+      "xu",
+      "yao",
+      "ji",
+      "shi",
+      "sheng",
+      "ji"
+    ],
+    "full_pinyin_continuous": "shebeigujianxuyaojishishengji",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-GUJIAN-B",
+    "pair_id": "GUJIAN",
+    "ambiguous_input": "gujian",
+    "target_word": "古剑",
+    "contrast_word": "固件",
+    "target_sentence": "他收藏了一把古剑。",
+    "pinyin_syllables": [
+      "ta",
+      "shou",
+      "cang",
+      "le",
+      "yi",
+      "ba",
+      "gu",
+      "jian"
+    ],
+    "full_pinyin_continuous": "tashoucangleyibagujian",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-ZHONGDUAN-A",
+    "pair_id": "ZHONGDUAN",
+    "ambiguous_input": "zhongduan",
+    "target_word": "中断",
+    "contrast_word": "终端",
+    "target_sentence": "系统发生中断。",
+    "pinyin_syllables": [
+      "xi",
+      "tong",
+      "fa",
+      "sheng",
+      "zhong",
+      "duan"
+    ],
+    "full_pinyin_continuous": "xitongfashengzhongduan",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-ZHONGDUAN-B",
+    "pair_id": "ZHONGDUAN",
+    "ambiguous_input": "zhongduan",
+    "target_word": "终端",
+    "contrast_word": "中断",
+    "target_sentence": "请打开命令行终端。",
+    "pinyin_syllables": [
+      "qing",
+      "da",
+      "kai",
+      "ming",
+      "ling",
+      "hang",
+      "zhong",
+      "duan"
+    ],
+    "full_pinyin_continuous": "qingdakaiminglinghangzhongduan",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-DIZHI-A",
+    "pair_id": "DIZHI",
+    "ambiguous_input": "dizhi",
+    "target_word": "地址",
+    "contrast_word": "地质",
+    "target_sentence": "请检查设备地址。",
+    "pinyin_syllables": [
+      "qing",
+      "jian",
+      "cha",
+      "she",
+      "bei",
+      "di",
+      "zhi"
+    ],
+    "full_pinyin_continuous": "qingjianchashebeidizhi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-DIZHI-B",
+    "pair_id": "DIZHI",
+    "ambiguous_input": "dizhi",
+    "target_word": "地质",
+    "contrast_word": "地址",
+    "target_sentence": "他正在研究地质结构。",
+    "pinyin_syllables": [
+      "ta",
+      "zheng",
+      "zai",
+      "yan",
+      "jiu",
+      "di",
+      "zhi",
+      "jie",
+      "gou"
+    ],
+    "full_pinyin_continuous": "tazhengzaiyanjiudizhijiegou",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-WENJIAN-A",
+    "pair_id": "WENJIAN",
+    "ambiguous_input": "wenjian",
+    "target_word": "文件",
+    "contrast_word": "稳健",
+    "target_sentence": "请打开这个文件。",
+    "pinyin_syllables": [
+      "qing",
+      "da",
+      "kai",
+      "zhe",
+      "ge",
+      "wen",
+      "jian"
+    ],
+    "full_pinyin_continuous": "qingdakaizhegewenjian",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-WENJIAN-B",
+    "pair_id": "WENJIAN",
+    "ambiguous_input": "wenjian",
+    "target_word": "稳健",
+    "contrast_word": "文件",
+    "target_sentence": "这个方案更加稳健。",
+    "pinyin_syllables": [
+      "zhe",
+      "ge",
+      "fang",
+      "an",
+      "geng",
+      "jia",
+      "wen",
+      "jian"
+    ],
+    "full_pinyin_continuous": "zhegefangangengjiawenjian",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-XIANCHENG-A",
+    "pair_id": "XIANCHENG",
+    "ambiguous_input": "xiancheng",
+    "target_word": "线程",
+    "contrast_word": "县城",
+    "target_sentence": "程序创建了一个线程。",
+    "pinyin_syllables": [
+      "cheng",
+      "xu",
+      "chuang",
+      "jian",
+      "le",
+      "yi",
+      "ge",
+      "xian",
+      "cheng"
+    ],
+    "full_pinyin_continuous": "chengxuchuangjianleyigexiancheng",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-XIANCHENG-B",
+    "pair_id": "XIANCHENG",
+    "ambiguous_input": "xiancheng",
+    "target_word": "县城",
+    "contrast_word": "线程",
+    "target_sentence": "他们住在一个安静的县城。",
+    "pinyin_syllables": [
+      "ta",
+      "men",
+      "zhu",
+      "zai",
+      "yi",
+      "ge",
+      "an",
+      "jing",
+      "de",
+      "xian",
+      "cheng"
+    ],
+    "full_pinyin_continuous": "tamenzhuzaiyigeanjingdexiancheng",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-YICHANG-A",
+    "pair_id": "YICHANG",
+    "ambiguous_input": "yichang",
+    "target_word": "异常",
+    "contrast_word": "一场",
+    "target_sentence": "系统出现异常。",
+    "pinyin_syllables": [
+      "xi",
+      "tong",
+      "chu",
+      "xian",
+      "yi",
+      "chang"
+    ],
+    "full_pinyin_continuous": "xitongchuxianyichang",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-YICHANG-B",
+    "pair_id": "YICHANG",
+    "ambiguous_input": "yichang",
+    "target_word": "一场",
+    "contrast_word": "异常",
+    "target_sentence": "下午有一场比赛。",
+    "pinyin_syllables": [
+      "xia",
+      "wu",
+      "you",
+      "yi",
+      "chang",
+      "bi",
+      "sai"
+    ],
+    "full_pinyin_continuous": "xiawuyouyichangbisai",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-BIANYI-A",
+    "pair_id": "BIANYI",
+    "ambiguous_input": "bianyi",
+    "target_word": "编译",
+    "contrast_word": "便宜",
+    "target_sentence": "需要重新编译程序。",
+    "pinyin_syllables": [
+      "xu",
+      "yao",
+      "chong",
+      "xin",
+      "bian",
+      "yi",
+      "cheng",
+      "xu"
+    ],
+    "full_pinyin_continuous": "xuyaochongxinbianyichengxu",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-BIANYI-B",
+    "pair_id": "BIANYI",
+    "ambiguous_input": "bianyi",
+    "target_word": "便宜",
+    "contrast_word": "编译",
+    "target_sentence": "这件商品比较便宜。",
+    "pinyin_syllables": [
+      "zhe",
+      "jian",
+      "shang",
+      "pin",
+      "bi",
+      "jiao",
+      "bian",
+      "yi"
+    ],
+    "full_pinyin_continuous": "zhejianshangpinbijiaobianyi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-XIEYI-A",
+    "pair_id": "XIEYI",
+    "ambiguous_input": "xieyi",
+    "target_word": "协议",
+    "contrast_word": "谢意",
+    "target_sentence": "双方遵循通信协议。",
+    "pinyin_syllables": [
+      "shuang",
+      "fang",
+      "zun",
+      "xun",
+      "tong",
+      "xin",
+      "xie",
+      "yi"
+    ],
+    "full_pinyin_continuous": "shuangfangzunxuntongxinxieyi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-XIEYI-B",
+    "pair_id": "XIEYI",
+    "ambiguous_input": "xieyi",
+    "target_word": "谢意",
+    "contrast_word": "协议",
+    "target_sentence": "他向大家表达谢意。",
+    "pinyin_syllables": [
+      "ta",
+      "xiang",
+      "da",
+      "jia",
+      "biao",
+      "da",
+      "xie",
+      "yi"
+    ],
+    "full_pinyin_continuous": "taxiangdajiabiaodaxieyi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHIWU-A",
+    "pair_id": "SHIWU",
+    "ambiguous_input": "shiwu",
+    "target_word": "事务",
+    "contrast_word": "食物",
+    "target_sentence": "数据库正在提交事务。",
+    "pinyin_syllables": [
+      "shu",
+      "ju",
+      "ku",
+      "zheng",
+      "zai",
+      "ti",
+      "jiao",
+      "shi",
+      "wu"
+    ],
+    "full_pinyin_continuous": "shujukuzhengzaitijiaoshiwu",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHIWU-B",
+    "pair_id": "SHIWU",
+    "ambiguous_input": "shiwu",
+    "target_word": "食物",
+    "contrast_word": "事务",
+    "target_sentence": "冰箱里还有一些食物。",
+    "pinyin_syllables": [
+      "bing",
+      "xiang",
+      "li",
+      "hai",
+      "you",
+      "yi",
+      "xie",
+      "shi",
+      "wu"
+    ],
+    "full_pinyin_continuous": "bingxianglihaiyouyixieshiwu",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHUJU-A",
+    "pair_id": "SHUJU",
+    "ambiguous_input": "shuju",
+    "target_word": "数据",
+    "contrast_word": "数句",
+    "target_sentence": "请分析这些数据。",
+    "pinyin_syllables": [
+      "qing",
+      "fen",
+      "xi",
+      "zhe",
+      "xie",
+      "shu",
+      "ju"
+    ],
+    "full_pinyin_continuous": "qingfenxizhexieshuju",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHUJU-B",
+    "pair_id": "SHUJU",
+    "ambiguous_input": "shuju",
+    "target_word": "数句",
+    "contrast_word": "数据",
+    "target_sentence": "他朗读了数句古诗。",
+    "pinyin_syllables": [
+      "ta",
+      "lang",
+      "du",
+      "le",
+      "shu",
+      "ju",
+      "gu",
+      "shi"
+    ],
+    "full_pinyin_continuous": "talangduleshujugushi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-HUIFU-A",
+    "pair_id": "HUIFU",
+    "ambiguous_input": "huifu",
+    "target_word": "恢复",
+    "contrast_word": "回复",
+    "target_sentence": "系统已经恢复正常。",
+    "pinyin_syllables": [
+      "xi",
+      "tong",
+      "yi",
+      "jing",
+      "hui",
+      "fu",
+      "zheng",
+      "chang"
+    ],
+    "full_pinyin_continuous": "xitongyijinghuifuzhengchang",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-HUIFU-B",
+    "pair_id": "HUIFU",
+    "ambiguous_input": "huifu",
+    "target_word": "回复",
+    "contrast_word": "恢复",
+    "target_sentence": "请尽快回复邮件。",
+    "pinyin_syllables": [
+      "qing",
+      "jin",
+      "kuai",
+      "hui",
+      "fu",
+      "you",
+      "jian"
+    ],
+    "full_pinyin_continuous": "qingjinkuaihuifuyoujian",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-QIANYI-A",
+    "pair_id": "QIANYI",
+    "ambiguous_input": "qianyi",
+    "target_word": "迁移",
+    "contrast_word": "千亿",
+    "target_sentence": "我们正在完成数据迁移。",
+    "pinyin_syllables": [
+      "wo",
+      "men",
+      "zheng",
+      "zai",
+      "wan",
+      "cheng",
+      "shu",
+      "ju",
+      "qian",
+      "yi"
+    ],
+    "full_pinyin_continuous": "womenzhengzaiwanchengshujuqianyi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-QIANYI-B",
+    "pair_id": "QIANYI",
+    "ambiguous_input": "qianyi",
+    "target_word": "千亿",
+    "contrast_word": "迁移",
+    "target_sentence": "市场规模已经达到千亿。",
+    "pinyin_syllables": [
+      "shi",
+      "chang",
+      "gui",
+      "mo",
+      "yi",
+      "jing",
+      "da",
+      "dao",
+      "qian",
+      "yi"
+    ],
+    "full_pinyin_continuous": "shichangguimoyijingdadaoqianyi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-HEXIN-A",
+    "pair_id": "HEXIN",
+    "ambiguous_input": "hexin",
+    "target_word": "核心",
+    "contrast_word": "河心",
+    "target_sentence": "这是系统的核心模块。",
+    "pinyin_syllables": [
+      "zhe",
+      "shi",
+      "xi",
+      "tong",
+      "de",
+      "he",
+      "xin",
+      "mo",
+      "kuai"
+    ],
+    "full_pinyin_continuous": "zheshixitongdehexinmokuai",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-HEXIN-B",
+    "pair_id": "HEXIN",
+    "ambiguous_input": "hexin",
+    "target_word": "河心",
+    "contrast_word": "核心",
+    "target_sentence": "小船慢慢驶向河心。",
+    "pinyin_syllables": [
+      "xiao",
+      "chuan",
+      "man",
+      "man",
+      "shi",
+      "xiang",
+      "he",
+      "xin"
+    ],
+    "full_pinyin_continuous": "xiaochuanmanmanshixianghexin",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-QUANLI-A",
+    "pair_id": "QUANLI",
+    "ambiguous_input": "quanli",
+    "target_word": "权利",
+    "contrast_word": "权力",
+    "target_sentence": "公民依法享有合法权利。",
+    "pinyin_syllables": [
+      "gong",
+      "min",
+      "yi",
+      "fa",
+      "xiang",
+      "you",
+      "he",
+      "fa",
+      "quan",
+      "li"
+    ],
+    "full_pinyin_continuous": "gongminyifaxiangyouhefaquanli",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-QUANLI-B",
+    "pair_id": "QUANLI",
+    "ambiguous_input": "quanli",
+    "target_word": "权力",
+    "contrast_word": "权利",
+    "target_sentence": "管理人员不能滥用权力。",
+    "pinyin_syllables": [
+      "guan",
+      "li",
+      "ren",
+      "yuan",
+      "bu",
+      "neng",
+      "lan",
+      "yong",
+      "quan",
+      "li"
+    ],
+    "full_pinyin_continuous": "guanlirenyuanbunenglanyongquanli",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHISHI-A",
+    "pair_id": "SHISHI",
+    "ambiguous_input": "shishi",
+    "target_word": "事实",
+    "contrast_word": "实时",
+    "target_sentence": "这是一项客观事实。",
+    "pinyin_syllables": [
+      "zhe",
+      "shi",
+      "yi",
+      "xiang",
+      "ke",
+      "guan",
+      "shi",
+      "shi"
+    ],
+    "full_pinyin_continuous": "zheshiyixiangkeguanshishi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHISHI-B",
+    "pair_id": "SHISHI",
+    "ambiguous_input": "shishi",
+    "target_word": "实时",
+    "contrast_word": "事实",
+    "target_sentence": "系统正在实时更新。",
+    "pinyin_syllables": [
+      "xi",
+      "tong",
+      "zheng",
+      "zai",
+      "shi",
+      "shi",
+      "geng",
+      "xin"
+    ],
+    "full_pinyin_continuous": "xitongzhengzaishishigengxin",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-XINGSHI-A",
+    "pair_id": "XINGSHI",
+    "ambiguous_input": "xingshi",
+    "target_word": "形式",
+    "contrast_word": "行事",
+    "target_sentence": "会议采用线上形式。",
+    "pinyin_syllables": [
+      "hui",
+      "yi",
+      "cai",
+      "yong",
+      "xian",
+      "shang",
+      "xing",
+      "shi"
+    ],
+    "full_pinyin_continuous": "huiyicaiyongxianshangxingshi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-XINGSHI-B",
+    "pair_id": "XINGSHI",
+    "ambiguous_input": "xingshi",
+    "target_word": "行事",
+    "contrast_word": "形式",
+    "target_sentence": "他一向谨慎行事。",
+    "pinyin_syllables": [
+      "ta",
+      "yi",
+      "xiang",
+      "jin",
+      "shen",
+      "xing",
+      "shi"
+    ],
+    "full_pinyin_continuous": "tayixiangjinshenxingshi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-JISHI-A",
+    "pair_id": "JISHI",
+    "ambiguous_input": "jishi",
+    "target_word": "即时",
+    "contrast_word": "及时",
+    "target_sentence": "消息需要即时同步。",
+    "pinyin_syllables": [
+      "xiao",
+      "xi",
+      "xu",
+      "yao",
+      "ji",
+      "shi",
+      "tong",
+      "bu"
+    ],
+    "full_pinyin_continuous": "xiaoxixuyaojishitongbu",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-JISHI-B",
+    "pair_id": "JISHI",
+    "ambiguous_input": "jishi",
+    "target_word": "及时",
+    "contrast_word": "即时",
+    "target_sentence": "发现问题以后及时处理。",
+    "pinyin_syllables": [
+      "fa",
+      "xian",
+      "wen",
+      "ti",
+      "yi",
+      "hou",
+      "ji",
+      "shi",
+      "chu",
+      "li"
+    ],
+    "full_pinyin_continuous": "faxianwentiyihoujishichuli",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-GONGSHI-A",
+    "pair_id": "GONGSHI",
+    "ambiguous_input": "gongshi",
+    "target_word": "公式",
+    "contrast_word": "公示",
+    "target_sentence": "请使用这个计算公式。",
+    "pinyin_syllables": [
+      "qing",
+      "shi",
+      "yong",
+      "zhe",
+      "ge",
+      "ji",
+      "suan",
+      "gong",
+      "shi"
+    ],
+    "full_pinyin_continuous": "qingshiyongzhegejisuangongshi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-GONGSHI-B",
+    "pair_id": "GONGSHI",
+    "ambiguous_input": "gongshi",
+    "target_word": "公示",
+    "contrast_word": "公式",
+    "target_sentence": "结果将在明天公示。",
+    "pinyin_syllables": [
+      "jie",
+      "guo",
+      "jiang",
+      "zai",
+      "ming",
+      "tian",
+      "gong",
+      "shi"
+    ],
+    "full_pinyin_continuous": "jieguojiangzaimingtiangongshi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHIYAN-A",
+    "pair_id": "SHIYAN",
+    "ambiguous_input": "shiyan",
+    "target_word": "实验",
+    "contrast_word": "食盐",
+    "target_sentence": "我们准备进行实验。",
+    "pinyin_syllables": [
+      "wo",
+      "men",
+      "zhun",
+      "bei",
+      "jin",
+      "xing",
+      "shi",
+      "yan"
+    ],
+    "full_pinyin_continuous": "womenzhunbeijinxingshiyan",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHIYAN-B",
+    "pair_id": "SHIYAN",
+    "ambiguous_input": "shiyan",
+    "target_word": "食盐",
+    "contrast_word": "实验",
+    "target_sentence": "厨房里需要一些食盐。",
+    "pinyin_syllables": [
+      "chu",
+      "fang",
+      "li",
+      "xu",
+      "yao",
+      "yi",
+      "xie",
+      "shi",
+      "yan"
+    ],
+    "full_pinyin_continuous": "chufanglixuyaoyixieshiyan",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHUZHI-A",
+    "pair_id": "SHUZHI",
+    "ambiguous_input": "shuzhi",
+    "target_word": "数值",
+    "contrast_word": "树脂",
+    "target_sentence": "请读取寄存器数值。",
+    "pinyin_syllables": [
+      "qing",
+      "du",
+      "qu",
+      "ji",
+      "cun",
+      "qi",
+      "shu",
+      "zhi"
+    ],
+    "full_pinyin_continuous": "qingduqujicunqishuzhi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-SHUZHI-B",
+    "pair_id": "SHUZHI",
+    "ambiguous_input": "shuzhi",
+    "target_word": "树脂",
+    "contrast_word": "数值",
+    "target_sentence": "这个零件使用树脂材料。",
+    "pinyin_syllables": [
+      "zhe",
+      "ge",
+      "ling",
+      "jian",
+      "shi",
+      "yong",
+      "shu",
+      "zhi",
+      "cai",
+      "liao"
+    ],
+    "full_pinyin_continuous": "zhegelingjianshiyongshuzhicailiao",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-JIEGUO-A",
+    "pair_id": "JIEGUO",
+    "ambiguous_input": "jieguo",
+    "target_word": "结果",
+    "contrast_word": "借过",
+    "target_sentence": "测试结果符合预期。",
+    "pinyin_syllables": [
+      "ce",
+      "shi",
+      "jie",
+      "guo",
+      "fu",
+      "he",
+      "yu",
+      "qi"
+    ],
+    "full_pinyin_continuous": "ceshijieguofuheyuqi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-JIEGUO-B",
+    "pair_id": "JIEGUO",
+    "ambiguous_input": "jieguo",
+    "target_word": "借过",
+    "contrast_word": "结果",
+    "target_sentence": "麻烦借过一下。",
+    "pinyin_syllables": [
+      "ma",
+      "fan",
+      "jie",
+      "guo",
+      "yi",
+      "xia"
+    ],
+    "full_pinyin_continuous": "mafanjieguoyixia",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-GUANJIAN-A",
+    "pair_id": "GUANJIAN",
+    "ambiguous_input": "guanjian",
+    "target_word": "关键",
+    "contrast_word": "管见",
+    "target_sentence": "这是一个关键问题。",
+    "pinyin_syllables": [
+      "zhe",
+      "shi",
+      "yi",
+      "ge",
+      "guan",
+      "jian",
+      "wen",
+      "ti"
+    ],
+    "full_pinyin_continuous": "zheshiyigeguanjianwenti",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-GUANJIAN-B",
+    "pair_id": "GUANJIAN",
+    "ambiguous_input": "guanjian",
+    "target_word": "管见",
+    "contrast_word": "关键",
+    "target_sentence": "以上只是个人管见。",
+    "pinyin_syllables": [
+      "yi",
+      "shang",
+      "zhi",
+      "shi",
+      "ge",
+      "ren",
+      "guan",
+      "jian"
+    ],
+    "full_pinyin_continuous": "yishangzhishigerenguanjian",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-XIANGMU-A",
+    "pair_id": "XIANGMU",
+    "ambiguous_input": "xiangmu",
+    "target_word": "项目",
+    "contrast_word": "橡木",
+    "target_sentence": "这个项目已经完成。",
+    "pinyin_syllables": [
+      "zhe",
+      "ge",
+      "xiang",
+      "mu",
+      "yi",
+      "jing",
+      "wan",
+      "cheng"
+    ],
+    "full_pinyin_continuous": "zhegexiangmuyijingwancheng",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-XIANGMU-B",
+    "pair_id": "XIANGMU",
+    "ambiguous_input": "xiangmu",
+    "target_word": "橡木",
+    "contrast_word": "项目",
+    "target_sentence": "桌子使用橡木制作。",
+    "pinyin_syllables": [
+      "zhuo",
+      "zi",
+      "shi",
+      "yong",
+      "xiang",
+      "mu",
+      "zhi",
+      "zuo"
+    ],
+    "full_pinyin_continuous": "zhuozishiyongxiangmuzhizuo",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-CESHI-A",
+    "pair_id": "CESHI",
+    "ambiguous_input": "ceshi",
+    "target_word": "测试",
+    "contrast_word": "侧室",
+    "target_sentence": "现在开始进行测试。",
+    "pinyin_syllables": [
+      "xian",
+      "zai",
+      "kai",
+      "shi",
+      "jin",
+      "xing",
+      "ce",
+      "shi"
+    ],
+    "full_pinyin_continuous": "xianzaikaishijinxingceshi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 3,
+      "record_top5": true
+    }
+  },
+  {
+    "id": "CTX-CESHI-B",
+    "pair_id": "CESHI",
+    "ambiguous_input": "ceshi",
+    "target_word": "侧室",
+    "contrast_word": "测试",
+    "target_sentence": "古代宅院里设有侧室。",
+    "pinyin_syllables": [
+      "gu",
+      "dai",
+      "zhai",
+      "yuan",
+      "li",
+      "she",
+      "you",
+      "ce",
+      "shi"
+    ],
+    "full_pinyin_continuous": "gudaizhaiyuanlisheyouceshi",
+    "expected_metrics": {
+      "target_sentence_top1": true,
+      "target_word_max_rank": 5,
+      "record_top5": true
+    }
+  }
+]

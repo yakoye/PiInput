@@ -1,0 +1,216 @@
+[
+  {
+    "id": "LEARN-PROMOTE-001",
+    "category": "candidate_promotion",
+    "input": "gujian",
+    "target": "固件",
+    "precondition": [
+      "clear_user_learning_for_input:gujian"
+    ],
+    "actions": [
+      "record_initial_rank",
+      "select_target:固件",
+      "repeat_same_selection:3",
+      "query_again"
+    ],
+    "expected": [
+      "target_rank_non_increasing",
+      "learning_does_not_remove_other_candidates",
+      "no_duplicate_candidate"
+    ],
+    "priority": "P1"
+  },
+  {
+    "id": "LEARN-CONTEXT-001",
+    "category": "context_learning",
+    "input": "shebeigujian",
+    "target": "设备固件",
+    "actions": [
+      "select_target_phrase",
+      "repeat:3",
+      "query_again"
+    ],
+    "expected": [
+      "phrase_rank_non_increasing",
+      "context_specific_learning_preferred"
+    ],
+    "priority": "P1"
+  },
+  {
+    "id": "LEARN-CUSTOM-001",
+    "category": "custom_phrase",
+    "input": "pcielianluxunlian",
+    "target": "PCIe链路训练",
+    "actions": [
+      "add_custom_phrase",
+      "query_input",
+      "commit_target"
+    ],
+    "expected": [
+      "custom_phrase_reachable",
+      "mixed_text_preserved"
+    ],
+    "priority": "P1"
+  },
+  {
+    "id": "LEARN-DELETE-001",
+    "category": "delete_learned_entry",
+    "input": "gujian",
+    "target": "固件",
+    "precondition": [
+      "target_has_user_learning"
+    ],
+    "actions": [
+      "delete_user_entry",
+      "query_again"
+    ],
+    "expected": [
+      "user_boost_removed",
+      "system_dictionary_entry_may_remain"
+    ],
+    "priority": "P1"
+  },
+  {
+    "id": "LEARN-RESET-001",
+    "category": "reset_learning",
+    "input": "multiple",
+    "target": null,
+    "precondition": [
+      "several_learned_entries_exist"
+    ],
+    "actions": [
+      "reset_user_learning",
+      "restart_engine",
+      "query_previous_inputs"
+    ],
+    "expected": [
+      "all_user_boosts_removed",
+      "system_dictionary_unchanged"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "LEARN-RESTART-001",
+    "category": "persistence",
+    "input": "wenjian",
+    "target": "文件",
+    "actions": [
+      "select_target_repeatedly",
+      "record_rank",
+      "restart_engine",
+      "query_again"
+    ],
+    "expected": [
+      "rank_persists_if_persistence_enabled",
+      "no_corrupt_user_data"
+    ],
+    "priority": "P1"
+  },
+  {
+    "id": "LEARN-SCHEME-001",
+    "category": "scheme_isolation",
+    "input": "gujian",
+    "target": "固件",
+    "actions": [
+      "learn_in_full_pinyin",
+      "switch_to_xiaohe",
+      "query_xiaohe_code"
+    ],
+    "expected": [
+      "behavior_matches_product_policy",
+      "no_invalid_cross_scheme_code"
+    ],
+    "priority": "P2"
+  },
+  {
+    "id": "LEARN-UNDO-001",
+    "category": "wrong_selection_recovery",
+    "input": "gujian",
+    "target": "固件",
+    "actions": [
+      "select_wrong_candidate:古剑",
+      "undo_or_reselect:固件",
+      "repeat_target_selection",
+      "query_again"
+    ],
+    "expected": [
+      "later_correct_choices_can_recover_rank",
+      "single_mistake_not_permanent"
+    ],
+    "priority": "P1"
+  },
+  {
+    "id": "LEARN-PASSWORD-001",
+    "category": "privacy",
+    "input": "mima123",
+    "target": null,
+    "precondition": [
+      "focus_password_field"
+    ],
+    "actions": [
+      "type_sensitive_text",
+      "leave_field",
+      "query_learning_store"
+    ],
+    "expected": [
+      "no_candidate_history_saved",
+      "no_user_phrase_learned"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "LEARN-PRIVATE-001",
+    "category": "privacy",
+    "input": "ceshiyinsi",
+    "target": "测试隐私",
+    "precondition": [
+      "private_mode_enabled_if_supported"
+    ],
+    "actions": [
+      "commit_text_repeatedly",
+      "disable_private_mode",
+      "query_again"
+    ],
+    "expected": [
+      "private_session_does_not_affect_rank_if_feature_supported"
+    ],
+    "priority": "P1"
+  },
+  {
+    "id": "LEARN-CORRUPTION-001",
+    "category": "storage_recovery",
+    "input": "any",
+    "target": null,
+    "precondition": [
+      "use_test_profile",
+      "simulate_invalid_user_dictionary_file"
+    ],
+    "actions": [
+      "start_engine",
+      "type_common_words"
+    ],
+    "expected": [
+      "engine_starts",
+      "falls_back_safely",
+      "reports_recoverable_error"
+    ],
+    "priority": "P0"
+  },
+  {
+    "id": "LEARN-EXPORT-001",
+    "category": "data_portability",
+    "input": "user_dictionary",
+    "target": null,
+    "actions": [
+      "export_user_dictionary_if_supported",
+      "clear_learning",
+      "import_exported_data",
+      "query_known_phrase"
+    ],
+    "expected": [
+      "round_trip_preserves_supported_entries",
+      "utf8_text_preserved"
+    ],
+    "priority": "P2"
+  }
+]

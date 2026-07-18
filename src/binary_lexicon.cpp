@@ -257,6 +257,13 @@ std::vector<LexiconCandidate> BinaryLexicon::query_exact(
     return lexicon_.query_exact(pinyin, limit);
 }
 
+std::vector<LexiconCandidate> BinaryLexicon::query_prefix(
+    const std::string& pinyin_prefix,
+    const std::size_t limit,
+    const std::size_t scan_limit) const {
+    return lexicon_.query_prefix(pinyin_prefix, limit, scan_limit);
+}
+
 std::size_t BinaryLexicon::entry_count() const noexcept {
     return lexicon_.entry_count();
 }
