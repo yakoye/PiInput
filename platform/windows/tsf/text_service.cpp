@@ -1,0 +1,688 @@
+#include "text_service.h"
+
+#include "liteime/utf.h"
+
+#include <shlobj.h>
+
+#include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <stdexcept>
+#include <string_view>
+#include <utility>
+
+namespace liteime::windows {
+
+std::atomic<long> g_object_count{0};
+HINSTANCE g_module_instance = nullptr;
+
+namespace {
+
+constexpr std::size_t kPageSize = 5U;
+
+class EditSession final : public ITfEditSession {
+public:
+    EditSession(TextService* service, ITfContext* context, std::wstring text, bool commit, bool cancel)
+        : service_(service), context_(context), text_(std::move(text)), commit_(commit), cancel_(cancel) {
+        service_->AddRef();
+        context_->AddRef();
+    }
+
+    STDMETHODIMP QueryInterface(REFIID iid, void** object) override {
+        if (object == nullptr) {
+            return E_POINTER;
+        }
+        *object = nullptr;
+        if (IsEqualIID(iid, IID_IUnknown) || IsEqualIID(iid, IID_ITfEditSession)) {
+            *object = static_cast<ITfEditSession*>(this);
+            AddRef();
+            return S_OK;
+        }
+        return E_NOINTERFACE;
+    }
+
+    STDMETHODIMP_(ULONG) AddRef() override {
+        return ++ref_count_;
+    }
+
+    STDMETHODIMP_(ULONG) Release() override {
+        const ULONG value = --ref_count_;
+        if (value == 0U) {
+            delete this;
+        }
+        return value;
+    }
+
+    STDMETHODIMP DoEditSession(const TfEditCookie edit_cookie) override {
+        return service_->apply_composition_edit(context_, edit_cookie, text_, commit_, cancel_);
+    }
+
+private:
+    ~EditSession() {
+        context_->Release();
+        service_->Release();
+    }
+
+    std::atomic<ULONG> ref_count_{1U};
+    TextService* service_{};
+    ITfContext* context_{};
+    std::wstring text_;
+    bool commit_{};
+    bool cancel_{};
+};
+
+[[nodiscard]] std::filesystem::path module_directory(const HINSTANCE module) {
+    std::wstring buffer(32768U, L'\0');
+    const DWORD length = GetModuleFileNameW(module, buffer.data(), static_cast<DWORD>(buffer.size()));
+    if (length == 0U || length >= buffer.size()) {
+        throw std::runtime_error("GetModuleFileNameW failed");
+    }
+    buffer.resize(length);
+    return std::filesystem::path(buffer).parent_path();
+}
+
+[[nodiscard]] std::filesystem::path local_app_data() {
+    PWSTR path = nullptr;
+    const HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &path);
+    if (FAILED(result) || path == nullptr) {
+        throw std::runtime_error("SHGetKnownFolderPath failed");
+    }
+    const std::filesystem::path output(path);
+    CoTaskMemFree(path);
+    return output;
+}
+
+[[nodiscard]] bool has_disallowed_modifier() {
+    return (GetKeyState(VK_CONTROL) & 0x8000) != 0 ||
+           (GetKeyState(VK_MENU) & 0x8000) != 0 ||
+           (GetKeyState(VK_LWIN) & 0x8000) != 0 ||
+           (GetKeyState(VK_RWIN) & 0x8000) != 0;
+}
+
+[[nodiscard]] bool is_ascii_letter(const WPARAM key) {
+    return key >= static_cast<WPARAM>('A') && key <= static_cast<WPARAM>('Z');
+}
+
+[[nodiscard]] bool is_number_key(const WPARAM key) {
+    return key >= static_cast<WPARAM>('1') && key <= static_cast<WPARAM>('9');
+}
+
+}  // namespace
+
+TextService::TextService(const HINSTANCE module) : module_(module) {
+    ++g_object_count;
+}
+
+TextService::~TextService() {
+    Deactivate();
+    --g_object_count;
+}
+
+STDMETHODIMP TextService::QueryInterface(REFIID iid, void** object) {
+    if (object == nullptr) {
+        return E_POINTER;
+    }
+    *object = nullptr;
+    if (IsEqualIID(iid, IID_IUnknown) || IsEqualIID(iid, IID_ITfTextInputProcessor)) {
+        *object = static_cast<ITfTextInputProcessor*>(this);
+    } else if (IsEqualIID(iid, IID_ITfKeyEventSink)) {
+        *object = static_cast<ITfKeyEventSink*>(this);
+    } else if (IsEqualIID(iid, IID_ITfCompositionSink)) {
+        *object = static_cast<ITfCompositionSink*>(this);
+    } else {
+        return E_NOINTERFACE;
+    }
+    AddRef();
+    return S_OK;
+}
+
+STDMETHODIMP_(ULONG) TextService::AddRef() {
+    return ++ref_count_;
+}
+
+STDMETHODIMP_(ULONG) TextService::Release() {
+    const ULONG value = --ref_count_;
+    if (value == 0U) {
+        delete this;
+    }
+    return value;
+}
+
+STDMETHODIMP TextService::Activate(ITfThreadMgr* const thread_manager, const TfClientId client_id) {
+    if (thread_manager == nullptr) {
+        return E_INVALIDARG;
+    }
+    Deactivate();
+    thread_manager_ = thread_manager;
+    thread_manager_->AddRef();
+    client_id_ = client_id;
+
+    HRESULT result = thread_manager_->QueryInterface(IID_PPV_ARGS(&keystroke_manager_));
+    if (FAILED(result)) {
+        Deactivate();
+        return result;
+    }
+    result = keystroke_manager_->AdviseKeyEventSink(client_id_, this, TRUE);
+    if (FAILED(result)) {
+        Deactivate();
+        return result;
+    }
+    key_sink_advised_ = true;
+
+    try {
+        load_engine();
+    } catch (...) {
+        Deactivate();
+        return E_FAIL;
+    }
+    candidate_window_.create(module_);
+    return S_OK;
+}
+
+STDMETHODIMP TextService::Deactivate() {
+    candidate_window_.hide();
+    candidate_window_.destroy();
+    if (composition_ != nullptr) {
+        composition_->Release();
+        composition_ = nullptr;
+    }
+    if (key_sink_advised_ && keystroke_manager_ != nullptr && client_id_ != TF_CLIENTID_NULL) {
+        keystroke_manager_->UnadviseKeyEventSink(client_id_);
+    }
+    key_sink_advised_ = false;
+    if (keystroke_manager_ != nullptr) {
+        keystroke_manager_->Release();
+        keystroke_manager_ = nullptr;
+    }
+    if (thread_manager_ != nullptr) {
+        thread_manager_->Release();
+        thread_manager_ = nullptr;
+    }
+    session_.reset();
+    client_id_ = TF_CLIENTID_NULL;
+    selected_index_ = 0U;
+    page_start_ = 0U;
+    symbol_candidates_.clear();
+    symbol_mode_ = false;
+    return S_OK;
+}
+
+STDMETHODIMP TextService::OnSetFocus(const BOOL foreground) {
+    foreground_ = foreground != FALSE;
+    if (!foreground_) {
+        candidate_window_.hide();
+    } else {
+        refresh_candidate_window();
+    }
+    return S_OK;
+}
+
+STDMETHODIMP TextService::OnTestKeyDown(
+    ITfContext*, const WPARAM wparam, LPARAM, BOOL* const eaten) {
+    if (eaten == nullptr) {
+        return E_POINTER;
+    }
+    *eaten = should_eat_key(wparam) ? TRUE : FALSE;
+    return S_OK;
+}
+
+STDMETHODIMP TextService::OnKeyDown(
+    ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
+    if (eaten == nullptr) {
+        return E_POINTER;
+    }
+    const bool consume = should_eat_key(wparam);
+    *eaten = consume ? TRUE : FALSE;
+    if (consume) {
+        last_eaten_key_ = wparam;
+        handle_key(context, wparam);
+    }
+    return S_OK;
+}
+
+STDMETHODIMP TextService::OnTestKeyUp(
+    ITfContext*, const WPARAM wparam, LPARAM, BOOL* const eaten) {
+    if (eaten == nullptr) {
+        return E_POINTER;
+    }
+    *eaten = (wparam == last_eaten_key_) ? TRUE : FALSE;
+    return S_OK;
+}
+
+STDMETHODIMP TextService::OnKeyUp(
+    ITfContext*, const WPARAM wparam, LPARAM, BOOL* const eaten) {
+    if (eaten == nullptr) {
+        return E_POINTER;
+    }
+    *eaten = (wparam == last_eaten_key_) ? TRUE : FALSE;
+    if (wparam == last_eaten_key_) {
+        last_eaten_key_ = 0U;
+    }
+    return S_OK;
+}
+
+STDMETHODIMP TextService::OnPreservedKey(ITfContext*, REFGUID, BOOL* const eaten) {
+    if (eaten == nullptr) {
+        return E_POINTER;
+    }
+    *eaten = FALSE;
+    return S_OK;
+}
+
+STDMETHODIMP TextService::OnCompositionTerminated(TfEditCookie, ITfComposition* const composition) {
+    if (composition_ != nullptr && (composition == nullptr || composition == composition_)) {
+        composition_->Release();
+        composition_ = nullptr;
+    }
+    if (session_ != nullptr) {
+        session_->clear();
+    }
+    selected_index_ = 0U;
+    page_start_ = 0U;
+    symbol_candidates_.clear();
+    symbol_mode_ = false;
+    candidate_window_.hide();
+    return S_OK;
+}
+
+bool TextService::should_eat_key(const WPARAM wparam) const {
+    if (session_ == nullptr || has_disallowed_modifier()) {
+        return false;
+    }
+    const bool composing = !session_->snapshot().input.empty();
+    if (!composing) {
+        if ((GetKeyState(VK_SHIFT) & 0x8000) != 0) {
+            return false;
+        }
+        return is_ascii_letter(wparam) || wparam == VK_OEM_7 || wparam == VK_OEM_1;
+    }
+    if (is_ascii_letter(wparam) || is_number_key(wparam)) {
+        return true;
+    }
+    switch (wparam) {
+    case VK_OEM_7:
+    case VK_BACK:
+    case VK_DELETE:
+    case VK_LEFT:
+    case VK_RIGHT:
+    case VK_HOME:
+    case VK_END:
+    case VK_UP:
+    case VK_DOWN:
+    case VK_PRIOR:
+    case VK_NEXT:
+    case VK_SPACE:
+    case VK_RETURN:
+    case VK_ESCAPE:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
+    if (session_ == nullptr || context == nullptr) {
+        return;
+    }
+    if (is_ascii_letter(wparam)) {
+        session_->insert(static_cast<char>(std::tolower(static_cast<unsigned char>(wparam))));
+        selected_index_ = 0U;
+        page_start_ = 0U;
+        request_update(context);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_OEM_7) {
+        session_->insert('\'');
+        selected_index_ = 0U;
+        page_start_ = 0U;
+        request_update(context);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_OEM_1 && session_->snapshot().input.empty()) {
+        session_->insert(';');
+        request_update(context);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_BACK) {
+        session_->backspace();
+        selected_index_ = 0U;
+        page_start_ = 0U;
+        if (session_->snapshot().input.empty()) {
+            request_cancel(context);
+        } else {
+            request_update(context);
+        }
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_DELETE) {
+        session_->delete_forward();
+        request_update(context);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_LEFT) {
+        session_->move_left();
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_RIGHT) {
+        session_->move_right();
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_HOME) {
+        session_->move_home();
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_END) {
+        session_->move_end();
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_UP) {
+        move_selection(-1);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_DOWN) {
+        move_selection(1);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_PRIOR) {
+        move_page(-1);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_NEXT) {
+        move_page(1);
+        refresh_candidate_window();
+        return;
+    }
+    if (is_number_key(wparam)) {
+        const std::size_t local = static_cast<std::size_t>(wparam - static_cast<WPARAM>('1'));
+        choose_candidate(context, page_start_ + local);
+        return;
+    }
+    if (wparam == VK_SPACE) {
+        if (!choose_candidate(context, selected_index_)) {
+            commit_raw_input(context);
+        }
+        return;
+    }
+    if (wparam == VK_RETURN) {
+        commit_raw_input(context);
+        return;
+    }
+    if (wparam == VK_ESCAPE) {
+        session_->clear();
+        request_cancel(context);
+        refresh_candidate_window();
+    }
+}
+
+void TextService::request_update(ITfContext* const context) {
+    if (session_ == nullptr) {
+        return;
+    }
+    const std::wstring text = utf8_to_wide(session_->snapshot().input);
+    auto* edit_session = new EditSession(this, context, text, false, false);
+    HRESULT session_result = E_FAIL;
+    context->RequestEditSession(client_id_, edit_session,
+        TF_ES_SYNC | TF_ES_READWRITE, &session_result);
+    edit_session->Release();
+}
+
+void TextService::request_commit(ITfContext* const context, const std::string& text) {
+    auto* edit_session = new EditSession(this, context, utf8_to_wide(text), true, false);
+    HRESULT session_result = E_FAIL;
+    context->RequestEditSession(client_id_, edit_session,
+        TF_ES_SYNC | TF_ES_READWRITE, &session_result);
+    edit_session->Release();
+    candidate_window_.hide();
+}
+
+void TextService::request_cancel(ITfContext* const context) {
+    auto* edit_session = new EditSession(this, context, L"", false, true);
+    HRESULT session_result = E_FAIL;
+    context->RequestEditSession(client_id_, edit_session,
+        TF_ES_SYNC | TF_ES_READWRITE, &session_result);
+    edit_session->Release();
+    candidate_window_.hide();
+}
+
+HRESULT TextService::apply_composition_edit(
+    ITfContext* const context,
+    const TfEditCookie edit_cookie,
+    const std::wstring& text,
+    const bool commit,
+    const bool cancel) {
+    if (context == nullptr) {
+        return E_INVALIDARG;
+    }
+
+    if (composition_ == nullptr && !cancel) {
+        TF_SELECTION selection{};
+        ULONG fetched = 0U;
+        HRESULT result = context->GetSelection(edit_cookie, TF_DEFAULT_SELECTION, 1U, &selection, &fetched);
+        if (FAILED(result) || fetched == 0U || selection.range == nullptr) {
+            return FAILED(result) ? result : E_FAIL;
+        }
+        selection.range->Collapse(edit_cookie, TF_ANCHOR_END);
+        ITfContextComposition* composition_context = nullptr;
+        result = context->QueryInterface(IID_PPV_ARGS(&composition_context));
+        if (SUCCEEDED(result)) {
+            result = composition_context->StartComposition(
+                edit_cookie, selection.range, this, &composition_);
+            composition_context->Release();
+        }
+        selection.range->Release();
+        if (FAILED(result) || composition_ == nullptr) {
+            return FAILED(result) ? result : E_FAIL;
+        }
+    }
+
+    if (composition_ == nullptr) {
+        return S_OK;
+    }
+
+    ITfRange* range = nullptr;
+    HRESULT result = composition_->GetRange(&range);
+    if (FAILED(result) || range == nullptr) {
+        return FAILED(result) ? result : E_FAIL;
+    }
+    const wchar_t* data = text.empty() ? L"" : text.c_str();
+    result = range->SetText(edit_cookie, 0U, data, static_cast<LONG>(text.size()));
+    if (SUCCEEDED(result)) {
+        TF_SELECTION selection{};
+        selection.range = range;
+        selection.style.ase = TF_AE_END;
+        selection.style.fInterimChar = FALSE;
+        range->Collapse(edit_cookie, TF_ANCHOR_END);
+        result = context->SetSelection(edit_cookie, 1U, &selection);
+    }
+
+    if (SUCCEEDED(result) && (commit || cancel)) {
+        ITfComposition* ending = composition_;
+        composition_ = nullptr;
+        result = ending->EndComposition(edit_cookie);
+        ending->Release();
+    }
+    range->Release();
+    return result;
+}
+
+bool TextService::choose_candidate(ITfContext* const context, const std::size_t index) {
+    if (session_ == nullptr) {
+        return false;
+    }
+    if (symbol_mode_) {
+        if (index >= symbol_candidates_.size()) {
+            return false;
+        }
+        const std::string text = symbol_candidates_[index];
+        session_->clear();
+        symbol_candidates_.clear();
+        symbol_mode_ = false;
+        selected_index_ = 0U;
+        page_start_ = 0U;
+        request_commit(context, text);
+        return true;
+    }
+    const auto& candidates = session_->snapshot().candidates;
+    if (index >= candidates.size()) {
+        return false;
+    }
+    const auto id = candidates[index].id;
+    const auto chosen = session_->choose(id);
+    if (!chosen.has_value()) {
+        return false;
+    }
+    selected_index_ = 0U;
+    page_start_ = 0U;
+    save_user_model();
+    request_commit(context, *chosen);
+    return true;
+}
+
+void TextService::commit_raw_input(ITfContext* const context) {
+    if (session_ == nullptr || session_->snapshot().input.empty()) {
+        return;
+    }
+    const std::string raw = session_->snapshot().input;
+    session_->clear();
+    symbol_candidates_.clear();
+    symbol_mode_ = false;
+    selected_index_ = 0U;
+    page_start_ = 0U;
+    request_commit(context, raw);
+}
+
+void TextService::move_selection(const int delta) {
+    if (session_ == nullptr) {
+        return;
+    }
+    const std::size_t count = symbol_mode_ ? symbol_candidates_.size() : session_->snapshot().candidates.size();
+    if (count == 0U) {
+        return;
+    }
+    const int signed_count = static_cast<int>(count);
+    const int next = (static_cast<int>(selected_index_) + delta + signed_count) % signed_count;
+    selected_index_ = static_cast<std::size_t>(next);
+    page_start_ = (selected_index_ / kPageSize) * kPageSize;
+}
+
+void TextService::move_page(const int delta) {
+    if (session_ == nullptr) {
+        return;
+    }
+    const std::size_t count = symbol_mode_ ? symbol_candidates_.size() : session_->snapshot().candidates.size();
+    if (count == 0U) {
+        return;
+    }
+    const int pages = static_cast<int>((count + kPageSize - 1U) / kPageSize);
+    int page = static_cast<int>(page_start_ / kPageSize) + delta;
+    page = (page + pages) % pages;
+    page_start_ = static_cast<std::size_t>(page) * kPageSize;
+    selected_index_ = (std::min)(page_start_, count - 1U);
+}
+
+void TextService::refresh_candidate_window() {
+    if (session_ == nullptr || !foreground_ || session_->snapshot().input.empty()) {
+        candidate_window_.hide();
+        return;
+    }
+    std::vector<std::wstring> display;
+    const std::string& input = session_->snapshot().input;
+    symbol_mode_ = !input.empty() && input.front() == ';';
+    symbol_candidates_.clear();
+    if (symbol_mode_) {
+        const auto results = symbols_.search(input.substr(1U), 20U);
+        for (const auto& result : results) {
+            symbol_candidates_.push_back(result.symbol);
+            display.push_back(utf8_to_wide(result.symbol + "  " + result.name));
+        }
+    } else {
+        for (const auto& item : session_->snapshot().candidates) {
+            display.push_back(utf8_to_wide(item.candidate.word));
+        }
+    }
+    if (display.empty()) {
+        selected_index_ = 0U;
+        page_start_ = 0U;
+    } else if (selected_index_ >= display.size()) {
+        selected_index_ = 0U;
+        page_start_ = 0U;
+    }
+    candidate_window_.update(
+        schema_display_name(), utf8_to_wide(input), display, selected_index_, page_start_);
+    candidate_window_.show_near_caret();
+}
+
+void TextService::load_engine() {
+    const auto data_root = local_app_data() / L"LiteIME" / L"UserData";
+    const auto lexicon_directory = data_root / L"lexicons";
+    const auto combined = lexicon_directory / L"liteime-imported.lex";
+    const auto base_binary = lexicon_directory / L"liteime-base.lex";
+    const auto installed_data = module_directory(module_).parent_path() / L"data";
+    const auto base_tsv = installed_data / L"base_lexicon.tsv";
+
+    if (std::filesystem::exists(combined)) {
+        engine_.load_lexicon(combined);
+    } else if (std::filesystem::exists(base_binary)) {
+        engine_.load_lexicon(base_binary);
+    } else {
+        engine_.load_lexicon(base_tsv);
+    }
+    user_model_path_ = data_root / L"user_model.tsv";
+    engine_.load_user_model(user_model_path_);
+    symbols_.load_tsv(installed_data / L"symbols.tsv");
+    schema_ = load_schema();
+    session_ = std::make_unique<ImeSession>(engine_, schema_);
+}
+
+void TextService::save_user_model() noexcept {
+    try {
+        engine_.save_user_model(user_model_path_);
+    } catch (...) {
+        // Input must not fail only because the learning file could not be written.
+    }
+}
+
+std::string TextService::load_schema() const {
+    const auto path = local_app_data() / L"LiteIME" / L"UserData" / L"settings.ini";
+    std::ifstream input(path, std::ios::binary);
+    std::string line;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        constexpr std::string_view prefix = "schema=";
+        if (line.rfind(prefix, 0U) == 0U) {
+            const std::string value = line.substr(prefix.size());
+            if (value == "full" || engine_.shuangpin().has_scheme(value)) {
+                return value;
+            }
+        }
+    }
+    return "full";
+}
+
+std::wstring TextService::schema_display_name() const {
+    if (schema_ == "full") {
+        return L"全拼";
+    }
+    for (const auto& item : engine_.shuangpin().schemes()) {
+        if (item.id == schema_) {
+            return utf8_to_wide(item.name);
+        }
+    }
+    return utf8_to_wide(schema_);
+}
+
+}  // namespace liteime::windows

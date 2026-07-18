@@ -1,0 +1,16 @@
+# LiteIME development TSV format
+word	pinyin	weight
+输入法	shu'ru'fa	10000
+输入法工具	shu'ru'fa'gong'ju	8000
+计算机	ji'suan'ji	10000
+计算器	ji'suan'qi	9000
+计蒜机	ji'suan'ji	100
+电子工程	dian'zi'gong'cheng	10000
+西安	xi'an	9000
+先	xian	8500
+我	wo	9000
+想	xiang	9000
+我想	wo'xiang	12000
+学习	xue'xi	11000
+协议	xie'yi	10500
+学习协议	xue'xi'xie'yi	12500

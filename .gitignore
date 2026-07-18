@@ -1,0 +1,15 @@
+/build/
+/dist/
+/.vs/
+/.idea/
+*.user
+*.suo
+*.obj
+*.lib
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.tmp
+__pycache__/
+.DS_Store

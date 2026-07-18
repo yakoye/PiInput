@@ -1,1 +1,245 @@
 # LiteIME
+
+当前开发版本：`v0.1.6-dev`
+
+LiteIME 是一个以输入准确、候选稳定、响应迅速为第一目标的轻量中文输入法项目。
+
+- C++20 跨平台输入核心；
+- Windows 首发，后续考虑 macOS、Android、iOS；
+- 支持全拼和多种双拼，小鹤双拼优先但不是唯一方案；
+- 支持导入搜狗 `.scel` 词库；
+- 自有中文/英文/程序员标点与快速符号搜索；
+- 纯离线输入完整可用；
+- 不加入 AI、语音、广告、资讯和内容推荐；
+- 跨设备词库、设置、短语和剪贴板同步放在后期，以可关闭、端到端加密为前提。
+
+## v0.1.6-dev 的关键变化
+
+用户在 Windows 真机运行注册修复脚本时，旧配置文件停用返回 `0x80004005`。旧配置文件不存在或未激活本来就是可接受状态，但 v0.1.5 的 PowerShell 脚本在 `$ErrorActionPreference = "Stop"` 下把它当作致命错误，导致真正的重新注册尚未执行。
+
+v0.1.6 已完成：
+
+- 清理旧 profile 和旧 DLL 改为幂等 best-effort；
+- 安装、修复和卸载脚本不再因旧状态缺失而提前终止；
+- 使用 `ITfInputProcessorProfileMgr::RegisterProfile` 注册文本服务和语言配置文件；
+- 配置文件设置为默认启用，并保持在 Windows 设置界面可见；
+- `liteime-profile.exe` 新增 `--register`、`--unregister` 和 `--status`；
+- 安装和修复完成后强制检查 `registered=yes` 与 `enabled=yes`；
+- 修复脚本完成后刷新 `ctfmon.exe`；
+- 增加针对注册流程和脚本幂等性的源码回归测试。
+
+> 当前环境仍无法编译 Windows TSF 目标。v0.1.6 必须在用户的 Visual Studio 2026 环境运行 `setup-dev.cmd`，才能确认 DLL 编译、注册、Windows 设置可见性和真实输入链路。
+
+## v0.1.4-dev 的关键变化
+
+v0.1.3 的 `liteime-preview.exe` 只是输入核心查询窗口，不是 Windows 系统输入法；用户输入小鹤双拼 `jisrji` 后没有候选，还有一个直接原因：当时只导入了电子和计算机专业 SCEL，专业词库中并不保证包含普通词“计算机”。
+
+v0.1.4 已完成两项针对性修复：
+
+1. 新增内置基础词库，始终与用户导入的专业 SCEL 合并；
+2. 新增第一版 Windows TSF 文本服务，可注册到 Windows 语言栏并在记事本等应用中测试真正的中文输入。
+
+## v0.1.4-dev 已实现
+
+### 内置基础词库
+
+- 新增 `data/base_lexicon.tsv`；
+- 含常用单字、常用词、常用短语和基础技术词；
+- 安装时始终生成 `liteime-base.lex`；
+- 与所有用户 SCEL 合并生成 `liteime-imported.lex`；
+- 即使没有任何 SCEL，仍可以测试全拼和双拼；
+- 已增加 `jisuanji → 计算机`、`jisrji → 计算机` 等回归测试。
+
+当前基础词库只是开发起步词库，不代表已经达到正式输入法的通用词库质量。
+
+### Windows TSF 最小输入链路
+
+新增：
+
+```text
+LiteImeTSF.dll
+liteime-profile.exe
+```
+
+当前 TSF 基线包括：
+
+- COM 文本服务注册与注销；
+- 简体中文语言配置文件注册；
+- `ITfKeyEventSink` 按键接入；
+- TSF Composition 创建、更新、提交和取消；
+- 调用已有全拼/双拼引擎；
+- 原生候选窗口；
+- 空格选中当前候选；
+- 数字键 `1~9` 选词；
+- 上下键移动候选；
+- PageUp/PageDown 翻页；
+- Backspace、Delete、左右键、Home、End；
+- Enter 提交原始拼音；
+- Esc 取消；
+- `;sheshidu` 符号搜索；
+- 本地用户选词学习；
+- 全拼、小鹤、自然码、微软、智能 ABC 方案切换工具。
+
+> TSF 代码已经加入源码和 Windows 构建目标，但当前开发环境没有 Windows SDK/MSVC，无法在这里完成真实 Windows 编译和应用兼容验证。用户运行本版 `setup-dev.cmd` 是第一轮真实 Windows TSF 验证。
+
+### 改进后的独立预览
+
+`liteime-preview.exe` 仍然保留，用于不注册系统输入法时单独检查引擎：
+
+- 新增输出区；
+- 空格、Enter、数字键和双击可把候选写入输出区；
+- 不再只复制到剪贴板；
+- 无候选时显示明确原因；
+- 优先加载合并词库，其次基础词库。
+
+## 推荐目录
+
+```text
+C:\Users\color\Downloads\lite-ime
+├── dicts
+│   ├── 电子词汇大全【官方推荐】.scel
+│   └── 计算机词汇大全【官方推荐】.scel
+├── packages
+│   └── lite-ime-v0.1.6-dev.zip
+└── lite-ime-dev
+    ├── setup-dev.cmd
+    ├── build.cmd
+    └── ...
+```
+
+版本压缩包内部固定包含一个顶层目录 `lite-ime-dev`。升级时先删除或改名旧的 `lite-ime-dev`，再解压新版。不要把新版直接覆盖到带有旧 CMake 缓存的目录。
+
+## Windows 一键构建、安装与注册
+
+在项目根目录运行：
+
+```powershell
+.\setup-dev.cmd
+```
+
+默认使用小鹤双拼，并依次完成：
+
+```text
+自动发现 Visual Studio 和 CMake
+→ 清理旧 build/dist
+→ Release 构建
+→ 自动测试
+→ 生成 EXE 与 LiteImeTSF.dll
+→ 安装到 %LOCALAPPDATA%\LiteIME\Dev
+→ 编译内置基础词库
+→ 导入相邻 dicts 中的 SCEL
+→ 注册 TSF 文本服务
+→ 激活语言配置文件
+→ 执行基础查询和注册表检查
+```
+
+指定全拼：
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\setup-dev.ps1 -Schema full
+```
+
+只构建、不注册 TSF：
+
+```powershell
+.\setup-dev.ps1 -SkipTsfRegistration
+```
+
+## 真正的系统输入测试
+
+安装成功后：
+
+```text
+1. 完全关闭并重新打开记事本；
+2. 按 Win+Space；
+3. 选择“LiteIME 中文输入法（开发版）”；
+4. 默认小鹤双拼输入 jisrji；
+5. 按空格；
+6. 应上屏“计算机”。
+```
+
+全拼模式：
+
+```powershell
+.\set-schema.cmd full
+```
+
+然后重新切换一次输入法，在记事本输入：
+
+```text
+jisuanji + Space
+```
+
+应上屏：
+
+```text
+计算机
+```
+
+切回小鹤：
+
+```powershell
+.\set-schema.cmd flypy
+```
+
+注册修复：
+
+```powershell
+.\repair-registration.ps1
+```
+
+自动检查：
+
+```powershell
+.\verify-windows.ps1
+```
+
+卸载但保留用户词库和学习数据：
+
+```powershell
+.\uninstall-dev.ps1
+```
+
+## 本版 Windows 产物
+
+```text
+dist\windows-x64\bin\liteime-scel-converter.exe
+dist\windows-x64\bin\liteime-lexicon-compiler.exe
+dist\windows-x64\bin\liteime-cli.exe
+dist\windows-x64\bin\liteime-benchmark.exe
+dist\windows-x64\bin\liteime-preview.exe
+dist\windows-x64\bin\liteime-profile.exe
+dist\windows-x64\bin\LiteImeTSF.dll
+```
+
+## 尚未达到正式发布质量的部分
+
+- Windows TSF 尚未在用户机器完成首次编译和运行验证；
+- 当前仅生成 x64 TSF DLL，32 位应用和 ARM64 尚未覆盖；
+- 候选窗仍使用最小 GDI 实现，未完成 DirectWrite/Direct2D、高 DPI、多显示器和深色模式；
+- 没有中英文状态切换按钮和状态栏；
+- 标点转换尚未接入 TSF 按键状态机；
+- 完整符号面板、收藏、最近和自定义尚未完成；
+- 通用词库仍很小，准确率尚未达到可替换成熟输入法的程度；
+- 设置 GUI、引擎独立进程、正式安装器、签名和应用兼容测试尚未完成。
+
+## 文档入口
+
+- [项目完整上下文](PROJECT_CONTEXT.md)
+- [产品定义](docs/01_product_definition.md)
+- [总体架构](docs/02_architecture.md)
+- [开发任务](docs/03_development_tasks.md)
+- [开发约束](docs/04_development_constraints.md)
+- [Windows 技术栈](docs/05_windows_technology_stack.md)
+- [词库与 SCEL](docs/06_dictionary_and_scel.md)
+- [标点与符号](docs/07_symbols_and_punctuation.md)
+- [同步规划](docs/08_sync_plan.md)
+- [测试与发布](docs/09_testing_and_release.md)
+- [新会话续接说明](docs/10_continuation_guide.md)
+- [开发流程 Skills 参考](docs/11_superpowers_skills_reference.md)
+- [版本更新工作流](docs/RELEASE_WORKFLOW.md)
+- [Windows TSF 开发测试](docs/TSF_DEVELOPER_TEST.md)
+- [v0.1.6-dev 版本说明](docs/release_notes_v0.1.6-dev.md)
+- [v0.1.6-dev 验证记录](docs/VERIFICATION_v0.1.6-dev.md)
+- [下一版计划](docs/next_develop_plan_v0.1.7.md)
