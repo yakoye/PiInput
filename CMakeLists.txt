@@ -28,6 +28,7 @@ add_library(liteime_core STATIC
     src/utf.cpp
     src/lexicon.cpp
     src/binary_lexicon.cpp
+    src/dictionary_builder.cpp
     src/pinyin.cpp
     src/shuangpin.cpp
     src/engine.cpp
@@ -69,6 +70,12 @@ add_executable(liteime-lexicon-compiler
 target_link_libraries(liteime-lexicon-compiler PRIVATE liteime_core)
 liteime_enable_warnings(liteime-lexicon-compiler)
 
+add_executable(liteime-dictionary-builder
+    tools/dictionary_builder/main.cpp
+)
+target_link_libraries(liteime-dictionary-builder PRIVATE liteime_core)
+liteime_enable_warnings(liteime-dictionary-builder)
+
 add_executable(liteime-cli
     tools/ime_cli/main.cpp
 )
@@ -84,6 +91,7 @@ liteime_enable_warnings(liteime-benchmark)
 install(TARGETS
     liteime-scel-converter
     liteime-lexicon-compiler
+    liteime-dictionary-builder
     liteime-cli
     liteime-benchmark
     RUNTIME DESTINATION bin
@@ -153,6 +161,23 @@ if(LITEIME_BUILD_TESTS)
         COMMAND ${CMAKE_COMMAND}
             -DLITEIME_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_source_regression.cmake
+    )
+    add_test(
+        NAME liteime-dictionary-script-regression
+        COMMAND "${CMAKE_COMMAND}"
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -P ${CMAKE_SOURCE_DIR}/tests/dictionary_script_regression.cmake
+    )
+    add_test(
+        NAME liteime-performance-smoke
+        COMMAND liteime-benchmark
+            --lexicon ${CMAKE_SOURCE_DIR}/data/base_lexicon.tsv
+            --schema full
+            --query wo
+            --iterations 2000
+            --warmup 200
+            --max-p95-us 2000
+            --max-p99-us 5000
     )
 
     if(LITEIME_TESTDATA_DIR)

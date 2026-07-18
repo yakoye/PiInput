@@ -1,4 +1,5 @@
 #include "liteime/binary_lexicon.h"
+#include "liteime/dictionary_builder.h"
 #include "liteime/engine.h"
 #include "liteime/lexicon.h"
 #include "liteime/pinyin.h"
@@ -17,6 +18,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <sstream>
+#include <unordered_set>
 #include <vector>
 
 namespace {
@@ -53,6 +56,57 @@ void write_sample_tsv(const std::filesystem::path& path) {
            << "学习\txue'xi\t160\n"
            << "协议\txie'yi\t150\n"
            << "学习协议\txue'xi'xie'yi\t260\n";
+}
+
+[[nodiscard]] std::vector<std::vector<std::string>> read_test_table(const std::string& name) {
+    const auto path = std::filesystem::path(LITEIME_SOURCE_DIR) / "tests" / "data" / name;
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        throw std::runtime_error("Cannot open test data: " + path.string());
+    }
+    std::vector<std::vector<std::string>> rows;
+    std::string line;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (line.empty() || line.front() == '#') {
+            continue;
+        }
+        std::vector<std::string> columns;
+        std::stringstream stream(line);
+        std::string column;
+        while (std::getline(stream, column, '\t')) {
+            columns.push_back(column);
+        }
+        rows.push_back(std::move(columns));
+    }
+    return rows;
+}
+
+void verify_candidate_table(
+    liteime::Engine& engine,
+    const std::string& table,
+    const std::string& schema) {
+    for (const auto& row : read_test_table(table)) {
+        check(row.size() == 4U, table + " row has four columns");
+        if (row.size() != 4U) {
+            continue;
+        }
+        const std::size_t max_rank = static_cast<std::size_t>(std::stoul(row[3]));
+        const std::size_t limit = max_rank == 0U ? 64U : max_rank;
+        const auto decoded = engine.decode(row[0], schema, 32U);
+        check(contains_canonical(decoded, row[1]), schema + " decodes " + row[0] + " -> " + row[1]);
+        const auto candidates = engine.query(row[0], schema, limit);
+        const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const auto& candidate) {
+            return candidate.word == row[2];
+        });
+        check(found != candidates.end(), schema + " candidate " + row[0] + " contains " + row[2]);
+        if (max_rank > 0U && found != candidates.end()) {
+            check(static_cast<std::size_t>(std::distance(candidates.begin(), found)) < max_rank,
+                schema + " candidate rank for " + row[2]);
+        }
+    }
 }
 
 void test_lexicon() {
@@ -109,6 +163,11 @@ void test_pinyin() {
 
     const auto manual = segmenter.segment("xi'an", 8U);
     check(manual.size() == 1U && manual.front().canonical == "xi'an", "Manual apostrophe boundary");
+
+    for (const auto& syllable : liteime::PinyinSegmenter::standard_syllables()) {
+        const auto decoded = segmenter.segment(syllable, 32U);
+        check(contains_canonical(decoded, syllable), "Full pinyin accepts standard syllable " + syllable);
+    }
 }
 
 void test_shuangpin() {
@@ -132,6 +191,62 @@ void test_shuangpin() {
 
     const auto abc = decoder.decode("abc", "jispji", 8U);
     check(contains_canonical(abc, "ji'suan'ji"), "ABC code path works");
+
+    for (const auto& row : read_test_table("xiaohe_mapping.tsv")) {
+        check(row.size() == 3U, "Xiaohe mapping row has three columns");
+        if (row.size() != 3U) {
+            continue;
+        }
+        const auto decoded = decoder.decode("flypy", row[0], 32U);
+        check(contains_canonical(decoded, row[1]),
+            "Flypy mapping " + row[0] + " -> " + row[1] + " (" + row[2] + ")");
+    }
+
+    std::unordered_set<std::string> reachable;
+    for (char first = 'a'; first <= 'z'; ++first) {
+        for (char second = 'a'; second <= 'z'; ++second) {
+            std::string code{first, second};
+            for (const auto& syllable : decoder.syllables_for_code("flypy", code)) {
+                reachable.insert(syllable);
+            }
+        }
+    }
+    for (const auto& syllable : liteime::PinyinSegmenter::standard_syllables()) {
+        check(reachable.contains(syllable), "Flypy can encode standard syllable " + syllable);
+    }
+    check(decoder.decode("flypy", "gjj", 8U).empty(), "Incomplete Flypy pair has no premature candidate");
+    check(decoder.decode("flypy", "qz", 8U).empty(), "Invalid Flypy code is rejected");
+}
+
+void test_dictionary_builder() {
+    const auto root = std::filesystem::path(LITEIME_SOURCE_DIR) / "tests" / "data" / "dictionary_builder";
+    const auto characters = liteime::read_dictionary_source(
+        root / "pinyin_data.txt", liteime::DictionarySourceFormat::pinyin_data, 1000U);
+    check(characters.size() == 2U, "Dictionary builder reads pinyin-data characters");
+    check(characters.size() >= 2U && characters[0].pinyin == "wo" && characters[1].pinyin == "ai",
+        "Dictionary builder removes character tones");
+
+    const auto phrases = liteime::read_dictionary_source(
+        root / "phrases.txt", liteime::DictionarySourceFormat::phrase_pinyin_data, 2000U);
+    check(!phrases.empty() && phrases.front().word == "感觉" && phrases.front().pinyin == "gan'jue",
+        "Dictionary builder reads phrase-pinyin-data");
+
+    const auto rime = liteime::read_dictionary_source(
+        root / "rime.dict.yaml", liteime::DictionarySourceFormat::rime_yaml, 3000U);
+    check(rime.size() == 2U && rime.front().word == "感觉" && rime.front().weight == 200U,
+        "Dictionary builder reads Rime YAML entries and weights");
+
+    const auto output = std::filesystem::temp_directory_path() / "liteime-dictionary-builder-test.tsv";
+    std::vector<liteime::LexiconCandidate> combined = characters;
+    combined.insert(combined.end(), phrases.begin(), phrases.end());
+    combined.insert(combined.end(), rime.begin(), rime.end());
+    liteime::write_dictionary_tsv(output, std::move(combined));
+    liteime::DevLexicon lexicon;
+    lexicon.load_tsv(output);
+    const auto feeling = lexicon.query_exact("gan'jue", 10U);
+    check(feeling.size() == 1U && feeling.front().word == "感觉" && feeling.front().weight == 2000U,
+        "Dictionary builder de-duplicates and keeps the highest weight");
+    std::filesystem::remove(output);
 }
 
 void test_engine() {
@@ -177,6 +292,59 @@ void test_builtin_base_lexicon() {
     const auto input_method = engine.query("uurufa", "flypy", 10U);
     check(!input_method.empty() && input_method.front().word == "输入法",
         "Built-in lexicon supports Flypy 输入法");
+
+    verify_candidate_table(engine, "xiaohe_candidates.tsv", "flypy");
+    verify_candidate_table(engine, "full_pinyin_candidates.tsv", "full");
+}
+
+void test_external_dictionary(const std::filesystem::path& path) {
+    liteime::Engine engine;
+    engine.load_lexicon(path);
+    check(engine.entry_count() >= 10000U, "External dictionary has useful coverage");
+    verify_candidate_table(engine, "xiaohe_candidates.tsv", "flypy");
+    verify_candidate_table(engine, "full_pinyin_candidates.tsv", "full");
+}
+
+void test_candidate_order_is_deterministic() {
+    const auto path = std::filesystem::temp_directory_path() / "liteime-test-stable-ranking.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n"
+               << "先\txian\t100\n"
+               << "先\txi'an\t100\n"
+               << "西安\txi'an\t100\n";
+    }
+    liteime::Engine engine;
+    engine.load_lexicon(path);
+    const auto baseline = engine.query("xian", "full", 10U);
+    check(baseline.size() == 3U, "Stable ranking fixture returns all candidates");
+    for (int iteration = 0; iteration < 100; ++iteration) {
+        const auto repeated = engine.query("xian", "full", 10U);
+        check(repeated.size() == baseline.size(), "Repeated candidate count is stable");
+        for (std::size_t index = 0U; index < (std::min)(repeated.size(), baseline.size()); ++index) {
+            check(repeated[index].word == baseline[index].word && repeated[index].pinyin == baseline[index].pinyin,
+                "Repeated candidate order is stable");
+        }
+    }
+    std::filesystem::remove(path);
+}
+
+void test_exact_phrase_beats_character_composition() {
+    const auto path = std::filesystem::temp_directory_path() / "liteime-test-exact-phrase.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n"
+               << "感\tgan\t40000\n"
+               << "干\tgan\t50000\n"
+               << "觉\tjue\t40000\n"
+               << "感觉\tgan'jue\t60000\n";
+    }
+    liteime::Engine engine;
+    engine.load_lexicon(path);
+    const auto candidates = engine.query("gjjt", "flypy", 5U);
+    check(!candidates.empty() && candidates.front().word == "感觉",
+        "Exact phrase ranks above higher aggregate character composition");
+    std::filesystem::remove(path);
 }
 
 void test_symbols() {
@@ -274,19 +442,24 @@ int run(const std::vector<std::string>& arguments) {
     try {
         test_lexicon();
         test_binary_lexicon();
+        test_dictionary_builder();
         test_pinyin();
         test_shuangpin();
         test_engine();
+        test_candidate_order_is_deterministic();
+        test_exact_phrase_beats_character_composition();
         test_builtin_base_lexicon();
         test_symbols();
         test_punctuation();
         test_user_model();
         test_session();
         test_invalid_scel();
-        if (arguments.size() == 3U) {
+        if (arguments.size() == 3U && arguments[1] != "--lexicon") {
             test_uploaded_scel(
                 liteime::path_from_utf8(arguments[1]),
                 liteime::path_from_utf8(arguments[2]));
+        } else if (arguments.size() == 3U && arguments[1] == "--lexicon") {
+            test_external_dictionary(liteime::path_from_utf8(arguments[2]));
         }
     } catch (const std::exception& error) {
         ++failures;

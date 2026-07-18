@@ -130,7 +130,20 @@ struct SchemeDefinition {
 
         std::string code;
         code.push_back(syllable.front());
-        if (syllable.size() == 1U) {
+        if (definition.kind == SchemeKind::flypy) {
+            // Xiaohe zero-initial syllables use aa/ee/oo for one letter,
+            // the original spelling for two letters, and the regular final
+            // key for three letters (ang -> ah, eng -> eg).
+            if (syllable.size() == 1U) {
+                code.push_back(syllable.front());
+            } else if (syllable.size() == 2U) {
+                code.push_back(syllable.back());
+            } else if (final_key != '\0') {
+                code.push_back(final_key);
+            } else {
+                return {};
+            }
+        } else if (syllable.size() == 1U) {
             code.push_back(syllable.front());
         } else if (final_key != '\0') {
             code.push_back(final_key);

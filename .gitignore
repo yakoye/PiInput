@@ -12,4 +12,5 @@
 *.ilk
 *.tmp
 __pycache__/
+/dicts/
 .DS_Store

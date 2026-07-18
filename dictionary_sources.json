@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "pinyin-data",
+      "repository": "https://github.com/mozillazg/pinyin-data.git",
+      "license": "MIT",
+      "purpose": "单字常用读音"
+    },
+    {
+      "id": "phrase-pinyin-data",
+      "repository": "https://github.com/mozillazg/phrase-pinyin-data.git",
+      "license": "MIT",
+      "purpose": "词语读音与多音词校正"
+    },
+    {
+      "id": "rime-pinyin-simp",
+      "repository": "https://github.com/rime/rime-pinyin-simp.git",
+      "license": "Apache-2.0",
+      "purpose": "通用简体拼音输入词库"
+    },
+    {
+      "id": "THUOCL",
+      "repository": "https://github.com/thunlp/THUOCL.git",
+      "license": "MIT",
+      "purpose": "可选领域词表，默认不混入通用候选"
+    }
+  ]
+}

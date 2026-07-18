@@ -1,11 +1,23 @@
 #include "liteime/engine.h"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <stdexcept>
 #include <unordered_map>
 
 namespace liteime {
+namespace {
+
+constexpr std::int64_t exact_phrase_bonus = 30'000'000;
+constexpr std::int64_t token_penalty = 12'000'000;
+constexpr std::int64_t joined_syllable_bonus = 4'000'000;
+
+[[nodiscard]] std::int64_t frequency_score(const std::uint32_t weight) {
+    return static_cast<std::int64_t>(std::log1p(static_cast<double>(weight)) * 1'000'000.0);
+}
+
+}  // namespace
 
 void Engine::load_lexicon(const std::filesystem::path& path) {
     if (is_binary_lexicon(path)) {
@@ -82,9 +94,10 @@ std::vector<EngineCandidate> Engine::query(
                 candidate.word,
                 candidate.pinyin,
                 candidate.weight,
-                static_cast<int>(candidate.weight) * 1000 +
+                frequency_score(candidate.weight) +
                     user_model_.score_adjustment(candidate.pinyin, candidate.word) +
-                    segmentation.score - segmentation_penalty,
+                    segmentation.score - segmentation_penalty +
+                    (segmentation.syllables.size() > 1U ? exact_phrase_bonus : 0),
             });
         }
 
@@ -95,7 +108,7 @@ std::vector<EngineCandidate> Engine::query(
         struct SentencePath {
             std::string text;
             std::uint32_t aggregate_weight{};
-            int score{};
+            std::int64_t score{};
         };
         std::vector<std::vector<SentencePath>> states(segmentation.syllables.size() + 1U);
         states[0U].push_back(SentencePath{});
@@ -127,9 +140,9 @@ std::vector<EngineCandidate> Engine::query(
                             total_weight,
                             static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max())));
                         const std::size_t syllable_count = end_position - start_position;
-                        next.score += static_cast<int>(word.weight) * 1000 +
+                        next.score += frequency_score(word.weight) - token_penalty +
                             user_model_.score_adjustment(span_pinyin, word.word) +
-                            static_cast<int>((syllable_count - 1U) * 20000U);
+                            static_cast<std::int64_t>(syllable_count - 1U) * joined_syllable_bonus;
                         destination.push_back(std::move(next));
                     }
                 }
@@ -168,7 +181,13 @@ std::vector<EngineCandidate> Engine::query(
         if (left.base_weight != right.base_weight) {
             return left.base_weight > right.base_weight;
         }
-        return left.word < right.word;
+        if (left.word.size() != right.word.size()) {
+            return left.word.size() > right.word.size();
+        }
+        if (left.word != right.word) {
+            return left.word < right.word;
+        }
+        return left.pinyin < right.pinyin;
     });
     if (results.size() > limit) {
         results.resize(limit);

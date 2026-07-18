@@ -21,6 +21,8 @@ struct Options {
     std::string query{"jisuanji"};
     std::size_t iterations{10000U};
     std::size_t warmup{1000U};
+    double max_p95_us{};
+    double max_p99_us{};
 };
 
 [[nodiscard]] std::size_t parse_size(const std::string& value, const char* name) {
@@ -52,6 +54,10 @@ struct Options {
             options.iterations = parse_size(require_value("--iterations"), "--iterations");
         } else if (argument == "--warmup") {
             options.warmup = parse_size(require_value("--warmup"), "--warmup");
+        } else if (argument == "--max-p95-us") {
+            options.max_p95_us = std::stod(require_value("--max-p95-us"));
+        } else if (argument == "--max-p99-us") {
+            options.max_p99_us = std::stod(require_value("--max-p99-us"));
         } else if (argument == "--help" || argument == "-h") {
             std::cout
                 << "LiteIME benchmark\n"
@@ -59,7 +65,9 @@ struct Options {
                 << "  --schema <full|flypy|natural|mspy|abc>\n"
                 << "  --query <input>\n"
                 << "  --iterations <count>\n"
-                << "  --warmup <count>\n";
+                << "  --warmup <count>\n"
+                << "  --max-p95-us <microseconds>\n"
+                << "  --max-p99-us <microseconds>\n";
             std::exit(0);
         } else {
             throw std::runtime_error("Unknown argument: " + argument);
@@ -110,6 +118,8 @@ int run(const std::vector<std::string>& arguments) {
     const double average = total / static_cast<double>(microseconds.size());
     const double load_ms = std::chrono::duration<double, std::milli>(load_end - load_start).count();
 
+    const double p95 = percentile(microseconds, 0.95);
+    const double p99 = percentile(microseconds, 0.99);
     std::cout << std::fixed << std::setprecision(3)
               << "LiteIME benchmark\n"
               << "lexicon_entries=" << engine.entry_count() << '\n'
@@ -117,10 +127,15 @@ int run(const std::vector<std::string>& arguments) {
               << "iterations=" << options.iterations << '\n'
               << "average_us=" << average << '\n'
               << "p50_us=" << percentile(microseconds, 0.50) << '\n'
-              << "p95_us=" << percentile(microseconds, 0.95) << '\n'
-              << "p99_us=" << percentile(microseconds, 0.99) << '\n'
+              << "p95_us=" << p95 << '\n'
+              << "p99_us=" << p99 << '\n'
               << "max_us=" << microseconds.back() << '\n'
               << "result_guard=" << result_guard << '\n';
+    if ((options.max_p95_us > 0.0 && p95 > options.max_p95_us) ||
+        (options.max_p99_us > 0.0 && p99 > options.max_p99_us)) {
+        std::cerr << "Latency threshold exceeded.\n";
+        return 2;
+    }
     return 0;
 }
 

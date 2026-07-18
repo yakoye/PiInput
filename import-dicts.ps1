@@ -17,7 +17,8 @@ if ([string]::IsNullOrWhiteSpace($DestinationDir)) {
 $Bin = Join-Path $Root "dist/windows-x64/bin"
 $Converter = Join-Path $Bin "liteime-scel-converter.exe"
 $Compiler = Join-Path $Bin "liteime-lexicon-compiler.exe"
-$BaseTsv = Join-Path $Root "data/base_lexicon.tsv"
+$GeneratedBaseTsv = Join-Path $DictionaryDir "generated/liteime-combined.tsv"
+$BaseTsv = if (Test-Path $GeneratedBaseTsv) { $GeneratedBaseTsv } else { Join-Path $Root "data/base_lexicon.tsv" }
 if (-not (Test-Path $Converter) -or -not (Test-Path $Compiler)) {
     throw "Build LiteIME first with .\build.ps1"
 }
@@ -43,7 +44,7 @@ try {
 
     $ScelFiles = @()
     if (Test-Path $DictionaryDir) {
-        $ScelFiles = @(Get-ChildItem $DictionaryDir -Filter *.scel -File | Sort-Object Name)
+        $ScelFiles = @(Get-ChildItem $DictionaryDir -Filter *.scel -File -Recurse | Sort-Object FullName)
     }
 
     foreach ($file in $ScelFiles) {

@@ -1,6 +1,6 @@
 # LiteIME
 
-当前开发版本：`v0.1.6-dev`
+当前开发版本：`v0.2.0-dev`
 
 LiteIME 是一个以输入准确、候选稳定、响应迅速为第一目标的轻量中文输入法项目。
 
@@ -12,6 +12,21 @@ LiteIME 是一个以输入准确、候选稳定、响应迅速为第一目标的
 - 纯离线输入完整可用；
 - 不加入 AI、语音、广告、资讯和内容推荐；
 - 跨设备词库、设置、短语和剪贴板同步放在后期，以可关闭、端到端加密为前提。
+
+## v0.2.0-dev：输入基础完善版
+
+本版本冻结新功能，只完善全拼、小鹤双拼、通用词库、候选排序、检索延迟和测试机制：
+
+- 修正小鹤零声母规则，覆盖 413 个标准普通话音节；
+- 加入用户指定的口诀字、常用组合、全拼同词表、非法编码和稳定性回归；
+- 新增 `liteime-dictionary-builder.exe`，支持 pinyin-data、phrase-pinyin-data、Rime YAML 和 LiteIME TSV；
+- 新增可双击的 `update-dictionaries.cmd`，下载、缓存、转换、验证并原子安装词库；
+- `dicts` 固定放在源码同级，更新源码不会删除大型词库和用户 SCEL；
+- 完整词匹配采用确定性奖励，修复“干觉”压过“感觉”、“先在”压过“现在”；
+- 词频使用对数缩放，避免不同长度路径直接相加原始权重；
+- 新增 `run-ime-tests.cmd`，一次验证小鹤、全拼、真实 SCEL、候选顺序和 `wo` 延迟。
+
+双击 `update-dictionaries.cmd` 更新词库，双击 `run-ime-tests.cmd` 执行完整输入测试。详细说明见 [词库更新说明](docs/词库更新说明.md) 和 [v0.2.0 验证记录](docs/VERIFICATION_v0.2.0-dev.md)。
 
 ## v0.1.6-dev 的关键变化
 
@@ -240,6 +255,8 @@ dist\windows-x64\bin\LiteImeTSF.dll
 - [开发流程 Skills 参考](docs/11_superpowers_skills_reference.md)
 - [版本更新工作流](docs/RELEASE_WORKFLOW.md)
 - [Windows TSF 开发测试](docs/TSF_DEVELOPER_TEST.md)
-- [v0.1.6-dev 版本说明](docs/release_notes_v0.1.6-dev.md)
-- [v0.1.6-dev 验证记录](docs/VERIFICATION_v0.1.6-dev.md)
-- [下一版计划](docs/next_develop_plan_v0.1.7.md)
+- [词库更新说明](docs/词库更新说明.md)
+- [v0.2.0-dev 版本说明](docs/release_notes_v0.2.0-dev.md)
+- [v0.2.0-dev 验证记录](docs/VERIFICATION_v0.2.0-dev.md)
+- [v0.2.0 输入基础设计](docs/superpowers/specs/2026-07-18-v0.2.0-输入基础完善设计.md)
+- [v0.2.0 实施计划](docs/superpowers/plans/2026-07-18-v0.2.0-输入基础完善实施计划.md)

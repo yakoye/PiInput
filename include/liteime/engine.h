@@ -7,6 +7,7 @@
 #include "liteime/user_model.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <variant>
@@ -18,7 +19,7 @@ struct EngineCandidate {
     std::string word;
     std::string pinyin;
     std::uint32_t base_weight{};
-    int score{};
+    std::int64_t score{};
 };
 
 class Engine final {
