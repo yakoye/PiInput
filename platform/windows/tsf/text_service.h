@@ -1,7 +1,9 @@
 #pragma once
 
 #include "candidate_window.h"
+#include "liteime/candidate_paging.h"
 #include "liteime/engine.h"
+#include "liteime/input_mode.h"
 #include "liteime/session.h"
 #include "liteime/symbols.h"
 #include "liteime_tsf_guids.h"
@@ -58,6 +60,8 @@ private:
     void commit_raw_input(ITfContext* context);
     void move_selection(int delta);
     void move_page(int delta);
+    [[nodiscard]] std::size_t current_page_size() const;
+    void toggle_input_mode(ITfContext* context);
     void load_engine();
     void save_user_model() noexcept;
     std::string load_schema() const;
@@ -71,7 +75,9 @@ private:
     TfClientId client_id_{TF_CLIENTID_NULL};
     bool key_sink_advised_{};
     bool foreground_{true};
+    bool english_mode_{};
     WPARAM last_eaten_key_{};
+    ShiftToggleState shift_toggle_;
 
     Engine engine_;
     SymbolIndex symbols_;
@@ -82,6 +88,7 @@ private:
     std::size_t page_start_{};
     std::vector<std::string> symbol_candidates_;
     bool symbol_mode_{};
+    CandidatePageSettings page_settings_;
     CandidateWindow candidate_window_;
 };
 

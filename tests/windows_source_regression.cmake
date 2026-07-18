@@ -8,6 +8,8 @@ file(READ "${LITEIME_SOURCE_DIR}/platform/windows/tsf/profile_registration.h" re
 file(READ "${LITEIME_SOURCE_DIR}/platform/windows/tsf/dllmain.cpp" dllmain_text)
 file(READ "${LITEIME_SOURCE_DIR}/repair-registration.ps1" repair_text)
 file(READ "${LITEIME_SOURCE_DIR}/install-dev.ps1" install_text)
+file(READ "${LITEIME_SOURCE_DIR}/platform/windows/tsf/text_service.cpp" text_service_text)
+file(READ "${LITEIME_SOURCE_DIR}/platform/windows/tsf/candidate_window.cpp" candidate_window_text)
 
 if(cmake_text MATCHES "target_link_libraries\\(LiteImeTSF[^\\)]*msctf")
     message(FATAL_ERROR "LiteImeTSF must not link a non-existent msctf import library")
@@ -63,6 +65,22 @@ endif()
 
 if(NOT install_text MATCHES "Previous profile deactivation")
     message(FATAL_ERROR "Installer must treat previous profile cleanup as best effort")
+endif()
+
+if(text_service_text MATCHES "kPageSize = 5")
+    message(FATAL_ERROR "TSF candidate paging must not return to the fixed five-item layout")
+endif()
+
+if(NOT text_service_text MATCHES "VK_OEM_MINUS" OR NOT text_service_text MATCHES "VK_OEM_PLUS")
+    message(FATAL_ERROR "TSF must support minus/equal candidate paging")
+endif()
+
+if(NOT text_service_text MATCHES "toggle_input_mode")
+    message(FATAL_ERROR "TSF must support standalone Shift input-mode switching")
+endif()
+
+if(NOT candidate_window_text MATCHES "const int column" OR NOT candidate_window_text MATCHES "item_width")
+    message(FATAL_ERROR "Candidate window must use horizontal column layout")
 endif()
 
 message(STATUS "Windows TSF source regression checks passed")

@@ -5,8 +5,8 @@
 
 namespace liteime {
 
-ImeSession::ImeSession(Engine& engine, std::string schema)
-    : engine_(&engine), schema_(std::move(schema)) {
+ImeSession::ImeSession(Engine& engine, std::string schema, const std::size_t candidate_limit)
+    : engine_(&engine), schema_(std::move(schema)), candidate_limit_(candidate_limit) {
     refresh();
 }
 
@@ -112,7 +112,7 @@ void ImeSession::refresh() {
     if (snapshot_.input.empty()) {
         return;
     }
-    const auto candidates = engine_->query(snapshot_.input, schema_, 10U);
+    const auto candidates = engine_->query(snapshot_.input, schema_, candidate_limit_);
     snapshot_.candidates.reserve(candidates.size());
     for (std::size_t index = 0U; index < candidates.size(); ++index) {
         const std::uint64_t id = (snapshot_.generation << 32U) | static_cast<std::uint64_t>(index + 1U);

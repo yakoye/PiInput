@@ -8,6 +8,8 @@ $Data = Join-Path $Root "data/base_lexicon.tsv"
 $Cli = Join-Path $Bin "liteime-cli.exe"
 $Profile = Join-Path $Bin "liteime-profile.exe"
 $Dll = Join-Path $Bin "LiteImeTSF.dll"
+$InstalledLexicon = Join-Path $env:LOCALAPPDATA "LiteIME/UserData/lexicons/liteime-imported.lex"
+$CandidateSettings = Join-Path $env:LOCALAPPDATA "LiteIME/UserData/settings.ini"
 
 foreach ($path in @($Cli, $Profile, $Dll, $Data)) {
     if (-not (Test-Path $path)) {
@@ -23,14 +25,42 @@ $FlypyResult = (& $Cli --lexicon $Data --schema flypy --query jisrji --top 5 | O
 if ($LASTEXITCODE -ne 0 -or -not $FlypyResult.Contains("计算机")) {
     throw "Flypy base lexicon verification failed.`n$FlypyResult"
 }
+if (Test-Path $InstalledLexicon) {
+    foreach ($case in @(
+        @("flypy", "jpiu", "接触"),
+        @("flypy", "cihv", "词汇"),
+        @("full", "jiechu", "接触"),
+        @("full", "cihui", "词汇")
+    )) {
+        $result = (& $Cli --lexicon $InstalledLexicon --schema $case[0] --query $case[1] --top 6 | Out-String)
+        if ($LASTEXITCODE -ne 0 -or $result -notmatch ("(?m)^1\. " + [regex]::Escape($case[2]) + "\s")) {
+            throw "Installed dictionary ranking failed: $($case[1]) must rank $($case[2]) first.`n$result"
+        }
+    }
+}
+if (-not (Test-Path $CandidateSettings)) {
+    throw "Candidate settings are missing: $CandidateSettings"
+}
 
 if (-not $SkipRegistryCheck) {
-    $RegistryPath = "HKCU:\Software\Classes\CLSID\{84E21A77-3A42-4D7B-93B8-BCDF818FC414}\InprocServer32"
-    if (-not (Test-Path $RegistryPath)) {
+    $RegistryPaths = @(
+        "HKCU:\Software\Classes\CLSID\{84E21A77-3A42-4D7B-93B8-BCDF818FC414}\InprocServer32",
+        "HKLM:\Software\Classes\CLSID\{84E21A77-3A42-4D7B-93B8-BCDF818FC414}\InprocServer32"
+    )
+    $RegistryPath = $RegistryPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if ([string]::IsNullOrWhiteSpace($RegistryPath)) {
         throw "LiteIME COM registration was not found. Run .\setup-dev.cmd or .\repair-registration.ps1."
     }
     $RegisteredDll = (Get-ItemProperty $RegistryPath).'(default)'
     Write-Host "Registered DLL: $RegisteredDll" -ForegroundColor Cyan
+    if (-not (Test-Path $RegisteredDll)) {
+        throw "Registered LiteIME DLL does not exist: $RegisteredDll"
+    }
+    $BuiltHash = (Get-FileHash $Dll -Algorithm SHA256).Hash
+    $RegisteredHash = (Get-FileHash $RegisteredDll -Algorithm SHA256).Hash
+    if ($BuiltHash -ne $RegisteredHash) {
+        throw "The registered TSF DLL is stale. Run .\setup-dev.cmd to install the current build."
+    }
 }
 
 
@@ -44,6 +74,7 @@ if (-not $SkipRegistryCheck) {
 
 Write-Host "Full pinyin query passed: jisuanji -> 计算机" -ForegroundColor Green
 Write-Host "Flypy query passed: jisrji -> 计算机" -ForegroundColor Green
+Write-Host "Registered TSF DLL matches the current Release build." -ForegroundColor Green
 Write-Host "Automated Windows verification passed." -ForegroundColor Green
 Write-Host "Manual TSF check:" -ForegroundColor Cyan
 Write-Host "  1. Close and reopen Notepad."

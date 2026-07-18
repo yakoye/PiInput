@@ -25,6 +25,26 @@
 - 拼音中间编辑；
 - 不同应用标点状态。
 
+当前输入基础回归数据位于：
+
+- `tests/data/xiaohe_mapping.tsv`：小鹤键位、零声母和 413 个合法音节可达性；
+- `tests/data/xiaohe_candidates.tsv`、`full_pinyin_candidates.tsv`：单字与常用词候选；
+- `tests/data/core_input_cases.tsv`：常用词、隔音符、长句切分与语义消歧发布门槛；
+- `tests/data/diagnostic_input_cases.tsv`：误触、漏键、模糊音、URL、V/U 模式等未来诊断项；
+- `tests/data/real_world_text_corpus.txt`：照护提醒、政策、沟通、新闻、论述和故事真实长句。
+
+`diagnostic_input_cases.tsv` 中的 `future` 行不会伪装成已经支持的功能，也不阻断当前版本发布。真实文本语料通过 `test-real-world-corpus.cmd` 生成 Top 10 命中率报告，结果保存在外部 `dicts/tests`，不会写入用户学习数据。
+
+### 候选与状态机回归
+
+- 单音节默认每页 9 项；
+- 多音节默认每页 6 项；
+- 页大小合法范围 1～9，可由 `settings.ini` 配置；
+- `-`/`=` 与 PageUp/PageDown 翻页边界一致；
+- 数字键只选择当前页可见编号；
+- 单独 Shift 切换中英文；Shift 作为修饰键时不切换；
+- 相同输入、词库和用户数据下候选顺序完全稳定。
+
 ### 性能测试
 
 - 冷启动；

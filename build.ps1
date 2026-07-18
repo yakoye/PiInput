@@ -112,7 +112,7 @@ try {
     if (Test-Path $InstallDir) { Remove-Item $InstallDir -Recurse -Force }
     Invoke-NativeChecked $CMakeExe @("--install", $BuildDir, "--config", $Configuration, "--prefix", $InstallDir)
 
-    $expected = @("liteime-cli.exe", "liteime-scel-converter.exe", "liteime-lexicon-compiler.exe", "liteime-benchmark.exe", "liteime-preview.exe", "liteime-profile.exe", "LiteImeTSF.dll")
+    $expected = @("liteime-cli.exe", "liteime-scel-converter.exe", "liteime-lexicon-compiler.exe", "liteime-dictionary-builder.exe", "liteime-benchmark.exe", "liteime-preview.exe", "liteime-profile.exe", "LiteImeTSF.dll")
     foreach ($name in $expected) {
         $path = Join-Path $InstallDir "bin/$name"
         if (-not (Test-Path $path)) { throw "Expected executable was not generated: $path" }

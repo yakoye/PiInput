@@ -88,6 +88,18 @@ Copy-Item (Join-Path $Source "*") $Destination -Recurse -Force
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
 Set-Content (Join-Path $Destination "VERSION") $Version -Encoding UTF8
 
+$UserDataDirectory = Join-Path $env:LOCALAPPDATA "LiteIME/UserData"
+$CandidateSettings = Join-Path $UserDataDirectory "settings.ini"
+New-Item $UserDataDirectory -ItemType Directory -Force | Out-Null
+$settingsLines = if (Test-Path $CandidateSettings) { @(Get-Content $CandidateSettings) } else { @() }
+if (-not ($settingsLines -match '^single_syllable_page_size=')) {
+    $settingsLines += "single_syllable_page_size=9"
+}
+if (-not ($settingsLines -match '^phrase_page_size=')) {
+    $settingsLines += "phrase_page_size=6"
+}
+$settingsLines | Set-Content $CandidateSettings -Encoding ASCII
+
 Invoke-NativeRequired -Description "Saving the LiteIME input schema" -Command {
     & $ProfileTool --schema $Schema
 }

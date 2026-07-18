@@ -1,6 +1,8 @@
 #include "liteime/binary_lexicon.h"
+#include "liteime/candidate_paging.h"
 #include "liteime/dictionary_builder.h"
 #include "liteime/engine.h"
+#include "liteime/input_mode.h"
 #include "liteime/lexicon.h"
 #include "liteime/pinyin.h"
 #include "liteime/punctuation.h"
@@ -244,9 +246,62 @@ void test_dictionary_builder() {
     liteime::DevLexicon lexicon;
     lexicon.load_tsv(output);
     const auto feeling = lexicon.query_exact("gan'jue", 10U);
-    check(feeling.size() == 1U && feeling.front().word == "感觉" && feeling.front().weight == 2000U,
-        "Dictionary builder de-duplicates and keeps the highest weight");
+    check(feeling.size() == 1U && feeling.front().word == "感觉" && feeling.front().weight == 200U,
+        "Dictionary builder preserves authoritative frequency over pronunciation fallback");
     std::filesystem::remove(output);
+}
+
+void verify_core_input_cases(liteime::Engine& engine) {
+    for (const auto& row : read_test_table("core_input_cases.tsv")) {
+        check(row.size() == 7U, "core_input_cases.tsv row has seven columns");
+        if (row.size() != 7U || row[0] != "required") {
+            continue;
+        }
+        const std::size_t max_rank = static_cast<std::size_t>(std::stoul(row[5]));
+        const auto decoded = engine.decode(row[2], row[1], 32U);
+        check(contains_canonical(decoded, row[3]), row[1] + " decodes required case " + row[2]);
+        const auto candidates = engine.query(row[2], row[1], max_rank);
+        const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const auto& candidate) {
+            return candidate.word == row[4];
+        });
+        check(found != candidates.end(), row[1] + " required target " + row[4] + " for " + row[2]);
+    }
+}
+
+void test_candidate_paging() {
+    const liteime::CandidatePageSettings defaults;
+    check(defaults.single_syllable == 9U, "Single-syllable page defaults to nine candidates");
+    check(defaults.multi_syllable == 6U, "Phrase page defaults to six candidates");
+    check(liteime::candidate_page_size(defaults, 1U, false) == 9U, "One syllable uses single-character page size");
+    check(liteime::candidate_page_size(defaults, 2U, false) == 6U, "Multiple syllables use phrase page size");
+    check(liteime::candidate_page_size(defaults, 0U, true) == 6U, "Symbols use phrase page size");
+    check(liteime::move_candidate_page(0U, 20U, 9U, -1) == 18U, "Previous page wraps to final page");
+    check(liteime::move_candidate_page(18U, 20U, 9U, 1) == 0U, "Next page wraps to first page");
+    check(liteime::move_candidate_page(0U, 13U, 6U, 1) == 6U, "Phrase next page advances by six");
+    check(liteime::align_candidate_page(6U, 20U, 9U) == 0U,
+        "Changing from six to nine candidates realigns the page boundary");
+
+    const auto settings_path = std::filesystem::temp_directory_path() / "liteime-page-settings.ini";
+    {
+        std::ofstream output(settings_path, std::ios::trunc);
+        output << "single_syllable_page_size=8\nphrase_page_size=5\n";
+    }
+    const auto configured = liteime::load_candidate_page_settings(settings_path);
+    check(configured.single_syllable == 8U && configured.multi_syllable == 5U,
+        "Candidate page sizes can be configured");
+    std::filesystem::remove(settings_path);
+}
+
+void test_shift_toggle_state() {
+    liteime::ShiftToggleState state;
+    state.on_shift_down();
+    check(state.on_shift_up(), "Standalone Shift toggles input mode");
+    state.on_shift_down();
+    state.on_other_key_down();
+    check(!state.on_shift_up(), "Shift used as a modifier does not toggle input mode");
+    check(!state.on_shift_up(), "Unmatched Shift release does not toggle input mode");
+    state.on_shift_down(true);
+    check(!state.on_shift_up(), "Shift pressed after Ctrl Alt or Win does not toggle input mode");
 }
 
 void test_engine() {
@@ -303,6 +358,7 @@ void test_external_dictionary(const std::filesystem::path& path) {
     check(engine.entry_count() >= 10000U, "External dictionary has useful coverage");
     verify_candidate_table(engine, "xiaohe_candidates.tsv", "flypy");
     verify_candidate_table(engine, "full_pinyin_candidates.tsv", "full");
+    verify_core_input_cases(engine);
 }
 
 void test_candidate_order_is_deterministic() {
@@ -409,6 +465,22 @@ void test_session() {
     check(selected.has_value() && *selected == "计算机", "Current candidate ID selects expected word");
     check(session.snapshot().input.empty(), "Choosing a candidate clears composition");
     std::filesystem::remove(path);
+
+    const auto paging_path = std::filesystem::temp_directory_path() / "liteime-test-session-paging.tsv";
+    {
+        std::ofstream output(paging_path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n";
+        for (int index = 0; index < 12; ++index) {
+            output << "候选" << index << "\thou\t" << (100 - index) << '\n';
+        }
+    }
+    liteime::Engine paging_engine;
+    paging_engine.load_lexicon(paging_path);
+    liteime::ImeSession paging_session(paging_engine, "full");
+    paging_session.set_input("hou");
+    check(paging_session.snapshot().candidates.size() == 12U,
+        "Session retains more than ten candidates for paging");
+    std::filesystem::remove(paging_path);
 }
 
 void test_invalid_scel() {
@@ -443,6 +515,8 @@ int run(const std::vector<std::string>& arguments) {
         test_lexicon();
         test_binary_lexicon();
         test_dictionary_builder();
+        test_candidate_paging();
+        test_shift_toggle_state();
         test_pinyin();
         test_shuangpin();
         test_engine();

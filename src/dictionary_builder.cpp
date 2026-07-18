@@ -112,6 +112,9 @@ std::vector<LexiconCandidate> read_dictionary_source(
 
         LexiconCandidate entry;
         entry.weight = default_weight;
+        entry.authoritative_weight =
+            format == DictionarySourceFormat::liteime_tsv ||
+            format == DictionarySourceFormat::rime_yaml;
         if (format == DictionarySourceFormat::liteime_tsv || format == DictionarySourceFormat::rime_yaml) {
             const auto columns = split_tabs(line);
             if (columns.size() < 2U || columns[0] == "word") {
@@ -157,10 +160,18 @@ std::vector<LexiconCandidate> read_dictionary_source(
 void write_dictionary_tsv(
     const std::filesystem::path& path,
     std::vector<LexiconCandidate> entries) {
-    std::map<std::pair<std::string, std::string>, std::uint32_t> unique;
+    struct MergedWeight {
+        std::uint32_t value{};
+        bool authoritative{};
+    };
+    std::map<std::pair<std::string, std::string>, MergedWeight> unique;
     for (const auto& entry : entries) {
         auto& weight = unique[{entry.word, entry.pinyin}];
-        weight = std::max(weight, entry.weight);
+        if ((entry.authoritative_weight && !weight.authoritative) ||
+            (entry.authoritative_weight == weight.authoritative && entry.weight > weight.value)) {
+            weight.value = entry.weight;
+            weight.authoritative = entry.authoritative_weight;
+        }
     }
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) {
@@ -168,7 +179,7 @@ void write_dictionary_tsv(
     }
     output << "word\tpinyin\tweight\n";
     for (const auto& [key, weight] : unique) {
-        output << key.first << '\t' << key.second << '\t' << weight << '\n';
+        output << key.first << '\t' << key.second << '\t' << weight.value << '\n';
     }
     if (!output) {
         throw std::runtime_error("Failed while writing dictionary TSV");

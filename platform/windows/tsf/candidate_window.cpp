@@ -9,7 +9,8 @@ constexpr wchar_t kCandidateClass[] = L"LiteIMETsfCandidateWindow";
 constexpr int kPadding = 8;
 constexpr int kHeaderHeight = 30;
 constexpr int kRowHeight = 30;
-constexpr std::size_t kPageSize = 5U;
+constexpr int kMinimumItemWidth = 64;
+constexpr int kMaximumItemWidth = 180;
 
 }  // namespace
 
@@ -37,8 +38,8 @@ bool CandidateWindow::create(const HINSTANCE instance) {
         WS_POPUP | WS_BORDER,
         0,
         0,
-        360,
-        kHeaderHeight + static_cast<int>(kPageSize) * kRowHeight + 2 * kPadding,
+        480,
+        kHeaderHeight + kRowHeight + 2 * kPadding,
         nullptr,
         nullptr,
         instance,
@@ -69,12 +70,14 @@ void CandidateWindow::update(
     const std::wstring& composition,
     const std::vector<std::wstring>& candidates,
     const std::size_t selected,
-    const std::size_t page_start) {
+    const std::size_t page_start,
+    const std::size_t page_size) {
     schema_name_ = schema_name;
     composition_ = composition;
     candidates_ = candidates;
     selected_ = selected;
     page_start_ = page_start;
+    page_size_ = (std::max)(std::size_t{1U}, page_size);
     if (window_ != nullptr) {
         InvalidateRect(window_, nullptr, TRUE);
     }
@@ -95,11 +98,49 @@ void CandidateWindow::show_near_caret() {
         point.y += 20;
     }
 
-    const int visible_count = static_cast<int>((std::min)(kPageSize,
-        candidates_.size() > page_start_ ? candidates_.size() - page_start_ : 0U));
-    const int height = kHeaderHeight + (std::max)(1, visible_count) * kRowHeight + 2 * kPadding;
-    SetWindowPos(window_, HWND_TOPMOST, point.x, point.y, 400, height,
+    const int height = kHeaderHeight + kRowHeight + 2 * kPadding;
+    int width = desired_width();
+    const HMONITOR monitor = MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
+    MONITORINFO monitor_info{sizeof(monitor_info)};
+    if (GetMonitorInfoW(monitor, &monitor_info) != FALSE) {
+        const int work_width = static_cast<int>(monitor_info.rcWork.right - monitor_info.rcWork.left);
+        width = (std::min)(width, work_width - 16);
+        point.x = (std::min)(point.x, monitor_info.rcWork.right - width);
+        point.x = (std::max)(point.x, monitor_info.rcWork.left);
+    }
+    SetWindowPos(window_, HWND_TOPMOST, point.x, point.y, width, height,
         SWP_NOACTIVATE | SWP_SHOWWINDOW);
+}
+
+int CandidateWindow::desired_width() const {
+    if (window_ == nullptr) {
+        return 480;
+    }
+    HDC dc = GetDC(window_);
+    if (dc == nullptr) {
+        return 480;
+    }
+    const auto previous_font = SelectObject(dc, font_);
+    int width = 2 * kPadding;
+    for (const int item_width : item_widths(dc)) {
+        width += item_width;
+    }
+    SelectObject(dc, previous_font);
+    ReleaseDC(window_, dc);
+    return (std::max)(320, width);
+}
+
+std::vector<int> CandidateWindow::item_widths(HDC dc) const {
+    std::vector<int> widths;
+    const std::size_t end = (std::min)(candidates_.size(), page_start_ + page_size_);
+    widths.reserve(end - page_start_);
+    for (std::size_t index = page_start_; index < end; ++index) {
+        const std::wstring text = std::to_wstring(index - page_start_ + 1U) + L". " + candidates_[index];
+        SIZE extent{};
+        GetTextExtentPoint32W(dc, text.c_str(), static_cast<int>(text.size()), &extent);
+        widths.push_back((std::clamp)(static_cast<int>(extent.cx) + 18, kMinimumItemWidth, kMaximumItemWidth));
+    }
+    return widths;
 }
 
 void CandidateWindow::hide() {
@@ -125,18 +166,33 @@ void CandidateWindow::paint() {
     const std::wstring header_text = composition_ + L"    [" + schema_name_ + L"]";
     DrawTextW(dc, header_text.c_str(), -1, &header, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
 
-    const std::size_t end = (std::min)(candidates_.size(), page_start_ + kPageSize);
+    const std::size_t end = (std::min)(candidates_.size(), page_start_ + page_size_);
+    const int available_width = (std::max)(1, static_cast<int>(client.right) - 2 * kPadding);
+    auto widths = item_widths(dc);
+    int desired_items_width = 0;
+    for (const int width : widths) {
+        desired_items_width += width;
+    }
+    const double scale = desired_items_width > available_width && desired_items_width > 0
+        ? static_cast<double>(available_width) / static_cast<double>(desired_items_width)
+        : 1.0;
+    int left = kPadding;
     for (std::size_t index = page_start_; index < end; ++index) {
-        const int row = static_cast<int>(index - page_start_);
-        RECT item{kPadding, kPadding + kHeaderHeight + row * kRowHeight,
-                  client.right - kPadding, kPadding + kHeaderHeight + (row + 1) * kRowHeight};
+        const int column = static_cast<int>(index - page_start_);
+        const int scaled_width = column + 1 == static_cast<int>(widths.size())
+            ? client.right - kPadding - left
+            : (std::max)(40, static_cast<int>(static_cast<double>(widths[static_cast<std::size_t>(column)]) * scale));
+        RECT item{left, kPadding + kHeaderHeight,
+                  (std::min)(static_cast<int>(client.right) - kPadding, left + scaled_width),
+                  kPadding + kHeaderHeight + kRowHeight};
+        left = item.right;
         if (index == selected_) {
             HBRUSH selected_brush = CreateSolidBrush(RGB(225, 239, 255));
             FillRect(dc, &item, selected_brush);
             DeleteObject(selected_brush);
         }
         SetTextColor(dc, RGB(25, 25, 25));
-        const std::wstring number = std::to_wstring(row + 1U) + L". ";
+        const std::wstring number = std::to_wstring(column + 1U) + L". ";
         const std::wstring line = number + candidates_[index];
         item.left += 4;
         DrawTextW(dc, line.c_str(), -1, &item, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);

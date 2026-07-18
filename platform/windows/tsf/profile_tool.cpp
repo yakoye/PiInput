@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
 
@@ -45,11 +46,27 @@ void write_schema(const std::string& schema) {
     }
     const auto path = local_app_data() / L"LiteIME" / L"UserData" / L"settings.ini";
     std::filesystem::create_directories(path.parent_path());
+    std::vector<std::string> lines;
+    {
+        std::ifstream input(path, std::ios::binary);
+        std::string line;
+        while (std::getline(input, line)) {
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
+            if (line.rfind("schema=", 0U) != 0U) {
+                lines.push_back(std::move(line));
+            }
+        }
+    }
+    lines.push_back("schema=" + schema);
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) {
         throw std::runtime_error("Cannot write settings.ini");
     }
-    output << "schema=" << schema << '\n';
+    for (const auto& line : lines) {
+        output << line << '\n';
+    }
     output.close();
     if (!output) {
         throw std::runtime_error("Failed while writing settings.ini");

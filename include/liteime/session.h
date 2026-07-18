@@ -24,7 +24,7 @@ struct CandidateSnapshot {
 
 class ImeSession final {
 public:
-    explicit ImeSession(Engine& engine, std::string schema = "full");
+    explicit ImeSession(Engine& engine, std::string schema = "full", std::size_t candidate_limit = 90U);
 
     void set_schema(std::string schema);
     void set_input(std::string input);
@@ -45,6 +45,7 @@ private:
 
     Engine* engine_{};
     std::string schema_;
+    std::size_t candidate_limit_{90U};
     CandidateSnapshot snapshot_;
 };
 

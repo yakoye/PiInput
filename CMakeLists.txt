@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(LiteIME VERSION 0.1.6 LANGUAGES CXX)
+project(LiteIME VERSION 0.2.0 LANGUAGES CXX)
 
 option(LITEIME_BUILD_TESTS "Build LiteIME tests" ON)
 option(LITEIME_STATIC_MSVC_RUNTIME "Use the static MSVC runtime" ON)
@@ -29,6 +29,8 @@ add_library(liteime_core STATIC
     src/lexicon.cpp
     src/binary_lexicon.cpp
     src/dictionary_builder.cpp
+    src/candidate_paging.cpp
+    src/input_mode.cpp
     src/pinyin.cpp
     src/shuangpin.cpp
     src/engine.cpp
@@ -181,6 +183,13 @@ if(LITEIME_BUILD_TESTS)
     )
 
     if(LITEIME_TESTDATA_DIR)
+        set(EXTERNAL_LEXICON "${LITEIME_TESTDATA_DIR}/cache/liteime-base.lex")
+        if(EXISTS "${EXTERNAL_LEXICON}")
+            add_test(
+                NAME liteime-external-dictionary-regression
+                COMMAND liteime-core-tests --lexicon "${EXTERNAL_LEXICON}"
+            )
+        endif()
         set(ELECTRONICS_SCEL "${LITEIME_TESTDATA_DIR}/电子词汇大全【官方推荐】.scel")
         set(COMPUTER_SCEL "${LITEIME_TESTDATA_DIR}/计算机词汇大全【官方推荐】.scel")
         if(EXISTS "${ELECTRONICS_SCEL}" AND EXISTS "${COMPUTER_SCEL}")

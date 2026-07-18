@@ -18,8 +18,6 @@ HINSTANCE g_module_instance = nullptr;
 
 namespace {
 
-constexpr std::size_t kPageSize = 5U;
-
 class EditSession final : public ITfEditSession {
 public:
     EditSession(TextService* service, ITfContext* context, std::wstring text, bool commit, bool cancel)
@@ -105,6 +103,10 @@ private:
 
 [[nodiscard]] bool is_number_key(const WPARAM key) {
     return key >= static_cast<WPARAM>('1') && key <= static_cast<WPARAM>('9');
+}
+
+[[nodiscard]] bool is_shift_key(const WPARAM key) {
+    return key == VK_SHIFT || key == VK_LSHIFT || key == VK_RSHIFT;
 }
 
 }  // namespace
@@ -204,6 +206,8 @@ STDMETHODIMP TextService::Deactivate() {
     page_start_ = 0U;
     symbol_candidates_.clear();
     symbol_mode_ = false;
+    english_mode_ = false;
+    shift_toggle_.reset();
     return S_OK;
 }
 
@@ -222,6 +226,11 @@ STDMETHODIMP TextService::OnTestKeyDown(
     if (eaten == nullptr) {
         return E_POINTER;
     }
+    if (is_shift_key(wparam)) {
+        shift_toggle_.on_shift_down(has_disallowed_modifier());
+    } else {
+        shift_toggle_.on_other_key_down();
+    }
     *eaten = should_eat_key(wparam) ? TRUE : FALSE;
     return S_OK;
 }
@@ -231,11 +240,18 @@ STDMETHODIMP TextService::OnKeyDown(
     if (eaten == nullptr) {
         return E_POINTER;
     }
+    if (is_shift_key(wparam)) {
+        shift_toggle_.on_shift_down(has_disallowed_modifier());
+    } else {
+        shift_toggle_.on_other_key_down();
+    }
     const bool consume = should_eat_key(wparam);
     *eaten = consume ? TRUE : FALSE;
     if (consume) {
         last_eaten_key_ = wparam;
-        handle_key(context, wparam);
+        if (!is_shift_key(wparam)) {
+            handle_key(context, wparam);
+        }
     }
     return S_OK;
 }
@@ -245,16 +261,19 @@ STDMETHODIMP TextService::OnTestKeyUp(
     if (eaten == nullptr) {
         return E_POINTER;
     }
-    *eaten = (wparam == last_eaten_key_) ? TRUE : FALSE;
+    *eaten = (is_shift_key(wparam) && !has_disallowed_modifier()) || wparam == last_eaten_key_ ? TRUE : FALSE;
     return S_OK;
 }
 
 STDMETHODIMP TextService::OnKeyUp(
-    ITfContext*, const WPARAM wparam, LPARAM, BOOL* const eaten) {
+    ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) {
         return E_POINTER;
     }
-    *eaten = (wparam == last_eaten_key_) ? TRUE : FALSE;
+    *eaten = (is_shift_key(wparam) || wparam == last_eaten_key_) ? TRUE : FALSE;
+    if (is_shift_key(wparam) && shift_toggle_.on_shift_up()) {
+        toggle_input_mode(context);
+    }
     if (wparam == last_eaten_key_) {
         last_eaten_key_ = 0U;
     }
@@ -289,6 +308,12 @@ bool TextService::should_eat_key(const WPARAM wparam) const {
     if (session_ == nullptr || has_disallowed_modifier()) {
         return false;
     }
+    if (is_shift_key(wparam)) {
+        return true;
+    }
+    if (english_mode_) {
+        return false;
+    }
     const bool composing = !session_->snapshot().input.empty();
     if (!composing) {
         if ((GetKeyState(VK_SHIFT) & 0x8000) != 0) {
@@ -311,6 +336,8 @@ bool TextService::should_eat_key(const WPARAM wparam) const {
     case VK_DOWN:
     case VK_PRIOR:
     case VK_NEXT:
+    case VK_OEM_MINUS:
+    case VK_OEM_PLUS:
     case VK_SPACE:
     case VK_RETURN:
     case VK_ESCAPE:
@@ -360,7 +387,13 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
     }
     if (wparam == VK_DELETE) {
         session_->delete_forward();
-        request_update(context);
+        selected_index_ = 0U;
+        page_start_ = 0U;
+        if (session_->snapshot().input.empty()) {
+            request_cancel(context);
+        } else {
+            request_update(context);
+        }
         refresh_candidate_window();
         return;
     }
@@ -404,9 +437,21 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
         refresh_candidate_window();
         return;
     }
+    if (wparam == VK_OEM_MINUS) {
+        move_page(-1);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_OEM_PLUS) {
+        move_page(1);
+        refresh_candidate_window();
+        return;
+    }
     if (is_number_key(wparam)) {
         const std::size_t local = static_cast<std::size_t>(wparam - static_cast<WPARAM>('1'));
-        choose_candidate(context, page_start_ + local);
+        if (local < current_page_size()) {
+            choose_candidate(context, page_start_ + local);
+        }
         return;
     }
     if (wparam == VK_SPACE) {
@@ -574,7 +619,8 @@ void TextService::move_selection(const int delta) {
     const int signed_count = static_cast<int>(count);
     const int next = (static_cast<int>(selected_index_) + delta + signed_count) % signed_count;
     selected_index_ = static_cast<std::size_t>(next);
-    page_start_ = (selected_index_ / kPageSize) * kPageSize;
+    const std::size_t page_size = current_page_size();
+    page_start_ = (selected_index_ / page_size) * page_size;
 }
 
 void TextService::move_page(const int delta) {
@@ -585,10 +631,8 @@ void TextService::move_page(const int delta) {
     if (count == 0U) {
         return;
     }
-    const int pages = static_cast<int>((count + kPageSize - 1U) / kPageSize);
-    int page = static_cast<int>(page_start_ / kPageSize) + delta;
-    page = (page + pages) % pages;
-    page_start_ = static_cast<std::size_t>(page) * kPageSize;
+    const std::size_t page_size = current_page_size();
+    page_start_ = move_candidate_page(page_start_, count, page_size, delta);
     selected_index_ = (std::min)(page_start_, count - 1U);
 }
 
@@ -619,8 +663,9 @@ void TextService::refresh_candidate_window() {
         selected_index_ = 0U;
         page_start_ = 0U;
     }
+    page_start_ = align_candidate_page(page_start_, display.size(), current_page_size());
     candidate_window_.update(
-        schema_display_name(), utf8_to_wide(input), display, selected_index_, page_start_);
+        schema_display_name(), utf8_to_wide(input), display, selected_index_, page_start_, current_page_size());
     candidate_window_.show_near_caret();
 }
 
@@ -643,7 +688,36 @@ void TextService::load_engine() {
     engine_.load_user_model(user_model_path_);
     symbols_.load_tsv(installed_data / L"symbols.tsv");
     schema_ = load_schema();
+    page_settings_ = load_candidate_page_settings(data_root / L"settings.ini");
     session_ = std::make_unique<ImeSession>(engine_, schema_);
+}
+
+std::size_t TextService::current_page_size() const {
+    if (session_ == nullptr) {
+        return page_settings_.multi_syllable;
+    }
+    const std::string& input = session_->snapshot().input;
+    if (symbol_mode_) {
+        return candidate_page_size(page_settings_, 0U, true);
+    }
+    const auto decoded = engine_.decode(input, schema_, 1U);
+    const std::size_t syllables = decoded.empty() ? (input.size() <= 2U ? 1U : 2U) : decoded.front().syllables.size();
+    return candidate_page_size(page_settings_, syllables, false);
+}
+
+void TextService::toggle_input_mode(ITfContext* const context) {
+    english_mode_ = !english_mode_;
+    if (session_ != nullptr && !session_->snapshot().input.empty()) {
+        session_->clear();
+        selected_index_ = 0U;
+        page_start_ = 0U;
+        symbol_candidates_.clear();
+        symbol_mode_ = false;
+        if (context != nullptr) {
+            request_cancel(context);
+        }
+    }
+    candidate_window_.hide();
 }
 
 void TextService::save_user_model() noexcept {
@@ -674,6 +748,9 @@ std::string TextService::load_schema() const {
 }
 
 std::wstring TextService::schema_display_name() const {
+    if (english_mode_) {
+        return L"英文";
+    }
     if (schema_ == "full") {
         return L"全拼";
     }

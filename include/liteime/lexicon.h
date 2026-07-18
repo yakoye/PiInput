@@ -13,6 +13,7 @@ struct LexiconCandidate {
     std::string word;
     std::string pinyin;
     std::uint32_t weight{};
+    bool authoritative_weight{true};
 };
 
 class DevLexicon final {

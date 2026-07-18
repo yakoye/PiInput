@@ -33,6 +33,18 @@
 11. 不保存完整按键记录和完整输入历史；
 12. 不加入 AI、语音、广告、资讯和内容推荐。
 
+## 2.1 v0.2.0 当前交互基线
+
+- 候选横向显示；
+- 单音节默认每页 9 项，多音节默认每页 6 项；
+- `-` 上一页，`=` 下一页，同时保留 PageUp/PageDown；
+- 单独按 Shift 切换中英文，Shift 参与组合快捷键时不切换；
+- 页大小写入 `%LOCALAPPDATA%\LiteIME\UserData\settings.ini`，范围 1～9；
+- 会话保留 90 个不可变候选，支持稳定多页浏览；
+- phrase-pinyin-data 只提供读音补全，不能用统一默认权重覆盖 Rime 等真实词频。
+
+已确认的回归词包括：`接触`、`词汇`、`感觉`、`现在`、`中国`。完整真实长句语料与未来诊断项分别保存在 `tests/data/real_world_text_corpus.txt` 和 `tests/data/diagnostic_input_cases.tsv`。
+
 ## 3. 技术栈决策
 
 - 核心：C++20；

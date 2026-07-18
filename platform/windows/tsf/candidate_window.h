@@ -21,13 +21,16 @@ public:
         const std::wstring& composition,
         const std::vector<std::wstring>& candidates,
         std::size_t selected,
-        std::size_t page_start);
+        std::size_t page_start,
+        std::size_t page_size);
     void show_near_caret();
     void hide();
 
 private:
     static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
     void paint();
+    [[nodiscard]] int desired_width() const;
+    [[nodiscard]] std::vector<int> item_widths(HDC dc) const;
 
     HWND window_{};
     HFONT font_{};
@@ -36,6 +39,7 @@ private:
     std::vector<std::wstring> candidates_;
     std::size_t selected_{};
     std::size_t page_start_{};
+    std::size_t page_size_{6U};
 };
 
 }  // namespace liteime::windows
