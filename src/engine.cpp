@@ -84,14 +84,14 @@ std::vector<PinyinSegmentation> Engine::decode(
     const std::string& input,
     const std::string& schema,
     const std::size_t limit) const {
-    return decode(input, schema, default_settings().pinyin, limit);
+    return decode(input, schema, limit, default_settings().pinyin);
 }
 
 std::vector<PinyinSegmentation> Engine::decode(
     const std::string& input,
     const std::string& schema,
-    const PinyinSettings& settings,
-    const std::size_t limit) const {
+    const std::size_t limit,
+    const PinyinSettings& settings) const {
     if (limit == 0U) {
         return {};
     }
@@ -131,14 +131,14 @@ std::vector<EngineCandidate> Engine::query(
     const std::string& input,
     const std::string& schema,
     const std::size_t limit) const {
-    return query(input, schema, default_settings().pinyin, limit);
+    return query(input, schema, limit, default_settings().pinyin);
 }
 
 std::vector<EngineCandidate> Engine::query(
     const std::string& input,
     const std::string& schema,
-    const PinyinSettings& settings,
-    const std::size_t limit) const {
+    const std::size_t limit,
+    const PinyinSettings& settings) const {
     if (limit == 0U) {
         return {};
     }
@@ -153,8 +153,11 @@ std::vector<EngineCandidate> Engine::query(
     }
     std::unordered_map<std::string, EngineCandidate> best;
 
-    auto submit = [&best](EngineCandidate candidate) {
-        const std::string key = candidate.word + "\n" + candidate.pinyin;
+    const bool merge_full_variant_words = is_full_pinyin_schema(schema) && full_variants.size() > 1U;
+    auto submit = [&best, merge_full_variant_words](EngineCandidate candidate) {
+        const std::string key = merge_full_variant_words
+            ? candidate.word
+            : candidate.word + "\n" + candidate.pinyin;
         const auto found = best.find(key);
         if (found == best.end() || candidate.score > found->second.score) {
             best[key] = std::move(candidate);

@@ -30,6 +30,9 @@ public:
     void save_user_model(const std::filesystem::path& path) const;
     void record_selection(const std::string& pinyin, const std::string& word);
 
+    // Invalid or disabled full-pinyin spellings return an empty result; input
+    // errors do not escape this Engine hot path. Direct PinyinSegmenter calls
+    // retain their lower-level std::invalid_argument contract.
     [[nodiscard]] std::vector<PinyinSegmentation> decode(
         const std::string& input,
         const std::string& schema,
@@ -38,9 +41,11 @@ public:
     [[nodiscard]] std::vector<PinyinSegmentation> decode(
         const std::string& input,
         const std::string& schema,
-        const PinyinSettings& settings,
-        std::size_t limit = 16U) const;
+        std::size_t limit,
+        const PinyinSettings& settings) const;
 
+    // Invalid or disabled full-pinyin spellings likewise produce no candidates
+    // without throwing an input-validation exception.
     [[nodiscard]] std::vector<EngineCandidate> query(
         const std::string& input,
         const std::string& schema,
@@ -49,8 +54,8 @@ public:
     [[nodiscard]] std::vector<EngineCandidate> query(
         const std::string& input,
         const std::string& schema,
-        const PinyinSettings& settings,
-        std::size_t limit = 10U) const;
+        std::size_t limit,
+        const PinyinSettings& settings) const;
 
     [[nodiscard]] std::size_t entry_count() const noexcept;
     [[nodiscard]] const ShuangpinDecoder& shuangpin() const noexcept;
