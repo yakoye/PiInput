@@ -19,6 +19,7 @@
 
 namespace {
 
+using piinput::windows::installer::current_marker_value;
 using piinput::windows::installer::version_directory;
 
 [[nodiscard]] std::filesystem::path executable_path() {
@@ -193,7 +194,7 @@ void write_current_marker(const std::filesystem::path& developer_root, const std
     const auto current = developer_root / L"current.txt";
     {
         std::wofstream output(temporary, std::ios::trunc);
-        output << version_root.wstring();
+        output << current_marker_value(version_root);
     }
     if (MoveFileExW(temporary.c_str(), current.c_str(),
             MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) == FALSE) {

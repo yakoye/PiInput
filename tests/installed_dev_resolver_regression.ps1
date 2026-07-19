@@ -127,4 +127,26 @@ if ($junctionCreated) {
     Write-Warning "SKIPPED reparse-point regression: junction creation failed: $junctionOutput"
 }
 
+$devJunctionLocal = Join-Path $fixtureRoot "dev-junction"
+$devJunctionPiInput = Join-Path $devJunctionLocal "PiInput"
+$devJunctionPath = Join-Path $devJunctionPiInput "Dev"
+$devJunctionTarget = Join-Path $fixtureRoot "dev-junction-target"
+$devJunctionVersionName = "0.3.0-dev-dev-junction"
+$devJunctionBin = Join-Path $devJunctionTarget "versions/$devJunctionVersionName/bin"
+New-Item $devJunctionPiInput -ItemType Directory -Force | Out-Null
+New-Item $devJunctionBin -ItemType Directory -Force | Out-Null
+Set-Content (Join-Path $devJunctionTarget "current.txt") -Value $devJunctionVersionName -NoNewline
+Set-Content (Join-Path $devJunctionBin "PiInputTSF.dll") -Value "fixture" -NoNewline
+Set-Content (Join-Path $devJunctionBin "piinput-profile.exe") -Value "fixture" -NoNewline
+$devJunctionOutput = & $env:ComSpec /d /c "mklink /J `"$devJunctionPath`" `"$devJunctionTarget`"" 2>&1
+$devJunctionCreated = $LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $devJunctionPath -PathType Container)
+if ($devJunctionCreated) {
+    Assert-Throws -Label "developer root junction" -Action {
+        Resolve-PiInputInstalledDev -LocalAppDataRoot $devJunctionLocal -RegisteredDllPathProvider { $null }
+    }
+    Write-Host "Developer-root reparse regression executed with a real junction."
+} else {
+    Write-Warning "SKIPPED developer-root reparse regression: junction creation failed: $devJunctionOutput"
+}
+
 Write-Host "Installed development resolver regression passed."

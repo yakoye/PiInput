@@ -33,4 +33,8 @@ std::filesystem::path version_directory(
         (sanitize_component(version) + L"-" + sanitize_component(build_id));
 }
 
+std::wstring current_marker_value(const std::filesystem::path& version_root) {
+    return version_root.filename().wstring();
+}
+
 }  // namespace piinput::windows::installer

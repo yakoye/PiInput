@@ -13,4 +13,7 @@ namespace piinput::windows::installer {
     std::wstring_view version,
     std::wstring_view build_id);
 
+[[nodiscard]] std::wstring current_marker_value(
+    const std::filesystem::path& version_root);
+
 }  // namespace piinput::windows::installer

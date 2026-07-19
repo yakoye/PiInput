@@ -17,6 +17,7 @@ PiInput 是一个以输入准确、候选稳定、响应迅速为第一目标的
 
 - 产品、运行时、命名空间、命令和 Windows 产物统一使用 PiInput/piinput 名称；
 - 开发安装使用 `Dev/versions/<版本>/bin` 并存目录，由 `current.txt` 与 COM 注册共同标识活动版本；
+- `current.txt` 仅保存活动版本目录名；旧绝对路径 marker 的兼容与迁移留给 Task 8；
 - 品牌零残留、SHA-256 完整性和安装路径解析纳入自动回归。
 
 ## v0.2.0-dev：输入基础完善版

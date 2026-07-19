@@ -20,6 +20,10 @@ int main() {
         std::cerr << "Unsafe path component was not sanitized deterministically\n";
         return 3;
     }
+    if (piinput::windows::installer::current_marker_value(version) != L"0.2.0-20260719-003412-42") {
+        std::cerr << "Current marker must contain only the active version directory name\n";
+        return 4;
+    }
     std::cout << "PiInput installer layout tests passed.\n";
     return 0;
 }

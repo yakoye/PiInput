@@ -44,6 +44,7 @@ function Assert-PiInputNotReparsePoint {
 
 function Resolve-PiInputVersionLayout {
     param(
+        [Parameter(Mandatory = $true)][string]$PiInputRoot,
         [Parameter(Mandatory = $true)][string]$DeveloperRoot,
         [Parameter(Mandatory = $true)][string]$VersionsRoot,
         [Parameter(Mandatory = $true)][string]$VersionName,
@@ -57,7 +58,9 @@ function Resolve-PiInputVersionLayout {
     $bin = Join-Path $activeVersionRoot "bin"
     $dll = Join-Path $bin "PiInputTSF.dll"
     $profile = Join-Path $bin "piinput-profile.exe"
-    if (-not (Test-Path -LiteralPath $VersionsRoot -PathType Container) -or
+    if (-not (Test-Path -LiteralPath $PiInputRoot -PathType Container) -or
+        -not (Test-Path -LiteralPath $DeveloperRoot -PathType Container) -or
+        -not (Test-Path -LiteralPath $VersionsRoot -PathType Container) -or
         -not (Test-Path -LiteralPath $activeVersionRoot -PathType Container) -or
         -not (Test-Path -LiteralPath $bin -PathType Container) -or
         -not (Test-Path -LiteralPath $dll -PathType Leaf) -or
@@ -65,6 +68,8 @@ function Resolve-PiInputVersionLayout {
         throw "The PiInput version layout is missing or incomplete: $VersionName"
     }
 
+    Assert-PiInputNotReparsePoint -Path $PiInputRoot -Label "PiInput root directory"
+    Assert-PiInputNotReparsePoint -Path $DeveloperRoot -Label "PiInput developer directory"
     Assert-PiInputNotReparsePoint -Path $VersionsRoot -Label "PiInput versions directory"
     Assert-PiInputNotReparsePoint -Path $activeVersionRoot -Label "PiInput version directory"
     Assert-PiInputNotReparsePoint -Path $bin -Label "PiInput version bin directory"
@@ -84,6 +89,7 @@ function Resolve-PiInputVersionLayout {
 
 function Resolve-PiInputRegisteredLayout {
     param(
+        [Parameter(Mandatory = $true)][string]$PiInputRoot,
         [Parameter(Mandatory = $true)][string]$DeveloperRoot,
         [Parameter(Mandatory = $true)][string]$VersionsRoot,
         [Parameter(Mandatory = $true)][string]$RegisteredDll
@@ -110,6 +116,7 @@ function Resolve-PiInputRegisteredLayout {
     }
 
     $layout = Resolve-PiInputVersionLayout `
+        -PiInputRoot $PiInputRoot `
         -DeveloperRoot $DeveloperRoot `
         -VersionsRoot $VersionsRoot `
         -VersionName $segments[0] `
@@ -129,7 +136,8 @@ function Resolve-PiInputInstalledDev {
         throw "LOCALAPPDATA is not available."
     }
 
-    $developerRoot = [IO.Path]::GetFullPath((Join-Path $LocalAppDataRoot "PiInput/Dev"))
+    $piInputRoot = [IO.Path]::GetFullPath((Join-Path $LocalAppDataRoot "PiInput"))
+    $developerRoot = [IO.Path]::GetFullPath((Join-Path $piInputRoot "Dev"))
     $versionsRoot = [IO.Path]::GetFullPath((Join-Path $developerRoot "versions"))
     $currentMarker = Join-Path $developerRoot "current.txt"
     $markerFailure = $null
@@ -138,6 +146,7 @@ function Resolve-PiInputInstalledDev {
         try {
             $markerValue = (Get-Content -LiteralPath $currentMarker -Raw).Trim()
             return Resolve-PiInputVersionLayout `
+                -PiInputRoot $piInputRoot `
                 -DeveloperRoot $developerRoot `
                 -VersionsRoot $versionsRoot `
                 -VersionName $markerValue `
@@ -153,6 +162,7 @@ function Resolve-PiInputInstalledDev {
             throw "No registered TSF DLL was found."
         }
         return Resolve-PiInputRegisteredLayout `
+            -PiInputRoot $piInputRoot `
             -DeveloperRoot $developerRoot `
             -VersionsRoot $versionsRoot `
             -RegisteredDll $registeredDll
