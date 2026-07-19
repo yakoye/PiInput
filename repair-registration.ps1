@@ -1,9 +1,12 @@
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$Dev = Join-Path $env:LOCALAPPDATA "PiInput/Dev"
-$Dll = Join-Path $Dev "bin/PiInputTSF.dll"
-$Profile = Join-Path $Dev "bin/piinput-profile.exe"
+$Root = $PSScriptRoot
+. (Join-Path $Root "scripts/windows/resolve-installed-dev.ps1")
+$Installed = Resolve-PiInputInstalledDev
+$Dev = $Installed.DeveloperRoot
+$Dll = $Installed.Dll
+$Profile = $Installed.Profile
 $RegSvr32 = Join-Path $env:SystemRoot "System32/regsvr32.exe"
 
 function Invoke-NativeBestEffort {
@@ -49,10 +52,6 @@ function Invoke-NativeRequired {
     if ($ExitCode -ne 0) {
         throw "$Description failed with exit code $ExitCode."
     }
-}
-
-if (-not (Test-Path $Dll) -or -not (Test-Path $Profile)) {
-    throw "PiInput TSF files are not installed. Run .\setup-dev.cmd first."
 }
 
 Write-Host "[1/6] Deactivating any old PiInput profile (absence is allowed)..." -ForegroundColor Cyan

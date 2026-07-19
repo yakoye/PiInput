@@ -7,6 +7,9 @@ file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/profile_tool.cpp" profile_
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/profile_registration.h" registration_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/dllmain.cpp" dllmain_text)
 file(READ "${PIINPUT_SOURCE_DIR}/repair-registration.ps1" repair_text)
+file(READ "${PIINPUT_SOURCE_DIR}/refresh-installed-dev.ps1" refresh_text)
+file(READ "${PIINPUT_SOURCE_DIR}/uninstall-dev.ps1" uninstall_text)
+file(READ "${PIINPUT_SOURCE_DIR}/scripts/windows/resolve-installed-dev.ps1" resolver_text)
 file(READ "${PIINPUT_SOURCE_DIR}/install-dev.ps1" install_text)
 file(READ "${PIINPUT_SOURCE_DIR}/setup-dev.ps1" setup_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/text_service.cpp" text_service_text)
@@ -68,6 +71,20 @@ endif()
 
 if(NOT repair_text MATCHES "--status")
     message(FATAL_ERROR "Repair script must verify profile registration state")
+endif()
+
+foreach(installed_script IN ITEMS repair_text refresh_text uninstall_text)
+    if(NOT "${${installed_script}}" MATCHES "resolve-installed-dev\\.ps1" OR
+       NOT "${${installed_script}}" MATCHES "Resolve-PiInputInstalledDev")
+        message(FATAL_ERROR "Installed-development script does not use the shared active-version resolver")
+    endif()
+endforeach()
+if(NOT resolver_text MATCHES "current\\.txt" OR NOT resolver_text MATCHES "InprocServer32" OR
+   NOT resolver_text MATCHES "versions")
+    message(FATAL_ERROR "Active-version resolver must validate current.txt and COM registration under versions")
+endif()
+if(refresh_text MATCHES "Stop-Process" OR NOT refresh_text MATCHES "PiInput-Install\\.exe")
+    message(FATAL_ERROR "Refresh must use the side-by-side installer without force-closing applications")
 endif()
 
 if(NOT install_text MATCHES "Previous profile deactivation")

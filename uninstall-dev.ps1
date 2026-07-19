@@ -4,8 +4,16 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $Dev = Join-Path $env:LOCALAPPDATA "PiInput/Dev"
 $StartMenuDirectory = Join-Path $env:APPDATA "Microsoft/Windows/Start Menu/Programs/PiInput"
-$ProfileTool = Join-Path $Dev "bin/piinput-profile.exe"
-$TsfDll = Join-Path $Dev "bin/PiInputTSF.dll"
+$Root = $PSScriptRoot
+. (Join-Path $Root "scripts/windows/resolve-installed-dev.ps1")
+$Installed = $null
+try {
+    $Installed = Resolve-PiInputInstalledDev
+} catch {
+    Write-Warning "Active PiInput version could not be resolved: $($_.Exception.Message)"
+}
+$ProfileTool = if ($Installed) { $Installed.Profile } else { $null }
+$TsfDll = if ($Installed) { $Installed.Dll } else { $null }
 $RegSvr32 = Join-Path $env:SystemRoot "System32/regsvr32.exe"
 
 function Invoke-NativeBestEffort {
@@ -23,7 +31,7 @@ function Invoke-NativeBestEffort {
     }
 }
 
-if (Test-Path $ProfileTool) {
+if ($ProfileTool -and (Test-Path -LiteralPath $ProfileTool -PathType Leaf)) {
     Invoke-NativeBestEffort -Description "Profile deactivation" -Command {
         & $ProfileTool --deactivate
     }
@@ -31,7 +39,7 @@ if (Test-Path $ProfileTool) {
         & $ProfileTool --unregister
     }
 }
-if (Test-Path $TsfDll) {
+if ($TsfDll -and (Test-Path -LiteralPath $TsfDll -PathType Leaf)) {
     Invoke-NativeBestEffort -Description "DLL unregistration" -Command {
         & $RegSvr32 /u /s $TsfDll
     }
