@@ -1,15 +1,15 @@
-# LiteIME v0.1.5-dev 版本说明
+# PiInput v0.1.5-dev 版本说明
 
 ## 版本目标
 
-根据用户在 Visual Studio 2026、Windows SDK 10.0.26100.0 环境中的第一轮 TSF 真实构建日志，修复阻断 `liteime-profile.exe` 和 `LiteImeTSF.dll` 生成的 Windows SDK/链接问题。
+根据用户在 Visual Studio 2026、Windows SDK 10.0.26100.0 环境中的第一轮 TSF 真实构建日志，修复阻断 `piinput-profile.exe` 和 `PiInputTSF.dll` 生成的 Windows SDK/链接问题。
 
 ## 用户真实构建结果
 
 v0.1.4-dev 已经在用户 Windows 机器成功完成：
 
 - CMake 配置；
-- `liteime_core.lib`；
+- `piinput_core.lib`；
 - 核心测试程序；
 - SCEL 转换器；
 - 词库编译器；
@@ -21,7 +21,7 @@ v0.1.4-dev 已经在用户 Windows 机器成功完成：
 
 ```text
 profile_tool.cpp: CLSID_TF_InputProcessorProfileMgr 未声明
-LiteImeTSF: LNK1181 无法打开 msctf.lib
+PiInputTSF: LNK1181 无法打开 msctf.lib
 ```
 
 同时发现两个非阻断警告：
@@ -58,8 +58,8 @@ TSF 接口由 `msctf.h` 声明、运行时由 `Msctf.dll` 提供；本项目通�
 从以下目标移除 `msctf`：
 
 ```text
-LiteImeTSF
-liteime-profile
+PiInputTSF
+piinput-profile
 ```
 
 保留：
@@ -113,8 +113,8 @@ tests/windows_source_regression.cmake
 
 仍需用户 Windows 真机验证：
 
-- `liteime-profile.exe` 是否编译成功；
-- `LiteImeTSF.dll` 是否链接成功；
+- `piinput-profile.exe` 是否编译成功；
+- `PiInputTSF.dll` 是否链接成功；
 - `regsvr32` 注册；
-- Win+Space 是否出现 LiteIME；
+- Win+Space 是否出现 PiInput；
 - 记事本中的 Composition、候选窗口和上屏。

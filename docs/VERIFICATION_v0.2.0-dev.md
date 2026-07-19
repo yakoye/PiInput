@@ -1,4 +1,4 @@
-# LiteIME v0.2.0-dev 验证记录
+# PiInput v0.2.0-dev 验证记录
 
 ## 环境
 
@@ -12,14 +12,14 @@
 干净 Release 构建执行以下 CTest：
 
 ```text
-liteime-core-tests
-liteime-installer-layout-tests
-liteime-windows-source-regression
-liteime-dictionary-script-regression
-liteime-corpus-regression
-liteime-performance-smoke
-liteime-external-dictionary-regression
-liteime-scel-regression
+piinput-core-tests
+piinput-installer-layout-tests
+piinput-windows-source-regression
+piinput-dictionary-script-regression
+piinput-corpus-regression
+piinput-performance-smoke
+piinput-external-dictionary-regression
+piinput-scel-regression
 ```
 
 语料包 SHA-256：
@@ -68,13 +68,13 @@ p99_us=68.0
 安装时，ChatGPT 与 Explorer 仍加载旧固定路径，Chrome、VS Code、Notepad++、Edge、微信等进程仍加载前一个版本目录：
 
 ```text
-%LOCALAPPDATA%\LiteIME\Dev\bin\LiteImeTSF.dll
+%LOCALAPPDATA%\PiInput\Dev\bin\PiInputTSF.dll
 ```
 
 在不关闭这些进程的情况下运行完整 `setup-dev.ps1 -NoClean -SkipDictionaryImport`，退出码为 0，注册路径切换为：
 
 ```text
-%LOCALAPPDATA%\LiteIME\Dev\versions\0.2.0-20260718-234159-17612\bin\LiteImeTSF.dll
+%LOCALAPPDATA%\PiInput\Dev\versions\0.2.0-20260718-234159-17612\bin\PiInputTSF.dll
 ```
 
 状态检查：

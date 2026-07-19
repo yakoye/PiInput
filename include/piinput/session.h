@@ -1,6 +1,6 @@
 #pragma once
 
-#include "liteime/engine.h"
+#include "piinput/engine.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 struct SessionCandidate {
     std::uint64_t id{};
@@ -49,4 +49,4 @@ private:
     CandidateSnapshot snapshot_;
 };
 
-}  // namespace liteime
+}  // namespace piinput

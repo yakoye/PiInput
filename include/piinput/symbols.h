@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 struct SymbolCandidate {
     std::string symbol;
@@ -29,4 +29,4 @@ private:
     std::vector<SymbolCandidate> entries_;
 };
 
-}  // namespace liteime
+}  // namespace piinput

@@ -5,9 +5,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\update-dic
 set "exit_code=%ERRORLEVEL%"
 echo.
 if not "%exit_code%"=="0" (
-  echo LiteIME dictionary update failed. Existing dictionaries were preserved.
+  echo PiInput dictionary update failed. Existing dictionaries were preserved.
 ) else (
-  echo LiteIME dictionaries are up to date.
+  echo PiInput dictionaries are up to date.
 )
 pause
 exit /b %exit_code%

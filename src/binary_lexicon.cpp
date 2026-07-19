@@ -1,4 +1,4 @@
-#include "liteime/binary_lexicon.h"
+#include "piinput/binary_lexicon.h"
 
 #include <algorithm>
 #include <array>
@@ -11,7 +11,7 @@
 #include <string_view>
 #include <unordered_map>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 constexpr std::array<char, 8> magic = {'L', 'I', 'M', 'E', 'L', 'E', 'X', '1'};
@@ -122,7 +122,7 @@ void write_u64(std::ostream& output, const std::uint64_t value) {
 
 [[nodiscard]] std::uint32_t checked_u32(const std::size_t value, const char* label) {
     if (value > std::numeric_limits<std::uint32_t>::max()) {
-        throw std::runtime_error(std::string(label) + " exceeds LiteIME lexicon format limit");
+        throw std::runtime_error(std::string(label) + " exceeds PiInput lexicon format limit");
     }
     return static_cast<std::uint32_t>(value);
 }
@@ -203,7 +203,7 @@ void BinaryLexicon::load(const std::filesystem::path& path) {
     std::array<char, 8> found_magic{};
     input.read(found_magic.data(), static_cast<std::streamsize>(found_magic.size()));
     if (!input || found_magic != magic) {
-        throw std::runtime_error("Invalid LiteIME binary lexicon magic");
+        throw std::runtime_error("Invalid PiInput binary lexicon magic");
     }
     const std::uint32_t version = read_u32(input, "format version");
     const std::uint32_t entry_count = read_u32(input, "entry count");
@@ -211,7 +211,7 @@ void BinaryLexicon::load(const std::filesystem::path& path) {
     (void)read_u32(input, "reserved field");
     const std::uint64_t pool_size_u64 = read_u64(input, "string pool size");
     if (version != format_version || stored_record_size != record_size) {
-        throw std::runtime_error("Unsupported LiteIME binary lexicon version");
+        throw std::runtime_error("Unsupported PiInput binary lexicon version");
     }
     if (pool_size_u64 > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
         throw std::runtime_error("Binary lexicon string pool is too large");
@@ -231,7 +231,7 @@ void BinaryLexicon::load(const std::filesystem::path& path) {
     std::string pool(static_cast<std::size_t>(pool_size_u64), '\0');
     input.read(pool.data(), static_cast<std::streamsize>(pool.size()));
     if (!input) {
-        throw std::runtime_error("Truncated LiteIME binary lexicon string pool");
+        throw std::runtime_error("Truncated PiInput binary lexicon string pool");
     }
 
     std::vector<LexiconCandidate> entries;
@@ -275,4 +275,4 @@ bool is_binary_lexicon(const std::filesystem::path& path) {
     return input && found_magic == magic;
 }
 
-}  // namespace liteime
+}  // namespace piinput

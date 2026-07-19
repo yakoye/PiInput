@@ -1,10 +1,10 @@
 #pragma once
 
-#include "liteime/binary_lexicon.h"
-#include "liteime/lexicon.h"
-#include "liteime/pinyin.h"
-#include "liteime/shuangpin.h"
-#include "liteime/user_model.h"
+#include "piinput/binary_lexicon.h"
+#include "piinput/lexicon.h"
+#include "piinput/pinyin.h"
+#include "piinput/shuangpin.h"
+#include "piinput/user_model.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -13,7 +13,7 @@
 #include <variant>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 struct EngineCandidate {
     std::string word;
@@ -57,4 +57,4 @@ private:
     UserModel user_model_;
 };
 
-}  // namespace liteime
+}  // namespace piinput

@@ -1,7 +1,7 @@
-#include "liteime/engine.h"
-#include "liteime/symbols.h"
-#include "liteime/utf.h"
-#include "liteime/windows_compat.h"
+#include "piinput/engine.h"
+#include "piinput/symbols.h"
+#include "piinput/utf.h"
+#include "piinput/windows_compat.h"
 
 #include <commctrl.h>
 #include <shellapi.h>
@@ -17,7 +17,7 @@
 
 namespace {
 
-constexpr wchar_t window_class_name[] = L"LiteIMEPreviewWindow";
+constexpr wchar_t window_class_name[] = L"PiInputPreviewWindow";
 constexpr int id_output = 1000;
 constexpr int id_input = 1001;
 constexpr int id_schema = 1002;
@@ -31,8 +31,8 @@ struct CandidateValue {
 };
 
 struct AppState {
-    liteime::Engine engine;
-    liteime::SymbolIndex symbols;
+    piinput::Engine engine;
+    piinput::SymbolIndex symbols;
     std::filesystem::path lexicon_path;
     std::filesystem::path user_model_path;
     HWND output{};
@@ -90,12 +90,12 @@ struct AppState {
         return explicit_path;
     }
 
-    const auto user_directory = local_app_data() / L"LiteIME" / L"UserData" / L"lexicons";
-    const auto combined = user_directory / L"liteime-imported.lex";
+    const auto user_directory = local_app_data() / L"PiInput" / L"UserData" / L"lexicons";
+    const auto combined = user_directory / L"piinput-imported.lex";
     if (std::filesystem::exists(combined)) {
         return combined;
     }
-    const auto base_compiled = user_directory / L"liteime-base.lex";
+    const auto base_compiled = user_directory / L"piinput-base.lex";
     if (std::filesystem::exists(base_compiled)) {
         return base_compiled;
     }
@@ -138,7 +138,7 @@ void update_candidates(AppState& state) {
     SendMessageW(state.candidates, LB_RESETCONTENT, 0U, 0U);
     state.values.clear();
     const std::wstring wide_input = get_window_text(state.input);
-    const std::string input = liteime::wide_to_utf8(wide_input.c_str());
+    const std::string input = piinput::wide_to_utf8(wide_input.c_str());
     if (input.empty()) {
         SetWindowTextW(state.status, L"输入拼音后按空格、Enter 或数字键上屏；以分号开头可搜索符号，例如 ;sheshidu");
         return;
@@ -149,7 +149,7 @@ void update_candidates(AppState& state) {
         for (std::size_t index = 0; index < results.size(); ++index) {
             const auto& result = results[index];
             state.values.push_back({result.symbol, {}});
-            const std::wstring line = liteime::utf8_to_wide(
+            const std::wstring line = piinput::utf8_to_wide(
                 std::to_string(index + 1U) + ". " + result.symbol + "    " + result.name + "    [" + result.category + "]");
             SendMessageW(state.candidates, LB_ADDSTRING, 0U, reinterpret_cast<LPARAM>(line.c_str()));
         }
@@ -158,7 +158,7 @@ void update_candidates(AppState& state) {
         for (std::size_t index = 0; index < results.size(); ++index) {
             const auto& result = results[index];
             state.values.push_back({result.word, result.pinyin});
-            const std::wstring line = liteime::utf8_to_wide(
+            const std::wstring line = piinput::utf8_to_wide(
                 std::to_string(index + 1U) + ". " + result.word + "    " + result.pinyin + "    " +
                 std::to_string(result.base_weight));
             SendMessageW(state.candidates, LB_ADDSTRING, 0U, reinterpret_cast<LPARAM>(line.c_str()));
@@ -186,7 +186,7 @@ bool commit_index(AppState& state, const std::size_t index) {
         return false;
     }
     const CandidateValue selected = state.values[index];
-    const std::wstring value = liteime::utf8_to_wide(selected.text);
+    const std::wstring value = piinput::utf8_to_wide(selected.text);
     append_output(state.output, value);
     if (!selected.pinyin.empty()) {
         state.engine.record_selection(selected.pinyin, selected.text);
@@ -303,7 +303,7 @@ LRESULT CALLBACK window_proc(const HWND window, const UINT message, const WPARAM
                 try {
                     update_candidates(*state);
                 } catch (const std::exception& error) {
-                    SetWindowTextW(state->status, liteime::utf8_to_wide(error.what()).c_str());
+                    SetWindowTextW(state->status, piinput::utf8_to_wide(error.what()).c_str());
                 }
             } else if (control_id == id_candidates && notification == LBN_DBLCLK) {
                 commit_selected(*state);
@@ -347,7 +347,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
 
         AppState state;
         state.lexicon_path = find_lexicon();
-        state.user_model_path = local_app_data() / L"LiteIME" / L"UserData" / L"user_model.tsv";
+        state.user_model_path = local_app_data() / L"PiInput" / L"UserData" / L"user_model.tsv";
         state.engine.load_lexicon(state.lexicon_path);
         state.engine.load_user_model(state.user_model_path);
         state.symbols.load_tsv(module_directory().parent_path() / L"data" / L"symbols.tsv");
@@ -364,7 +364,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
             throw std::runtime_error("RegisterClassExW failed");
         }
 
-        const std::wstring title = L"LiteIME 输入核心预览 v" + liteime::utf8_to_wide(LITEIME_VERSION);
+        const std::wstring title = L"PiInput 输入核心预览 v" + piinput::utf8_to_wide(PIINPUT_VERSION);
         HWND window = CreateWindowExW(0, window_class_name, title.c_str(),
             WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 760, 560,
             nullptr, nullptr, instance, &state);
@@ -381,8 +381,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
         }
         return static_cast<int>(message.wParam);
     } catch (const std::exception& error) {
-        MessageBoxW(nullptr, liteime::utf8_to_wide(error.what()).c_str(),
-            L"LiteIME Preview Error", MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, piinput::utf8_to_wide(error.what()).c_str(),
+            L"PiInput Preview Error", MB_OK | MB_ICONERROR);
         return 1;
     }
 }

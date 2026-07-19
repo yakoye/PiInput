@@ -1,4 +1,4 @@
-# LiteIME v0.1.7-dev 下一步开发计划
+# PiInput v0.1.7-dev 下一步开发计划
 
 ## 第一优先级：Windows TSF 真机闭环
 

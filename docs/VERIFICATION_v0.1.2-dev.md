@@ -1,4 +1,4 @@
-# LiteIME v0.1.2-dev 验证记录
+# PiInput v0.1.2-dev 验证记录
 
 ## 1. 验证范围
 
@@ -15,17 +15,17 @@
 执行结果：
 
 ```text
-liteime_core             built
-liteime-cli              built
-liteime-core-tests       built
-liteime-scel-converter   built
+piinput_core             built
+piinput-cli              built
+piinput-core-tests       built
+piinput-scel-converter   built
 ```
 
 ## 3. 自动测试
 
 ```text
-Test #1: liteime-core-tests       Passed
-Test #2: liteime-scel-regression  Passed
+Test #1: piinput-core-tests       Passed
+Test #2: piinput-scel-regression  Passed
 
 100% tests passed, 0 tests failed out of 2
 ```
@@ -55,8 +55,8 @@ Loaded entries: 10300
 Linux Release 二进制大小：
 
 ```text
-liteime-scel-converter  75,920 bytes
-liteime-cli             88,608 bytes
+piinput-scel-converter  75,920 bytes
+piinput-cli             88,608 bytes
 ```
 
 这些大小只代表当前 Linux 构建，不代表最终 Windows EXE 或输入法安装包大小。
@@ -65,10 +65,10 @@ liteime-cli             88,608 bytes
 
 用户使用 Visual Studio 2026 Build Tools、CMake 和 Windows SDK 完成配置，证实：
 
-- `liteime_core.lib` 可生成；
-- `liteime-core-tests.exe` 可生成并通过；
-- `liteime-cli.exe` 可生成；
-- 原 v0.1.1-dev 的 `liteime-scel-converter` 在 `std::min` 处触发 C2589。
+- `piinput_core.lib` 可生成；
+- `piinput-core-tests.exe` 可生成并通过；
+- `piinput-cli.exe` 可生成；
+- 原 v0.1.1-dev 的 `piinput-scel-converter` 在 `std::min` 处触发 C2589。
 
 v0.1.2-dev 针对该日志修复。由于当前发布环境不是 Windows，本记录不冒充 Windows 复测已完成。
 
@@ -87,6 +87,6 @@ v0.1.2-dev 针对该日志修复。由于当前发布环境不是 Windows，本�
 所有目标编译成功
 测试成功
 安装成功
-dist/windows-x64/bin/liteime-cli.exe 存在
-dist/windows-x64/bin/liteime-scel-converter.exe 存在
+dist/windows-x64/bin/piinput-cli.exe 存在
+dist/windows-x64/bin/piinput-scel-converter.exe 存在
 ```

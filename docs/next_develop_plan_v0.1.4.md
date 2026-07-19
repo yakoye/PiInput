@@ -1,8 +1,8 @@
-# LiteIME v0.1.4-dev 下一步开发计划
+# PiInput v0.1.4-dev 下一步开发计划
 
 ## 主目标
 
-建立 Windows TSF 最小可用输入法链路，使 LiteIME 能够出现在 Windows 输入法列表，并在普通文本框中完成中文候选上屏。
+建立 Windows TSF 最小可用输入法链路，使 PiInput 能够出现在 Windows 输入法列表，并在普通文本框中完成中文候选上屏。
 
 ## 任务顺序
 

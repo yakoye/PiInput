@@ -24,13 +24,13 @@ v0.1.4-dev 的 TSF 实现以官方 COM、语言配置文件、edit session 和 c
 
 ## SCEL 社区解析实现
 
-SCEL 没有作为 LiteIME 的稳定公开格式。当前解析结构通过多个公开解析器交叉核对，并使用用户真实文件验证：
+SCEL 没有作为 PiInput 的稳定公开格式。当前解析结构通过多个公开解析器交叉核对，并使用用户真实文件验证：
 
 - `lewangdev/scel2txt`
 - `howl-anderson/scel2txt`
 - `shonenada/scel2txt.py`
 
-采用社区实现时只参考二进制结构事实，LiteIME 代码为独立 C++20 实现，并加入严格边界检查、UTF-16 代理项处理、错误偏移和回归测试。
+采用社区实现时只参考二进制结构事实，PiInput 代码为独立 C++20 实现，并加入严格边界检查、UTF-16 代理项处理、错误偏移和回归测试。
 
 ## 开发方法
 
@@ -39,7 +39,7 @@ SCEL 没有作为 LiteIME 的稳定公开格式。当前解析结构通过多个
 
 ## 双拼映射
 
-内置小鹤、自然码、微软和智能 ABC 映射，使用 Rime `rime-double-pinyin` 项目中的对应 schema 交叉核对。LiteIME 没有复制 Rime 引擎代码，而是将键位事实重新实现为独立 C++ 映射和标准拼音解码测试。
+内置小鹤、自然码、微软和智能 ABC 映射，使用 Rime `rime-double-pinyin` 项目中的对应 schema 交叉核对。PiInput 没有复制 Rime 引擎代码，而是将键位事实重新实现为独立 C++ 映射和标准拼音解码测试。
 
 公开发布前必须再次审查：
 

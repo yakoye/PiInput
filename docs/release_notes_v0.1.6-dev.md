@@ -1,4 +1,4 @@
-# LiteIME v0.1.6-dev 版本说明
+# PiInput v0.1.6-dev 版本说明
 
 ## 版本目标
 
@@ -61,7 +61,7 @@ dwFlags = 0
 
 ### 3. 增加配置文件状态检查
 
-`liteime-profile.exe` 新增：
+`piinput-profile.exe` 新增：
 
 ```text
 --register
@@ -108,7 +108,7 @@ enabled=yes
 然后在 Windows 设置的“添加键盘”或 `Win + Space` 中看到：
 
 ```text
-LiteIME 中文输入法（开发版）
+PiInput 中文输入法（开发版）
 ```
 
 ## 已知限制

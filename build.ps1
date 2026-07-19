@@ -84,7 +84,7 @@ try {
         if (Test-Path $SiblingDicts) { $TestDataDir = $SiblingDicts }
     }
 
-    Write-Host "LiteIME root: $Root" -ForegroundColor Cyan
+    Write-Host "PiInput root: $Root" -ForegroundColor Cyan
     Write-Host "Using CMake: $CMakeExe" -ForegroundColor Cyan
     Write-Host "Using generator: $Generator" -ForegroundColor Cyan
     if ($TestDataDir) { Write-Host "SCEL test data: $TestDataDir" -ForegroundColor Cyan }
@@ -102,8 +102,8 @@ try {
         }
     }
 
-    $configure = @("-S", $Root, "-B", $BuildDir, "-G", $Generator, "-A", "x64", "-DLITEIME_BUILD_TESTS=ON")
-    if ($TestDataDir) { $configure += "-DLITEIME_TESTDATA_DIR=$TestDataDir" }
+    $configure = @("-S", $Root, "-B", $BuildDir, "-G", $Generator, "-A", "x64", "-DPIINPUT_BUILD_TESTS=ON")
+    if ($TestDataDir) { $configure += "-DPIINPUT_TESTDATA_DIR=$TestDataDir" }
 
     Invoke-NativeChecked $CMakeExe $configure
     Invoke-NativeChecked $CMakeExe @("--build", $BuildDir, "--config", $Configuration, "--parallel")
@@ -112,7 +112,7 @@ try {
     if (Test-Path $InstallDir) { Remove-Item $InstallDir -Recurse -Force }
     Invoke-NativeChecked $CMakeExe @("--install", $BuildDir, "--config", $Configuration, "--prefix", $InstallDir)
 
-    $expected = @("liteime-cli.exe", "liteime-scel-converter.exe", "liteime-lexicon-compiler.exe", "liteime-dictionary-builder.exe", "liteime-benchmark.exe", "liteime-preview.exe", "liteime-profile.exe", "LiteImeTSF.dll")
+    $expected = @("piinput-cli.exe", "piinput-scel-converter.exe", "piinput-lexicon-compiler.exe", "piinput-dictionary-builder.exe", "piinput-benchmark.exe", "piinput-preview.exe", "piinput-profile.exe", "PiInputTSF.dll")
     foreach ($name in $expected) {
         $path = Join-Path $InstallDir "bin/$name"
         if (-not (Test-Path $path)) { throw "Expected executable was not generated: $path" }

@@ -1,14 +1,14 @@
 #pragma once
 
-#include "liteime/pinyin.h"
-#include "liteime/shuangpin.h"
+#include "piinput/pinyin.h"
+#include "piinput/shuangpin.h"
 
 #include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 struct PinyinPrefix {
     std::vector<std::string> complete_syllables;
@@ -24,4 +24,4 @@ struct PinyinPrefix {
     const ShuangpinDecoder& shuangpin,
     std::size_t limit = 16U);
 
-}  // namespace liteime
+}  // namespace piinput

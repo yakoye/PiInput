@@ -1,4 +1,4 @@
-# LiteIME v0.1.6-dev 验证记录
+# PiInput v0.1.6-dev 验证记录
 
 验证日期：2026-07-18
 
@@ -37,9 +37,9 @@ DeactivateProfile failed: 0x80004005
 测试项：
 
 ```text
-liteime-core-tests
-liteime-windows-source-regression
-liteime-scel-regression
+piinput-core-tests
+piinput-windows-source-regression
+piinput-scel-regression
 ```
 
 ## 4. Sanitizer
@@ -70,9 +70,9 @@ liteime-scel-regression
 
 必须继续确认：
 
-1. `LiteImeTSF.dll` 和 `liteime-profile.exe` 编译成功；
+1. `PiInputTSF.dll` 和 `piinput-profile.exe` 编译成功；
 2. `--status` 输出 `registered=yes`；
 3. `--status` 输出 `enabled=yes`；
-4. Windows“添加键盘”列表出现 LiteIME；
-5. `Win + Space` 出现 LiteIME；
+4. Windows“添加键盘”列表出现 PiInput；
+5. `Win + Space` 出现 PiInput；
 6. 记事本中小鹤输入 `jisrji` 后可上屏“计算机”。

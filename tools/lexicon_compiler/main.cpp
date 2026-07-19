@@ -1,6 +1,6 @@
-#include "liteime/binary_lexicon.h"
-#include "liteime/utf.h"
-#include "liteime/windows_compat.h"
+#include "piinput/binary_lexicon.h"
+#include "piinput/utf.h"
+#include "piinput/windows_compat.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -11,8 +11,8 @@ namespace {
 
 int run(const std::vector<std::string>& arguments) {
     if (arguments.size() == 2U && (arguments[1] == "--help" || arguments[1] == "-h")) {
-        std::cout << "LiteIME Lexicon Compiler v" << LITEIME_VERSION << "\n\n"
-                  << "Usage: liteime-lexicon-compiler --input dictionary.tsv --output dictionary.lex\n";
+        std::cout << "PiInput Lexicon Compiler v" << PIINPUT_VERSION << "\n\n"
+                  << "Usage: piinput-lexicon-compiler --input dictionary.tsv --output dictionary.lex\n";
         return 0;
     }
     std::string input;
@@ -29,9 +29,9 @@ int run(const std::vector<std::string>& arguments) {
     if (input.empty() || output.empty()) {
         throw std::runtime_error("Both --input and --output are required");
     }
-    liteime::compile_tsv_to_binary(liteime::path_from_utf8(input), liteime::path_from_utf8(output));
-    liteime::BinaryLexicon lexicon;
-    lexicon.load(liteime::path_from_utf8(output));
+    piinput::compile_tsv_to_binary(piinput::path_from_utf8(input), piinput::path_from_utf8(output));
+    piinput::BinaryLexicon lexicon;
+    lexicon.load(piinput::path_from_utf8(output));
     std::cout << "Compiled " << lexicon.entry_count() << " entries to " << output << "\n";
     return 0;
 }
@@ -44,7 +44,7 @@ int wmain(const int argc, wchar_t* argv[]) {
     try {
         std::vector<std::string> arguments;
         for (int index = 0; index < argc; ++index) {
-            arguments.push_back(liteime::wide_to_utf8(argv[index]));
+            arguments.push_back(piinput::wide_to_utf8(argv[index]));
         }
         return run(arguments);
     } catch (const std::exception& error) {

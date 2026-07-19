@@ -119,25 +119,25 @@ candidate_score
 正式版本建议：
 
 ```text
-LiteImeTSF.dll
+PiInputTSF.dll
   ├─ TSF/COM 接入
   ├─ 组合文本
   ├─ 按键过滤
   └─ 与引擎 IPC
 
-LiteImeEngine.exe
+PiInputEngine.exe
   ├─ 核心引擎
   ├─ 词库内存映射
   ├─ 解码和排序
   └─ 用户数据缓存
 
-LiteImeConfig.exe
+PiInputConfig.exe
   ├─ 输入方案
   ├─ 词库导入
   ├─ 标点与符号
   └─ 用户数据管理
 
-LiteImeSync.exe（后期可选）
+PiInputSync.exe（后期可选）
   ├─ 配对
   ├─ 加密同步
   └─ 剪贴板

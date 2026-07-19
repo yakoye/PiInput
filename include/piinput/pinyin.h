@@ -6,7 +6,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 struct PinyinSegmentation {
     std::vector<std::string> syllables;
@@ -34,4 +34,4 @@ private:
     std::unordered_set<std::string> prefix_set_;
 };
 
-}  // namespace liteime
+}  // namespace piinput

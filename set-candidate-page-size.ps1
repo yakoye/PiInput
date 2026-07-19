@@ -6,7 +6,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$SettingsDirectory = Join-Path $env:LOCALAPPDATA "LiteIME/UserData"
+$SettingsDirectory = Join-Path $env:LOCALAPPDATA "PiInput/UserData"
 $SettingsPath = Join-Path $SettingsDirectory "settings.ini"
 New-Item $SettingsDirectory -ItemType Directory -Force | Out-Null
 $preserved = @()
@@ -20,5 +20,5 @@ if (Test-Path $SettingsPath) {
     "single_syllable_page_size=$SingleSyllable"
     "phrase_page_size=$Phrase"
 ) | Set-Content $SettingsPath -Encoding ASCII
-Write-Host "LiteIME candidate page sizes saved: single=$SingleSyllable, phrase=$Phrase" -ForegroundColor Green
-Write-Host "Switch away from LiteIME and back once to reload the settings." -ForegroundColor Cyan
+Write-Host "PiInput candidate page sizes saved: single=$SingleSyllable, phrase=$Phrase" -ForegroundColor Green
+Write-Host "Switch away from PiInput and back once to reload the settings." -ForegroundColor Cyan

@@ -1,14 +1,9 @@
 {
-  "package": "lite-ime-test-corpus-v0.2.0",
+  "package": "piinput-test-corpus-v0.2.0",
   "version": "0.2.0",
   "encoding": "UTF-8",
   "file_count": 51,
   "files": [
-    {
-      "path": "README.md",
-      "size": 3178,
-      "sha256": "dba660670f39f1cac19f67e35746bbaf1ac8f99bb8268d77183ad2c593f989e5"
-    },
     {
       "path": "corpus/ambiguity.json",
       "size": 807,
@@ -66,8 +61,8 @@
     },
     {
       "path": "docs/CONTINUATION_GUIDE.md",
-      "size": 1130,
-      "sha256": "73b5dbe4c95c779836dc975be4f75acd75ac68119a2f4f5e4fe90d498aad128d"
+      "size": 1129,
+      "sha256": "1d02b48d7ec1179c662a4a927801354cd10c596045e6a2f3e8d8c8a2e4def414"
     },
     {
       "path": "docs/DEVELOPMENT_CONSTRAINTS.md",
@@ -76,8 +71,8 @@
     },
     {
       "path": "docs/METRICS_AND_REPORT_FORMAT.md",
-      "size": 1360,
-      "sha256": "aa28fa0e9c9791e8040520b98eae2f43173bda7cf9b6057774efb202ff704c07"
+      "size": 1359,
+      "sha256": "8509fb7004f401e8ab979cf0923d1d8a50c3411153a4fdc7db17d5ce070c1f0d"
     },
     {
       "path": "docs/NEXT_DEVELOP_PLAN_v0.3.0.md",
@@ -86,8 +81,8 @@
     },
     {
       "path": "docs/PROJECT_OVERVIEW.md",
-      "size": 1491,
-      "sha256": "17f5ec2a3c16a53d7d5876c418436173f1f2aa3d19a40b5278876f41c9cd5c5d"
+      "size": 1489,
+      "sha256": "ecec16e7672704a775eef69482f9fa8f63c5e9bd8ea7532340369f9eea98864b"
     },
     {
       "path": "docs/ROADMAP.md",
@@ -101,33 +96,33 @@
     },
     {
       "path": "docs/VERSION_NOTES_v0.1.0.md",
-      "size": 797,
-      "sha256": "feaddb65a09c227b3fa3cd0753609a5ab797a53be90a9355d4c46c10ca85e1dd"
+      "size": 795,
+      "sha256": "7f8aef6d9855d212b4c210db88338525ecf24a8ac51dc80a8ee5e824a50b0ece"
     },
     {
       "path": "docs/VERSION_NOTES_v0.2.0.md",
-      "size": 988,
-      "sha256": "45c0e68ee7c6582000bb885c58f16a648bd3c262240519462aff5f19b0bc5dd9"
+      "size": 987,
+      "sha256": "34ed7e1d3ef490f0f4f6b85c7b3788f2fe1fef041d64966690302f1dfa5dd6e2"
     },
     {
       "path": "generated/Chinese_IME_Test_Corpus_v0.2.0.md",
-      "size": 19819,
-      "sha256": "21525dd2e6dae42aa07c7a00be96c525805272c7b4fff0aaf8f1f6a9c8d0c503"
+      "size": 20285,
+      "sha256": "d10aa956c3b8b77c7e366344129e51adfceb1411c3d09e87556c855d01824abd"
     },
     {
       "path": "generated/Chinese_IME_Test_Corpus_v0.2.0.txt",
-      "size": 7695,
-      "sha256": "b8e033311d0c55e2fa717803403a44d8e59d2c3f4b4f841d5b82f7123cff9ca9"
+      "size": 7932,
+      "sha256": "f01e8d8d498088260d264e52766ecce8890b4b5d08f73736e16828bf2266acd9"
     },
     {
       "path": "generated/sample_evaluation_report.json",
-      "size": 2355,
-      "sha256": "bd1e3eee2b610912d42401772938706210d404be55797505f50ec0a0aa774721"
+      "size": 2449,
+      "sha256": "ff5d6db077ab49070c9d3bd98ffb8ac7b64c6f69213d9b5b418179d876b465be"
     },
     {
       "path": "generated/xiaohe_long_sentences.generated.json",
-      "size": 14039,
-      "sha256": "58f2961858e3ca3e192a65a7625310a4a023d88df999bcb97bc4f59c154ac95a"
+      "size": 14951,
+      "sha256": "81c0d6a6e23d1d3b165bae84f04c3dc06237d6eac0db3c04d09222ce45413808"
     },
     {
       "path": "keyboard/generic_action_keys.json",
@@ -148,6 +143,11 @@
       "path": "keyboard/qwerty_adjacency.json",
       "size": 1824,
       "sha256": "890b0dc1aa95fe9580da5b1b244283e668a6d416794b53e7c73eb6e747c75b3e"
+    },
+    {
+      "path": "README.md",
+      "size": 3174,
+      "sha256": "4d72df47e6571cb495d3cb71364a976889717d1894727d461314bbb7ae105756"
     },
     {
       "path": "reports/engine_results.template.json",
@@ -176,8 +176,8 @@
     },
     {
       "path": "tests/correction_test_cases.json",
-      "size": 106315,
-      "sha256": "e5622bc21a2d177929ee2d39ef589a8ffef9941ce8298193a79bb04e90bf3a6b"
+      "size": 110677,
+      "sha256": "1693a40275a6f1a9cff41cfb1cc5e59d3cf4694c4148025450276fe8238a9855"
     },
     {
       "path": "tests/full_pinyin_test_cases.json",
@@ -186,18 +186,18 @@
     },
     {
       "path": "tests/fuzzy_pinyin_test_cases.json",
-      "size": 6819,
-      "sha256": "c732c9d56bf8a36276f97b1a490771d4779512f4a157b0c9c8685e2b81318398"
+      "size": 7121,
+      "sha256": "0ef85c7c4d7c70c297bbf7a7febb5e22d361231e83ea4bcb1a4f3ee1c2dc4efb"
     },
     {
       "path": "tests/language_model_test_cases.json",
-      "size": 50069,
-      "sha256": "e7104c44ee4e3aa2da2f722065ffbc48e5156c18ce840f055b8dffb68eb50b17"
+      "size": 52095,
+      "sha256": "8a054660a23bff72d6bd2e43e907698e226c7a77922e99a7c2c9d6e42842f6e3"
     },
     {
       "path": "tests/professional_vocabulary_test_cases.json",
-      "size": 24826,
-      "sha256": "43b5b5804de806930f39db52a996f82c636cc98186cc5eabf2aa93cb8ff3d49d"
+      "size": 25969,
+      "sha256": "e2fb3600299e363de06389df6db1e2d61b8e1054d355eb64dd44dfbb9533fee6"
     },
     {
       "path": "tests/state_machine_test_cases.json",
@@ -216,8 +216,8 @@
     },
     {
       "path": "tools/build_release.py",
-      "size": 1162,
-      "sha256": "3643caaa053e1ef174401181a7ee30b2161e0d2862d4292e2419a1936140bbdb"
+      "size": 1161,
+      "sha256": "ca1efe700ce15f836a6843213a686700a1df49ac4ee6836ce508c2cf91772b98"
     },
     {
       "path": "tools/evaluate_candidate_results.py",
@@ -246,8 +246,8 @@
     },
     {
       "path": "tools/generate_manifest.py",
-      "size": 888,
-      "sha256": "e98c6212200641c26210091973adddd487ba04fa75aa8a95340846248d7fb89c"
+      "size": 887,
+      "sha256": "b43a11b38d5fe16a628fe53cfc01cb1585d28fc15bdf642b7c0f499a0c1add42"
     },
     {
       "path": "tools/generate_typo_cases.py",

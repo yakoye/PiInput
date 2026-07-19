@@ -1,10 +1,10 @@
-# Release Manifest — LiteIME v0.1.6-dev
+# Release Manifest — PiInput v0.1.6-dev
 
 ## Package
 
 ```text
-lite-ime-v0.1.6-dev.zip
-└── lite-ime-dev/
+piinput-v0.1.6-dev.zip
+└── piinput-dev/
 ```
 
 ## Core deliverables

@@ -1,4 +1,4 @@
-# LiteIME v0.1.2-dev 发布说明
+# PiInput v0.1.2-dev 发布说明
 
 ## 本版定位
 
@@ -7,7 +7,7 @@
 ## 已修复
 
 - 修复 `windows.h` 定义的 `min` 宏与 `std::min` 冲突导致的 MSVC `C2589`：
-  - 新增 `include/liteime/windows_compat.h`；
+  - 新增 `include/piinput/windows_compat.h`；
   - 在包含 `windows.h` 前统一定义 `NOMINMAX`；
   - 同时定义 `WIN32_LEAN_AND_MEAN`，减少 Windows 头文件污染；
   - CMake 的 Windows 构建也统一定义 `NOMINMAX`、`WIN32_LEAN_AND_MEAN`、`UNICODE` 和 `_UNICODE`。
@@ -42,7 +42,7 @@ std::min(limit, dictionary.entries.size())
 后续的：
 
 ```text
-file INSTALL cannot find liteime-scel-converter.exe
+file INSTALL cannot find piinput-scel-converter.exe
 ```
 
-只是前一个编译失败的连锁结果。测试通过只说明 `liteime_core` 单元测试通过，不代表整个解决方案已经构建成功。
+只是前一个编译失败的连锁结果。测试通过只说明 `piinput_core` 单元测试通过，不代表整个解决方案已经构建成功。

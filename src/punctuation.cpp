@@ -1,6 +1,6 @@
-#include "liteime/punctuation.h"
+#include "piinput/punctuation.h"
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 [[nodiscard]] std::string ascii_symbol(const char key, const bool shift) {
@@ -83,4 +83,4 @@ void PunctuationTransformer::reset_quotes() noexcept {
     next_single_quote_open_ = true;
 }
 
-}  // namespace liteime
+}  // namespace piinput

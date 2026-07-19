@@ -1,6 +1,6 @@
 #pragma once
 
-namespace liteime {
+namespace piinput {
 
 class ShiftToggleState final {
 public:
@@ -14,4 +14,4 @@ private:
     bool used_as_modifier_{};
 };
 
-}  // namespace liteime
+}  // namespace piinput

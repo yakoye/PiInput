@@ -10,12 +10,12 @@ if ([string]::IsNullOrWhiteSpace($DictionaryRoot)) {
     $DictionaryRoot = Join-Path (Split-Path -Parent $RepoRoot) "dicts"
 }
 $Bin = Join-Path $RepoRoot "dist/windows-x64/bin"
-$Builder = Join-Path $Bin "liteime-dictionary-builder.exe"
-$Compiler = Join-Path $Bin "liteime-lexicon-compiler.exe"
-$Converter = Join-Path $Bin "liteime-scel-converter.exe"
-$Cli = Join-Path $Bin "liteime-cli.exe"
-$Benchmark = Join-Path $Bin "liteime-benchmark.exe"
-Write-Host "Building current LiteIME dictionary tools..." -ForegroundColor Cyan
+$Builder = Join-Path $Bin "piinput-dictionary-builder.exe"
+$Compiler = Join-Path $Bin "piinput-lexicon-compiler.exe"
+$Converter = Join-Path $Bin "piinput-scel-converter.exe"
+$Cli = Join-Path $Bin "piinput-cli.exe"
+$Benchmark = Join-Path $Bin "piinput-benchmark.exe"
+Write-Host "Building current PiInput dictionary tools..." -ForegroundColor Cyan
 & (Join-Path $RepoRoot "build.ps1") -Configuration Release
 if ($LASTEXITCODE -ne 0) { throw "Building dictionary tools failed." }
 
@@ -26,9 +26,9 @@ New-Item -ItemType Directory -Force $Generated, $Cache | Out-Null
 $Manifest = Join-Path $Cache "dictionary-build-manifest.json"
 function Install-ValidatedLexicon {
     param([string]$SourceLexicon)
-    $installedDir = Join-Path $env:LOCALAPPDATA "LiteIME/UserData/lexicons"
+    $installedDir = Join-Path $env:LOCALAPPDATA "PiInput/UserData/lexicons"
     New-Item -ItemType Directory -Force $installedDir | Out-Null
-    $installed = Join-Path $installedDir "liteime-imported.lex"
+    $installed = Join-Path $installedDir "piinput-imported.lex"
     $needsCopy = -not (Test-Path $installed)
     if (-not $needsCopy) {
         $needsCopy = (Get-FileHash $SourceLexicon -Algorithm SHA256).Hash -ne (Get-FileHash $installed -Algorithm SHA256).Hash
@@ -59,7 +59,7 @@ $sourceState["local"] = @($localFiles | Sort-Object FullName | ForEach-Object {
     [ordered]@{ path = $_.FullName.Substring($DictionaryRoot.Length); sha256 = (Get-FileHash $_.FullName -Algorithm SHA256).Hash }
 })
 $stateJson = $sourceState | ConvertTo-Json -Depth 5 -Compress
-$FinalLex = Join-Path $Cache "liteime-base.lex"
+$FinalLex = Join-Path $Cache "piinput-base.lex"
 if (-not $Force -and (Test-Path $Manifest) -and (Test-Path $FinalLex)) {
     if ((Get-Content -Raw $Manifest) -eq $stateJson) {
         Write-Host "Dictionary sources are unchanged; reusing $FinalLex" -ForegroundColor Green
@@ -68,7 +68,7 @@ if (-not $Force -and (Test-Path $Manifest) -and (Test-Path $FinalLex)) {
     }
 }
 
-$staging = Join-Path ([IO.Path]::GetTempPath()) ("LiteIME-dictionaries-" + [Guid]::NewGuid().ToString("N"))
+$staging = Join-Path ([IO.Path]::GetTempPath()) ("PiInput-dictionaries-" + [Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force $staging | Out-Null
 try {
     $arguments = [System.Collections.Generic.List[string]]::new()
@@ -92,7 +92,7 @@ try {
     & $Builder @arguments
     if ($LASTEXITCODE -ne 0) { throw "Dictionary normalization failed." }
     $stagedTsv = Join-Path $staging "combined.tsv"
-    $stagedLex = Join-Path $staging "liteime-base.lex"
+    $stagedLex = Join-Path $staging "piinput-base.lex"
     & $Compiler --input $stagedTsv --output $stagedLex
     if ($LASTEXITCODE -ne 0) { throw "Binary dictionary compilation failed." }
 
@@ -131,7 +131,7 @@ try {
     & $Benchmark --lexicon $stagedLex --schema full --query wo --iterations 10000 --warmup 1000 --max-p95-us 2000 --max-p99-us 5000
     if ($LASTEXITCODE -ne 0) { throw "Dictionary latency verification failed." }
 
-    $GeneratedTsv = Join-Path $Generated "liteime-combined.tsv"
+    $GeneratedTsv = Join-Path $Generated "piinput-combined.tsv"
     Copy-Item $stagedTsv ($GeneratedTsv + ".new") -Force
     Move-Item ($GeneratedTsv + ".new") $GeneratedTsv -Force
     Move-Item $stagedLex ($FinalLex + ".new") -Force

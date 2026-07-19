@@ -1,6 +1,6 @@
 #pragma once
 
-#include "liteime_tsf_guids.h"
+#include "piinput_tsf_guids.h"
 
 #include <msctf.h>
 #include <objbase.h>
@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <iterator>
 
-namespace liteime::windows::tsf {
+namespace piinput::windows::tsf {
 
 inline HRESULT create_profile_manager(ITfInputProcessorProfileMgr** manager) {
     if (manager == nullptr) {
@@ -45,9 +45,9 @@ inline HRESULT get_profile(TF_INPUTPROCESSORPROFILE* profile) {
 
     result = manager->GetProfile(
         TF_PROFILETYPE_INPUTPROCESSOR,
-        kLiteImeLanguageId,
-        CLSID_LiteImeTextService,
-        GUID_LiteImeProfile,
+        kPiInputLanguageId,
+        CLSID_PiInputTextService,
+        GUID_PiInputProfile,
         nullptr,
         profile);
     manager->Release();
@@ -61,11 +61,11 @@ inline HRESULT register_profile() {
         return result;
     }
 
-    constexpr wchar_t description[] = L"LiteIME 中文输入法（开发版）";
+    constexpr wchar_t description[] = L"PiInput 中文输入法（开发版）";
     result = manager->RegisterProfile(
-        CLSID_LiteImeTextService,
-        kLiteImeLanguageId,
-        GUID_LiteImeProfile,
+        CLSID_PiInputTextService,
+        kPiInputLanguageId,
+        GUID_PiInputProfile,
         description,
         static_cast<ULONG>(std::size(description) - 1U),
         nullptr,
@@ -89,9 +89,9 @@ inline HRESULT unregister_profile() {
     TF_INPUTPROCESSORPROFILE profile{};
     result = manager->GetProfile(
         TF_PROFILETYPE_INPUTPROCESSOR,
-        kLiteImeLanguageId,
-        CLSID_LiteImeTextService,
-        GUID_LiteImeProfile,
+        kPiInputLanguageId,
+        CLSID_PiInputTextService,
+        GUID_PiInputProfile,
         nullptr,
         &profile);
     if (FAILED(result)) {
@@ -100,9 +100,9 @@ inline HRESULT unregister_profile() {
     }
 
     result = manager->UnregisterProfile(
-        CLSID_LiteImeTextService,
-        kLiteImeLanguageId,
-        GUID_LiteImeProfile,
+        CLSID_PiInputTextService,
+        kPiInputLanguageId,
+        GUID_PiInputProfile,
         0U);
     manager->Release();
     return result;
@@ -123,9 +123,9 @@ inline HRESULT activate_profile() {
 
     result = manager->ActivateProfile(
         TF_PROFILETYPE_INPUTPROCESSOR,
-        kLiteImeLanguageId,
-        CLSID_LiteImeTextService,
-        GUID_LiteImeProfile,
+        kPiInputLanguageId,
+        CLSID_PiInputTextService,
+        GUID_PiInputProfile,
         nullptr,
         TF_IPPMF_ENABLEPROFILE |
             TF_IPPMF_FORSESSION |
@@ -152,13 +152,13 @@ inline HRESULT deactivate_profile() {
 
     result = manager->DeactivateProfile(
         TF_PROFILETYPE_INPUTPROCESSOR,
-        kLiteImeLanguageId,
-        CLSID_LiteImeTextService,
-        GUID_LiteImeProfile,
+        kPiInputLanguageId,
+        CLSID_PiInputTextService,
+        GUID_PiInputProfile,
         nullptr,
         TF_IPPMF_FORSESSION);
     manager->Release();
     return result;
 }
 
-}  // namespace liteime::windows::tsf
+}  // namespace piinput::windows::tsf

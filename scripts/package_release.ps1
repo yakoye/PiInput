@@ -3,10 +3,10 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($Version)) { $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim() }
 $Parent = Split-Path -Parent $Root
-$ZipName = "lite-ime-v$Version.zip"
+$ZipName = "piinput-v$Version.zip"
 $Zip = Join-Path $Parent $ZipName
-$StageRoot = Join-Path $Parent ".liteime-release-stage"
-$Stage = Join-Path $StageRoot "lite-ime-dev"
+$StageRoot = Join-Path $Parent ".piinput-release-stage"
+$Stage = Join-Path $StageRoot "piinput-dev"
 if (Test-Path $StageRoot) { Remove-Item $StageRoot -Recurse -Force }
 if (Test-Path $Zip) { Remove-Item $Zip -Force }
 New-Item $StageRoot -ItemType Directory -Force | Out-Null

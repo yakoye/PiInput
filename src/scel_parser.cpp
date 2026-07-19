@@ -1,12 +1,12 @@
-#include "liteime/scel_parser.h"
+#include "piinput/scel_parser.h"
 
-#include "liteime/utf.h"
+#include "piinput/utf.h"
 
 #include <fstream>
 #include <limits>
 #include <sstream>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 constexpr std::size_t kHeaderSize = 12U;
@@ -187,4 +187,4 @@ ScelDictionary ScelParser::parse_bytes(const std::vector<std::uint8_t>& bytes) c
     return dictionary;
 }
 
-}  // namespace liteime
+}  // namespace piinput

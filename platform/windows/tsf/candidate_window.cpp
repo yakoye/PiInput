@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
-namespace liteime::windows {
+namespace piinput::windows {
 namespace {
 
-constexpr wchar_t kCandidateClass[] = L"LiteIMETsfCandidateWindow";
+constexpr wchar_t kCandidateClass[] = L"PiInputTsfCandidateWindow";
 constexpr int kPadding = 8;
 constexpr int kHeaderHeight = 30;
 constexpr int kRowHeight = 30;
@@ -221,4 +221,4 @@ LRESULT CALLBACK CandidateWindow::window_proc(
     return DefWindowProcW(window, message, wparam, lparam);
 }
 
-}  // namespace liteime::windows
+}  // namespace piinput::windows

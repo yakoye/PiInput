@@ -1,11 +1,11 @@
-#include "liteime/shuangpin.h"
+#include "piinput/shuangpin.h"
 
 #include <algorithm>
 #include <cctype>
 #include <stdexcept>
 #include <unordered_set>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 enum class SchemeKind {
@@ -315,4 +315,4 @@ std::vector<PinyinSegmentation> ShuangpinDecoder::decode(
     return results;
 }
 
-}  // namespace liteime
+}  // namespace piinput

@@ -1,4 +1,4 @@
-# LiteIME 项目完整上下文
+# PiInput 项目完整上下文
 
 本文档是跨会话、跨开发环境继续迭代的权威入口。每个发布压缩包必须保留并更新。
 
@@ -39,7 +39,7 @@
 - 单音节默认每页 9 项，多音节默认每页 6 项；
 - `-` 上一页，`=` 下一页，同时保留 PageUp/PageDown；
 - 单独按 Shift 切换中英文，Shift 参与组合快捷键时不切换；
-- 页大小写入 `%LOCALAPPDATA%\LiteIME\UserData\settings.ini`，范围 1～9；
+- 页大小写入 `%LOCALAPPDATA%\PiInput\UserData\settings.ini`，范围 1～9；
 - 会话保留 90 个不可变候选，支持稳定多页浏览；
 - phrase-pinyin-data 只提供读音补全，不能用统一默认权重覆盖 Rime 等真实词频。
 
@@ -98,7 +98,7 @@ Windows TSF / macOS InputMethodKit / Android IME / iOS Keyboard
 - 当前流程：SCEL → TSV → `.lex`；
 - `.lex` 当前为自有小型二进制格式；
 - 编译器按 `word+pinyin` 去重，排序后保留最高权重；
-- 批量导入会保留每个独立 `.lex`，同时生成 `liteime-imported.lex` 合并词库；
+- 批量导入会保留每个独立 `.lex`，同时生成 `piinput-imported.lex` 合并词库；
 - 正式安装包不默认重新分发授权不明确的第三方完整词库；
 - 后续需要词库来源、许可证、质量报告、分层权重和内存映射索引。
 
@@ -157,20 +157,20 @@ Windows TSF / macOS InputMethodKit / Android IME / iOS Keyboard
 版本压缩包：
 
 ```text
-lite-ime-vX.Y.Z-dev.zip
-└── lite-ime-dev
+piinput-vX.Y.Z-dev.zip
+└── piinput-dev
 ```
 
 用户本地始终使用固定目录：
 
 ```text
-C:\...\lite-ime\lite-ime-dev
+C:\...\piinput\piinput-dev
 ```
 
 用户数据：
 
 ```text
-%LOCALAPPDATA%\LiteIME\UserData
+%LOCALAPPDATA%\PiInput\UserData
 ├── lexicons
 ├── user_model.tsv
 ├── settings
@@ -181,7 +181,7 @@ C:\...\lite-ime\lite-ime-dev
 开发程序：
 
 ```text
-%LOCALAPPDATA%\LiteIME\Dev
+%LOCALAPPDATA%\PiInput\Dev
 ├── current.txt
 └── versions
     └── <版本-构建号>
@@ -189,11 +189,11 @@ C:\...\lite-ime\lite-ime-dev
         └── data
 ```
 
-开发安装必须使用 `LiteIME-Install.exe` 的版本并存方案。禁止重新覆盖 `%LOCALAPPDATA%\LiteIME\Dev\bin\LiteImeTSF.dll`，禁止为了更新 DLL 强制关闭用户应用。用户数据始终位于 `%LOCALAPPDATA%\LiteIME\UserData`，不能放进版本目录。
+开发安装必须使用 `PiInput-Install.exe` 的版本并存方案。禁止重新覆盖 `%LOCALAPPDATA%\PiInput\Dev\bin\PiInputTSF.dll`，禁止为了更新 DLL 强制关闭用户应用。用户数据始终位于 `%LOCALAPPDATA%\PiInput\UserData`，不能放进版本目录。
 
 ## 10.1 v0.2.0 测试语料
 
-用户提供的 `lite-ime-test-corpus-v0.2.0.zip` 已完整纳入 `tests/corpus/v0.2.0`。语料包含 407 个标准全拼音节和 786 条结构化用例。当前能力作为阻断门禁；纠错、模糊音、V/U 模式和更完整的语言模型仅作为未来诊断，不得据此宣称已经支持。
+用户提供的 `piinput-test-corpus-v0.2.0.zip` 已完整纳入 `tests/corpus/v0.2.0`。语料包含 407 个标准全拼音节和 786 条结构化用例。当前能力作为阻断门禁；纠错、模糊音、V/U 模式和更完整的语言模型仅作为未来诊断，不得据此宣称已经支持。
 
 删除源码目录或升级开发包不能删除用户数据。
 
@@ -232,7 +232,7 @@ v0.2.0 冻结新功能，只完善输入基础。新增完整小鹤零声母和 
 
 ### 已有 Windows 源码实现，但仍需用户 Windows/MSVC 真机验证
 
-- `LiteImeTSF.dll` COM/TSF 文本服务；
+- `PiInputTSF.dll` COM/TSF 文本服务；
 - 简体中文语言配置文件注册、启用和激活；
 - `ITfKeyEventSink`；
 - TSF Composition 创建、更新、提交和取消；
@@ -242,7 +242,7 @@ v0.2.0 冻结新功能，只完善输入基础。新增完整小鹤零声母和 
 - Enter 原始拼音提交、Esc 取消；
 - TSF 内符号搜索；
 - 本地选词学习；
-- `liteime-profile.exe` 方案设置和配置文件激活；
+- `piinput-profile.exe` 方案设置和配置文件激活；
 - 注册、修复、验证和卸载脚本；
 - 改进后的独立 Win32 预览。
 

@@ -1,4 +1,4 @@
-# LiteIME v0.1.3-dev 版本说明
+# PiInput v0.1.3-dev 版本说明
 
 ## 版本定位
 
@@ -22,10 +22,10 @@
 ### 词库
 
 - 新增自有 `.lex` 二进制格式；
-- 新增 `liteime-lexicon-compiler`；
+- 新增 `piinput-lexicon-compiler`；
 - 编译时按词和拼音去重；
 - 批量 SCEL 导入；
-- 生成每个独立词库及合并词库 `liteime-imported.lex`。
+- 生成每个独立词库及合并词库 `piinput-imported.lex`。
 
 ### 候选与学习
 
@@ -45,7 +45,7 @@
 
 ### Windows
 
-- 新增原生 Win32 `liteime-preview.exe`；
+- 新增原生 Win32 `piinput-preview.exe`；
 - 支持全拼和四种双拼切换；
 - 支持 `;` 前缀符号搜索；
 - 双击候选复制并记录本地学习；
@@ -55,7 +55,7 @@
 
 ### 工具和测试
 
-- 新增 `liteime-benchmark`；
+- 新增 `piinput-benchmark`；
 - 新增真实 SCEL 回归；
 - 新增全拼歧义、四套双拼、二进制词库、句子解码、符号、标点、用户学习和候选快照测试；
 - 增加 ASan/UBSan 验证。

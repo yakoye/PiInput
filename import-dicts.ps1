@@ -11,30 +11,30 @@ if ([string]::IsNullOrWhiteSpace($DictionaryDir)) {
     $DictionaryDir = Join-Path (Split-Path -Parent $Root) "dicts"
 }
 if ([string]::IsNullOrWhiteSpace($DestinationDir)) {
-    $DestinationDir = Join-Path $env:LOCALAPPDATA "LiteIME/UserData/lexicons"
+    $DestinationDir = Join-Path $env:LOCALAPPDATA "PiInput/UserData/lexicons"
 }
 
 $Bin = Join-Path $Root "dist/windows-x64/bin"
-$Converter = Join-Path $Bin "liteime-scel-converter.exe"
-$Compiler = Join-Path $Bin "liteime-lexicon-compiler.exe"
-$GeneratedBaseTsv = Join-Path $DictionaryDir "generated/liteime-combined.tsv"
+$Converter = Join-Path $Bin "piinput-scel-converter.exe"
+$Compiler = Join-Path $Bin "piinput-lexicon-compiler.exe"
+$GeneratedBaseTsv = Join-Path $DictionaryDir "generated/piinput-combined.tsv"
 $BaseTsv = if (Test-Path $GeneratedBaseTsv) { $GeneratedBaseTsv } else { Join-Path $Root "data/base_lexicon.tsv" }
 if (-not (Test-Path $Converter) -or -not (Test-Path $Compiler)) {
-    throw "Build LiteIME first with .\build.ps1"
+    throw "Build PiInput first with .\build.ps1"
 }
 if (-not (Test-Path $BaseTsv)) {
     throw "Built-in base lexicon is missing: $BaseTsv"
 }
 
 New-Item $DestinationDir -ItemType Directory -Force | Out-Null
-$TemporaryDir = Join-Path ([IO.Path]::GetTempPath()) ("LiteIME-import-" + [Guid]::NewGuid().ToString("N"))
+$TemporaryDir = Join-Path ([IO.Path]::GetTempPath()) ("PiInput-import-" + [Guid]::NewGuid().ToString("N"))
 New-Item $TemporaryDir -ItemType Directory -Force | Out-Null
 $ConvertedTsvFiles = [System.Collections.Generic.List[string]]::new()
 
 try {
     # The built-in starter dictionary is always present. This prevents a professional-only
     # SCEL collection from making ordinary words such as “计算机” or “输入法” disappear.
-    $BaseLex = Join-Path $DestinationDir "liteime-base.lex"
+    $BaseLex = Join-Path $DestinationDir "piinput-base.lex"
     & $Compiler --input $BaseTsv --output $BaseLex
     if ($LASTEXITCODE -ne 0) {
         throw "Built-in base lexicon compilation failed: $BaseTsv"
@@ -66,11 +66,11 @@ try {
 
     # Build one deterministic combined dictionary used by the preview and TSF text service.
     # The compiler performs word+pinyin de-duplication and keeps the highest weight.
-    $CombinedTsv = Join-Path $TemporaryDir "liteime-imported.tsv"
+    $CombinedTsv = Join-Path $TemporaryDir "piinput-imported.tsv"
     $Utf8NoBom = [Text.UTF8Encoding]::new($false)
     $Writer = [IO.StreamWriter]::new($CombinedTsv, $false, $Utf8NoBom)
     try {
-        $Writer.WriteLine("# LiteIME combined base and imported lexicon")
+        $Writer.WriteLine("# PiInput combined base and imported lexicon")
         $Writer.WriteLine((@("word", "pinyin", "weight") -join "`t"))
         foreach ($tsv in $ConvertedTsvFiles) {
             foreach ($line in [IO.File]::ReadLines($tsv, $Utf8NoBom)) {
@@ -84,7 +84,7 @@ try {
         $Writer.Dispose()
     }
 
-    $CombinedLex = Join-Path $DestinationDir "liteime-imported.lex"
+    $CombinedLex = Join-Path $DestinationDir "piinput-imported.lex"
     & $Compiler --input $CombinedTsv --output $CombinedLex
     if ($LASTEXITCODE -ne 0) {
         throw "Combined lexicon compilation failed: $CombinedTsv"
@@ -92,7 +92,7 @@ try {
 
     Write-Host "Combined dictionary: $CombinedLex" -ForegroundColor Cyan
     if ($ScelFiles.Count -eq 0) {
-        Write-Host "No SCEL files were found. LiteIME will use the built-in starter dictionary." -ForegroundColor Yellow
+        Write-Host "No SCEL files were found. PiInput will use the built-in starter dictionary." -ForegroundColor Yellow
     } else {
         Write-Host "Imported $($ScelFiles.Count) SCEL dictionaries plus the built-in starter dictionary." -ForegroundColor Green
     }

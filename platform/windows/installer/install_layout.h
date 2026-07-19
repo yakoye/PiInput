@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace liteime::windows::installer {
+namespace piinput::windows::installer {
 
 [[nodiscard]] std::wstring sanitize_component(std::wstring_view value);
 
@@ -13,4 +13,4 @@ namespace liteime::windows::installer {
     std::wstring_view version,
     std::wstring_view build_id);
 
-}  // namespace liteime::windows::installer
+}  // namespace piinput::windows::installer

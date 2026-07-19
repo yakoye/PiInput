@@ -1,13 +1,13 @@
 #pragma once
 
 #include "candidate_window.h"
-#include "liteime/candidate_paging.h"
-#include "liteime/engine.h"
-#include "liteime/input_mode.h"
-#include "liteime/punctuation.h"
-#include "liteime/session.h"
-#include "liteime/symbols.h"
-#include "liteime_tsf_guids.h"
+#include "piinput/candidate_paging.h"
+#include "piinput/engine.h"
+#include "piinput/input_mode.h"
+#include "piinput/punctuation.h"
+#include "piinput/session.h"
+#include "piinput/symbols.h"
+#include "piinput_tsf_guids.h"
 
 #include <msctf.h>
 
@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-namespace liteime::windows {
+namespace piinput::windows {
 
 class TextService final : public ITfTextInputProcessor, public ITfKeyEventSink, public ITfCompositionSink {
 public:
@@ -97,4 +97,4 @@ private:
 extern std::atomic<long> g_object_count;
 extern HINSTANCE g_module_instance;
 
-}  // namespace liteime::windows
+}  // namespace piinput::windows

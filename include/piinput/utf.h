@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 [[nodiscard]] std::string utf16le_to_utf8(
     const std::vector<std::uint8_t>& bytes,
@@ -19,4 +19,4 @@ namespace liteime {
 [[nodiscard]] std::string wide_to_utf8(const wchar_t* value);
 [[nodiscard]] std::wstring utf8_to_wide(std::string_view value);
 
-}  // namespace liteime
+}  // namespace piinput

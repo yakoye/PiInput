@@ -1,4 +1,4 @@
-LIBRARY "LiteImeTSF"
+LIBRARY "PiInputTSF"
 EXPORTS
     DllCanUnloadNow PRIVATE
     DllGetClassObject PRIVATE

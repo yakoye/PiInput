@@ -32,7 +32,7 @@ python tools/evaluate_candidate_results.py reports/engine_results.json --out gen
 
 ## 4. 注意事项
 
-- `reports/sample_engine_results.json` 只是格式演示，不代表 Lite IME 当前真实准确率；
+- `reports/sample_engine_results.json` 只是格式演示，不代表 PiInput 当前真实准确率；
 - 候选列表应保持引擎原始顺序，不得在适配器中预先排序；
 - 延迟计时起点和终点必须在同一测试环境中固定；
 - 不同硬件、平台和冷/热启动结果不得直接混合统计；

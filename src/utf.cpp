@@ -1,12 +1,12 @@
-#include "liteime/utf.h"
+#include "piinput/utf.h"
 
 #include <cwchar>
 #include <limits>
 #include <stdexcept>
 
-#include "liteime/windows_compat.h"
+#include "piinput/windows_compat.h"
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 void append_utf8(std::string& output, const std::uint32_t code_point) {
@@ -186,4 +186,4 @@ std::wstring utf8_to_wide(const std::string_view value) {
 #endif
 }
 
-}  // namespace liteime
+}  // namespace piinput

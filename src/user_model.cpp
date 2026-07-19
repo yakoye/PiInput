@@ -1,4 +1,4 @@
-#include "liteime/user_model.h"
+#include "piinput/user_model.h"
 
 #include <algorithm>
 #include <charconv>
@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 [[nodiscard]] std::vector<std::string_view> split_tabs(const std::string& line) {
@@ -90,7 +90,7 @@ void UserModel::save(const std::filesystem::path& path) const {
     if (!output) {
         throw std::runtime_error("Cannot create user model: " + temporary);
     }
-    output << "# LiteIME user selection model\n"
+    output << "# PiInput user selection model\n"
            << "pinyin\tword\tcount\tlast_used\n";
 
     std::vector<std::pair<std::string, Entry>> ordered(entries_.begin(), entries_.end());
@@ -159,4 +159,4 @@ std::size_t UserModel::entry_count() const noexcept {
     return entries_.size();
 }
 
-}  // namespace liteime
+}  // namespace piinput

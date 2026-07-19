@@ -1,9 +1,9 @@
-#include "liteime/session.h"
+#include "piinput/session.h"
 
 #include <algorithm>
 #include <stdexcept>
 
-namespace liteime {
+namespace piinput {
 
 ImeSession::ImeSession(Engine& engine, std::string schema, const std::size_t candidate_limit)
     : engine_(&engine), schema_(std::move(schema)), candidate_limit_(candidate_limit) {
@@ -120,4 +120,4 @@ void ImeSession::refresh() {
     }
 }
 
-}  // namespace liteime
+}  // namespace piinput

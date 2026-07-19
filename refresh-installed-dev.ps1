@@ -4,9 +4,9 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $Root = $PSScriptRoot
 $Source = Join-Path $Root "dist/windows-x64"
-$Destination = Join-Path $env:LOCALAPPDATA "LiteIME/Dev"
-$SourceDll = Join-Path $Source "bin/LiteImeTSF.dll"
-$InstalledDll = Join-Path $Destination "bin/LiteImeTSF.dll"
+$Destination = Join-Path $env:LOCALAPPDATA "PiInput/Dev"
+$SourceDll = Join-Path $Source "bin/PiInputTSF.dll"
+$InstalledDll = Join-Path $Destination "bin/PiInputTSF.dll"
 
 if (-not $SkipBuild) {
     & (Join-Path $Root "build.ps1") -Configuration Release
@@ -43,5 +43,5 @@ try {
 $sourceHash = (Get-FileHash $SourceDll -Algorithm SHA256).Hash
 $installedHash = (Get-FileHash $InstalledDll -Algorithm SHA256).Hash
 if ($sourceHash -ne $installedHash) { throw "Installed DLL hash does not match the current build." }
-Write-Host "LiteIME current Release build was installed without changing TSF registration." -ForegroundColor Green
-Write-Host "Reopen the target application and switch to LiteIME once." -ForegroundColor Cyan
+Write-Host "PiInput current Release build was installed without changing TSF registration." -ForegroundColor Green
+Write-Host "Reopen the target application and switch to PiInput once." -ForegroundColor Cyan

@@ -1,15 +1,15 @@
-# LiteIME 版本更新与本地开发工作流
+# PiInput 版本更新与本地开发工作流
 
 ## 1. 版本包命名
 
 ```text
-lite-ime-vX.Y.Z-dev.zip
+piinput-vX.Y.Z-dev.zip
 ```
 
 压缩包内部固定为：
 
 ```text
-lite-ime-dev/
+piinput-dev/
 ```
 
 本地不使用带版本号的源码目录，版本号由 `VERSION` 和文档记录。
@@ -17,21 +17,21 @@ lite-ime-dev/
 ## 2. 推荐本地结构
 
 ```text
-lite-ime/
+piinput/
 ├── dicts/
 ├── packages/
 ├── releases/
-└── lite-ime-dev/
+└── piinput-dev/
 ```
 
-`dicts` 放用户自己的 SCEL，`packages` 存放历史 ZIP，`lite-ime-dev` 始终是当前源码。
+`dicts` 放用户自己的 SCEL，`packages` 存放历史 ZIP，`piinput-dev` 始终是当前源码。
 
 ## 3. 更新步骤
 
-1. 关闭 `liteime-preview.exe`；
-2. 将旧 `lite-ime-dev` 改名为备份，或确认 Git 已提交后删除；
-3. 解压新版 ZIP 到 `lite-ime` 目录；
-4. 确认得到新的 `lite-ime-dev`；
+1. 关闭 `piinput-preview.exe`；
+2. 将旧 `piinput-dev` 改名为备份，或确认 Git 已提交后删除；
+3. 解压新版 ZIP 到 `piinput` 目录；
+4. 确认得到新的 `piinput-dev`；
 5. 从根目录运行 `setup-dev.cmd`；
 6. 构建、测试和安装成功后再删除旧备份。
 
@@ -90,7 +90,7 @@ TSF 注册检查：
 ### 完整源码开发包
 
 ```text
-lite-ime-vX.Y.Z-dev.zip
+piinput-vX.Y.Z-dev.zip
 ```
 
 包含源码、文档、测试和构建脚本，不包含 build/dist。
@@ -100,7 +100,7 @@ lite-ime-vX.Y.Z-dev.zip
 后续 Windows CI 可产出：
 
 ```text
-lite-ime-vX.Y.Z-dev-windows-x64.zip
+piinput-vX.Y.Z-dev-windows-x64.zip
 ```
 
 ### 正式安装包
@@ -108,13 +108,13 @@ lite-ime-vX.Y.Z-dev-windows-x64.zip
 TSF 真机链路和兼容性稳定后产出：
 
 ```text
-LiteIME-Setup-vX.Y.Z-dev-x64.exe
+PiInput-Setup-vX.Y.Z-dev-x64.exe
 ```
 
 正式版：
 
 ```text
-LiteIME-Setup-v1.0.0-x64.exe
+PiInput-Setup-v1.0.0-x64.exe
 ```
 
 ## 6. 用户数据升级约束

@@ -2,28 +2,28 @@
 
 ## 一键构建与安装
 
-在源码根目录双击 `setup-dev.cmd`。脚本构建 Release、运行全部测试、准备 `dist/windows-x64`，最后启动 `LiteIME-Install.exe --silent`。
+在源码根目录双击 `setup-dev.cmd`。脚本构建 Release、运行全部测试、准备 `dist/windows-x64`，最后启动 `PiInput-Install.exe --silent`。
 
 也可以在构建完成后直接双击：
 
 ```text
-dist\windows-x64\bin\LiteIME-Install.exe
+dist\windows-x64\bin\PiInput-Install.exe
 ```
 
 开发安装器采用版本并存：
 
 ```text
-%LOCALAPPDATA%\LiteIME\Dev
+%LOCALAPPDATA%\PiInput\Dev
 ├── current.txt
 └── versions
     └── 0.2.0-<UTC时间-PID>
         ├── bin
-        │   ├── LiteImeTSF.dll
-        │   └── liteime-profile.exe
+        │   ├── PiInputTSF.dll
+        │   └── piinput-profile.exe
         └── data
 ```
 
-它不会覆盖正在被应用占用的旧 DLL，不会强制关闭记事本、Notepad++、Explorer 等应用。安装完成后重新打开目标应用即可加载新版；旧版本目录在不再占用时由后续安装清理。用户词库、学习和设置始终保存在 `%LOCALAPPDATA%\LiteIME\UserData`。
+它不会覆盖正在被应用占用的旧 DLL，不会强制关闭记事本、Notepad++、Explorer 等应用。安装完成后重新打开目标应用即可加载新版；旧版本目录在不再占用时由后续安装清理。用户词库、学习和设置始终保存在 `%LOCALAPPDATA%\PiInput\UserData`。
 
 ## 自动检查
 
@@ -34,12 +34,12 @@ dist\windows-x64\bin\LiteIME-Install.exe
 检查构建 DLL 与注册 DLL、COM 路径、词库及 TSF profile。当前版本目录可查看：
 
 ```powershell
-Get-Content "$env:LOCALAPPDATA\LiteIME\Dev\current.txt"
+Get-Content "$env:LOCALAPPDATA\PiInput\Dev\current.txt"
 ```
 
 ## 输入验收
 
-重新打开记事本，使用 `Win+Space` 选择“LiteIME 中文输入法（开发版）”。默认小鹤双拼。
+重新打开记事本，使用 `Win+Space` 选择“PiInput 中文输入法（开发版）”。默认小鹤双拼。
 
 ```text
 jisrji + Space → 计算机
@@ -77,6 +77,6 @@ Esc             取消输入
 
 ## 故障信息
 
-发生问题时提供 `setup-dev.cmd` 完整输出、`verify-windows.ps1` 输出、目标应用名、Composition/候选/上屏分别进行到哪一步，以及 `%LOCALAPPDATA%\LiteIME\Dev\current.txt` 内容。
+发生问题时提供 `setup-dev.cmd` 完整输出、`verify-windows.ps1` 输出、目标应用名、Composition/候选/上屏分别进行到哪一步，以及 `%LOCALAPPDATA%\PiInput\Dev\current.txt` 内容。
 
 当前限制：仅 x64、开发版未签名、候选窗仍为 GDI、尚无设置 GUI、密码框和全面应用兼容性尚未完成。

@@ -2,10 +2,10 @@ set(CORPUS_ROOT "${SOURCE_DIR}/tests/corpus/v0.2.0")
 set(VALIDATOR "${CORPUS_ROOT}/tools/validate_test_corpus.py")
 
 if(NOT EXISTS "${CORPUS_ROOT}/MANIFEST.json")
-    message(FATAL_ERROR "LiteIME v0.2.0 corpus manifest is missing")
+    message(FATAL_ERROR "PiInput v0.2.0 corpus manifest is missing")
 endif()
 if(NOT EXISTS "${VALIDATOR}")
-    message(FATAL_ERROR "LiteIME v0.2.0 corpus validator is missing")
+    message(FATAL_ERROR "PiInput v0.2.0 corpus validator is missing")
 endif()
 
 find_program(PYTHON_EXECUTABLE NAMES python3 python REQUIRED)

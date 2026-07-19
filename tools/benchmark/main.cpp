@@ -1,6 +1,6 @@
-#include "liteime/engine.h"
-#include "liteime/utf.h"
-#include "liteime/windows_compat.h"
+#include "piinput/engine.h"
+#include "piinput/utf.h"
+#include "piinput/windows_compat.h"
 
 #include <algorithm>
 #include <chrono>
@@ -45,7 +45,7 @@ struct Options {
             return arguments[++index];
         };
         if (argument == "--lexicon") {
-            options.lexicon = liteime::path_from_utf8(require_value("--lexicon"));
+            options.lexicon = piinput::path_from_utf8(require_value("--lexicon"));
         } else if (argument == "--schema") {
             options.schema = require_value("--schema");
         } else if (argument == "--query") {
@@ -60,7 +60,7 @@ struct Options {
             options.max_p99_us = std::stod(require_value("--max-p99-us"));
         } else if (argument == "--help" || argument == "-h") {
             std::cout
-                << "LiteIME benchmark\n"
+                << "PiInput benchmark\n"
                 << "  --lexicon <file.tsv|file.lex>  required\n"
                 << "  --schema <full|flypy|natural|mspy|abc>\n"
                 << "  --query <input>\n"
@@ -89,7 +89,7 @@ struct Options {
 
 int run(const std::vector<std::string>& arguments) {
     const Options options = parse_options(arguments);
-    liteime::Engine engine;
+    piinput::Engine engine;
 
     const auto load_start = std::chrono::steady_clock::now();
     engine.load_lexicon(options.lexicon);
@@ -121,7 +121,7 @@ int run(const std::vector<std::string>& arguments) {
     const double p95 = percentile(microseconds, 0.95);
     const double p99 = percentile(microseconds, 0.99);
     std::cout << std::fixed << std::setprecision(3)
-              << "LiteIME benchmark\n"
+              << "PiInput benchmark\n"
               << "lexicon_entries=" << engine.entry_count() << '\n'
               << "load_ms=" << load_ms << '\n'
               << "iterations=" << options.iterations << '\n'
@@ -148,7 +148,7 @@ int wmain(const int argc, wchar_t* argv[]) {
         std::vector<std::string> arguments;
         arguments.reserve(static_cast<std::size_t>(argc));
         for (int index = 0; index < argc; ++index) {
-            arguments.push_back(liteime::wide_to_utf8(argv[index]));
+            arguments.push_back(piinput::wide_to_utf8(argv[index]));
         }
         return run(arguments);
     } catch (const std::exception& error) {

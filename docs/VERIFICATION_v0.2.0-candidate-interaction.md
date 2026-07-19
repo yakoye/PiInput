@@ -10,7 +10,7 @@
 ## 自动验证
 
 - CMake Release 全目标编译：通过；
-- `LiteImeTSF.dll`、`liteime-core-tests.exe` 等全部目标链接：通过；
+- `PiInputTSF.dll`、`piinput-core-tests.exe` 等全部目标链接：通过；
 - CTest：6/6 通过；
 - 外部词库：459,505 条；
 - `wo` 10,000 次查询：P95 10.4 μs，P99 15.3 μs；

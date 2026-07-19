@@ -17,16 +17,16 @@ C++20 Release
 ```bash
 cmake -S . -B build/linux -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
-  -DLITEIME_TESTDATA_DIR=/mnt/data
+  -DPIINPUT_TESTDATA_DIR=/mnt/data
 cmake --build build/linux --parallel
 ```
 
 结果：构建退出码 0，生成：
 
 ```text
-liteime-scel-converter
-liteime-cli
-liteime-core-tests
+piinput-scel-converter
+piinput-cli
+piinput-core-tests
 ```
 
 ## 测试命令
@@ -91,7 +91,7 @@ Total Test time: 0.03 sec
 命令：
 
 ```bash
-liteime-cli \
+piinput-cli \
   --lexicon computer_full.tsv \
   --query "zuo'yong'yu" \
   --top 10
@@ -117,7 +117,7 @@ cmake -S . -B build/sanitize -G Ninja \
   -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined" \
-  -DLITEIME_TESTDATA_DIR=/mnt/data
+  -DPIINPUT_TESTDATA_DIR=/mnt/data
 cmake --build build/sanitize --parallel
 ASAN_OPTIONS=detect_leaks=1 \
   ctest --test-dir build/sanitize --output-on-failure

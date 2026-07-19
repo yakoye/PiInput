@@ -1,4 +1,4 @@
-#include "liteime/pinyin.h"
+#include "piinput/pinyin.h"
 
 #include <algorithm>
 #include <cctype>
@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 [[nodiscard]] bool is_ascii_letter(const char value) {
@@ -204,4 +204,4 @@ std::vector<PinyinSegmentation> PinyinSegmenter::segment(
     return results;
 }
 
-}  // namespace liteime
+}  // namespace piinput

@@ -19,11 +19,11 @@ TSF 是正式输入法接入路径。不能把网页悬浮窗、全局键盘钩�
 当前 Windows 构建新增：
 
 ```text
-LiteImeTSF.dll
-liteime-profile.exe
+PiInputTSF.dll
+piinput-profile.exe
 ```
 
-`LiteImeTSF.dll` 当前实现：
+`PiInputTSF.dll` 当前实现：
 
 - COM class factory；
 - `DllRegisterServer` / `DllUnregisterServer`；
@@ -39,7 +39,7 @@ liteime-profile.exe
 - GDI 最小候选窗口；
 - 现有 C++ Engine、ImeSession、SymbolIndex 和 UserModel 接入。
 
-`liteime-profile.exe` 当前负责：
+`piinput-profile.exe` 当前负责：
 
 - 激活和停用开发语言配置文件；
 - 保存全拼或双拼方案；
@@ -71,10 +71,10 @@ v0.1.4-dev 暂时使用 GDI 候选窗，只用于打通 TSF 输入链路。它�
 
 ```text
 宿主应用进程
-  └─ LiteImeTSF.dll
+  └─ PiInputTSF.dll
           │ Named Pipe / ALPC 评估
           ▼
-     LiteImeEngine.exe
+     PiInputEngine.exe
 ```
 
 把大词库、用户数据库和复杂解码从宿主应用进程移到独立引擎，是后续稳定性任务。IPC 要求：
@@ -103,22 +103,22 @@ v0.1.4-dev 暂时使用 GDI 候选窗，只用于打通 TSF 输入链路。它�
 ## 当前 Windows 产物
 
 ```text
-liteime-scel-converter.exe
-liteime-lexicon-compiler.exe
-liteime-cli.exe
-liteime-benchmark.exe
-liteime-preview.exe
-liteime-profile.exe
-LiteImeTSF.dll
+piinput-scel-converter.exe
+piinput-lexicon-compiler.exe
+piinput-cli.exe
+piinput-benchmark.exe
+piinput-preview.exe
+piinput-profile.exe
+PiInputTSF.dll
 ```
 
 后续规划：
 
 ```text
-LiteImeEngine.exe
-LiteImeConfig.exe
-LiteIME-Setup-vX.Y.Z-x64.exe 或 MSI
-LiteImeSync.exe（可选）
+PiInputEngine.exe
+PiInputConfig.exe
+PiInput-Setup-vX.Y.Z-x64.exe 或 MSI
+PiInputSync.exe（可选）
 ```
 
 ## 架构覆盖范围

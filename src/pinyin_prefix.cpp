@@ -1,11 +1,11 @@
-#include "liteime/pinyin_prefix.h"
+#include "piinput/pinyin_prefix.h"
 
 #include <algorithm>
 #include <cctype>
 #include <stdexcept>
 #include <unordered_set>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 [[nodiscard]] std::string join_prefix(
@@ -157,4 +157,4 @@ std::vector<PinyinPrefix> expand_input_prefix(
     return {};
 }
 
-}  // namespace liteime
+}  // namespace piinput

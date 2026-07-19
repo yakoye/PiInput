@@ -1,5 +1,5 @@
-#include "liteime/scel_parser.h"
-#include "liteime/utf.h"
+#include "piinput/scel_parser.h"
+#include "piinput/utf.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -10,16 +10,16 @@
 #include <string>
 #include <vector>
 
-#include "liteime/windows_compat.h"
+#include "piinput/windows_compat.h"
 
 namespace {
 
 void print_usage() {
     std::cout
-        << "LiteIME SCEL Converter v" << LITEIME_VERSION << "\n\n"
+        << "PiInput SCEL Converter v" << PIINPUT_VERSION << "\n\n"
         << "Usage:\n"
-        << "  liteime-scel-converter --info <input.scel>\n"
-        << "  liteime-scel-converter --input <input.scel> --output <output> "
+        << "  piinput-scel-converter --info <input.scel>\n"
+        << "  piinput-scel-converter --input <input.scel> --output <output> "
            "[--format tsv|jsonl|txt] [--limit N]\n";
 }
 
@@ -115,8 +115,8 @@ int run(const std::vector<std::string>& arguments) {
         throw std::runtime_error("Missing --input or --info");
     }
 
-    liteime::ScelParser parser;
-    const auto dictionary = parser.parse_file(liteime::path_from_utf8(input_value));
+    piinput::ScelParser parser;
+    const auto dictionary = parser.parse_file(piinput::path_from_utf8(input_value));
 
     if (info_only) {
         std::cout
@@ -138,7 +138,7 @@ int run(const std::vector<std::string>& arguments) {
         throw std::runtime_error("Unsupported format: " + format);
     }
 
-    std::ofstream output(liteime::path_from_utf8(output_value), std::ios::binary);
+    std::ofstream output(piinput::path_from_utf8(output_value), std::ios::binary);
     if (!output) {
         throw std::runtime_error("Cannot create output file: " + output_value);
     }
@@ -148,7 +148,7 @@ int run(const std::vector<std::string>& arguments) {
         : (std::min)(limit, dictionary.entries.size());
 
     if (format == "tsv") {
-        output << "# LiteIME SCEL conversion\n"
+        output << "# PiInput SCEL conversion\n"
                << "# title=" << tsv_escape(dictionary.metadata.title) << "\n"
                << "# category=" << tsv_escape(dictionary.metadata.category) << "\n"
                << "# source_entries=" << dictionary.entries.size() << "\n"
@@ -190,7 +190,7 @@ int wmain(const int argc, wchar_t* argv[]) {
         std::vector<std::string> arguments;
         arguments.reserve(static_cast<std::size_t>(argc));
         for (int index = 0; index < argc; ++index) {
-            arguments.push_back(liteime::wide_to_utf8(argv[index]));
+            arguments.push_back(piinput::wide_to_utf8(argv[index]));
         }
         return run(arguments);
     } catch (const std::exception& error) {

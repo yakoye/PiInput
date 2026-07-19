@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 struct ScelMetadata {
     std::string title;
@@ -40,4 +40,4 @@ public:
     [[nodiscard]] ScelDictionary parse_bytes(const std::vector<std::uint8_t>& bytes) const;
 };
 
-}  // namespace liteime
+}  // namespace piinput

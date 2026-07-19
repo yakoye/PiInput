@@ -1,4 +1,4 @@
-# LiteIME built-in symbol table. UTF-8, tab-separated.
+# PiInput built-in symbol table. UTF-8, tab-separated.
 symbol	category	name	aliases
 ，	中文标点	中文逗号	逗号|douhao|comma
 。	中文标点	中文句号	句号|juhao|period

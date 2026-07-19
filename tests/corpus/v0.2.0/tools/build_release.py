@@ -15,7 +15,7 @@ SCRIPTS = [
 def main() -> int:
     for name in SCRIPTS:
         subprocess.run([sys.executable, str(ROOT / "tools" / name)], check=True, cwd=ROOT)
-    zip_path = ROOT.parent / "lite-ime-test-corpus-v0.2.0.zip"
+    zip_path = ROOT.parent / "piinput-test-corpus-v0.2.0.zip"
     if zip_path.exists(): zip_path.unlink()
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in sorted(ROOT.rglob("*")):

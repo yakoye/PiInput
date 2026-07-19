@@ -5,13 +5,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$Tool = Join-Path $env:LOCALAPPDATA "LiteIME/Dev/bin/liteime-profile.exe"
+$Tool = Join-Path $env:LOCALAPPDATA "PiInput/Dev/bin/piinput-profile.exe"
 if (-not (Test-Path $Tool)) {
-    throw "LiteIME is not installed. Run .\setup-dev.cmd first."
+    throw "PiInput is not installed. Run .\setup-dev.cmd first."
 }
 & $Tool --schema $Schema
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
-Write-Host "The new schema will be used the next time the LiteIME profile is activated in an application." -ForegroundColor Cyan
+Write-Host "The new schema will be used the next time the PiInput profile is activated in an application." -ForegroundColor Cyan
 exit 0

@@ -1,6 +1,6 @@
-# Lite IME Test Corpus v0.2.0
+# PiInput Test Corpus v0.2.0
 
-面向 Lite IME 中文输入法项目的第二版测试语料与评估工具包。
+面向 PiInput 中文输入法项目的第二版测试语料与评估工具包。
 
 ## 项目定位
 
@@ -28,7 +28,7 @@
 ## 目录
 
 ```text
-lite-ime-test-corpus-v0.2.0/
+piinput-test-corpus-v0.2.0/
 ├─ README.md
 ├─ docs/                 项目说明、测试计划、指标、路线图和续接说明
 ├─ schemes/              全拼与双拼方案配置
@@ -76,6 +76,6 @@ python tools/validate_test_corpus.py
 
 ## 当前限制
 
-- 尚未连接 Lite IME 的真实候选接口；`reports/sample_engine_results.json` 仅用于演示报告格式。
+- 尚未连接 PiInput 的真实候选接口；`reports/sample_engine_results.json` 仅用于演示报告格式。
 - 推荐排名阈值是测试基线，不代表所有产品必须采用同一候选策略。
 - v0.5.0 前不对具体平台扫描码和物理键盘映射作完整断言。

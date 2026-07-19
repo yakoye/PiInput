@@ -1,4 +1,4 @@
-# LiteIME v0.1.3-dev 验证记录
+# PiInput v0.1.3-dev 验证记录
 
 验证日期：2026-07-18
 
@@ -16,7 +16,7 @@
 - 性能基准工具；
 - AddressSanitizer 和 UndefinedBehaviorSanitizer。
 
-Windows 专用的 `liteime-preview.exe` 只能在 Windows/MSVC 环境构建。本发布环境是 Linux，因此本记录不冒充 Windows 编译已经完成。Windows 构建需要用户运行根目录 `setup-dev.cmd` 后反馈日志。
+Windows 专用的 `piinput-preview.exe` 只能在 Windows/MSVC 环境构建。本发布环境是 Linux，因此本记录不冒充 Windows 编译已经完成。Windows 构建需要用户运行根目录 `setup-dev.cmd` 后反馈日志。
 
 ## 2. Release 构建和测试
 
@@ -31,18 +31,18 @@ rm -rf build/linux dist/linux-x64
 
 ```text
 所有核心和工具目标编译、链接成功
-liteime-core-tests: passed
-liteime-scel-regression: passed
+piinput-core-tests: passed
+piinput-scel-regression: passed
 2/2 tests passed
 ```
 
 生成：
 
 ```text
-liteime-scel-converter
-liteime-lexicon-compiler
-liteime-cli
-liteime-benchmark
+piinput-scel-converter
+piinput-lexicon-compiler
+piinput-cli
+piinput-benchmark
 ```
 
 ## 3. 真实 SCEL 回归
@@ -68,12 +68,12 @@ liteime-benchmark
 执行：
 
 ```bash
-liteime-scel-converter \
+piinput-scel-converter \
   --input 计算机词汇大全【官方推荐】.scel \
   --output computer.tsv \
   --format tsv
 
-liteime-lexicon-compiler \
+piinput-lexicon-compiler \
   --input computer.tsv \
   --output computer.lex
 ```
@@ -93,7 +93,7 @@ computer.lex: 约 483 KiB
 执行：
 
 ```bash
-liteime-cli \
+piinput-cli \
   --lexicon computer.lex \
   --query zuoyongyu \
   --schema full \
@@ -111,7 +111,7 @@ liteime-cli \
 执行：
 
 ```bash
-liteime-cli \
+piinput-cli \
   --lexicon examples/sample_lexicon.tsv \
   --query jisrji \
   --schema flypy \
@@ -133,7 +133,7 @@ Decoded pinyin: ji'suan'ji
 执行：
 
 ```bash
-liteime-cli \
+piinput-cli \
   --lexicon examples/sample_lexicon.tsv \
   --query woxiangxuexixieyi \
   --schema full
@@ -150,7 +150,7 @@ liteime-cli \
 执行：
 
 ```bash
-liteime-cli \
+piinput-cli \
   --symbols data/symbols.tsv \
   --symbol-query sheshidu
 ```
@@ -167,7 +167,7 @@ Loaded symbols: 140
 执行：
 
 ```bash
-liteime-benchmark \
+piinput-benchmark \
   --lexicon computer.lex \
   --schema full \
   --query zuoyongyu \
@@ -194,15 +194,15 @@ max_us=21.492
 执行 Debug + AddressSanitizer + UndefinedBehaviorSanitizer：
 
 ```text
-liteime-core-tests: passed
-liteime-scel-regression: passed
+piinput-core-tests: passed
+piinput-scel-regression: passed
 2/2 tests passed
 未报告内存越界、Use-After-Free 或未定义行为
 ```
 
 ## 11. Windows 待用户验证
 
-在 Windows 的 `lite-ime-dev` 根目录运行：
+在 Windows 的 `piinput-dev` 根目录运行：
 
 ```powershell
 .\setup-dev.cmd
@@ -211,11 +211,11 @@ liteime-scel-regression: passed
 预期生成：
 
 ```text
-dist\windows-x64\bin\liteime-scel-converter.exe
-dist\windows-x64\bin\liteime-lexicon-compiler.exe
-dist\windows-x64\bin\liteime-cli.exe
-dist\windows-x64\bin\liteime-benchmark.exe
-dist\windows-x64\bin\liteime-preview.exe
+dist\windows-x64\bin\piinput-scel-converter.exe
+dist\windows-x64\bin\piinput-lexicon-compiler.exe
+dist\windows-x64\bin\piinput-cli.exe
+dist\windows-x64\bin\piinput-benchmark.exe
+dist\windows-x64\bin\piinput-preview.exe
 ```
 
 随后运行：
@@ -231,6 +231,6 @@ dist\windows-x64\bin\liteime-preview.exe
 - 中文路径词库加载；
 - 四种双拼候选；
 - `;sheshidu` 符号搜索；
-- 双击复制和 `%LOCALAPPDATA%\LiteIME\UserData\user_model.tsv` 写入；
+- 双击复制和 `%LOCALAPPDATA%\PiInput\UserData\user_model.tsv` 写入；
 - 开始菜单快捷方式；
 - 卸载后用户数据是否保留。

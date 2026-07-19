@@ -1,6 +1,6 @@
 #pragma once
 
-#include "liteime/pinyin.h"
+#include "piinput/pinyin.h"
 
 #include <cstddef>
 #include <string>
@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 struct ShuangpinSchemeInfo {
     std::string id;
@@ -41,4 +41,4 @@ private:
     std::unordered_map<std::string, SchemeData> schemes_;
 };
 
-}  // namespace liteime
+}  // namespace piinput

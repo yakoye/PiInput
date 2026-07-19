@@ -10,9 +10,9 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 if ([string]::IsNullOrWhiteSpace($DictionaryRoot)) {
     $DictionaryRoot = Join-Path (Split-Path -Parent $RepoRoot) "dicts"
 }
-$GeneratedTsv = Join-Path $DictionaryRoot "generated/liteime-combined.tsv"
-$Lexicon = Join-Path $DictionaryRoot "cache/liteime-base.lex"
-$Cli = Join-Path $RepoRoot "dist/windows-x64/bin/liteime-cli.exe"
+$GeneratedTsv = Join-Path $DictionaryRoot "generated/piinput-combined.tsv"
+$Lexicon = Join-Path $DictionaryRoot "cache/piinput-base.lex"
+$Cli = Join-Path $RepoRoot "dist/windows-x64/bin/piinput-cli.exe"
 $Corpus = Join-Path $RepoRoot "tests/data/real_world_text_corpus.txt"
 $ReportDirectory = Join-Path $DictionaryRoot "tests"
 $Report = Join-Path $ReportDirectory "real-world-corpus-results.tsv"

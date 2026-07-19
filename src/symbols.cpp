@@ -1,4 +1,4 @@
-#include "liteime/symbols.h"
+#include "piinput/symbols.h"
 
 #include <algorithm>
 #include <cctype>
@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string_view>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 [[nodiscard]] std::vector<std::string_view> split_tabs(const std::string& line) {
@@ -144,4 +144,4 @@ std::size_t SymbolIndex::entry_count() const noexcept {
     return entries_.size();
 }
 
-}  // namespace liteime
+}  // namespace piinput

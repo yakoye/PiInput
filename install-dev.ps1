@@ -10,12 +10,12 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $Root = $PSScriptRoot
 $Source = Join-Path $Root "dist/windows-x64"
-$Destination = Join-Path $env:LOCALAPPDATA "LiteIME/Dev"
-$Preview = Join-Path $Destination "bin/liteime-preview.exe"
-$ProfileTool = Join-Path $Destination "bin/liteime-profile.exe"
-$TsfDll = Join-Path $Destination "bin/LiteImeTSF.dll"
-$StartMenuDirectory = Join-Path $env:APPDATA "Microsoft/Windows/Start Menu/Programs/LiteIME"
-$PreviewShortcut = Join-Path $StartMenuDirectory "LiteIME Preview (Developer).lnk"
+$Destination = Join-Path $env:LOCALAPPDATA "PiInput/Dev"
+$Preview = Join-Path $Destination "bin/piinput-preview.exe"
+$ProfileTool = Join-Path $Destination "bin/piinput-profile.exe"
+$TsfDll = Join-Path $Destination "bin/PiInputTSF.dll"
+$StartMenuDirectory = Join-Path $env:APPDATA "Microsoft/Windows/Start Menu/Programs/PiInput"
+$PreviewShortcut = Join-Path $StartMenuDirectory "PiInput Preview (Developer).lnk"
 $RegSvr32 = Join-Path $env:SystemRoot "System32/regsvr32.exe"
 
 function Invoke-NativeBestEffort {
@@ -50,10 +50,10 @@ function Invoke-NativeRequired {
 }
 
 foreach ($required in @(
-    (Join-Path $Source "bin/liteime-cli.exe"),
-    (Join-Path $Source "bin/liteime-preview.exe"),
-    (Join-Path $Source "bin/liteime-profile.exe"),
-    (Join-Path $Source "bin/LiteImeTSF.dll"),
+    (Join-Path $Source "bin/piinput-cli.exe"),
+    (Join-Path $Source "bin/piinput-preview.exe"),
+    (Join-Path $Source "bin/piinput-profile.exe"),
+    (Join-Path $Source "bin/PiInputTSF.dll"),
     (Join-Path $Source "data/base_lexicon.tsv"),
     (Join-Path $Source "data/symbols.tsv")
 )) {
@@ -67,8 +67,8 @@ Get-Process ctfmon -ErrorAction SilentlyContinue |
     Stop-Process -Force -ErrorAction SilentlyContinue
 
 # Cleanup is deliberately idempotent. A missing or inactive previous profile is normal.
-$OldProfileTool = Join-Path $Destination "bin/liteime-profile.exe"
-$OldTsfDll = Join-Path $Destination "bin/LiteImeTSF.dll"
+$OldProfileTool = Join-Path $Destination "bin/piinput-profile.exe"
+$OldTsfDll = Join-Path $Destination "bin/PiInputTSF.dll"
 if (Test-Path $OldProfileTool) {
     Invoke-NativeBestEffort -Description "Previous profile deactivation" -Command {
         & $OldProfileTool --deactivate
@@ -88,7 +88,7 @@ Copy-Item (Join-Path $Source "*") $Destination -Recurse -Force
 $Version = (Get-Content (Join-Path $Root "VERSION") -Raw).Trim()
 Set-Content (Join-Path $Destination "VERSION") $Version -Encoding UTF8
 
-$UserDataDirectory = Join-Path $env:LOCALAPPDATA "LiteIME/UserData"
+$UserDataDirectory = Join-Path $env:LOCALAPPDATA "PiInput/UserData"
 $CandidateSettings = Join-Path $UserDataDirectory "settings.ini"
 New-Item $UserDataDirectory -ItemType Directory -Force | Out-Null
 $settingsLines = if (Test-Path $CandidateSettings) { @(Get-Content $CandidateSettings) } else { @() }
@@ -100,7 +100,7 @@ if (-not ($settingsLines -match '^phrase_page_size=')) {
 }
 $settingsLines | Set-Content $CandidateSettings -Encoding ASCII
 
-Invoke-NativeRequired -Description "Saving the LiteIME input schema" -Command {
+Invoke-NativeRequired -Description "Saving the PiInput input schema" -Command {
     & $ProfileTool --schema $Schema
 }
 
@@ -120,32 +120,32 @@ $Shell = New-Object -ComObject WScript.Shell
 $Link = $Shell.CreateShortcut($PreviewShortcut)
 $Link.TargetPath = $Preview
 $Link.WorkingDirectory = Split-Path -Parent $Preview
-$Link.Description = "LiteIME input-core preview (developer build)"
+$Link.Description = "PiInput input-core preview (developer build)"
 $Link.Save()
 
 if (-not $SkipTsfRegistration) {
-    Invoke-NativeRequired -Description "Registering LiteImeTSF.dll" -Command {
+    Invoke-NativeRequired -Description "Registering PiInputTSF.dll" -Command {
         & $RegSvr32 /s $TsfDll
     }
-    Invoke-NativeRequired -Description "Registering the LiteIME TSF profile" -Command {
+    Invoke-NativeRequired -Description "Registering the PiInput TSF profile" -Command {
         & $ProfileTool --register
     }
-    Invoke-NativeRequired -Description "Activating the LiteIME TSF profile" -Command {
+    Invoke-NativeRequired -Description "Activating the PiInput TSF profile" -Command {
         & $ProfileTool --activate
     }
-    Invoke-NativeRequired -Description "Verifying the LiteIME TSF profile" -Command {
+    Invoke-NativeRequired -Description "Verifying the PiInput TSF profile" -Command {
         & $ProfileTool --status
     }
 }
 
-Write-Host "LiteIME developer build installed to: $Destination" -ForegroundColor Green
+Write-Host "PiInput developer build installed to: $Destination" -ForegroundColor Green
 Write-Host "Input schema: $Schema" -ForegroundColor Green
 Write-Host "Start Menu shortcut created: $PreviewShortcut" -ForegroundColor Green
 if (-not $SkipTsfRegistration) {
     $CtfMon = Join-Path $env:SystemRoot "System32/ctfmon.exe"
     Start-Process $CtfMon
-    Write-Host "LiteIME TSF system input method registered." -ForegroundColor Green
-    Write-Host "Close and reopen Settings and Notepad, then press Win+Space and select 'LiteIME 中文输入法（开发版）'." -ForegroundColor Cyan
+    Write-Host "PiInput TSF system input method registered." -ForegroundColor Green
+    Write-Host "Close and reopen Settings and Notepad, then press Win+Space and select 'PiInput 中文输入法（开发版）'." -ForegroundColor Cyan
 } else {
     Write-Host "TSF registration was skipped; only the preview and tools were installed." -ForegroundColor Yellow
 }

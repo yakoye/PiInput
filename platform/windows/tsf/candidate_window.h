@@ -1,11 +1,11 @@
 #pragma once
 
-#include "liteime/windows_compat.h"
+#include "piinput/windows_compat.h"
 
 #include <string>
 #include <vector>
 
-namespace liteime::windows {
+namespace piinput::windows {
 
 class CandidateWindow final {
 public:
@@ -42,4 +42,4 @@ private:
     std::size_t page_size_{6U};
 };
 
-}  // namespace liteime::windows
+}  // namespace piinput::windows

@@ -1,7 +1,7 @@
 #include "profile_registration.h"
 
-#include "liteime/utf.h"
-#include "liteime/windows_compat.h"
+#include "piinput/utf.h"
+#include "piinput/windows_compat.h"
 
 #include <msctf.h>
 #include <objbase.h>
@@ -18,11 +18,11 @@
 
 namespace {
 
-using liteime::windows::tsf::activate_profile;
-using liteime::windows::tsf::deactivate_profile;
-using liteime::windows::tsf::get_profile;
-using liteime::windows::tsf::register_profile;
-using liteime::windows::tsf::unregister_profile;
+using piinput::windows::tsf::activate_profile;
+using piinput::windows::tsf::deactivate_profile;
+using piinput::windows::tsf::get_profile;
+using piinput::windows::tsf::register_profile;
+using piinput::windows::tsf::unregister_profile;
 
 [[nodiscard]] std::filesystem::path local_app_data() {
     PWSTR path = nullptr;
@@ -44,7 +44,7 @@ void write_schema(const std::string& schema) {
     if (!valid_schema(schema)) {
         throw std::runtime_error("Unknown schema. Use full, flypy, natural, mspy, or abc.");
     }
-    const auto path = local_app_data() / L"LiteIME" / L"UserData" / L"settings.ini";
+    const auto path = local_app_data() / L"PiInput" / L"UserData" / L"settings.ini";
     std::filesystem::create_directories(path.parent_path());
     std::vector<std::string> lines;
     {
@@ -71,11 +71,11 @@ void write_schema(const std::string& schema) {
     if (!output) {
         throw std::runtime_error("Failed while writing settings.ini");
     }
-    std::cout << "LiteIME schema set to: " << schema << '\n';
+    std::cout << "PiInput schema set to: " << schema << '\n';
 }
 
 [[nodiscard]] std::string read_schema() {
-    const auto path = local_app_data() / L"LiteIME" / L"UserData" / L"settings.ini";
+    const auto path = local_app_data() / L"PiInput" / L"UserData" / L"settings.ini";
     std::ifstream input(path, std::ios::binary);
     std::string line;
     while (std::getline(input, line)) {
@@ -115,11 +115,11 @@ int show_status() {
 
 void print_help() {
     std::cout
-        << "LiteIME profile tool\n"
-        << "  --register               Register and enable the LiteIME TSF profile\n"
-        << "  --unregister             Unregister the LiteIME TSF profile\n"
-        << "  --activate               Enable and activate the LiteIME TSF profile\n"
-        << "  --deactivate             Deactivate the LiteIME TSF profile\n"
+        << "PiInput profile tool\n"
+        << "  --register               Register and enable the PiInput TSF profile\n"
+        << "  --unregister             Unregister the PiInput TSF profile\n"
+        << "  --activate               Enable and activate the PiInput TSF profile\n"
+        << "  --deactivate             Deactivate the PiInput TSF profile\n"
         << "  --status                 Show registered/enabled/active state\n"
         << "  --schema <name>          Set full/flypy/natural/mspy/abc\n"
         << "  --show-schema            Print the configured input schema\n";
@@ -137,7 +137,7 @@ int run(const int argc, wchar_t* argv[]) {
             if (index + 1 >= argc) {
                 throw std::runtime_error("--schema requires a value");
             }
-            write_schema(liteime::wide_to_utf8(argv[++index]));
+            write_schema(piinput::wide_to_utf8(argv[++index]));
         } else if (argument == L"--show-schema") {
             std::cout << read_schema() << '\n';
         } else if (argument == L"--register") {
@@ -145,30 +145,30 @@ int run(const int argc, wchar_t* argv[]) {
             if (FAILED(result)) {
                 return print_hresult_failure("RegisterProfile", result, 5);
             }
-            std::cout << "LiteIME profile registered and enabled.\n";
+            std::cout << "PiInput profile registered and enabled.\n";
         } else if (argument == L"--unregister") {
             const HRESULT result = unregister_profile();
             if (result == S_FALSE) {
-                std::cout << "LiteIME profile was not registered; nothing to remove.\n";
+                std::cout << "PiInput profile was not registered; nothing to remove.\n";
             } else if (FAILED(result)) {
                 return print_hresult_failure("UnregisterProfile", result, 6);
             } else {
-                std::cout << "LiteIME profile unregistered.\n";
+                std::cout << "PiInput profile unregistered.\n";
             }
         } else if (argument == L"--activate") {
             const HRESULT result = activate_profile();
             if (result != S_OK) {
                 return print_hresult_failure("ActivateProfile", result, 2);
             }
-            std::cout << "LiteIME profile enabled. Use Win+Space to select it if Windows did not switch immediately.\n";
+            std::cout << "PiInput profile enabled. Use Win+Space to select it if Windows did not switch immediately.\n";
         } else if (argument == L"--deactivate") {
             const HRESULT result = deactivate_profile();
             if (result == S_FALSE) {
-                std::cout << "LiteIME profile was not active or not registered; nothing to deactivate.\n";
+                std::cout << "PiInput profile was not active or not registered; nothing to deactivate.\n";
             } else if (FAILED(result)) {
                 return print_hresult_failure("DeactivateProfile", result, 3);
             } else {
-                std::cout << "LiteIME profile deactivated.\n";
+                std::cout << "PiInput profile deactivated.\n";
             }
         } else if (argument == L"--status") {
             const int status = show_status();
@@ -178,7 +178,7 @@ int run(const int argc, wchar_t* argv[]) {
         } else if (argument == L"--help" || argument == L"-h") {
             print_help();
         } else {
-            throw std::runtime_error("Unknown argument: " + liteime::wide_to_utf8(argv[index]));
+            throw std::runtime_error("Unknown argument: " + piinput::wide_to_utf8(argv[index]));
         }
     }
     return 0;

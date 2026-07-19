@@ -1,4 +1,4 @@
-#include "liteime/lexicon.h"
+#include "piinput/lexicon.h"
 
 #include <algorithm>
 #include <charconv>
@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string_view>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 [[nodiscard]] std::vector<std::string_view> split_tabs(const std::string& line) {
@@ -140,4 +140,4 @@ std::size_t DevLexicon::entry_count() const noexcept {
     return entry_count_;
 }
 
-}  // namespace liteime
+}  // namespace piinput

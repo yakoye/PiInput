@@ -1,11 +1,11 @@
-#include "liteime/candidate_paging.h"
+#include "piinput/candidate_paging.h"
 
 #include <algorithm>
 #include <cctype>
 #include <fstream>
 #include <string>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 [[nodiscard]] std::size_t parse_page_size(const std::string& value, const std::size_t fallback) {
@@ -74,4 +74,4 @@ std::size_t align_candidate_page(
     return ((std::min)(page_start, candidate_count - 1U) / page_size) * page_size;
 }
 
-}  // namespace liteime
+}  // namespace piinput

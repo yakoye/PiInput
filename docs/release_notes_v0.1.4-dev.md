@@ -1,4 +1,4 @@
-# LiteIME v0.1.4-dev 版本说明
+# PiInput v0.1.4-dev 版本说明
 
 ## 版本目标
 
@@ -14,15 +14,15 @@
 
 - `data/base_lexicon.tsv`；
 - 常用单字、词语、短语和基础技术词；
-- 安装时编译为 `liteime-base.lex`；
-- 始终合并进 `liteime-imported.lex`；
+- 安装时编译为 `piinput-base.lex`；
+- 始终合并进 `piinput-imported.lex`；
 - 没有 SCEL 时仍能使用基础词库；
 - 新增全拼和小鹤普通词回归测试。
 
 ### Windows TSF
 
-- `LiteImeTSF.dll`；
-- `liteime-profile.exe`；
+- `PiInputTSF.dll`；
+- `piinput-profile.exe`；
 - COM class factory；
 - 当前用户 COM 注册；
 - TSF 文本服务和简体中文语言配置文件注册；

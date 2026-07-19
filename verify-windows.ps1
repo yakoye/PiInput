@@ -5,11 +5,11 @@ Set-StrictMode -Version Latest
 $Root = $PSScriptRoot
 $Bin = Join-Path $Root "dist/windows-x64/bin"
 $Data = Join-Path $Root "data/base_lexicon.tsv"
-$Cli = Join-Path $Bin "liteime-cli.exe"
-$Profile = Join-Path $Bin "liteime-profile.exe"
-$Dll = Join-Path $Bin "LiteImeTSF.dll"
-$InstalledLexicon = Join-Path $env:LOCALAPPDATA "LiteIME/UserData/lexicons/liteime-imported.lex"
-$CandidateSettings = Join-Path $env:LOCALAPPDATA "LiteIME/UserData/settings.ini"
+$Cli = Join-Path $Bin "piinput-cli.exe"
+$Profile = Join-Path $Bin "piinput-profile.exe"
+$Dll = Join-Path $Bin "PiInputTSF.dll"
+$InstalledLexicon = Join-Path $env:LOCALAPPDATA "PiInput/UserData/lexicons/piinput-imported.lex"
+$CandidateSettings = Join-Path $env:LOCALAPPDATA "PiInput/UserData/settings.ini"
 
 foreach ($path in @($Cli, $Profile, $Dll, $Data)) {
     if (-not (Test-Path $path)) {
@@ -44,17 +44,17 @@ if (-not (Test-Path $CandidateSettings)) {
 
 if (-not $SkipRegistryCheck) {
     $RegistryPaths = @(
-        "HKCU:\Software\Classes\CLSID\{84E21A77-3A42-4D7B-93B8-BCDF818FC414}\InprocServer32",
-        "HKLM:\Software\Classes\CLSID\{84E21A77-3A42-4D7B-93B8-BCDF818FC414}\InprocServer32"
+        "HKCU:\Software\Classes\CLSID\{D73AABA7-BE3E-4E53-8DE2-652D352743F3}\InprocServer32",
+        "HKLM:\Software\Classes\CLSID\{D73AABA7-BE3E-4E53-8DE2-652D352743F3}\InprocServer32"
     )
     $RegistryPath = $RegistryPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
     if ([string]::IsNullOrWhiteSpace($RegistryPath)) {
-        throw "LiteIME COM registration was not found. Run .\setup-dev.cmd or .\repair-registration.ps1."
+        throw "PiInput COM registration was not found. Run .\setup-dev.cmd or .\repair-registration.ps1."
     }
     $RegisteredDll = (Get-ItemProperty $RegistryPath).'(default)'
     Write-Host "Registered DLL: $RegisteredDll" -ForegroundColor Cyan
     if (-not (Test-Path $RegisteredDll)) {
-        throw "Registered LiteIME DLL does not exist: $RegisteredDll"
+        throw "Registered PiInput DLL does not exist: $RegisteredDll"
     }
     $BuiltHash = (Get-FileHash $Dll -Algorithm SHA256).Hash
     $RegisteredHash = (Get-FileHash $RegisteredDll -Algorithm SHA256).Hash
@@ -67,7 +67,7 @@ if (-not $SkipRegistryCheck) {
 if (-not $SkipRegistryCheck) {
     $StatusResult = (& $Profile --status 2>&1 | Out-String)
     if ($LASTEXITCODE -ne 0 -or -not $StatusResult.Contains("registered=yes") -or -not $StatusResult.Contains("enabled=yes")) {
-        throw "LiteIME TSF profile status verification failed.`n$StatusResult"
+        throw "PiInput TSF profile status verification failed.`n$StatusResult"
     }
     Write-Host $StatusResult.Trim() -ForegroundColor Cyan
 }
@@ -78,7 +78,7 @@ Write-Host "Registered TSF DLL matches the current Release build." -ForegroundCo
 Write-Host "Automated Windows verification passed." -ForegroundColor Green
 Write-Host "Manual TSF check:" -ForegroundColor Cyan
 Write-Host "  1. Close and reopen Notepad."
-Write-Host "  2. Press Win+Space and select LiteIME 中文输入法（开发版）."
+Write-Host "  2. Press Win+Space and select PiInput 中文输入法（开发版）."
 Write-Host "  3. Type jisrji (default developer schema is Flypy)."
 Write-Host "  4. Press Space; 计算机 should be committed."
 exit 0

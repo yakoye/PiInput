@@ -1,7 +1,7 @@
-#include "liteime/engine.h"
-#include "liteime/symbols.h"
-#include "liteime/utf.h"
-#include "liteime/windows_compat.h"
+#include "piinput/engine.h"
+#include "piinput/symbols.h"
+#include "piinput/utf.h"
+#include "piinput/windows_compat.h"
 
 #include <cstddef>
 #include <filesystem>
@@ -14,16 +14,16 @@ namespace {
 
 void print_usage() {
     std::cout
-        << "LiteIME Core CLI v" << LITEIME_VERSION << "\n\n"
+        << "PiInput Core CLI v" << PIINPUT_VERSION << "\n\n"
         << "Dictionary query:\n"
-        << "  liteime-cli --lexicon <dictionary.tsv|dictionary.lex> --query <input>\n"
+        << "  piinput-cli --lexicon <dictionary.tsv|dictionary.lex> --query <input>\n"
         << "               [--schema full|flypy|natural|mspy|abc] [--top N] [--show-decode]\n\n"
         << "Decode only:\n"
-        << "  liteime-cli --decode <input> [--schema ...] [--top N]\n\n"
+        << "  piinput-cli --decode <input> [--schema ...] [--top N]\n\n"
         << "Symbol search:\n"
-        << "  liteime-cli --symbols <symbols.tsv> --symbol-query <name|pinyin|english> [--top N]\n\n"
+        << "  piinput-cli --symbols <symbols.tsv> --symbol-query <name|pinyin|english> [--top N]\n\n"
         << "Other:\n"
-        << "  liteime-cli --list-schemas\n";
+        << "  piinput-cli --list-schemas\n";
 }
 
 [[nodiscard]] std::size_t parse_size(const std::string& value) {
@@ -82,7 +82,7 @@ int run(const std::vector<std::string>& arguments) {
         }
     }
 
-    liteime::Engine engine;
+    piinput::Engine engine;
     if (list_schemas) {
         std::cout << "full\t全拼\n";
         for (const auto& item : engine.shuangpin().schemes()) {
@@ -95,8 +95,8 @@ int run(const std::vector<std::string>& arguments) {
         if (symbols_path.empty() || symbol_query.empty()) {
             throw std::runtime_error("Both --symbols and --symbol-query are required");
         }
-        liteime::SymbolIndex symbols;
-        symbols.load_tsv(liteime::path_from_utf8(symbols_path));
+        piinput::SymbolIndex symbols;
+        symbols.load_tsv(piinput::path_from_utf8(symbols_path));
         const auto results = symbols.search(symbol_query, top);
         std::cout << "Loaded symbols: " << symbols.entry_count() << "\n";
         for (std::size_t index = 0U; index < results.size(); ++index) {
@@ -125,7 +125,7 @@ int run(const std::vector<std::string>& arguments) {
     if (lexicon_path.empty()) {
         throw std::runtime_error("--lexicon is required for dictionary query");
     }
-    engine.load_lexicon(liteime::path_from_utf8(lexicon_path));
+    engine.load_lexicon(piinput::path_from_utf8(lexicon_path));
     const auto candidates = engine.query(query, schema, top);
     std::cout << "Loaded entries: " << engine.entry_count() << "\n";
     if (candidates.empty()) {
@@ -149,7 +149,7 @@ int wmain(const int argc, wchar_t* argv[]) {
         std::vector<std::string> arguments;
         arguments.reserve(static_cast<std::size_t>(argc));
         for (int index = 0; index < argc; ++index) {
-            arguments.push_back(liteime::wide_to_utf8(argv[index]));
+            arguments.push_back(piinput::wide_to_utf8(argv[index]));
         }
         return run(arguments);
     } catch (const std::exception& error) {

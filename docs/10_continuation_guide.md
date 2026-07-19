@@ -14,14 +14,14 @@
 - 常用词门禁包括 `接触`、`词汇`、`感觉`、`现在`、`中国`；
 - 增量候选包括小鹤 `mkt→明天`、`rug→如果/入股` 与全拼尾音节前缀；
 - 中文标点已经接入 TSF；
-- 开发安装器 `LiteIME-Install.exe` 使用版本并存，不覆盖占用中的 DLL，不关闭用户应用；
+- 开发安装器 `PiInput-Install.exe` 使用版本并存，不覆盖占用中的 DLL，不关闭用户应用；
 - 407 音节、786 条结构化语料已纳入 `tests/corpus/v0.2.0`。
 
 ## 本地目录
 
 ```text
-C:\Users\color\Downloads\lite-ime
-├── LiteIME-repo
+C:\Users\color\Downloads\piinput
+├── PiInput-repo
 └── dicts
 ```
 
@@ -33,7 +33,7 @@ C:\Users\color\Downloads\lite-ime
 setup-dev.cmd            构建、测试、并存安装
 update-dictionaries.cmd  下载、转换、构建外部词库
 run-ime-tests.cmd        输入法完整回归
-dist\windows-x64\bin\LiteIME-Install.exe  只安装当前构建
+dist\windows-x64\bin\PiInput-Install.exe  只安装当前构建
 ```
 
 ## 下一阶段边界

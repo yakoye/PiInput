@@ -120,8 +120,8 @@ TSF 源码进入版本后，必须分别记录：
 ## 发布包结构
 
 ```text
-lite-ime-vX.Y.Z-dev.zip
-└─ lite-ime-dev/
+piinput-vX.Y.Z-dev.zip
+└─ piinput-dev/
   README.md
   PROJECT_CONTEXT.md
   VERSION
@@ -167,10 +167,10 @@ git add .; git commit -m "feat: add SCEL parser and dictionary conversion baseli
 
 开发安装还必须验证：
 
-1. 注册路径指向 `%LOCALAPPDATA%\LiteIME\Dev\versions\...\bin\LiteImeTSF.dll`；
+1. 注册路径指向 `%LOCALAPPDATA%\PiInput\Dev\versions\...\bin\PiInputTSF.dll`；
 2. 被旧应用占用的 DLL 不会被覆盖或强制删除；
 3. 安装器不强制关闭任何用户应用；
 4. profile 状态为 `registered=yes`、`enabled=yes`；
-5. `%LOCALAPPDATA%\LiteIME\UserData` 在升级后保持不变。
+5. `%LOCALAPPDATA%\PiInput\UserData` 在升级后保持不变。
 
 某个测试程序通过时，其他独立工具仍可能编译失败，因此不得只依据 `100% tests passed` 宣称完整构建成功。

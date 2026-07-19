@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(LiteIME VERSION 0.2.0 LANGUAGES CXX)
+project(PiInput VERSION 0.3.0 LANGUAGES CXX)
 
-option(LITEIME_BUILD_TESTS "Build LiteIME tests" ON)
-option(LITEIME_STATIC_MSVC_RUNTIME "Use the static MSVC runtime" ON)
-set(LITEIME_TESTDATA_DIR "" CACHE PATH "Directory containing the two SCEL regression files")
+option(PIINPUT_BUILD_TESTS "Build PiInput tests" ON)
+option(PIINPUT_STATIC_MSVC_RUNTIME "Use the static MSVC runtime" ON)
+set(PIINPUT_TESTDATA_DIR "" CACHE PATH "Directory containing the two SCEL regression files")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,11 +19,11 @@ if(WIN32)
     )
 endif()
 
-if(MSVC AND LITEIME_STATIC_MSVC_RUNTIME)
+if(MSVC AND PIINPUT_STATIC_MSVC_RUNTIME)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-add_library(liteime_core STATIC
+add_library(piinput_core STATIC
     src/scel_parser.cpp
     src/utf.cpp
     src/lexicon.cpp
@@ -41,17 +41,17 @@ add_library(liteime_core STATIC
     src/user_model.cpp
 )
 
-target_include_directories(liteime_core
+target_include_directories(piinput_core
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_compile_definitions(liteime_core
+target_compile_definitions(piinput_core
     PUBLIC
-        LITEIME_VERSION="${PROJECT_VERSION}"
+        PIINPUT_VERSION="${PROJECT_VERSION}"
 )
 
-function(liteime_enable_warnings target)
+function(piinput_enable_warnings target)
     if(MSVC)
         target_compile_options(${target} PRIVATE /W4 /permissive- /utf-8)
     else()
@@ -59,63 +59,63 @@ function(liteime_enable_warnings target)
     endif()
 endfunction()
 
-liteime_enable_warnings(liteime_core)
+piinput_enable_warnings(piinput_core)
 
-add_executable(liteime-scel-converter
+add_executable(piinput-scel-converter
     tools/scel_converter/main.cpp
 )
-target_link_libraries(liteime-scel-converter PRIVATE liteime_core)
-liteime_enable_warnings(liteime-scel-converter)
+target_link_libraries(piinput-scel-converter PRIVATE piinput_core)
+piinput_enable_warnings(piinput-scel-converter)
 
-add_executable(liteime-lexicon-compiler
+add_executable(piinput-lexicon-compiler
     tools/lexicon_compiler/main.cpp
 )
-target_link_libraries(liteime-lexicon-compiler PRIVATE liteime_core)
-liteime_enable_warnings(liteime-lexicon-compiler)
+target_link_libraries(piinput-lexicon-compiler PRIVATE piinput_core)
+piinput_enable_warnings(piinput-lexicon-compiler)
 
-add_executable(liteime-dictionary-builder
+add_executable(piinput-dictionary-builder
     tools/dictionary_builder/main.cpp
 )
-target_link_libraries(liteime-dictionary-builder PRIVATE liteime_core)
-liteime_enable_warnings(liteime-dictionary-builder)
+target_link_libraries(piinput-dictionary-builder PRIVATE piinput_core)
+piinput_enable_warnings(piinput-dictionary-builder)
 
-add_executable(liteime-cli
+add_executable(piinput-cli
     tools/ime_cli/main.cpp
 )
-target_link_libraries(liteime-cli PRIVATE liteime_core)
-liteime_enable_warnings(liteime-cli)
+target_link_libraries(piinput-cli PRIVATE piinput_core)
+piinput_enable_warnings(piinput-cli)
 
-add_executable(liteime-benchmark
+add_executable(piinput-benchmark
     tools/benchmark/main.cpp
 )
-target_link_libraries(liteime-benchmark PRIVATE liteime_core)
-liteime_enable_warnings(liteime-benchmark)
+target_link_libraries(piinput-benchmark PRIVATE piinput_core)
+piinput_enable_warnings(piinput-benchmark)
 
 install(TARGETS
-    liteime-scel-converter
-    liteime-lexicon-compiler
-    liteime-dictionary-builder
-    liteime-cli
-    liteime-benchmark
+    piinput-scel-converter
+    piinput-lexicon-compiler
+    piinput-dictionary-builder
+    piinput-cli
+    piinput-benchmark
     RUNTIME DESTINATION bin
 )
 
 if(WIN32)
-    add_executable(liteime-preview WIN32
+    add_executable(piinput-preview WIN32
         platform/windows/preview/main.cpp
     )
-    target_link_libraries(liteime-preview PRIVATE liteime_core comctl32 shell32 ole32)
-    liteime_enable_warnings(liteime-preview)
+    target_link_libraries(piinput-preview PRIVATE piinput_core comctl32 shell32 ole32)
+    piinput_enable_warnings(piinput-preview)
 
-    add_library(LiteImeTSF SHARED
+    add_library(PiInputTSF SHARED
         platform/windows/tsf/dllmain.cpp
         platform/windows/tsf/text_service.cpp
         platform/windows/tsf/candidate_window.cpp
-        platform/windows/tsf/LiteImeTSF.def
+        platform/windows/tsf/PiInputTSF.def
     )
-    target_include_directories(LiteImeTSF PRIVATE platform/windows/tsf)
-    target_link_libraries(LiteImeTSF PRIVATE
-        liteime_core
+    target_include_directories(PiInputTSF PRIVATE platform/windows/tsf)
+    target_link_libraries(PiInputTSF PRIVATE
+        piinput_core
         ole32
         shell32
         user32
@@ -123,34 +123,34 @@ if(WIN32)
         advapi32
         uuid
     )
-    set_target_properties(LiteImeTSF PROPERTIES PREFIX "" OUTPUT_NAME "LiteImeTSF")
-    liteime_enable_warnings(LiteImeTSF)
+    set_target_properties(PiInputTSF PROPERTIES PREFIX "" OUTPUT_NAME "PiInputTSF")
+    piinput_enable_warnings(PiInputTSF)
 
-    add_executable(liteime-profile
+    add_executable(piinput-profile
         platform/windows/tsf/profile_tool.cpp
     )
-    target_include_directories(liteime-profile PRIVATE platform/windows/tsf)
-    target_link_libraries(liteime-profile PRIVATE liteime_core ole32 shell32 uuid)
-    liteime_enable_warnings(liteime-profile)
+    target_include_directories(piinput-profile PRIVATE platform/windows/tsf)
+    target_link_libraries(piinput-profile PRIVATE piinput_core ole32 shell32 uuid)
+    piinput_enable_warnings(piinput-profile)
 
-    add_executable(LiteIME-Install WIN32
+    add_executable(PiInput-Install WIN32
         platform/windows/installer/main.cpp
         platform/windows/installer/install_layout.cpp
     )
-    target_include_directories(LiteIME-Install PRIVATE
+    target_include_directories(PiInput-Install PRIVATE
         include
         platform/windows/installer
         platform/windows/tsf
     )
-    target_compile_definitions(LiteIME-Install PRIVATE LITEIME_VERSION=L"${PROJECT_VERSION}")
-    target_link_libraries(LiteIME-Install PRIVATE ole32 shell32 advapi32 user32)
-    liteime_enable_warnings(LiteIME-Install)
+    target_compile_definitions(PiInput-Install PRIVATE PIINPUT_VERSION=L"${PROJECT_VERSION}")
+    target_link_libraries(PiInput-Install PRIVATE ole32 shell32 advapi32 user32)
+    piinput_enable_warnings(PiInput-Install)
 
     install(TARGETS
-        liteime-preview
-        liteime-profile
-        LiteImeTSF
-        LiteIME-Install
+        piinput-preview
+        piinput-profile
+        PiInputTSF
+        PiInput-Install
         RUNTIME DESTINATION bin
         LIBRARY DESTINATION bin
     )
@@ -158,55 +158,61 @@ endif()
 install(FILES data/symbols.tsv data/base_lexicon.tsv DESTINATION data)
 install(FILES examples/sample_lexicon.tsv DESTINATION data)
 
-if(LITEIME_BUILD_TESTS)
+if(PIINPUT_BUILD_TESTS)
     include(CTest)
     enable_testing()
 
-    add_executable(liteime-core-tests
+    add_executable(piinput-core-tests
         tests/test_main.cpp
     )
-    target_link_libraries(liteime-core-tests PRIVATE liteime_core)
-    target_compile_definitions(liteime-core-tests PRIVATE
-        LITEIME_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    target_link_libraries(piinput-core-tests PRIVATE piinput_core)
+    target_compile_definitions(piinput-core-tests PRIVATE
+        PIINPUT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
     )
-    liteime_enable_warnings(liteime-core-tests)
+    piinput_enable_warnings(piinput-core-tests)
 
     if(WIN32)
-        add_executable(liteime-installer-layout-tests
+        add_executable(piinput-installer-layout-tests
             tests/installer_layout_tests.cpp
             platform/windows/installer/install_layout.cpp
         )
-        target_include_directories(liteime-installer-layout-tests PRIVATE platform/windows/installer)
-        liteime_enable_warnings(liteime-installer-layout-tests)
+        target_include_directories(piinput-installer-layout-tests PRIVATE platform/windows/installer)
+        piinput_enable_warnings(piinput-installer-layout-tests)
     endif()
 
-    add_test(NAME liteime-core-tests COMMAND liteime-core-tests)
+    add_test(NAME piinput-core-tests COMMAND piinput-core-tests)
 
     if(WIN32)
-        add_test(NAME liteime-installer-layout-tests COMMAND liteime-installer-layout-tests)
+        add_test(NAME piinput-installer-layout-tests COMMAND piinput-installer-layout-tests)
     endif()
 
     add_test(
-        NAME liteime-windows-source-regression
+        NAME piinput-brand-regression
+        COMMAND "${CMAKE_COMMAND}"
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -P ${CMAKE_SOURCE_DIR}/tests/brand_regression.cmake
+    )
+    add_test(
+        NAME piinput-windows-source-regression
         COMMAND ${CMAKE_COMMAND}
-            -DLITEIME_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+            -DPIINPUT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_source_regression.cmake
     )
     add_test(
-        NAME liteime-dictionary-script-regression
+        NAME piinput-dictionary-script-regression
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
             -P ${CMAKE_SOURCE_DIR}/tests/dictionary_script_regression.cmake
     )
     add_test(
-        NAME liteime-corpus-regression
+        NAME piinput-corpus-regression
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
             -P ${CMAKE_SOURCE_DIR}/tests/corpus_regression.cmake
     )
     add_test(
-        NAME liteime-performance-smoke
-        COMMAND liteime-benchmark
+        NAME piinput-performance-smoke
+        COMMAND piinput-benchmark
             --lexicon ${CMAKE_SOURCE_DIR}/data/base_lexicon.tsv
             --schema full
             --query wo
@@ -216,20 +222,20 @@ if(LITEIME_BUILD_TESTS)
             --max-p99-us 5000
     )
 
-    if(LITEIME_TESTDATA_DIR)
-        set(EXTERNAL_LEXICON "${LITEIME_TESTDATA_DIR}/cache/liteime-base.lex")
+    if(PIINPUT_TESTDATA_DIR)
+        set(EXTERNAL_LEXICON "${PIINPUT_TESTDATA_DIR}/cache/piinput-base.lex")
         if(EXISTS "${EXTERNAL_LEXICON}")
             add_test(
-                NAME liteime-external-dictionary-regression
-                COMMAND liteime-core-tests --lexicon "${EXTERNAL_LEXICON}"
+                NAME piinput-external-dictionary-regression
+                COMMAND piinput-core-tests --lexicon "${EXTERNAL_LEXICON}"
             )
         endif()
-        set(ELECTRONICS_SCEL "${LITEIME_TESTDATA_DIR}/电子词汇大全【官方推荐】.scel")
-        set(COMPUTER_SCEL "${LITEIME_TESTDATA_DIR}/计算机词汇大全【官方推荐】.scel")
+        set(ELECTRONICS_SCEL "${PIINPUT_TESTDATA_DIR}/电子词汇大全【官方推荐】.scel")
+        set(COMPUTER_SCEL "${PIINPUT_TESTDATA_DIR}/计算机词汇大全【官方推荐】.scel")
         if(EXISTS "${ELECTRONICS_SCEL}" AND EXISTS "${COMPUTER_SCEL}")
             add_test(
-                NAME liteime-scel-regression
-                COMMAND liteime-core-tests "${ELECTRONICS_SCEL}" "${COMPUTER_SCEL}"
+                NAME piinput-scel-regression
+                COMMAND piinput-core-tests "${ELECTRONICS_SCEL}" "${COMPUTER_SCEL}"
             )
         endif()
     endif()

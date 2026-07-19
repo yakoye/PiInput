@@ -1,13 +1,13 @@
 #pragma once
 
-#include "liteime/lexicon.h"
+#include "piinput/lexicon.h"
 
 #include <cstddef>
 #include <filesystem>
 #include <string>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 class BinaryLexicon final {
 public:
@@ -34,4 +34,4 @@ void compile_tsv_to_binary(
 
 [[nodiscard]] bool is_binary_lexicon(const std::filesystem::path& path);
 
-}  // namespace liteime
+}  // namespace piinput

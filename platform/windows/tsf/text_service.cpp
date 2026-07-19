@@ -1,6 +1,6 @@
 #include "text_service.h"
 
-#include "liteime/utf.h"
+#include "piinput/utf.h"
 
 #include <shlobj.h>
 
@@ -11,7 +11,7 @@
 #include <string_view>
 #include <utility>
 
-namespace liteime::windows {
+namespace piinput::windows {
 
 std::atomic<long> g_object_count{0};
 HINSTANCE g_module_instance = nullptr;
@@ -738,10 +738,10 @@ void TextService::refresh_candidate_window() {
 }
 
 void TextService::load_engine() {
-    const auto data_root = local_app_data() / L"LiteIME" / L"UserData";
+    const auto data_root = local_app_data() / L"PiInput" / L"UserData";
     const auto lexicon_directory = data_root / L"lexicons";
-    const auto combined = lexicon_directory / L"liteime-imported.lex";
-    const auto base_binary = lexicon_directory / L"liteime-base.lex";
+    const auto combined = lexicon_directory / L"piinput-imported.lex";
+    const auto base_binary = lexicon_directory / L"piinput-base.lex";
     const auto installed_data = module_directory(module_).parent_path() / L"data";
     const auto base_tsv = installed_data / L"base_lexicon.tsv";
 
@@ -798,7 +798,7 @@ void TextService::save_user_model() noexcept {
 }
 
 std::string TextService::load_schema() const {
-    const auto path = local_app_data() / L"LiteIME" / L"UserData" / L"settings.ini";
+    const auto path = local_app_data() / L"PiInput" / L"UserData" / L"settings.ini";
     std::ifstream input(path, std::ios::binary);
     std::string line;
     while (std::getline(input, line)) {
@@ -831,4 +831,4 @@ std::wstring TextService::schema_display_name() const {
     return utf8_to_wide(schema_);
 }
 
-}  // namespace liteime::windows
+}  // namespace piinput::windows

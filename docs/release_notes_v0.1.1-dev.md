@@ -1,4 +1,4 @@
-# LiteIME v0.1.1-dev 发布说明
+# PiInput v0.1.1-dev 发布说明
 
 ## 本版定位
 

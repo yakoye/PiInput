@@ -9,9 +9,9 @@ if ([string]::IsNullOrWhiteSpace($DictionaryRoot)) {
 & (Join-Path $Root "build.ps1") -Configuration Release -TestDataDir $DictionaryRoot
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$Tests = Join-Path $Root "build/windows-x64/Release/liteime-core-tests.exe"
-$Benchmark = Join-Path $Root "dist/windows-x64/bin/liteime-benchmark.exe"
-$Lexicon = Join-Path $DictionaryRoot "cache/liteime-base.lex"
+$Tests = Join-Path $Root "build/windows-x64/Release/piinput-core-tests.exe"
+$Benchmark = Join-Path $Root "dist/windows-x64/bin/piinput-benchmark.exe"
+$Lexicon = Join-Path $DictionaryRoot "cache/piinput-base.lex"
 if (Test-Path $Lexicon) {
     & $Tests --lexicon $Lexicon
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -20,4 +20,4 @@ if (Test-Path $Lexicon) {
 } else {
     Write-Host "External dictionary cache not found; CTest coverage still ran." -ForegroundColor Yellow
 }
-Write-Host "LiteIME full-pinyin, Xiaohe and latency tests passed." -ForegroundColor Green
+Write-Host "PiInput full-pinyin, Xiaohe and latency tests passed." -ForegroundColor Green

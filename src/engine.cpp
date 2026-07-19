@@ -1,5 +1,5 @@
-#include "liteime/engine.h"
-#include "liteime/pinyin_prefix.h"
+#include "piinput/engine.h"
+#include "piinput/pinyin_prefix.h"
 
 #include <algorithm>
 #include <cmath>
@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 constexpr std::int64_t exact_phrase_bonus = 30'000'000;
@@ -249,4 +249,4 @@ const ShuangpinDecoder& Engine::shuangpin() const noexcept {
     return shuangpin_;
 }
 
-}  // namespace liteime
+}  // namespace piinput

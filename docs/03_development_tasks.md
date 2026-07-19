@@ -12,7 +12,7 @@
 - [x] Linux 和 Windows 构建脚本；
 - [x] 单元测试和真实 SCEL 回归；
 - [x] ASan/UBSan 验证流程；
-- [x] 固定 `lite-ime-dev` 更新工作流；
+- [x] 固定 `piinput-dev` 更新工作流；
 - [ ] Windows CI 和已编译二进制发布；
 - [ ] 正式代码签名。
 

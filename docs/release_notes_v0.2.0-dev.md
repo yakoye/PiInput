@@ -1,4 +1,4 @@
-# LiteIME v0.2.0-dev 版本说明
+# PiInput v0.2.0-dev 版本说明
 
 ## 范围
 
@@ -25,10 +25,10 @@
 
 ## Windows 开发安装器
 
-- 新增 `LiteIME-Install.exe`；
-- 每次安装创建 `%LOCALAPPDATA%\LiteIME\Dev\versions\<版本-构建号>`；
+- 新增 `PiInput-Install.exe`；
+- 每次安装创建 `%LOCALAPPDATA%\PiInput\Dev\versions\<版本-构建号>`；
 - 先复制完整新版本，再切换当前用户 COM 注册路径；
-- 不覆盖已被应用加载的旧 `LiteImeTSF.dll`，不强制关闭用户应用；
+- 不覆盖已被应用加载的旧 `PiInputTSF.dll`，不强制关闭用户应用；
 - 注册或验证失败时回滚原 COM 路径；
 - `current.txt` 原子指向当前版本；
 - 未被占用的旧版本自动清理，被占用版本保留到下一次；
@@ -39,7 +39,7 @@
 
 ## 测试语料
 
-- 纳入 `lite-ime-test-corpus-v0.2.0.zip` 的完整内容；
+- 纳入 `piinput-test-corpus-v0.2.0.zip` 的完整内容；
 - 固定校验 SHA-256、407 个标准全拼音节、451 个唯一结构化 ID 和总计 786 条结构化用例；
 - 包含全拼、小鹤、零声母、长句、隔音符、专业词、ASCII、Unicode、Emoji 和状态机数据；
 - 当前已实现能力进入发布门禁，纠错、模糊音、V/U 模式和更完整语言模型用例保留为未来诊断项，不伪装成已完成。

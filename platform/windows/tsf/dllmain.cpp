@@ -1,8 +1,8 @@
 #include "text_service.h"
-#include "liteime_tsf_guids.h"
+#include "piinput_tsf_guids.h"
 #include "profile_registration.h"
 
-#include "liteime/windows_compat.h"
+#include "piinput/windows_compat.h"
 
 #include <msctf.h>
 #include <objbase.h>
@@ -12,9 +12,9 @@
 #include <new>
 #include <string>
 
-using liteime::windows::TextService;
-using liteime::windows::g_module_instance;
-using liteime::windows::g_object_count;
+using piinput::windows::TextService;
+using piinput::windows::g_module_instance;
+using piinput::windows::g_object_count;
 
 namespace {
 
@@ -109,9 +109,9 @@ HRESULT register_com_server() {
     if (length == 0U || length >= std::size(module_path)) {
         return HRESULT_FROM_WIN32(GetLastError());
     }
-    const std::wstring clsid = guid_string(CLSID_LiteImeTextService);
+    const std::wstring clsid = guid_string(CLSID_PiInputTextService);
     const std::wstring base = L"Software\\Classes\\CLSID\\" + clsid;
-    HRESULT result = set_registry_string(HKEY_CURRENT_USER, base, nullptr, L"LiteIME Text Service");
+    HRESULT result = set_registry_string(HKEY_CURRENT_USER, base, nullptr, L"PiInput Text Service");
     if (FAILED(result)) {
         return result;
     }
@@ -123,7 +123,7 @@ HRESULT register_com_server() {
 }
 
 HRESULT unregister_com_server() {
-    const std::wstring path = L"Software\\Classes\\CLSID\\" + guid_string(CLSID_LiteImeTextService);
+    const std::wstring path = L"Software\\Classes\\CLSID\\" + guid_string(CLSID_PiInputTextService);
     const LONG result = RegDeleteTreeW(HKEY_CURRENT_USER, path.c_str());
     if (result == ERROR_FILE_NOT_FOUND) {
         return S_OK;
@@ -132,7 +132,7 @@ HRESULT unregister_com_server() {
 }
 
 HRESULT register_tsf_profile() {
-    HRESULT result = liteime::windows::tsf::register_profile();
+    HRESULT result = piinput::windows::tsf::register_profile();
     if (FAILED(result)) {
         return result;
     }
@@ -142,11 +142,11 @@ HRESULT register_tsf_profile() {
         CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&category_manager));
     if (SUCCEEDED(result)) {
         result = category_manager->RegisterCategory(
-            CLSID_LiteImeTextService, GUID_TFCAT_TIP_KEYBOARD, CLSID_LiteImeTextService);
+            CLSID_PiInputTextService, GUID_TFCAT_TIP_KEYBOARD, CLSID_PiInputTextService);
         category_manager->Release();
     }
     if (FAILED(result)) {
-        liteime::windows::tsf::unregister_profile();
+        piinput::windows::tsf::unregister_profile();
     }
     return result;
 }
@@ -157,11 +157,11 @@ HRESULT unregister_tsf_profile() {
         CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&category_manager));
     if (SUCCEEDED(category_result)) {
         category_result = category_manager->UnregisterCategory(
-            CLSID_LiteImeTextService, GUID_TFCAT_TIP_KEYBOARD, CLSID_LiteImeTextService);
+            CLSID_PiInputTextService, GUID_TFCAT_TIP_KEYBOARD, CLSID_PiInputTextService);
         category_manager->Release();
     }
 
-    const HRESULT profile_result = liteime::windows::tsf::unregister_profile();
+    const HRESULT profile_result = piinput::windows::tsf::unregister_profile();
     const bool profile_missing = (profile_result == S_FALSE);
     const bool category_missing_or_removed = SUCCEEDED(category_result) || category_result == E_FAIL;
     if (profile_missing && category_missing_or_removed) {
@@ -202,7 +202,7 @@ extern "C" HRESULT __stdcall DllGetClassObject(
     REFCLSID class_id,
     REFIID iid,
     void** object) {
-    if (!IsEqualCLSID(class_id, CLSID_LiteImeTextService)) {
+    if (!IsEqualCLSID(class_id, CLSID_PiInputTextService)) {
         return CLASS_E_CLASSNOTAVAILABLE;
     }
     auto* factory = new (std::nothrow) ClassFactory();

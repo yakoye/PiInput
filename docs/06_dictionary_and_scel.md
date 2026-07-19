@@ -52,7 +52,7 @@ MergedEntry
   ↓ 质量评分和词库层级
 RankedEntry
   ↓ 编译
-LiteIME .lex
+PiInput .lex
 ```
 
 ## 拼音规范化
@@ -119,8 +119,8 @@ user.lex/user.db  用户自定义和学习
 1. 转换相邻 `dicts` 目录中的所有 SCEL；
 2. 为每个词库生成独立 `.lex`；
 3. 合并所有 TSV；
-4. 由编译器去重并生成 `liteime-imported.lex`；
-5. 把结果保存到 `%LOCALAPPDATA%\LiteIME\UserData\lexicons`。
+4. 由编译器去重并生成 `piinput-imported.lex`；
+5. 把结果保存到 `%LOCALAPPDATA%\PiInput\UserData\lexicons`。
 
 ## v0.1.4-dev 内置基础词库
 

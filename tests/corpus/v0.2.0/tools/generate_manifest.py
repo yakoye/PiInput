@@ -11,7 +11,7 @@ def main() -> int:
         if not p.is_file() or p.name == "MANIFEST.json" or "__pycache__" in p.parts: continue
         data = p.read_bytes()
         files.append({"path": p.relative_to(ROOT).as_posix(), "size": len(data), "sha256": hashlib.sha256(data).hexdigest()})
-    manifest = {"package":"lite-ime-test-corpus-v0.2.0","version":"0.2.0","encoding":"UTF-8","file_count":len(files),"files":files}
+    manifest = {"package":"piinput-test-corpus-v0.2.0","version":"0.2.0","encoding":"UTF-8","file_count":len(files),"files":files}
     (ROOT / "MANIFEST.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+"\n", encoding="utf-8")
     print(f"generated manifest: {len(files)} files")
     return 0

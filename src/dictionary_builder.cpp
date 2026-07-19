@@ -1,4 +1,4 @@
-#include "liteime/dictionary_builder.h"
+#include "piinput/dictionary_builder.h"
 
 #include <algorithm>
 #include <cctype>
@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <string_view>
 
-namespace liteime {
+namespace piinput {
 namespace {
 
 [[nodiscard]] std::string trim(std::string value) {
@@ -113,9 +113,9 @@ std::vector<LexiconCandidate> read_dictionary_source(
         LexiconCandidate entry;
         entry.weight = default_weight;
         entry.authoritative_weight =
-            format == DictionarySourceFormat::liteime_tsv ||
+            format == DictionarySourceFormat::piinput_tsv ||
             format == DictionarySourceFormat::rime_yaml;
-        if (format == DictionarySourceFormat::liteime_tsv || format == DictionarySourceFormat::rime_yaml) {
+        if (format == DictionarySourceFormat::piinput_tsv || format == DictionarySourceFormat::rime_yaml) {
             const auto columns = split_tabs(line);
             if (columns.size() < 2U || columns[0] == "word") {
                 continue;
@@ -186,4 +186,4 @@ void write_dictionary_tsv(
     }
 }
 
-}  // namespace liteime
+}  // namespace piinput

@@ -1,7 +1,7 @@
 #include "install_layout.h"
-#include "liteime_tsf_guids.h"
+#include "piinput_tsf_guids.h"
 
-#include "liteime/windows_compat.h"
+#include "piinput/windows_compat.h"
 
 #include <shlobj.h>
 #include <shellapi.h>
@@ -19,13 +19,13 @@
 
 namespace {
 
-using liteime::windows::installer::version_directory;
+using piinput::windows::installer::version_directory;
 
 [[nodiscard]] std::filesystem::path executable_path() {
     std::wstring buffer(32768U, L'\0');
     const DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
     if (length == 0U || length >= buffer.size()) {
-        throw std::runtime_error("Cannot locate LiteIME-Install.exe");
+        throw std::runtime_error("Cannot locate PiInput-Install.exe");
     }
     buffer.resize(length);
     return buffer;
@@ -87,7 +87,7 @@ void copy_tree(const std::filesystem::path& source, const std::filesystem::path&
 }
 
 [[nodiscard]] std::wstring com_registry_key() {
-    return L"Software\\Classes\\CLSID\\" + guid_string(CLSID_LiteImeTextService) + L"\\InprocServer32";
+    return L"Software\\Classes\\CLSID\\" + guid_string(CLSID_PiInputTextService) + L"\\InprocServer32";
 }
 
 [[nodiscard]] std::wstring read_registered_dll() {
@@ -116,7 +116,7 @@ void write_registered_dll(const std::filesystem::path& dll) {
     const LONG create = RegCreateKeyExW(HKEY_CURRENT_USER, com_registry_key().c_str(), 0U, nullptr,
         REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &key, nullptr);
     if (create != ERROR_SUCCESS) {
-        throw std::runtime_error("Cannot update the LiteIME COM registration");
+        throw std::runtime_error("Cannot update the PiInput COM registration");
     }
     const std::wstring value = dll.wstring();
     const DWORD bytes = static_cast<DWORD>((value.size() + 1U) * sizeof(wchar_t));
@@ -129,7 +129,7 @@ void write_registered_dll(const std::filesystem::path& dll) {
     }
     RegCloseKey(key);
     if (result != ERROR_SUCCESS) {
-        throw std::runtime_error("Cannot write the LiteIME COM registration");
+        throw std::runtime_error("Cannot write the PiInput COM registration");
     }
 }
 
@@ -223,21 +223,21 @@ void clean_unlocked_versions(const std::filesystem::path& versions, const std::f
     const auto installer = executable_path();
     const auto source_bin = installer.parent_path();
     const auto source_data = source_bin.parent_path() / L"data";
-    require_file(source_bin / L"LiteImeTSF.dll");
-    require_file(source_bin / L"liteime-profile.exe");
+    require_file(source_bin / L"PiInputTSF.dll");
+    require_file(source_bin / L"piinput-profile.exe");
     require_file(source_data / L"base_lexicon.tsv");
     require_file(source_data / L"symbols.tsv");
 
-    const auto liteime_root = local_app_data() / L"LiteIME";
-    const auto developer_root = liteime_root / L"Dev";
-    const auto target = version_directory(developer_root, LITEIME_VERSION, build_id());
+    const auto piinput_root = local_app_data() / L"PiInput";
+    const auto developer_root = piinput_root / L"Dev";
+    const auto target = version_directory(developer_root, PIINPUT_VERSION, build_id());
     const auto target_bin = target / L"bin";
     copy_tree(source_bin, target_bin);
     copy_tree(source_data, target / L"data");
-    initialize_user_settings(liteime_root / L"UserData");
+    initialize_user_settings(piinput_root / L"UserData");
 
-    const auto new_dll = target_bin / L"LiteImeTSF.dll";
-    const auto profile = target_bin / L"liteime-profile.exe";
+    const auto new_dll = target_bin / L"PiInputTSF.dll";
+    const auto profile = target_bin / L"piinput-profile.exe";
     const std::wstring previous_dll = read_registered_dll();
     bool first_registration_attempted = false;
     try {
@@ -298,25 +298,25 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     try {
         const auto target = install();
         const std::wstring message =
-            L"LiteIME 已安装完成。\n\n"
+            L"PiInput 已安装完成。\n\n"
             L"不需要关闭当前正在编辑的程序。请重新打开要测试的程序，"
-            L"再通过 Win+Space 选择 LiteIME。\n\n安装目录：\n" + target.wstring();
+            L"再通过 Win+Space 选择 PiInput。\n\n安装目录：\n" + target.wstring();
         if (!silent) {
-            MessageBoxW(nullptr, message.c_str(), L"LiteIME 安装完成", MB_OK | MB_ICONINFORMATION);
+            MessageBoxW(nullptr, message.c_str(), L"PiInput 安装完成", MB_OK | MB_ICONINFORMATION);
         }
         return 0;
     } catch (const std::filesystem::filesystem_error& error) {
         const std::wstring detail = widen_error(error);
         if (!silent) {
-            MessageBoxW(nullptr, (L"LiteIME 安装失败：\n" + detail).c_str(),
-                L"LiteIME 安装失败", MB_OK | MB_ICONERROR);
+            MessageBoxW(nullptr, (L"PiInput 安装失败：\n" + detail).c_str(),
+                L"PiInput 安装失败", MB_OK | MB_ICONERROR);
         }
         return 1;
     } catch (const std::exception& error) {
         const std::wstring detail = widen_error(error);
         if (!silent) {
-            MessageBoxW(nullptr, (L"LiteIME 安装失败：\n" + detail).c_str(),
-                L"LiteIME 安装失败", MB_OK | MB_ICONERROR);
+            MessageBoxW(nullptr, (L"PiInput 安装失败：\n" + detail).c_str(),
+                L"PiInput 安装失败", MB_OK | MB_ICONERROR);
         }
         return 1;
     }

@@ -1,6 +1,6 @@
 #include "install_layout.h"
 
-namespace liteime::windows::installer {
+namespace piinput::windows::installer {
 
 std::wstring sanitize_component(const std::wstring_view value) {
     std::wstring result;
@@ -33,4 +33,4 @@ std::filesystem::path version_directory(
         (sanitize_component(version) + L"-" + sanitize_component(build_id));
 }
 
-}  // namespace liteime::windows::installer
+}  // namespace piinput::windows::installer

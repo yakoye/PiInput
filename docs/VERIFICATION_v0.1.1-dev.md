@@ -1,4 +1,4 @@
-# LiteIME v0.1.1-dev 验证记录
+# PiInput v0.1.1-dev 验证记录
 
 ## 已完成验证
 
@@ -19,6 +19,6 @@
 - PowerShell 脚本实际执行；
 - Visual Studio 2022 生成器配置；
 - Windows x64 Release 编译；
-- `liteime-scel-converter.exe` 和 `liteime-cli.exe` 运行测试。
+- `piinput-scel-converter.exe` 和 `piinput-cli.exe` 运行测试。
 
 这部分不能在当前环境中假装已完成。

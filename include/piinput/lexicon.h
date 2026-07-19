@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 struct LexiconCandidate {
     std::string word;
@@ -38,4 +38,4 @@ private:
     std::size_t entry_count_{};
 };
 
-}  // namespace liteime
+}  // namespace piinput

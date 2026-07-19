@@ -2,7 +2,7 @@
 
 ## 当前版本
 
-`lite-ime-test-corpus-v0.2.0`
+`piinput-test-corpus-v0.2.0`
 
 ## 当前状态
 

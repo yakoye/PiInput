@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace liteime {
+namespace piinput {
 
 class UserModel final {
 public:
@@ -29,4 +29,4 @@ private:
     std::unordered_map<std::string, Entry> entries_;
 };
 
-}  // namespace liteime
+}  // namespace piinput

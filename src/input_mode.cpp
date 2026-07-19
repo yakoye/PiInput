@@ -1,6 +1,6 @@
-#include "liteime/input_mode.h"
+#include "piinput/input_mode.h"
 
-namespace liteime {
+namespace piinput {
 
 void ShiftToggleState::on_shift_down(const bool modifier_already_down) noexcept {
     if (!pressed_) {
@@ -29,4 +29,4 @@ void ShiftToggleState::reset() noexcept {
     used_as_modifier_ = false;
 }
 
-}  // namespace liteime
+}  // namespace piinput

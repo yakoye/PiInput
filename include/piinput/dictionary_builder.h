@@ -1,14 +1,14 @@
 #pragma once
 
-#include "liteime/lexicon.h"
+#include "piinput/lexicon.h"
 
 #include <filesystem>
 #include <vector>
 
-namespace liteime {
+namespace piinput {
 
 enum class DictionarySourceFormat {
-    liteime_tsv,
+    piinput_tsv,
     rime_yaml,
     pinyin_data,
     phrase_pinyin_data,
@@ -23,4 +23,4 @@ void write_dictionary_tsv(
     const std::filesystem::path& path,
     std::vector<LexiconCandidate> entries);
 
-}  // namespace liteime
+}  // namespace piinput

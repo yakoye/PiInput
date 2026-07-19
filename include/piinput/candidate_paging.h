@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <filesystem>
 
-namespace liteime {
+namespace piinput {
 
 struct CandidatePageSettings {
     std::size_t single_syllable{9U};
@@ -29,4 +29,4 @@ struct CandidatePageSettings {
     std::size_t candidate_count,
     std::size_t page_size) noexcept;
 
-}  // namespace liteime
+}  // namespace piinput

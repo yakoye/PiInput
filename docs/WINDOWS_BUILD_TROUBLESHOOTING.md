@@ -52,7 +52,7 @@ std::min(a, b)
 现象：
 
 ```text
-file INSTALL cannot find ... liteime-scel-converter.exe
+file INSTALL cannot find ... piinput-scel-converter.exe
 ```
 
 这通常不是安装规则本身的问题，而是前面的编译已经失败，目标 EXE 根本没有生成。
@@ -61,7 +61,7 @@ file INSTALL cannot find ... liteime-scel-converter.exe
 
 ## 4. 测试通过但整体构建仍失败
 
-`liteime-core-tests` 只链接核心库。某个独立工具目标编译失败时，核心测试仍可能通过。因此必须同时满足：
+`piinput-core-tests` 只链接核心库。某个独立工具目标编译失败时，核心测试仍可能通过。因此必须同时满足：
 
 1. 配置成功；
 2. 所有目标编译成功；
@@ -112,7 +112,7 @@ LINK : fatal error LNK1181: 无法打开输入文件 msctf.lib
 
 ## `DeactivateProfile failed: 0x80004005`
 
-含义：旧 LiteIME 配置文件不存在、未启用或当前没有处于激活状态。对“修复注册”和“升级安装”来说，这是可接受的清理状态，不代表新版注册失败。
+含义：旧 PiInput 配置文件不存在、未启用或当前没有处于激活状态。对“修复注册”和“升级安装”来说，这是可接受的清理状态，不代表新版注册失败。
 
 从 `v0.1.6-dev` 开始，脚本不会在这里停止，而会继续：
 

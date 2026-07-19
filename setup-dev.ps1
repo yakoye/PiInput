@@ -32,8 +32,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $DistBin = Join-Path $Root "dist/windows-x64/bin"
-$ProfileTool = Join-Path $DistBin "liteime-profile.exe"
-$Installer = Join-Path $DistBin "LiteIME-Install.exe"
+$ProfileTool = Join-Path $DistBin "piinput-profile.exe"
+$Installer = Join-Path $DistBin "PiInput-Install.exe"
 foreach ($Required in @($ProfileTool, $Installer)) {
     if (-not (Test-Path $Required)) {
         throw "Missing Release output: $Required"
@@ -42,7 +42,7 @@ foreach ($Required in @($ProfileTool, $Installer)) {
 
 & $ProfileTool --schema $Schema
 if ($LASTEXITCODE -ne 0) {
-    throw "Saving the LiteIME schema failed with exit code $LASTEXITCODE."
+    throw "Saving the PiInput schema failed with exit code $LASTEXITCODE."
 }
 
 if (-not $SkipDictionaryImport) {
@@ -59,7 +59,7 @@ if (-not $SkipDictionaryImport) {
 if (-not $SkipTsfRegistration) {
     $InstallerProcess = Start-Process -FilePath $Installer -ArgumentList "--silent" -Wait -PassThru
     if ($InstallerProcess.ExitCode -ne 0) {
-        throw "LiteIME-Install.exe failed with exit code $($InstallerProcess.ExitCode)."
+        throw "PiInput-Install.exe failed with exit code $($InstallerProcess.ExitCode)."
     }
 }
 
@@ -72,10 +72,10 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "LiteIME developer setup completed." -ForegroundColor Green
+Write-Host "PiInput developer setup completed." -ForegroundColor Green
 if ($SkipTsfRegistration) {
-    Write-Host "TSF installation was skipped. Run dist\windows-x64\bin\liteime-preview.exe for standalone testing." -ForegroundColor Cyan
+    Write-Host "TSF installation was skipped. Run dist\windows-x64\bin\piinput-preview.exe for standalone testing." -ForegroundColor Cyan
 } else {
-    Write-Host "Open a new Notepad window, press Win+Space, and select LiteIME." -ForegroundColor Cyan
+    Write-Host "Open a new Notepad window, press Win+Space, and select PiInput." -ForegroundColor Cyan
 }
 exit 0

@@ -1,4 +1,4 @@
-# LiteIME v0.1.4-dev 验证记录
+# PiInput v0.1.4-dev 验证记录
 
 验证日期：2026-07-18
 
@@ -21,8 +21,8 @@
 ```bash
 cmake -S . -B build/linux \
   -DCMAKE_BUILD_TYPE=Release \
-  -DLITEIME_BUILD_TESTS=ON \
-  -DLITEIME_TESTDATA_DIR=/mnt/data
+  -DPIINPUT_BUILD_TESTS=ON \
+  -DPIINPUT_TESTDATA_DIR=/mnt/data
 cmake --build build/linux --parallel 2
 ctest --test-dir build/linux --output-on-failure
 cmake --install build/linux --prefix dist/linux-x64
@@ -40,8 +40,8 @@ Release 配置成功
 测试：
 
 ```text
-liteime-core-tests        Passed
-liteime-scel-regression   Passed
+piinput-core-tests        Passed
+piinput-scel-regression   Passed
 ```
 
 ## 3. Sanitizer
@@ -51,8 +51,8 @@ liteime-scel-regression   Passed
 ```bash
 cmake -S . -B build/asan \
   -DCMAKE_BUILD_TYPE=Debug \
-  -DLITEIME_BUILD_TESTS=ON \
-  -DLITEIME_TESTDATA_DIR=/mnt/data \
+  -DPIINPUT_BUILD_TESTS=ON \
+  -DPIINPUT_TESTDATA_DIR=/mnt/data \
   -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
   -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
 cmake --build build/asan --parallel 2
@@ -130,7 +130,7 @@ candidate: ℃
 命令：
 
 ```bash
-./build/linux/liteime-benchmark \
+./build/linux/piinput-benchmark \
   --lexicon data/base_lexicon.tsv \
   --schema flypy \
   --query jisrji \
@@ -156,8 +156,8 @@ max_us=17.065
 新增源码：
 
 ```text
-platform/windows/tsf/LiteImeTSF.def
-platform/windows/tsf/liteime_tsf_guids.h
+platform/windows/tsf/PiInputTSF.def
+platform/windows/tsf/piinput_tsf_guids.h
 platform/windows/tsf/candidate_window.h
 platform/windows/tsf/candidate_window.cpp
 platform/windows/tsf/text_service.h
@@ -196,11 +196,11 @@ platform/windows/tsf/profile_tool.cpp
 
 必须继续确认：
 
-1. `LiteImeTSF.dll` 编译和链接成功；
-2. `liteime-profile.exe` 编译成功；
+1. `PiInputTSF.dll` 编译和链接成功；
+2. `piinput-profile.exe` 编译成功；
 3. 完整测试通过；
 4. regsvr32 成功；
-5. Win+Space 出现 LiteIME；
+5. Win+Space 出现 PiInput；
 6. 记事本输入 `jisrji` 有 Composition；
 7. 候选窗显示“计算机”；
 8. Space 上屏“计算机”；

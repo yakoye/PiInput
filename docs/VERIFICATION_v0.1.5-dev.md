@@ -1,4 +1,4 @@
-# LiteIME v0.1.5-dev 验证记录
+# PiInput v0.1.5-dev 验证记录
 
 验证日期：2026-07-18
 
@@ -16,13 +16,13 @@ Windows SDK 10.0.26100.0
 v0.1.4-dev 实际成功生成：
 
 ```text
-liteime_core.lib
-liteime-core-tests.exe
-liteime-scel-converter.exe
-liteime-lexicon-compiler.exe
-liteime-cli.exe
-liteime-benchmark.exe
-liteime-preview.exe
+piinput_core.lib
+piinput-core-tests.exe
+piinput-scel-converter.exe
+piinput-lexicon-compiler.exe
+piinput-cli.exe
+piinput-benchmark.exe
+piinput-preview.exe
 ```
 
 实际失败：
@@ -42,14 +42,14 @@ LNK1181: 无法打开输入文件 msctf.lib
 ```text
 profile_tool.cpp 使用 CLSID_TF_InputProcessorProfiles
 profile_tool.cpp 使用 IID_PPV_ARGS(&manager)
-CMake 不再为 LiteImeTSF 链接 msctf
-CMake 不再为 liteime-profile 链接 msctf
+CMake 不再为 PiInputTSF 链接 msctf
+CMake 不再为 piinput-profile 链接 msctf
 ```
 
 新增自动测试：
 
 ```text
-liteime-windows-source-regression
+piinput-windows-source-regression
 ```
 
 用于阻止以上错误再次进入发布包。
@@ -61,8 +61,8 @@ liteime-windows-source-regression
 ```bash
 cmake -S . -B build/linux \
   -DCMAKE_BUILD_TYPE=Release \
-  -DLITEIME_BUILD_TESTS=ON \
-  -DLITEIME_TESTDATA_DIR=/mnt/data
+  -DPIINPUT_BUILD_TESTS=ON \
+  -DPIINPUT_TESTDATA_DIR=/mnt/data
 cmake --build build/linux --parallel 2
 ctest --test-dir build/linux --output-on-failure
 ```
@@ -76,9 +76,9 @@ ctest --test-dir build/linux --output-on-failure
 测试项：
 
 ```text
-liteime-core-tests
-liteime-windows-source-regression
-liteime-scel-regression
+piinput-core-tests
+piinput-windows-source-regression
+piinput-scel-regression
 ```
 
 ## 4. Sanitizer
@@ -111,13 +111,13 @@ liteime-scel-regression
 
 必须同时满足：
 
-1. `liteime-profile.exe` 编译成功；
-2. `LiteImeTSF.dll` 链接成功；
+1. `piinput-profile.exe` 编译成功；
+2. `PiInputTSF.dll` 链接成功；
 3. CTest 全部通过；
 4. 安装阶段找到所有 EXE/DLL；
 5. `regsvr32` 成功；
 6. profile 激活成功；
-7. Win+Space 出现 LiteIME；
+7. Win+Space 出现 PiInput；
 8. 记事本小鹤输入 `jisrji` 后出现“计算机”；
 9. Space 上屏成功。
 

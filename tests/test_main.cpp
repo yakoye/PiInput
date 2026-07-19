@@ -1,18 +1,18 @@
-#include "liteime/binary_lexicon.h"
-#include "liteime/candidate_paging.h"
-#include "liteime/dictionary_builder.h"
-#include "liteime/engine.h"
-#include "liteime/input_mode.h"
-#include "liteime/lexicon.h"
-#include "liteime/pinyin.h"
-#include "liteime/punctuation.h"
-#include "liteime/scel_parser.h"
-#include "liteime/session.h"
-#include "liteime/shuangpin.h"
-#include "liteime/symbols.h"
-#include "liteime/utf.h"
-#include "liteime/user_model.h"
-#include "liteime/windows_compat.h"
+#include "piinput/binary_lexicon.h"
+#include "piinput/candidate_paging.h"
+#include "piinput/dictionary_builder.h"
+#include "piinput/engine.h"
+#include "piinput/input_mode.h"
+#include "piinput/lexicon.h"
+#include "piinput/pinyin.h"
+#include "piinput/punctuation.h"
+#include "piinput/scel_parser.h"
+#include "piinput/session.h"
+#include "piinput/shuangpin.h"
+#include "piinput/symbols.h"
+#include "piinput/utf.h"
+#include "piinput/user_model.h"
+#include "piinput/windows_compat.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -36,7 +36,7 @@ void check(const bool condition, const std::string& message) {
 }
 
 [[nodiscard]] bool contains_canonical(
-    const std::vector<liteime::PinyinSegmentation>& segmentations,
+    const std::vector<piinput::PinyinSegmentation>& segmentations,
     const std::string& expected) {
     return std::any_of(segmentations.begin(), segmentations.end(), [&](const auto& item) {
         return item.canonical == expected;
@@ -61,7 +61,7 @@ void write_sample_tsv(const std::filesystem::path& path) {
 }
 
 [[nodiscard]] std::vector<std::vector<std::string>> read_test_table(const std::string& name) {
-    const auto path = std::filesystem::path(LITEIME_SOURCE_DIR) / "tests" / "data" / name;
+    const auto path = std::filesystem::path(PIINPUT_SOURCE_DIR) / "tests" / "data" / name;
     std::ifstream input(path, std::ios::binary);
     if (!input) {
         throw std::runtime_error("Cannot open test data: " + path.string());
@@ -87,7 +87,7 @@ void write_sample_tsv(const std::filesystem::path& path) {
 }
 
 void verify_candidate_table(
-    liteime::Engine& engine,
+    piinput::Engine& engine,
     const std::string& table,
     const std::string& schema) {
     for (const auto& row : read_test_table(table)) {
@@ -112,10 +112,10 @@ void verify_candidate_table(
 }
 
 void test_lexicon() {
-    const auto path = std::filesystem::temp_directory_path() / "liteime-test-lexicon.tsv";
+    const auto path = std::filesystem::temp_directory_path() / "piinput-test-lexicon.tsv";
     write_sample_tsv(path);
 
-    liteime::DevLexicon lexicon;
+    piinput::DevLexicon lexicon;
     lexicon.load_tsv(path);
     check(lexicon.entry_count() == 12U, "TSV lexicon entry count");
     const auto results = lexicon.query_exact("ji'suan'ji", 10U);
@@ -130,17 +130,17 @@ void test_lexicon() {
 
 void test_binary_lexicon() {
     const auto temp = std::filesystem::temp_directory_path();
-    const auto tsv = temp / "liteime-test-binary-source.tsv";
-    const auto lex = temp / "liteime-test-binary.lex";
+    const auto tsv = temp / "piinput-test-binary-source.tsv";
+    const auto lex = temp / "piinput-test-binary.lex";
     write_sample_tsv(tsv);
     {
         std::ofstream append(tsv, std::ios::binary | std::ios::app);
         append << "计算机\tji'suan'ji\t20000\n";
     }
-    liteime::compile_tsv_to_binary(tsv, lex);
-    check(liteime::is_binary_lexicon(lex), "Binary lexicon magic detection");
+    piinput::compile_tsv_to_binary(tsv, lex);
+    check(piinput::is_binary_lexicon(lex), "Binary lexicon magic detection");
 
-    liteime::BinaryLexicon binary;
+    piinput::BinaryLexicon binary;
     binary.load(lex);
     check(binary.entry_count() == 12U, "Binary lexicon entry count");
     const auto results = binary.query_exact("shu'ru'fa", 5U);
@@ -156,11 +156,11 @@ void test_binary_lexicon() {
 }
 
 void test_pinyin() {
-    liteime::PinyinSegmenter segmenter;
+    piinput::PinyinSegmenter segmenter;
     check(segmenter.is_syllable("xian"), "xian is a valid syllable");
     check(segmenter.is_valid_prefix("zhua"), "zhua is a valid prefix");
     check(!segmenter.is_valid_prefix("qqq"), "qqq is not a valid prefix");
-    check(liteime::PinyinSegmenter::normalize("nü'e") == "nv'e", "Normalize ü to v");
+    check(piinput::PinyinSegmenter::normalize("nü'e") == "nv'e", "Normalize ü to v");
 
     const auto computer = segmenter.segment("jisuanji", 8U);
     check(contains_canonical(computer, "ji'suan'ji"), "Continuous full pinyin segmentation");
@@ -172,14 +172,14 @@ void test_pinyin() {
     const auto manual = segmenter.segment("xi'an", 8U);
     check(manual.size() == 1U && manual.front().canonical == "xi'an", "Manual apostrophe boundary");
 
-    for (const auto& syllable : liteime::PinyinSegmenter::standard_syllables()) {
+    for (const auto& syllable : piinput::PinyinSegmenter::standard_syllables()) {
         const auto decoded = segmenter.segment(syllable, 32U);
         check(contains_canonical(decoded, syllable), "Full pinyin accepts standard syllable " + syllable);
     }
 }
 
 void test_shuangpin() {
-    liteime::ShuangpinDecoder decoder;
+    piinput::ShuangpinDecoder decoder;
     check(decoder.has_scheme("flypy"), "Flypy scheme exists");
     check(decoder.has_scheme("natural"), "Natural scheme exists");
     check(decoder.has_scheme("mspy"), "Microsoft scheme exists");
@@ -219,7 +219,7 @@ void test_shuangpin() {
             }
         }
     }
-    for (const auto& syllable : liteime::PinyinSegmenter::standard_syllables()) {
+    for (const auto& syllable : piinput::PinyinSegmenter::standard_syllables()) {
         check(reachable.contains(syllable), "Flypy can encode standard syllable " + syllable);
     }
     check(decoder.decode("flypy", "gjj", 8U).empty(), "Incomplete Flypy pair has no premature candidate");
@@ -227,29 +227,29 @@ void test_shuangpin() {
 }
 
 void test_dictionary_builder() {
-    const auto root = std::filesystem::path(LITEIME_SOURCE_DIR) / "tests" / "data" / "dictionary_builder";
-    const auto characters = liteime::read_dictionary_source(
-        root / "pinyin_data.txt", liteime::DictionarySourceFormat::pinyin_data, 1000U);
+    const auto root = std::filesystem::path(PIINPUT_SOURCE_DIR) / "tests" / "data" / "dictionary_builder";
+    const auto characters = piinput::read_dictionary_source(
+        root / "pinyin_data.txt", piinput::DictionarySourceFormat::pinyin_data, 1000U);
     check(characters.size() == 2U, "Dictionary builder reads pinyin-data characters");
     check(characters.size() >= 2U && characters[0].pinyin == "wo" && characters[1].pinyin == "ai",
         "Dictionary builder removes character tones");
 
-    const auto phrases = liteime::read_dictionary_source(
-        root / "phrases.txt", liteime::DictionarySourceFormat::phrase_pinyin_data, 2000U);
+    const auto phrases = piinput::read_dictionary_source(
+        root / "phrases.txt", piinput::DictionarySourceFormat::phrase_pinyin_data, 2000U);
     check(!phrases.empty() && phrases.front().word == "感觉" && phrases.front().pinyin == "gan'jue",
         "Dictionary builder reads phrase-pinyin-data");
 
-    const auto rime = liteime::read_dictionary_source(
-        root / "rime.dict.yaml", liteime::DictionarySourceFormat::rime_yaml, 3000U);
+    const auto rime = piinput::read_dictionary_source(
+        root / "rime.dict.yaml", piinput::DictionarySourceFormat::rime_yaml, 3000U);
     check(rime.size() == 2U && rime.front().word == "感觉" && rime.front().weight == 200U,
         "Dictionary builder reads Rime YAML entries and weights");
 
-    const auto output = std::filesystem::temp_directory_path() / "liteime-dictionary-builder-test.tsv";
-    std::vector<liteime::LexiconCandidate> combined = characters;
+    const auto output = std::filesystem::temp_directory_path() / "piinput-dictionary-builder-test.tsv";
+    std::vector<piinput::LexiconCandidate> combined = characters;
     combined.insert(combined.end(), phrases.begin(), phrases.end());
     combined.insert(combined.end(), rime.begin(), rime.end());
-    liteime::write_dictionary_tsv(output, std::move(combined));
-    liteime::DevLexicon lexicon;
+    piinput::write_dictionary_tsv(output, std::move(combined));
+    piinput::DevLexicon lexicon;
     lexicon.load_tsv(output);
     const auto feeling = lexicon.query_exact("gan'jue", 10U);
     check(feeling.size() == 1U && feeling.front().word == "感觉" && feeling.front().weight == 200U,
@@ -257,7 +257,7 @@ void test_dictionary_builder() {
     std::filesystem::remove(output);
 }
 
-void verify_incremental_candidates(liteime::Engine& engine) {
+void verify_incremental_candidates(piinput::Engine& engine) {
     for (const auto& row : read_test_table("incremental_candidates.tsv")) {
         check(row.size() == 5U, "incremental candidate row has five columns");
         if (row.size() != 5U) {
@@ -277,7 +277,7 @@ void verify_incremental_candidates(liteime::Engine& engine) {
     }
 }
 
-void verify_core_input_cases(liteime::Engine& engine) {
+void verify_core_input_cases(piinput::Engine& engine) {
     for (const auto& row : read_test_table("core_input_cases.tsv")) {
         check(row.size() == 7U, "core_input_cases.tsv row has seven columns");
         if (row.size() != 7U || row[0] != "required") {
@@ -295,31 +295,31 @@ void verify_core_input_cases(liteime::Engine& engine) {
 }
 
 void test_candidate_paging() {
-    const liteime::CandidatePageSettings defaults;
+    const piinput::CandidatePageSettings defaults;
     check(defaults.single_syllable == 9U, "Single-syllable page defaults to nine candidates");
     check(defaults.multi_syllable == 6U, "Phrase page defaults to six candidates");
-    check(liteime::candidate_page_size(defaults, 1U, false) == 9U, "One syllable uses single-character page size");
-    check(liteime::candidate_page_size(defaults, 2U, false) == 6U, "Multiple syllables use phrase page size");
-    check(liteime::candidate_page_size(defaults, 0U, true) == 6U, "Symbols use phrase page size");
-    check(liteime::move_candidate_page(0U, 20U, 9U, -1) == 18U, "Previous page wraps to final page");
-    check(liteime::move_candidate_page(18U, 20U, 9U, 1) == 0U, "Next page wraps to first page");
-    check(liteime::move_candidate_page(0U, 13U, 6U, 1) == 6U, "Phrase next page advances by six");
-    check(liteime::align_candidate_page(6U, 20U, 9U) == 0U,
+    check(piinput::candidate_page_size(defaults, 1U, false) == 9U, "One syllable uses single-character page size");
+    check(piinput::candidate_page_size(defaults, 2U, false) == 6U, "Multiple syllables use phrase page size");
+    check(piinput::candidate_page_size(defaults, 0U, true) == 6U, "Symbols use phrase page size");
+    check(piinput::move_candidate_page(0U, 20U, 9U, -1) == 18U, "Previous page wraps to final page");
+    check(piinput::move_candidate_page(18U, 20U, 9U, 1) == 0U, "Next page wraps to first page");
+    check(piinput::move_candidate_page(0U, 13U, 6U, 1) == 6U, "Phrase next page advances by six");
+    check(piinput::align_candidate_page(6U, 20U, 9U) == 0U,
         "Changing from six to nine candidates realigns the page boundary");
 
-    const auto settings_path = std::filesystem::temp_directory_path() / "liteime-page-settings.ini";
+    const auto settings_path = std::filesystem::temp_directory_path() / "piinput-page-settings.ini";
     {
         std::ofstream output(settings_path, std::ios::trunc);
         output << "single_syllable_page_size=8\nphrase_page_size=5\n";
     }
-    const auto configured = liteime::load_candidate_page_settings(settings_path);
+    const auto configured = piinput::load_candidate_page_settings(settings_path);
     check(configured.single_syllable == 8U && configured.multi_syllable == 5U,
         "Candidate page sizes can be configured");
     std::filesystem::remove(settings_path);
 }
 
 void test_shift_toggle_state() {
-    liteime::ShiftToggleState state;
+    piinput::ShiftToggleState state;
     state.on_shift_down();
     check(state.on_shift_up(), "Standalone Shift toggles input mode");
     state.on_shift_down();
@@ -331,9 +331,9 @@ void test_shift_toggle_state() {
 }
 
 void test_engine() {
-    const auto path = std::filesystem::temp_directory_path() / "liteime-test-engine.tsv";
+    const auto path = std::filesystem::temp_directory_path() / "piinput-test-engine.tsv";
     write_sample_tsv(path);
-    liteime::Engine engine;
+    piinput::Engine engine;
     engine.load_lexicon(path);
 
     const auto full = engine.query("jisuanji", "full", 10U);
@@ -357,8 +357,8 @@ void test_engine() {
 
 
 void test_builtin_base_lexicon() {
-    const auto path = std::filesystem::path(LITEIME_SOURCE_DIR) / "data" / "base_lexicon.tsv";
-    liteime::Engine engine;
+    const auto path = std::filesystem::path(PIINPUT_SOURCE_DIR) / "data" / "base_lexicon.tsv";
+    piinput::Engine engine;
     engine.load_lexicon(path);
     check(engine.entry_count() >= 250U, "Built-in starter lexicon size");
 
@@ -380,7 +380,7 @@ void test_builtin_base_lexicon() {
 }
 
 void test_external_dictionary(const std::filesystem::path& path) {
-    liteime::Engine engine;
+    piinput::Engine engine;
     engine.load_lexicon(path);
     check(engine.entry_count() >= 10000U, "External dictionary has useful coverage");
     verify_candidate_table(engine, "xiaohe_candidates.tsv", "flypy");
@@ -390,7 +390,7 @@ void test_external_dictionary(const std::filesystem::path& path) {
 }
 
 void test_candidate_order_is_deterministic() {
-    const auto path = std::filesystem::temp_directory_path() / "liteime-test-stable-ranking.tsv";
+    const auto path = std::filesystem::temp_directory_path() / "piinput-test-stable-ranking.tsv";
     {
         std::ofstream output(path, std::ios::binary | std::ios::trunc);
         output << "word\tpinyin\tweight\n"
@@ -398,7 +398,7 @@ void test_candidate_order_is_deterministic() {
                << "先\txi'an\t100\n"
                << "西安\txi'an\t100\n";
     }
-    liteime::Engine engine;
+    piinput::Engine engine;
     engine.load_lexicon(path);
     const auto baseline = engine.query("xian", "full", 10U);
     check(baseline.size() == 3U, "Stable ranking fixture returns all candidates");
@@ -414,7 +414,7 @@ void test_candidate_order_is_deterministic() {
 }
 
 void test_exact_phrase_beats_character_composition() {
-    const auto path = std::filesystem::temp_directory_path() / "liteime-test-exact-phrase.tsv";
+    const auto path = std::filesystem::temp_directory_path() / "piinput-test-exact-phrase.tsv";
     {
         std::ofstream output(path, std::ios::binary | std::ios::trunc);
         output << "word\tpinyin\tweight\n"
@@ -423,7 +423,7 @@ void test_exact_phrase_beats_character_composition() {
                << "觉\tjue\t40000\n"
                << "感觉\tgan'jue\t60000\n";
     }
-    liteime::Engine engine;
+    piinput::Engine engine;
     engine.load_lexicon(path);
     const auto candidates = engine.query("gjjt", "flypy", 5U);
     check(!candidates.empty() && candidates.front().word == "感觉",
@@ -432,8 +432,8 @@ void test_exact_phrase_beats_character_composition() {
 }
 
 void test_symbols() {
-    liteime::SymbolIndex index;
-    index.load_tsv(std::filesystem::path(LITEIME_SOURCE_DIR) / "data" / "symbols.tsv");
+    piinput::SymbolIndex index;
+    index.load_tsv(std::filesystem::path(PIINPUT_SOURCE_DIR) / "data" / "symbols.tsv");
     check(index.entry_count() >= 100U, "Built-in symbol table size");
     const auto celsius = index.search("sheshidu", 10U);
     check(!celsius.empty() && celsius.front().symbol == "℃", "Pinyin symbol search");
@@ -442,7 +442,7 @@ void test_symbols() {
 }
 
 void test_punctuation() {
-    liteime::PunctuationTransformer transformer;
+    piinput::PunctuationTransformer transformer;
     for (const auto& row : read_test_table("punctuation_cases.tsv")) {
         check(row.size() == 4U, "punctuation row has four columns");
         if (row.size() != 4U || row[0].size() != 1U) {
@@ -451,32 +451,32 @@ void test_punctuation() {
         const char key = row[0].front();
         const bool shift = row[1] == "1";
         transformer.reset_quotes();
-        check(transformer.transform(key, liteime::PunctuationMode::chinese, shift) == row[2],
+        check(transformer.transform(key, piinput::PunctuationMode::chinese, shift) == row[2],
             "Chinese punctuation mapping for " + row[0] + (shift ? " shifted" : ""));
         transformer.reset_quotes();
-        check(transformer.transform(key, liteime::PunctuationMode::english, shift) == row[3],
+        check(transformer.transform(key, piinput::PunctuationMode::english, shift) == row[3],
             "English punctuation passthrough for " + row[0] + (shift ? " shifted" : ""));
         transformer.reset_quotes();
-        check(transformer.transform(key, liteime::PunctuationMode::programmer, shift) == row[3],
+        check(transformer.transform(key, piinput::PunctuationMode::programmer, shift) == row[3],
             "Programmer punctuation passthrough for " + row[0] + (shift ? " shifted" : ""));
     }
     transformer.reset_quotes();
-    check(transformer.transform('\'', liteime::PunctuationMode::chinese, true) == "“", "Opening double quote");
-    check(transformer.transform('\'', liteime::PunctuationMode::chinese, true) == "”", "Closing double quote");
-    check(transformer.transform('\'', liteime::PunctuationMode::chinese, false) == "‘", "Opening single quote");
-    check(transformer.transform('\'', liteime::PunctuationMode::chinese, false) == "’", "Closing single quote");
+    check(transformer.transform('\'', piinput::PunctuationMode::chinese, true) == "“", "Opening double quote");
+    check(transformer.transform('\'', piinput::PunctuationMode::chinese, true) == "”", "Closing double quote");
+    check(transformer.transform('\'', piinput::PunctuationMode::chinese, false) == "‘", "Opening single quote");
+    check(transformer.transform('\'', piinput::PunctuationMode::chinese, false) == "’", "Closing single quote");
 }
 
 
 
 void test_user_model() {
-    const auto path = std::filesystem::temp_directory_path() / "liteime-test-user-model.tsv";
-    liteime::UserModel model;
+    const auto path = std::filesystem::temp_directory_path() / "piinput-test-user-model.tsv";
+    piinput::UserModel model;
     model.record_selection("ji'suan'ji", "计蒜机");
     check(model.score_adjustment("ji'suan'ji", "计蒜机") > 0, "User model score adjustment");
     model.save(path);
 
-    liteime::UserModel loaded;
+    piinput::UserModel loaded;
     loaded.load(path);
     check(loaded.entry_count() == 1U, "User model persistence");
     check(loaded.score_adjustment("ji'suan'ji", "计蒜机") > 0, "Loaded user model adjustment");
@@ -486,11 +486,11 @@ void test_user_model() {
 }
 
 void test_session() {
-    const auto path = std::filesystem::temp_directory_path() / "liteime-test-session.tsv";
+    const auto path = std::filesystem::temp_directory_path() / "piinput-test-session.tsv";
     write_sample_tsv(path);
-    liteime::Engine engine;
+    piinput::Engine engine;
     engine.load_lexicon(path);
-    liteime::ImeSession session(engine, "full");
+    piinput::ImeSession session(engine, "full");
     session.set_input("jisuanji");
     const auto first_generation = session.snapshot().generation;
     check(!session.snapshot().candidates.empty(), "Session candidate snapshot");
@@ -511,7 +511,7 @@ void test_session() {
     check(session.snapshot().input.empty(), "Choosing a candidate clears composition");
     std::filesystem::remove(path);
 
-    const auto paging_path = std::filesystem::temp_directory_path() / "liteime-test-session-paging.tsv";
+    const auto paging_path = std::filesystem::temp_directory_path() / "piinput-test-session-paging.tsv";
     {
         std::ofstream output(paging_path, std::ios::binary | std::ios::trunc);
         output << "word\tpinyin\tweight\n";
@@ -519,9 +519,9 @@ void test_session() {
             output << "候选" << index << "\thou\t" << (100 - index) << '\n';
         }
     }
-    liteime::Engine paging_engine;
+    piinput::Engine paging_engine;
     paging_engine.load_lexicon(paging_path);
-    liteime::ImeSession paging_session(paging_engine, "full");
+    piinput::ImeSession paging_session(paging_engine, "full");
     paging_session.set_input("hou");
     check(paging_session.snapshot().candidates.size() == 12U,
         "Session retains more than ten candidates for paging");
@@ -529,18 +529,18 @@ void test_session() {
 }
 
 void test_invalid_scel() {
-    liteime::ScelParser parser;
+    piinput::ScelParser parser;
     bool threw = false;
     try {
         (void)parser.parse_bytes({0U, 1U, 2U});
-    } catch (const liteime::ScelError&) {
+    } catch (const piinput::ScelError&) {
         threw = true;
     }
     check(threw, "Invalid SCEL must throw ScelError");
 }
 
 void test_uploaded_scel(const std::filesystem::path& electronics, const std::filesystem::path& computer) {
-    liteime::ScelParser parser;
+    piinput::ScelParser parser;
 
     const auto electronic_dictionary = parser.parse_file(electronics);
     check(electronic_dictionary.metadata.title == "电子词汇大全【官方推荐】", "Electronics title");
@@ -575,10 +575,10 @@ int run(const std::vector<std::string>& arguments) {
         test_invalid_scel();
         if (arguments.size() == 3U && arguments[1] != "--lexicon") {
             test_uploaded_scel(
-                liteime::path_from_utf8(arguments[1]),
-                liteime::path_from_utf8(arguments[2]));
+                piinput::path_from_utf8(arguments[1]),
+                piinput::path_from_utf8(arguments[2]));
         } else if (arguments.size() == 3U && arguments[1] == "--lexicon") {
-            test_external_dictionary(liteime::path_from_utf8(arguments[2]));
+            test_external_dictionary(piinput::path_from_utf8(arguments[2]));
         }
     } catch (const std::exception& error) {
         ++failures;
@@ -586,7 +586,7 @@ int run(const std::vector<std::string>& arguments) {
     }
 
     if (failures == 0) {
-        std::cout << "All LiteIME core tests passed.\n";
+        std::cout << "All PiInput core tests passed.\n";
         return 0;
     }
     std::cerr << failures << " test(s) failed.\n";
@@ -601,7 +601,7 @@ int wmain(const int argc, wchar_t* argv[]) {
     std::vector<std::string> arguments;
     arguments.reserve(static_cast<std::size_t>(argc));
     for (int index = 0; index < argc; ++index) {
-        arguments.push_back(liteime::wide_to_utf8(argv[index]));
+        arguments.push_back(piinput::wide_to_utf8(argv[index]));
     }
     return run(arguments);
 }

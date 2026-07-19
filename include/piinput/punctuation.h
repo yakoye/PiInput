@@ -3,7 +3,7 @@
 #include <optional>
 #include <string>
 
-namespace liteime {
+namespace piinput {
 
 enum class PunctuationMode {
     chinese,
@@ -21,4 +21,4 @@ private:
     mutable bool next_single_quote_open_{true};
 };
 
-}  // namespace liteime
+}  // namespace piinput
