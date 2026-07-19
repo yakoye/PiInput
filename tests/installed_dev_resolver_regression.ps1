@@ -33,9 +33,10 @@ $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ("piinput-resolver-" + [Guid
 New-Item $fixtureRoot -ItemType Directory -Force | Out-Null
 
 $normalLocal = Join-Path $fixtureRoot "normal"
-$normalVersion = New-VersionLayout -LocalRoot $normalLocal -VersionName "0.3.0-dev-normal"
+$normalVersionName = "0.3.0-dev-normal"
+$normalVersion = New-VersionLayout -LocalRoot $normalLocal -VersionName $normalVersionName
 $normalDev = Join-Path $normalLocal "PiInput/Dev"
-Set-Content (Join-Path $normalDev "current.txt") -Value $normalVersion -NoNewline
+Set-Content (Join-Path $normalDev "current.txt") -Value $normalVersionName -NoNewline
 $normal = Resolve-PiInputInstalledDev -LocalAppDataRoot $normalLocal -RegisteredDllPathProvider { $null }
 if ($normal.ActiveVersionRoot -ne [IO.Path]::GetFullPath($normalVersion)) {
     throw "current.txt did not resolve the active version."
@@ -47,6 +48,18 @@ $fallbackDll = Join-Path $fallbackVersion "bin/PiInputTSF.dll"
 $fallback = Resolve-PiInputInstalledDev -LocalAppDataRoot $fallbackLocal -RegisteredDllPathProvider { $fallbackDll }
 if ($fallback.Source -ne "COM" -or $fallback.ActiveVersionRoot -ne [IO.Path]::GetFullPath($fallbackVersion)) {
     throw "COM registration did not resolve the active version."
+}
+
+$invalidMarkerLocal = Join-Path $fixtureRoot "invalid-marker-fallback"
+$invalidMarkerVersionName = "0.3.0-dev-com-fallback"
+$invalidMarkerVersion = New-VersionLayout -LocalRoot $invalidMarkerLocal -VersionName $invalidMarkerVersionName
+$invalidMarkerDev = Join-Path $invalidMarkerLocal "PiInput/Dev"
+Set-Content (Join-Path $invalidMarkerDev "current.txt") -Value "../invalid" -NoNewline
+$invalidMarkerDll = Join-Path $invalidMarkerVersion "bin/PiInputTSF.dll"
+$invalidFallback = Resolve-PiInputInstalledDev -LocalAppDataRoot $invalidMarkerLocal -RegisteredDllPathProvider { $invalidMarkerDll }
+if ($invalidFallback.Source -ne "COM" -or
+    $invalidFallback.ActiveVersionRoot -ne [IO.Path]::GetFullPath($invalidMarkerVersion)) {
+    throw "Invalid current.txt did not fall back to the validated COM layout."
 }
 
 $missingLocal = Join-Path $fixtureRoot "missing-marker"
@@ -64,11 +77,54 @@ Assert-Throws -Label "out-of-bounds current marker" -Action {
 }
 
 $nonexistentLocal = Join-Path $fixtureRoot "nonexistent"
-$missingVersion = Join-Path $nonexistentLocal "PiInput/Dev/versions/0.3.0-dev-missing"
 New-Item (Join-Path $nonexistentLocal "PiInput/Dev") -ItemType Directory -Force | Out-Null
-Set-Content (Join-Path $nonexistentLocal "PiInput/Dev/current.txt") -Value $missingVersion -NoNewline
+Set-Content (Join-Path $nonexistentLocal "PiInput/Dev/current.txt") -Value "0.3.0-dev-missing" -NoNewline
 Assert-Throws -Label "missing active version" -Action {
     Resolve-PiInputInstalledDev -LocalAppDataRoot $nonexistentLocal -RegisteredDllPathProvider { $null }
+}
+
+$absoluteMarkerLocal = Join-Path $fixtureRoot "absolute-marker"
+$absoluteMarkerVersion = New-VersionLayout -LocalRoot $absoluteMarkerLocal -VersionName "0.3.0-dev-absolute"
+Set-Content (Join-Path $absoluteMarkerLocal "PiInput/Dev/current.txt") -Value $absoluteMarkerVersion -NoNewline
+Assert-Throws -Label "absolute current marker" -Action {
+    Resolve-PiInputInstalledDev -LocalAppDataRoot $absoluteMarkerLocal -RegisteredDllPathProvider { $null }
+}
+
+$wrongNameLocal = Join-Path $fixtureRoot "wrong-dll-name"
+$wrongNameVersion = New-VersionLayout -LocalRoot $wrongNameLocal -VersionName "0.3.0-dev-wrong-name"
+$wrongNameDll = Join-Path $wrongNameVersion "bin/not-the-tsf.dll"
+Set-Content $wrongNameDll -Value "fixture" -NoNewline
+Assert-Throws -Label "wrong COM DLL basename" -Action {
+    Resolve-PiInputInstalledDev -LocalAppDataRoot $wrongNameLocal -RegisteredDllPathProvider { $wrongNameDll }
+}
+
+$wrongLayerLocal = Join-Path $fixtureRoot "wrong-layer"
+$wrongLayerVersion = New-VersionLayout -LocalRoot $wrongLayerLocal -VersionName "parent/nested"
+$wrongLayerDll = Join-Path $wrongLayerVersion "bin/PiInputTSF.dll"
+Assert-Throws -Label "wrong COM directory depth" -Action {
+    Resolve-PiInputInstalledDev -LocalAppDataRoot $wrongLayerLocal -RegisteredDllPathProvider { $wrongLayerDll }
+}
+
+$junctionLocal = Join-Path $fixtureRoot "junction"
+$junctionVersionName = "0.3.0-dev-junction"
+$junctionVersions = Join-Path $junctionLocal "PiInput/Dev/versions"
+$junctionPath = Join-Path $junctionVersions $junctionVersionName
+$junctionTarget = Join-Path $fixtureRoot "junction-target"
+$junctionTargetBin = Join-Path $junctionTarget "bin"
+New-Item $junctionVersions -ItemType Directory -Force | Out-Null
+New-Item $junctionTargetBin -ItemType Directory -Force | Out-Null
+Set-Content (Join-Path $junctionTargetBin "PiInputTSF.dll") -Value "fixture" -NoNewline
+Set-Content (Join-Path $junctionTargetBin "piinput-profile.exe") -Value "fixture" -NoNewline
+$junctionOutput = & $env:ComSpec /d /c "mklink /J `"$junctionPath`" `"$junctionTarget`"" 2>&1
+$junctionCreated = $LASTEXITCODE -eq 0 -and (Test-Path -LiteralPath $junctionPath -PathType Container)
+if ($junctionCreated) {
+    Set-Content (Join-Path $junctionLocal "PiInput/Dev/current.txt") -Value $junctionVersionName -NoNewline
+    Assert-Throws -Label "junction active version" -Action {
+        Resolve-PiInputInstalledDev -LocalAppDataRoot $junctionLocal -RegisteredDllPathProvider { $null }
+    }
+    Write-Host "Reparse-point regression executed with a real junction."
+} else {
+    Write-Warning "SKIPPED reparse-point regression: junction creation failed: $junctionOutput"
 }
 
 Write-Host "Installed development resolver regression passed."

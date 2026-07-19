@@ -6,14 +6,9 @@ $Dev = Join-Path $env:LOCALAPPDATA "PiInput/Dev"
 $StartMenuDirectory = Join-Path $env:APPDATA "Microsoft/Windows/Start Menu/Programs/PiInput"
 $Root = $PSScriptRoot
 . (Join-Path $Root "scripts/windows/resolve-installed-dev.ps1")
-$Installed = $null
-try {
-    $Installed = Resolve-PiInputInstalledDev
-} catch {
-    Write-Warning "Active PiInput version could not be resolved: $($_.Exception.Message)"
-}
-$ProfileTool = if ($Installed) { $Installed.Profile } else { $null }
-$TsfDll = if ($Installed) { $Installed.Dll } else { $null }
+$Installed = Resolve-PiInputInstalledDev
+$ProfileTool = $Installed.Profile
+$TsfDll = $Installed.Dll
 $RegSvr32 = Join-Path $env:SystemRoot "System32/regsvr32.exe"
 
 function Invoke-NativeBestEffort {
@@ -31,26 +26,37 @@ function Invoke-NativeBestEffort {
     }
 }
 
-if ($ProfileTool -and (Test-Path -LiteralPath $ProfileTool -PathType Leaf)) {
+function Invoke-NativeRequired {
+    param([scriptblock]$Command, [string]$Description)
+    $PreviousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        & $Command 2>&1 | ForEach-Object { Write-Host $_ }
+        $ExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $PreviousPreference
+    }
+    if ($ExitCode -ne 0) {
+        throw "$Description failed with exit code $ExitCode. The PiInput runtime was preserved."
+    }
+}
+
+if (Test-Path -LiteralPath $ProfileTool -PathType Leaf) {
     Invoke-NativeBestEffort -Description "Profile deactivation" -Command {
         & $ProfileTool --deactivate
     }
-    Invoke-NativeBestEffort -Description "Profile unregistration" -Command {
+    Invoke-NativeRequired -Description "Profile unregistration" -Command {
         & $ProfileTool --unregister
     }
 }
-if ($TsfDll -and (Test-Path -LiteralPath $TsfDll -PathType Leaf)) {
-    Invoke-NativeBestEffort -Description "DLL unregistration" -Command {
+if (Test-Path -LiteralPath $TsfDll -PathType Leaf) {
+    Invoke-NativeRequired -Description "DLL unregistration" -Command {
         & $RegSvr32 /u /s $TsfDll
     }
 }
 
 if (Test-Path $Dev) {
-    try {
-        Remove-Item $Dev -Recurse -Force
-    } catch {
-        Write-Warning "Some applications still have PiInputTSF.dll loaded. Sign out or restart Windows, then remove: $Dev"
-    }
+    Remove-Item $Dev -Recurse -Force
 }
 if (Test-Path $StartMenuDirectory) {
     Remove-Item $StartMenuDirectory -Recurse -Force

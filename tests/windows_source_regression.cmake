@@ -86,6 +86,10 @@ endif()
 if(refresh_text MATCHES "Stop-Process" OR NOT refresh_text MATCHES "PiInput-Install\\.exe")
     message(FATAL_ERROR "Refresh must use the side-by-side installer without force-closing applications")
 endif()
+if(NOT uninstall_text MATCHES "Invoke-NativeRequired" OR
+   uninstall_text MATCHES "Active PiInput version could not be resolved")
+    message(FATAL_ERROR "Uninstall must preserve the runtime when resolution or unregistration fails")
+endif()
 
 if(NOT install_text MATCHES "Previous profile deactivation")
     message(FATAL_ERROR "Installer must treat previous profile cleanup as best effort")

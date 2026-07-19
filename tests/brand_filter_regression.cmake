@@ -94,6 +94,16 @@ file(MAKE_DIRECTORY "${archive_root}/src")
 file(WRITE "${archive_root}/src/clean.txt" "PiInput\n")
 run_gate("source archive without git metadata" "${archive_root}" "PASS")
 
+set(root_special_clean "${matrix_root}/root-special-clean")
+file(MAKE_DIRECTORY "${root_special_clean}")
+file(WRITE "${root_special_clean}/中文;clean.txt" "PiInput\n")
+run_gate("clean root semicolon path" "${root_special_clean}" "PASS")
+
+set(root_special_dirty "${matrix_root}/root-special-dirty")
+file(MAKE_DIRECTORY "${root_special_dirty}")
+file(WRITE "${root_special_dirty}/${legacy_compact};probe.txt" "${legacy_compact}\n")
+run_gate("legacy root semicolon path" "${root_special_dirty}" "REJECT")
+
 set(detection_values
     "compact|${legacy_compact}"
     "hyphen|${legacy_hyphen}"
