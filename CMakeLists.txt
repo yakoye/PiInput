@@ -193,6 +193,13 @@ if(PIINPUT_BUILD_TESTS)
             -P ${CMAKE_SOURCE_DIR}/tests/brand_regression.cmake
     )
     add_test(
+        NAME piinput-brand-filter-regression
+        COMMAND "${CMAKE_COMMAND}"
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -DTEST_BINARY_DIR=${CMAKE_BINARY_DIR}/brand-filter-regression
+            -P ${CMAKE_SOURCE_DIR}/tests/brand_filter_regression.cmake
+    )
+    add_test(
         NAME piinput-windows-source-regression
         COMMAND ${CMAKE_COMMAND}
             -DPIINPUT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}

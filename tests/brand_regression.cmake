@@ -20,10 +20,20 @@ if(NOT paths_result EQUAL 0)
     message(FATAL_ERROR "Unable to list tracked files: ${paths_error}")
 endif()
 
-string(TOLOWER "${tracked_paths}" tracked_paths_lower)
-if(tracked_paths_lower MATCHES "${legacy_pattern}")
-    message(FATAL_ERROR "Legacy brand remains in a tracked path")
-endif()
+string(REPLACE "\r\n" "\n" tracked_paths "${tracked_paths}")
+string(REPLACE "\r" "\n" tracked_paths "${tracked_paths}")
+string(REPLACE "\n" ";" tracked_path_list "${tracked_paths}")
+foreach(tracked_path IN LISTS tracked_path_list)
+    string(REPLACE "\\" "/" normalized_path "${tracked_path}")
+    if(normalized_path MATCHES "^(build|dist|\\.git)(/|$)")
+        continue()
+    endif()
+
+    string(TOLOWER "${normalized_path}" normalized_path_lower)
+    if(normalized_path_lower MATCHES "${legacy_pattern}")
+        message(FATAL_ERROR "Legacy brand remains in tracked path: ${tracked_path}")
+    endif()
+endforeach()
 
 execute_process(
     COMMAND git grep -I -n -i -E -e "${legacy_pattern}" -- . ":(exclude)build/**" ":(exclude)dist/**" ":(exclude).git/**"
