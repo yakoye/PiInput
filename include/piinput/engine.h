@@ -3,6 +3,7 @@
 #include "piinput/binary_lexicon.h"
 #include "piinput/lexicon.h"
 #include "piinput/pinyin.h"
+#include "piinput/settings.h"
 #include "piinput/shuangpin.h"
 #include "piinput/user_model.h"
 
@@ -34,9 +35,21 @@ public:
         const std::string& schema,
         std::size_t limit = 16U) const;
 
+    [[nodiscard]] std::vector<PinyinSegmentation> decode(
+        const std::string& input,
+        const std::string& schema,
+        const PinyinSettings& settings,
+        std::size_t limit = 16U) const;
+
     [[nodiscard]] std::vector<EngineCandidate> query(
         const std::string& input,
         const std::string& schema,
+        std::size_t limit = 10U) const;
+
+    [[nodiscard]] std::vector<EngineCandidate> query(
+        const std::string& input,
+        const std::string& schema,
+        const PinyinSettings& settings,
         std::size_t limit = 10U) const;
 
     [[nodiscard]] std::size_t entry_count() const noexcept;

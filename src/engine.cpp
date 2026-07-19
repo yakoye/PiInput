@@ -1,4 +1,5 @@
 #include "piinput/engine.h"
+#include "piinput/full_pinyin_variants.h"
 #include "piinput/pinyin_prefix.h"
 
 #include <algorithm>
@@ -6,6 +7,7 @@
 #include <limits>
 #include <stdexcept>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace piinput {
 namespace {
@@ -18,6 +20,37 @@ constexpr std::int64_t completion_character_penalty = 100'000;
 
 [[nodiscard]] std::int64_t frequency_score(const std::uint32_t weight) {
     return static_cast<std::int64_t>(std::log1p(static_cast<double>(weight)) * 1'000'000.0);
+}
+
+[[nodiscard]] bool is_full_pinyin_schema(const std::string_view schema) {
+    return schema == "full" || schema == "full-pinyin" || schema == "pinyin";
+}
+
+struct FullPinyinDecodeResult {
+    std::vector<std::string> variants;
+    std::vector<PinyinSegmentation> segmentations;
+};
+
+[[nodiscard]] FullPinyinDecodeResult decode_full_pinyin(
+    const std::string_view input,
+    const PinyinSettings& settings,
+    const std::size_t limit,
+    const PinyinSegmenter& pinyin) {
+    FullPinyinDecodeResult decoded;
+    decoded.variants = normalize_full_pinyin_variants(input, settings, limit);
+    std::unordered_set<std::string> seen;
+    for (const auto& variant : decoded.variants) {
+        for (auto& segmentation : pinyin.segment(variant, limit)) {
+            if (!seen.insert(segmentation.canonical).second) {
+                continue;
+            }
+            decoded.segmentations.push_back(std::move(segmentation));
+            if (decoded.segmentations.size() == limit) {
+                return decoded;
+            }
+        }
+    }
+    return decoded;
 }
 
 }  // namespace
@@ -51,10 +84,22 @@ std::vector<PinyinSegmentation> Engine::decode(
     const std::string& input,
     const std::string& schema,
     const std::size_t limit) const {
-    if (schema == "full" || schema == "full-pinyin" || schema == "pinyin") {
-        return pinyin_.segment(input, limit);
+    return decode(input, schema, default_settings().pinyin, limit);
+}
+
+std::vector<PinyinSegmentation> Engine::decode(
+    const std::string& input,
+    const std::string& schema,
+    const PinyinSettings& settings,
+    const std::size_t limit) const {
+    if (limit == 0U) {
+        return {};
     }
-    return shuangpin_.decode(schema, input, limit);
+    if (!is_full_pinyin_schema(schema)) {
+        return shuangpin_.decode(schema, input, limit);
+    }
+
+    return decode_full_pinyin(input, settings, limit, pinyin_).segmentations;
 }
 
 std::vector<LexiconCandidate> Engine::query_exact(
@@ -86,10 +131,26 @@ std::vector<EngineCandidate> Engine::query(
     const std::string& input,
     const std::string& schema,
     const std::size_t limit) const {
+    return query(input, schema, default_settings().pinyin, limit);
+}
+
+std::vector<EngineCandidate> Engine::query(
+    const std::string& input,
+    const std::string& schema,
+    const PinyinSettings& settings,
+    const std::size_t limit) const {
     if (limit == 0U) {
         return {};
     }
-    const auto segmentations = decode(input, schema, 24U);
+    std::vector<std::string> full_variants;
+    std::vector<PinyinSegmentation> segmentations;
+    if (is_full_pinyin_schema(schema)) {
+        auto decoded = decode_full_pinyin(input, settings, 24U, pinyin_);
+        full_variants = std::move(decoded.variants);
+        segmentations = std::move(decoded.segmentations);
+    } else {
+        segmentations = shuangpin_.decode(schema, input, 24U);
+    }
     std::unordered_map<std::string, EngineCandidate> best;
 
     auto submit = [&best](EngineCandidate candidate) {
@@ -101,7 +162,26 @@ std::vector<EngineCandidate> Engine::query(
     };
 
     if (segmentations.empty()) {
-        const auto prefixes = expand_input_prefix(input, schema, pinyin_, shuangpin_, 24U);
+        std::vector<PinyinPrefix> prefixes;
+        if (is_full_pinyin_schema(schema)) {
+            std::unordered_set<std::string> seen_prefixes;
+            for (const auto& variant : full_variants) {
+                for (auto& prefix : expand_input_prefix(variant, schema, pinyin_, shuangpin_, 24U)) {
+                    if (!seen_prefixes.insert(prefix.canonical_prefix).second) {
+                        continue;
+                    }
+                    prefixes.push_back(std::move(prefix));
+                    if (prefixes.size() == 24U) {
+                        break;
+                    }
+                }
+                if (prefixes.size() == 24U) {
+                    break;
+                }
+            }
+        } else {
+            prefixes = expand_input_prefix(input, schema, pinyin_, shuangpin_, 24U);
+        }
         for (std::size_t prefix_index = 0U; prefix_index < prefixes.size(); ++prefix_index) {
             const auto& prefix = prefixes[prefix_index];
             const auto candidates = query_prefix(

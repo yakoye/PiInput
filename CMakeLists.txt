@@ -31,6 +31,7 @@ add_library(piinput_core STATIC
     src/dictionary_builder.cpp
     src/candidate_paging.cpp
     src/input_mode.cpp
+    src/full_pinyin_variants.cpp
     src/pinyin.cpp
     src/pinyin_prefix.cpp
     src/shuangpin.cpp
@@ -179,6 +180,12 @@ if(PIINPUT_BUILD_TESTS)
     target_link_libraries(piinput-settings-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-settings-tests)
 
+    add_executable(piinput-full-pinyin-variants-tests
+        tests/full_pinyin_variants_tests.cpp
+    )
+    target_link_libraries(piinput-full-pinyin-variants-tests PRIVATE piinput_core)
+    piinput_enable_warnings(piinput-full-pinyin-variants-tests)
+
     if(WIN32)
         add_executable(piinput-installer-layout-tests
             tests/installer_layout_tests.cpp
@@ -190,6 +197,7 @@ if(PIINPUT_BUILD_TESTS)
 
     add_test(NAME piinput-core-tests COMMAND piinput-core-tests)
     add_test(NAME piinput-settings-tests COMMAND piinput-settings-tests)
+    add_test(NAME piinput-full-pinyin-variants COMMAND piinput-full-pinyin-variants-tests)
 
     if(WIN32)
         add_test(NAME piinput-installer-layout-tests COMMAND piinput-installer-layout-tests)
