@@ -1,6 +1,7 @@
 #include "piinput/settings.h"
 #include "piinput/settings_manager.h"
 
+#include <array>
 #include <atomic>
 #include <filesystem>
 #include <fstream>
@@ -140,6 +141,62 @@ void test_candidate_screen_validation_is_key_order_independent() {
     check(parsed.settings.candidates.max_items == 9U, "max items can precede screen dimensions");
     check(parsed.settings.candidates.items_per_row == 5U, "ordered candidate row size applied");
     check(parsed.settings.candidates.visible_rows == 1U, "ordered candidate rows applied");
+}
+
+void test_invalid_candidate_screen_size_falls_back_independently_of_key_order() {
+    const auto previous = piinput::default_settings();
+    const std::array<std::array<std::string, 3U>, 6U> permutations{{
+        {{"max_items=9\n", "items_per_row=9\n", "visible_rows=5\n"}},
+        {{"max_items=9\n", "visible_rows=5\n", "items_per_row=9\n"}},
+        {{"items_per_row=9\n", "max_items=9\n", "visible_rows=5\n"}},
+        {{"items_per_row=9\n", "visible_rows=5\n", "max_items=9\n"}},
+        {{"visible_rows=5\n", "max_items=9\n", "items_per_row=9\n"}},
+        {{"visible_rows=5\n", "items_per_row=9\n", "max_items=9\n"}},
+    }};
+
+    for (std::size_t index = 0U; index < permutations.size(); ++index) {
+        const auto& permutation = permutations[index];
+        const auto parsed = piinput::parse_settings_text(
+            "[candidates]\n" + permutation[0] + permutation[1] + permutation[2], previous);
+        const auto label = "candidate permutation " + std::to_string(index);
+        check(parsed.settings.candidates.max_items == 90U, label + " rolls back max items");
+        check(parsed.settings.candidates.items_per_row == 9U, label + " keeps row size");
+        check(parsed.settings.candidates.visible_rows == 5U, label + " keeps visible rows");
+        check(parsed.errors.size() == 1U, label + " reports one error");
+        check(!parsed.errors.empty() &&
+                parsed.errors.front().find("key 'max_items'") != std::string::npos,
+            label + " attributes the error to max items");
+        check(parsed.errors.empty() || parsed.errors.front().find("=9") == std::string::npos,
+            label + " does not expose the rejected value");
+    }
+}
+
+void test_candidate_screen_size_uses_fixed_dimension_fallback_priority() {
+    auto previous = piinput::default_settings();
+    previous.candidates.max_items = 30U;
+    const std::array<std::array<std::string, 3U>, 6U> permutations{{
+        {{"max_items=20\n", "items_per_row=9\n", "visible_rows=5\n"}},
+        {{"max_items=20\n", "visible_rows=5\n", "items_per_row=9\n"}},
+        {{"items_per_row=9\n", "max_items=20\n", "visible_rows=5\n"}},
+        {{"items_per_row=9\n", "visible_rows=5\n", "max_items=20\n"}},
+        {{"visible_rows=5\n", "max_items=20\n", "items_per_row=9\n"}},
+        {{"visible_rows=5\n", "items_per_row=9\n", "max_items=20\n"}},
+    }};
+
+    for (std::size_t index = 0U; index < permutations.size(); ++index) {
+        const auto& permutation = permutations[index];
+        const auto parsed = piinput::parse_settings_text(
+            "[candidates]\n" + permutation[0] + permutation[1] + permutation[2], previous);
+        const auto label = "candidate fallback permutation " + std::to_string(index);
+        check(parsed.settings.candidates.max_items == 20U, label + " keeps max items");
+        check(parsed.settings.candidates.items_per_row == 6U, label + " rolls back row size");
+        check(parsed.settings.candidates.visible_rows == 3U, label + " rolls back visible rows");
+        check(parsed.errors.size() == 2U, label + " reports each rolled-back field once");
+        check(parsed.errors.size() >= 2U &&
+                parsed.errors[0].find("key 'visible_rows'") != std::string::npos &&
+                parsed.errors[1].find("key 'items_per_row'") != std::string::npos,
+            label + " uses fixed visible rows then row size priority");
+    }
 }
 
 void test_invalid_values_fallback_and_errors() {
@@ -319,6 +376,8 @@ int main() {
     test_defaults_and_round_trip();
     test_valid_values_and_boundaries();
     test_candidate_screen_validation_is_key_order_independent();
+    test_invalid_candidate_screen_size_falls_back_independently_of_key_order();
+    test_candidate_screen_size_uses_fixed_dimension_fallback_priority();
     test_invalid_values_fallback_and_errors();
     test_syntax_unknown_and_duplicate_keys();
     test_invalid_utf8_is_rejected_as_a_whole();

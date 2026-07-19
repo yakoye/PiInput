@@ -1,12 +1,12 @@
 #include "piinput/settings.h"
 
+#include <array>
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace piinput {
 namespace {
@@ -164,10 +164,17 @@ enum class CandidateNumericField {
 };
 
 struct CandidateAssignment {
-    CandidateNumericField field;
     std::uint32_t previous_value;
-    std::size_t line;
+    std::optional<std::size_t> line;
 };
+
+using CandidateAssignments = std::array<CandidateAssignment, 3U>;
+
+[[nodiscard]] CandidateAssignment& candidate_assignment(
+    CandidateAssignments& assignments,
+    const CandidateNumericField field) noexcept {
+    return assignments[static_cast<std::size_t>(field)];
+}
 
 void parse_general(
     SettingsParseResult& result,
@@ -215,17 +222,14 @@ void parse_candidates(
     const std::string_view key,
     const std::string_view value,
     const std::size_t line,
-    std::vector<CandidateAssignment>& assignments) {
+    CandidateAssignments& assignments) {
     auto& candidates = result.settings.candidates;
     if (key == "items_per_row") {
         const auto parsed = parse_integer(value);
         if (!parsed || *parsed < 5U || *parsed > 9U) {
             add_error(result, line, "candidates", key, "invalid value");
         } else {
-            if (*parsed != candidates.items_per_row) {
-                assignments.push_back(
-                    {CandidateNumericField::items_per_row, candidates.items_per_row, line});
-            }
+            candidate_assignment(assignments, CandidateNumericField::items_per_row).line = line;
             candidates.items_per_row = *parsed;
         }
     } else if (key == "visible_rows") {
@@ -233,10 +237,7 @@ void parse_candidates(
         if (!parsed || *parsed < 1U || *parsed > 5U) {
             add_error(result, line, "candidates", key, "invalid value");
         } else {
-            if (*parsed != candidates.visible_rows) {
-                assignments.push_back(
-                    {CandidateNumericField::visible_rows, candidates.visible_rows, line});
-            }
+            candidate_assignment(assignments, CandidateNumericField::visible_rows).line = line;
             candidates.visible_rows = *parsed;
         }
     } else if (key == "max_items") {
@@ -244,10 +245,7 @@ void parse_candidates(
         if (!parsed || *parsed < 9U || *parsed > 180U) {
             add_error(result, line, "candidates", key, "invalid value");
         } else {
-            if (*parsed != candidates.max_items) {
-                assignments.push_back(
-                    {CandidateNumericField::max_items, candidates.max_items, line});
-            }
+            candidate_assignment(assignments, CandidateNumericField::max_items).line = line;
             candidates.max_items = *parsed;
         }
     } else if (key == "horizontal") {
@@ -263,30 +261,68 @@ void parse_candidates(
     }
 }
 
+[[nodiscard]] bool candidate_screen_size_is_valid(const CandidateSettings& candidates) noexcept {
+    return candidates.max_items >= candidates.items_per_row * candidates.visible_rows;
+}
+
+void rollback_candidate_assignment(
+    SettingsParseResult& result,
+    CandidateAssignments& assignments,
+    const CandidateNumericField field) {
+    auto& candidates = result.settings.candidates;
+    const auto& assignment = candidate_assignment(assignments, field);
+    if (!assignment.line) {
+        return;
+    }
+
+    std::uint32_t* destination = nullptr;
+    std::string_view key;
+    switch (field) {
+    case CandidateNumericField::items_per_row:
+        destination = &candidates.items_per_row;
+        key = "items_per_row";
+        break;
+    case CandidateNumericField::visible_rows:
+        destination = &candidates.visible_rows;
+        key = "visible_rows";
+        break;
+    case CandidateNumericField::max_items:
+        destination = &candidates.max_items;
+        key = "max_items";
+        break;
+    }
+    if (*destination == assignment.previous_value) {
+        return;
+    }
+    *destination = assignment.previous_value;
+    add_error(result, *assignment.line, "candidates", key, "invalid value");
+}
+
 void enforce_candidate_screen_size(
     SettingsParseResult& result,
-    std::vector<CandidateAssignment>& assignments) {
+    CandidateAssignments& assignments) {
     auto& candidates = result.settings.candidates;
-    while (candidates.max_items < candidates.items_per_row * candidates.visible_rows &&
-           !assignments.empty()) {
-        const auto assignment = assignments.back();
-        assignments.pop_back();
-        std::string_view key;
-        switch (assignment.field) {
-        case CandidateNumericField::items_per_row:
-            candidates.items_per_row = assignment.previous_value;
-            key = "items_per_row";
-            break;
-        case CandidateNumericField::visible_rows:
-            candidates.visible_rows = assignment.previous_value;
-            key = "visible_rows";
-            break;
-        case CandidateNumericField::max_items:
-            candidates.max_items = assignment.previous_value;
-            key = "max_items";
-            break;
+    if (candidate_screen_size_is_valid(candidates)) {
+        return;
+    }
+
+    const auto& max_assignment = candidate_assignment(assignments, CandidateNumericField::max_items);
+    const auto required_items = candidates.items_per_row * candidates.visible_rows;
+    if (max_assignment.line && max_assignment.previous_value >= required_items) {
+        rollback_candidate_assignment(result, assignments, CandidateNumericField::max_items);
+        return;
+    }
+
+    // If the preceding max_items cannot hold the requested dimensions, use a stable
+    // field priority: visible_rows, then items_per_row, and finally max_items.
+    // This makes both the resulting snapshot and error order independent of INI key order.
+    for (const auto field : {CandidateNumericField::visible_rows,
+             CandidateNumericField::items_per_row,
+             CandidateNumericField::max_items}) {
+        rollback_candidate_assignment(result, assignments, field);
+        if (candidate_screen_size_is_valid(candidates)) {
+            return;
         }
-        add_error(result, assignment.line, "candidates", key, "invalid value");
     }
 }
 
@@ -333,7 +369,11 @@ SettingsParseResult parse_settings_text(
         return result;
     }
     std::string section;
-    std::vector<CandidateAssignment> candidate_assignments;
+    CandidateAssignments candidate_assignments{{
+        {previous.candidates.items_per_row, std::nullopt},
+        {previous.candidates.visible_rows, std::nullopt},
+        {previous.candidates.max_items, std::nullopt},
+    }};
     std::size_t line_number = 0U;
     while (!text.empty()) {
         ++line_number;
