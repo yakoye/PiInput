@@ -461,6 +461,12 @@ void test_manager_rejects_torn_and_incomplete_reads_deterministically() {
     check(!torn_manager.last_errors().empty() &&
             torn_manager.last_errors().front().find("key '<unstable-file>'") != std::string::npos,
         "torn read reports a fixed error key");
+    torn_manager.poll();
+    torn_manager.apply_pending_at_composition_boundary();
+    check(torn_reader->read_calls == 2U,
+        "stable metadata after a torn read retries the content read");
+    check(torn_manager.current()->general.schema == piinput::InputSchema::full,
+        "stable retry after a torn read publishes valid settings");
 
     auto short_reader = std::make_shared<ScriptedSettingsFileReader>();
     short_reader->metadata_results = {before, before};
@@ -496,10 +502,38 @@ void test_manager_catches_reader_exceptions_and_redacts_them() {
             check(error.find("SECRET-READER-EXCEPTION") == std::string::npos,
                 "reader exception detail is redacted");
         }
+        reader->throw_on_read = false;
+        manager.poll();
+        manager.apply_pending_at_composition_boundary();
+        check(reader->read_calls == 2U,
+            "same metadata after a transient read exception retries the content read");
+        check(manager.current()->general.schema == piinput::InputSchema::full,
+            "retry after a transient read exception publishes valid settings");
     } catch (const std::exception&) {
         threw = true;
     }
     check(!threw, "reader exception does not escape SettingsManager");
+    std::filesystem::remove_all(directory);
+}
+
+void test_manager_does_not_repeat_stable_document_fatal_errors() {
+    const auto directory = make_temp_directory("settings-stable-fatal");
+    const auto content = std::string(
+        "[general]\nschema=full\nmissing-equals-SECRET-STABLE-FATAL\n");
+    const auto stable = metadata_at(1, content.size());
+    auto reader = std::make_shared<ScriptedSettingsFileReader>();
+    reader->metadata_results = {stable, stable, stable};
+    reader->content = content;
+    const auto log_path = directory / "logs" / "settings.log";
+
+    piinput::SettingsManager manager(directory / "settings.ini", reader);
+    const auto first_log = read_text(log_path);
+    manager.poll();
+    const auto second_log = read_text(log_path);
+    check(reader->read_calls == 1U, "unchanged stable fatal settings are not reread");
+    check(second_log == first_log, "unchanged stable fatal errors are not logged repeatedly");
+    check(second_log.find("SECRET-STABLE-FATAL") == std::string::npos,
+        "stable fatal log remains redacted");
     std::filesystem::remove_all(directory);
 }
 
@@ -653,6 +687,7 @@ int main() {
     test_manager_uses_metadata_fast_path_without_rereading_content();
     test_manager_rejects_torn_and_incomplete_reads_deterministically();
     test_manager_catches_reader_exceptions_and_redacts_them();
+    test_manager_does_not_repeat_stable_document_fatal_errors();
     test_manager_boundary_generation_and_immutability();
     test_manager_partial_errors_and_hot_reload_false();
     test_concurrent_current_reads();

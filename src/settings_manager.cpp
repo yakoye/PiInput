@@ -107,13 +107,18 @@ void SettingsManager::poll() noexcept {
         bool new_round = false;
         try {
             const auto before = file_reader_->metadata(path_);
-            new_round = !last_metadata_ || *last_metadata_ != before;
-            if (!new_round) {
+            const auto already_succeeded =
+                last_successful_metadata_ && *last_successful_metadata_ == before;
+            const auto already_failed_deterministically =
+                last_deterministic_failure_metadata_ &&
+                *last_deterministic_failure_metadata_ == before;
+            if (already_succeeded || already_failed_deterministically) {
                 return;
             }
-            last_metadata_ = before;
+            new_round = true;
             if (before.size > max_settings_file_size) {
                 pending_.reset();
+                last_deterministic_failure_metadata_ = before;
                 set_errors(
                     {"line 0 [document] key '<file-size>': settings file too large"}, true);
                 return;
@@ -123,7 +128,6 @@ void SettingsManager::poll() noexcept {
             const auto after = file_reader_->metadata(path_);
             if (after != before) {
                 pending_.reset();
-                last_metadata_ = after;
                 set_errors(
                     {"line 0 [document] key '<unstable-file>': settings file changed while reading"},
                     true);
@@ -140,8 +144,11 @@ void SettingsManager::poll() noexcept {
             set_errors(std::move(parsed.errors), true);
             if (parsed.document_fatal) {
                 pending_.reset();
+                last_deterministic_failure_metadata_ = before;
                 return;
             }
+            last_successful_metadata_ = before;
+            last_deterministic_failure_metadata_.reset();
             if (parsed.settings == *base) {
                 pending_.reset();
                 return;

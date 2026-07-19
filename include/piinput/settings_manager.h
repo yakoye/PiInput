@@ -50,7 +50,8 @@ private:
     std::atomic<std::shared_ptr<const SettingsSnapshot>> current_;
     mutable std::mutex pending_mutex_;
     std::optional<SettingsSnapshot> pending_;
-    std::optional<SettingsFileMetadata> last_metadata_;
+    std::optional<SettingsFileMetadata> last_successful_metadata_;
+    std::optional<SettingsFileMetadata> last_deterministic_failure_metadata_;
     std::vector<std::string> last_errors_;
 };
 
