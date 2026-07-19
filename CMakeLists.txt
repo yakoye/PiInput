@@ -37,6 +37,8 @@ add_library(piinput_core STATIC
     src/engine.cpp
     src/symbols.cpp
     src/punctuation.cpp
+    src/settings.cpp
+    src/settings_manager.cpp
     src/session.cpp
     src/user_model.cpp
 )
@@ -171,6 +173,12 @@ if(PIINPUT_BUILD_TESTS)
     )
     piinput_enable_warnings(piinput-core-tests)
 
+    add_executable(piinput-settings-tests
+        tests/settings_tests.cpp
+    )
+    target_link_libraries(piinput-settings-tests PRIVATE piinput_core)
+    piinput_enable_warnings(piinput-settings-tests)
+
     if(WIN32)
         add_executable(piinput-installer-layout-tests
             tests/installer_layout_tests.cpp
@@ -181,6 +189,7 @@ if(PIINPUT_BUILD_TESTS)
     endif()
 
     add_test(NAME piinput-core-tests COMMAND piinput-core-tests)
+    add_test(NAME piinput-settings-tests COMMAND piinput-settings-tests)
 
     if(WIN32)
         add_test(NAME piinput-installer-layout-tests COMMAND piinput-installer-layout-tests)
