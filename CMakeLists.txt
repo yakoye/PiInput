@@ -200,6 +200,27 @@ if(PIINPUT_BUILD_TESTS)
             -P ${CMAKE_SOURCE_DIR}/tests/brand_filter_regression.cmake
     )
     add_test(
+        NAME piinput-sha256-regression
+        COMMAND "${CMAKE_COMMAND}"
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -P ${CMAKE_SOURCE_DIR}/tests/sha256_regression.cmake
+    )
+    add_test(
+        NAME piinput-release-metadata-regression
+        COMMAND "${CMAKE_COMMAND}"
+            -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -P ${CMAKE_SOURCE_DIR}/tests/release_metadata_regression.cmake
+    )
+    if(WIN32)
+        find_program(PIINPUT_POWERSHELL_EXECUTABLE NAMES pwsh powershell REQUIRED)
+        add_test(
+            NAME piinput-installed-dev-resolver-regression
+            COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
+                -NoProfile
+                -File ${CMAKE_SOURCE_DIR}/tests/installed_dev_resolver_regression.ps1
+        )
+    endif()
+    add_test(
         NAME piinput-windows-source-regression
         COMMAND ${CMAKE_COMMAND}
             -DPIINPUT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}

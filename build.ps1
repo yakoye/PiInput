@@ -112,10 +112,20 @@ try {
     if (Test-Path $InstallDir) { Remove-Item $InstallDir -Recurse -Force }
     Invoke-NativeChecked $CMakeExe @("--install", $BuildDir, "--config", $Configuration, "--prefix", $InstallDir)
 
-    $expected = @("piinput-cli.exe", "piinput-scel-converter.exe", "piinput-lexicon-compiler.exe", "piinput-dictionary-builder.exe", "piinput-benchmark.exe", "piinput-preview.exe", "piinput-profile.exe", "PiInputTSF.dll")
+    $expected = @("piinput-cli.exe", "piinput-scel-converter.exe", "piinput-lexicon-compiler.exe", "piinput-dictionary-builder.exe", "piinput-benchmark.exe", "piinput-preview.exe", "piinput-profile.exe", "PiInputTSF.dll", "PiInput-Install.exe")
     foreach ($name in $expected) {
         $path = Join-Path $InstallDir "bin/$name"
         if (-not (Test-Path $path)) { throw "Expected executable was not generated: $path" }
+    }
+
+    $legacyCompact = "lite" + "ime"
+    $legacyHyphen = "lite" + "-" + "ime"
+    $legacyUnderscore = "lite" + "_" + "ime"
+    $legacyPattern = "$legacyCompact|$legacyHyphen|$legacyUnderscore"
+    $legacyArtifacts = @(Get-ChildItem (Join-Path $InstallDir "bin") -File |
+        Where-Object { $_.Name -match $legacyPattern })
+    if ($legacyArtifacts.Count -gt 0) {
+        throw "Legacy Release artifact remains: $($legacyArtifacts.Name -join ', ')"
     }
 
     Write-Host "Build, tests, and staging completed." -ForegroundColor Green
