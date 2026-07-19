@@ -76,6 +76,7 @@ struct SettingsSnapshot {
 struct SettingsParseResult {
     SettingsSnapshot settings;
     std::vector<std::string> errors;
+    bool document_fatal{false};
 };
 
 [[nodiscard]] SettingsSnapshot default_settings();

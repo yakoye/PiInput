@@ -366,6 +366,7 @@ SettingsParseResult parse_settings_text(
     }
     if (!is_valid_utf8(text)) {
         add_error(result, 1U, "document", "<encoding>", "invalid UTF-8");
+        result.document_fatal = true;
         return result;
     }
     std::string section;
@@ -386,27 +387,39 @@ SettingsParseResult parse_settings_text(
         }
         if (line.front() == '[') {
             if (line.size() < 3U || line.back() != ']') {
-                add_error(result, line_number, "syntax", "<section>", "malformed section");
+                add_error(result, line_number, "document", "<section>", "malformed section");
+                result.document_fatal = true;
                 continue;
             }
             const auto parsed_section = trim(line.substr(1U, line.size() - 2U));
             if (parsed_section.empty()) {
-                add_error(result, line_number, "syntax", "<section>", "malformed section");
+                add_error(result, line_number, "document", "<section>", "malformed section");
+                result.document_fatal = true;
                 continue;
             }
-            section.assign(parsed_section);
+            if (parsed_section == "general" || parsed_section == "pinyin" ||
+                parsed_section == "candidates" || parsed_section == "english" ||
+                parsed_section == "punctuation") {
+                section.assign(parsed_section);
+            } else {
+                section = "<unknown-section>";
+            }
             continue;
         }
 
         const auto equals = line.find('=');
         if (equals == std::string_view::npos) {
-            add_error(result, line_number, section.empty() ? "syntax" : section, "<syntax>", "missing equals");
+            add_error(
+                result, line_number, section.empty() ? "document" : section, "<syntax>", "missing equals");
+            result.document_fatal = true;
             continue;
         }
         const auto key = trim(line.substr(0U, equals));
         const auto value = trim(line.substr(equals + 1U));
         if (key.empty()) {
-            add_error(result, line_number, section.empty() ? "syntax" : section, "<empty>", "empty key");
+            add_error(
+                result, line_number, section.empty() ? "document" : section, "<empty>", "empty key");
+            result.document_fatal = true;
             continue;
         }
 
@@ -423,7 +436,11 @@ SettingsParseResult parse_settings_text(
                 result, result.settings.punctuation, parse_punctuation, value, line_number, "punctuation", key);
         }
     }
-    enforce_candidate_screen_size(result, candidate_assignments);
+    if (result.document_fatal) {
+        result.settings = previous;
+    } else {
+        enforce_candidate_screen_size(result, candidate_assignments);
+    }
     return result;
 }
 

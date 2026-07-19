@@ -1,11 +1,16 @@
 #include "piinput/settings.h"
 #include "piinput/settings_manager.h"
 
+#include <algorithm>
 #include <array>
 #include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <vector>
@@ -27,6 +32,56 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
     if (!output) {
         throw std::runtime_error("failed to write settings fixture");
     }
+}
+
+[[nodiscard]] std::string read_text(const std::filesystem::path& path) {
+    std::ifstream input(path, std::ios::binary);
+    return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+}
+
+[[nodiscard]] std::filesystem::path make_temp_directory(const std::string& label) {
+    const auto nonce = std::chrono::steady_clock::now().time_since_epoch().count();
+    const auto path = std::filesystem::temp_directory_path() /
+        ("piinput-" + label + "-" + std::to_string(nonce));
+    std::filesystem::create_directories(path);
+    return path;
+}
+
+class ScriptedSettingsFileReader final : public piinput::SettingsFileReader {
+public:
+    std::vector<piinput::SettingsFileMetadata> metadata_results;
+    std::string content;
+    bool throw_on_read{false};
+    std::size_t metadata_calls{0U};
+    std::size_t read_calls{0U};
+
+    [[nodiscard]] piinput::SettingsFileMetadata metadata(
+        const std::filesystem::path&) override {
+        const auto index = metadata_calls++;
+        if (metadata_results.empty()) {
+            throw std::runtime_error("missing scripted metadata");
+        }
+        return metadata_results[std::min(index, metadata_results.size() - 1U)];
+    }
+
+    [[nodiscard]] std::string read(
+        const std::filesystem::path&,
+        const std::uintmax_t) override {
+        ++read_calls;
+        if (throw_on_read) {
+            throw std::runtime_error("SECRET-READER-EXCEPTION");
+        }
+        return content;
+    }
+};
+
+[[nodiscard]] piinput::SettingsFileMetadata metadata_at(
+    const std::int64_t tick,
+    const std::uintmax_t size) {
+    return {
+        std::filesystem::file_time_type{std::filesystem::file_time_type::duration{tick}},
+        size,
+    };
 }
 
 void test_defaults_and_round_trip() {
@@ -225,6 +280,7 @@ void test_invalid_values_fallback_and_errors() {
         "mode=secret-punctuation-value\n",
         previous);
     check(parsed.errors.size() == 11U, "all invalid known fields report errors");
+    check(!parsed.document_fatal, "known field errors are not document-fatal");
     check(parsed.settings == previous, "invalid known values preserve previous fields");
     for (const auto& error : parsed.errors) {
         check(error.find("line ") != std::string::npos, "error contains line number");
@@ -253,13 +309,198 @@ void test_syntax_unknown_and_duplicate_keys() {
         "[broken\n",
         previous);
     check(parsed.errors.size() == 5U, "invalid duplicate and syntax errors reported");
-    check(parsed.settings.general.hot_reload, "last valid duplicate bool wins");
-    check(parsed.settings.pinyin.prefix_beam_width == 64U,
-        "invalid duplicate preserves preceding valid value");
+    check(parsed.settings == previous, "document syntax errors preserve the whole previous snapshot");
     for (const auto& error : parsed.errors) {
         check(error.find("SECRET") == std::string::npos, "uppercase secret is not leaked");
         check(error.find("secret") == std::string::npos, "syntax content is not leaked");
     }
+}
+
+void test_document_fatal_errors_are_redacted_and_preserve_previous_snapshot() {
+    auto previous = piinput::default_settings();
+    previous.general.schema = piinput::InputSchema::mspy;
+    previous.pinyin.prefix_beam_width = 64U;
+    const std::array<std::string, 3U> texts{{
+        "[general]\nschema=full\nmissing-equals-SECRET-TOKEN\n",
+        "[general]\nschema=full\n=empty-key-SECRET-TOKEN\n",
+        "[general]\nschema=full\n[broken-section-SECRET-TOKEN\n",
+    }};
+
+    for (std::size_t index = 0U; index < texts.size(); ++index) {
+        const auto parsed = piinput::parse_settings_text(texts[index], previous);
+        const auto label = "document-fatal syntax case " + std::to_string(index);
+        check(parsed.settings == previous, label + " preserves the whole snapshot");
+        check(parsed.document_fatal, label + " is classified as document-fatal");
+        check(!parsed.errors.empty(), label + " reports an error");
+        for (const auto& error : parsed.errors) {
+            check(error.find("SECRET-TOKEN") == std::string::npos,
+                label + " does not expose raw syntax content");
+        }
+    }
+
+    const auto unknown_section = piinput::parse_settings_text(
+        "[unknown-section-SECRET-TOKEN]\nmissing-equals-SECRET-TOKEN\n", previous);
+    check(unknown_section.settings == previous,
+        "syntax error in unknown section preserves the whole snapshot");
+    check(unknown_section.document_fatal,
+        "syntax error in unknown section is classified as document-fatal");
+    check(unknown_section.errors.size() == 1U,
+        "syntax error in unknown section reports one error");
+    check(!unknown_section.errors.empty() &&
+            unknown_section.errors.front().find("[<unknown-section>]") != std::string::npos,
+        "unknown section syntax error uses a fixed section label");
+    check(unknown_section.errors.empty() ||
+            unknown_section.errors.front().find("SECRET-TOKEN") == std::string::npos,
+        "unknown section syntax error is redacted");
+}
+
+void test_manager_rejects_oversized_settings_file() {
+    const auto directory = make_temp_directory("settings-oversized");
+    const auto path = directory / "settings.ini";
+    std::string oversized = "SECRET-OVERSIZED-TOKEN";
+    oversized.resize((1024U * 1024U) + 1U, 'x');
+    write_text(path, oversized);
+
+    piinput::SettingsManager manager(path);
+    const auto original = manager.current();
+    manager.apply_pending_at_composition_boundary();
+    check(manager.current().get() == original.get(), "oversized settings file is not published");
+    check(!manager.last_errors().empty(), "oversized settings file reports an error");
+    check(!manager.last_errors().empty() &&
+            manager.last_errors().front().find("key '<file-size>'") != std::string::npos,
+        "oversized settings file reports the fixed file-size key");
+    for (const auto& error : manager.last_errors()) {
+        check(error.find("SECRET-OVERSIZED-TOKEN") == std::string::npos,
+            "oversized settings error is redacted");
+    }
+    std::filesystem::remove_all(directory);
+}
+
+void test_manager_appends_redacted_errors_to_derived_log_once_per_change() {
+    const auto directory = make_temp_directory("settings-log");
+    const auto path = directory / "settings.ini";
+    const auto log_path = directory / "logs" / "settings.log";
+    write_text(path,
+        "[general]\nschema=full\nUNKNOWN-KEY-SECRET=UNKNOWN-VALUE-SECRET\n"
+        "hot_reload=SECRET-LOG-VALUE\n");
+
+    piinput::SettingsManager manager(path);
+    manager.apply_pending_at_composition_boundary();
+    check(manager.current()->general.schema == piinput::InputSchema::full,
+        "log append does not block valid fields from a field-error reload");
+    check(std::filesystem::is_regular_file(log_path), "settings error log uses derived logs path");
+    const auto first_log = read_text(log_path);
+    check(first_log.find("key 'hot_reload'") != std::string::npos,
+        "settings error log contains the canonical field name");
+    check(first_log.find("SECRET-LOG-VALUE") == std::string::npos,
+        "settings error log does not contain the invalid value");
+    check(first_log.find("UNKNOWN-KEY-SECRET") == std::string::npos &&
+            first_log.find("UNKNOWN-VALUE-SECRET") == std::string::npos,
+        "settings error log does not contain ignored unknown keys or values");
+
+    manager.poll();
+    const auto second_log = read_text(log_path);
+    check(second_log == first_log, "unchanged invalid settings are not logged repeatedly");
+    std::filesystem::remove_all(directory);
+}
+
+void test_manager_log_failure_does_not_escape_or_block_current() {
+    const auto directory = make_temp_directory("settings-log-failure");
+    const auto path = directory / "settings.ini";
+    write_text(directory / "logs", "regular file blocks log directory creation");
+    write_text(path,
+        "[general]\nschema=full\nhot_reload=SECRET-UNWRITABLE-LOG\n");
+
+    bool threw = false;
+    try {
+        piinput::SettingsManager manager(path);
+        manager.apply_pending_at_composition_boundary();
+        check(manager.current()->general.schema == piinput::InputSchema::full,
+            "log failure does not block publishing valid fields");
+        check(!manager.last_errors().empty(), "last errors remain available after log failure");
+    } catch (const std::exception&) {
+        threw = true;
+    }
+    check(!threw, "log failure does not escape SettingsManager");
+    std::filesystem::remove_all(directory);
+}
+
+void test_manager_uses_metadata_fast_path_without_rereading_content() {
+    const auto directory = make_temp_directory("settings-metadata-fast-path");
+    const auto content = std::string("[general]\nschema=full\n");
+    const auto stable = metadata_at(1, content.size());
+    auto reader = std::make_shared<ScriptedSettingsFileReader>();
+    reader->metadata_results = {stable, stable, stable};
+    reader->content = content;
+
+    piinput::SettingsManager manager(directory / "settings.ini", reader);
+    manager.apply_pending_at_composition_boundary();
+    check(manager.current()->general.schema == piinput::InputSchema::full,
+        "scripted stable settings are published");
+    check(reader->read_calls == 1U, "initial stable settings are read once");
+
+    manager.poll();
+    check(reader->read_calls == 1U, "unchanged metadata skips settings content read");
+    std::filesystem::remove_all(directory);
+}
+
+void test_manager_rejects_torn_and_incomplete_reads_deterministically() {
+    const auto directory = make_temp_directory("settings-stable-read");
+    const auto content = std::string("[general]\nschema=full\n");
+    const auto before = metadata_at(1, content.size());
+    const auto after = metadata_at(2, content.size());
+    auto torn_reader = std::make_shared<ScriptedSettingsFileReader>();
+    torn_reader->metadata_results = {before, after};
+    torn_reader->content = content;
+
+    piinput::SettingsManager torn_manager(directory / "torn-settings.ini", torn_reader);
+    const auto torn_original = torn_manager.current();
+    torn_manager.apply_pending_at_composition_boundary();
+    check(torn_manager.current().get() == torn_original.get(),
+        "metadata change during read does not publish pending settings");
+    check(!torn_manager.last_errors().empty() &&
+            torn_manager.last_errors().front().find("key '<unstable-file>'") != std::string::npos,
+        "torn read reports a fixed error key");
+
+    auto short_reader = std::make_shared<ScriptedSettingsFileReader>();
+    short_reader->metadata_results = {before, before};
+    short_reader->content = "short";
+    piinput::SettingsManager short_manager(directory / "short-settings.ini", short_reader);
+    const auto short_original = short_manager.current();
+    short_manager.apply_pending_at_composition_boundary();
+    check(short_manager.current().get() == short_original.get(),
+        "incomplete read does not publish pending settings");
+    check(!short_manager.last_errors().empty() &&
+            short_manager.last_errors().front().find("key '<file>'") != std::string::npos,
+        "incomplete read reports a fixed file error");
+    std::filesystem::remove_all(directory);
+}
+
+void test_manager_catches_reader_exceptions_and_redacts_them() {
+    const auto directory = make_temp_directory("settings-reader-exception");
+    const auto content = std::string("[general]\nschema=full\n");
+    const auto stable = metadata_at(1, content.size());
+    auto reader = std::make_shared<ScriptedSettingsFileReader>();
+    reader->metadata_results = {stable};
+    reader->content = content;
+    reader->throw_on_read = true;
+
+    bool threw = false;
+    try {
+        piinput::SettingsManager manager(directory / "throwing-settings.ini", reader);
+        const auto original = manager.current();
+        manager.apply_pending_at_composition_boundary();
+        check(manager.current().get() == original.get(), "reader exception preserves current settings");
+        check(!manager.last_errors().empty(), "reader exception reports a fixed error");
+        for (const auto& error : manager.last_errors()) {
+            check(error.find("SECRET-READER-EXCEPTION") == std::string::npos,
+                "reader exception detail is redacted");
+        }
+    } catch (const std::exception&) {
+        threw = true;
+    }
+    check(!threw, "reader exception does not escape SettingsManager");
+    std::filesystem::remove_all(directory);
 }
 
 void test_invalid_utf8_is_rejected_as_a_whole() {
@@ -291,6 +532,16 @@ void test_manager_boundary_generation_and_immutability() {
     check(first->general.schema == piinput::InputSchema::full, "polled value applied");
     check(original->general.schema == piinput::InputSchema::flypy,
         "old composition snapshot remains immutable");
+
+    write_text(path, "[general]\nschema=abc\nmissing-equals-SECRET-TOKEN\n");
+    manager.poll();
+    manager.apply_pending_at_composition_boundary();
+    check(manager.current().get() == first.get(),
+        "document-fatal reload does not publish a partial snapshot");
+    for (const auto& error : manager.last_errors()) {
+        check(error.find("SECRET-TOKEN") == std::string::npos,
+            "manager document errors do not expose raw syntax content");
+    }
 
     manager.poll();
     manager.apply_pending_at_composition_boundary();
@@ -339,7 +590,11 @@ void test_manager_partial_errors_and_hot_reload_false() {
 
 void test_concurrent_current_reads() {
     const auto path = std::filesystem::temp_directory_path() / "piinput-settings-manager-concurrent.ini";
-    write_text(path, "[general]\nschema=full\n");
+    const std::string compact =
+        "[candidates]\nitems_per_row=5\nvisible_rows=1\nmax_items=9\n";
+    const std::string expanded =
+        "[candidates]\nitems_per_row=9\nvisible_rows=5\nmax_items=90\n";
+    write_text(path, compact);
     piinput::SettingsManager manager(path);
     manager.apply_pending_at_composition_boundary();
 
@@ -348,17 +603,27 @@ void test_concurrent_current_reads() {
     std::vector<std::thread> readers;
     for (int index = 0; index < 4; ++index) {
         readers.emplace_back([&] {
+            std::uint64_t previous_generation = 0U;
             while (!stop.load(std::memory_order_relaxed)) {
                 const auto snapshot = manager.current();
-                if (!snapshot || snapshot->candidates.items_per_row < 5U ||
-                    snapshot->candidates.items_per_row > 9U) {
+                const auto compact_snapshot = snapshot &&
+                    snapshot->candidates.items_per_row == 5U &&
+                    snapshot->candidates.visible_rows == 1U &&
+                    snapshot->candidates.max_items == 9U;
+                const auto expanded_snapshot = snapshot &&
+                    snapshot->candidates.items_per_row == 9U &&
+                    snapshot->candidates.visible_rows == 5U &&
+                    snapshot->candidates.max_items == 90U;
+                if ((!compact_snapshot && !expanded_snapshot) ||
+                    snapshot->generation < previous_generation) {
                     invalid.store(true, std::memory_order_relaxed);
                 }
+                previous_generation = snapshot->generation;
             }
         });
     }
     for (int index = 0; index < 20; ++index) {
-        write_text(path, std::string("[general]\nschema=") + (index % 2 == 0 ? "abc\n" : "full\n"));
+        write_text(path, index % 2 == 0 ? expanded : compact);
         manager.poll();
         manager.apply_pending_at_composition_boundary();
     }
@@ -380,7 +645,14 @@ int main() {
     test_candidate_screen_size_uses_fixed_dimension_fallback_priority();
     test_invalid_values_fallback_and_errors();
     test_syntax_unknown_and_duplicate_keys();
+    test_document_fatal_errors_are_redacted_and_preserve_previous_snapshot();
     test_invalid_utf8_is_rejected_as_a_whole();
+    test_manager_rejects_oversized_settings_file();
+    test_manager_appends_redacted_errors_to_derived_log_once_per_change();
+    test_manager_log_failure_does_not_escape_or_block_current();
+    test_manager_uses_metadata_fast_path_without_rereading_content();
+    test_manager_rejects_torn_and_incomplete_reads_deterministically();
+    test_manager_catches_reader_exceptions_and_redacts_them();
     test_manager_boundary_generation_and_immutability();
     test_manager_partial_errors_and_hot_reload_false();
     test_concurrent_current_reads();
