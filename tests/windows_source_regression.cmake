@@ -184,6 +184,17 @@ if(NOT text_service_text MATCHES "candidate_grid_\\.move_row" OR
    NOT text_service_text MATCHES "candidate_grid_\\.candidate_index_for_digit")
     message(FATAL_ERROR "TSF row navigation and digit selection must use CandidateGrid")
 endif()
+if(NOT text_service_header_text MATCHES "EnglishLexicon" OR
+   NOT text_service_header_text MATCHES "EnglishSession" OR
+   NOT text_service_text MATCHES "settings_\\.english\\.enabled" OR
+   NOT text_service_text MATCHES "english_lexicon\\.tsv" OR
+   NOT text_service_text MATCHES "english_user\\.tsv" OR
+   NOT text_service_text MATCHES "english_learning\\.tsv")
+    message(FATAL_ERROR "TSF must own and lazily initialize the optional local English resources")
+endif()
+if(NOT text_service_text MATCHES "settings_\\.english\\.items_per_row")
+    message(FATAL_ERROR "TSF must apply the English-only candidate column count")
+endif()
 if(NOT candidate_window_header_text MATCHES "items_per_row" OR
    NOT candidate_window_header_text MATCHES "visible_rows" OR
    NOT candidate_window_text MATCHES "actual_visible_rows")

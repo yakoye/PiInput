@@ -10,5 +10,11 @@ PiInput 尚未确定公开发布许可证。除非后续版本明确附带许可
 - `mozillazg/phrase-pinyin-data`：MIT；
 - `rime/rime-pinyin-simp`：Apache-2.0；
 - `thunlp/THUOCL`：MIT，仅作为可选领域来源下载，默认不合并。
+- `aparrish/wordfreq-en-25000`：数据采用 CC BY-SA 4.0，来源仓库
+  `https://github.com/aparrish/wordfreq-en-25000`。可选英文更新固定到 commit
+  `9650fa612e121beb6126b9b4d7344da287013c6e`，原始文件
+  `wordfreq-en-25000-log.json` 的 SHA-256 为
+  `51cc5521d1ff8cf4353f72199fd4d3ce3cbff9ca9e61858414b94314c9df35a6`。
+  该完整数据仅按需下载到外部 `dicts/sources`，不随 PiInput 源码包重新分发。
 
 PiInput 不提取或重新分发已安装商业输入法的内部基础词库。

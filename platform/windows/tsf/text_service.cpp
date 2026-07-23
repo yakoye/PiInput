@@ -113,6 +113,15 @@ private:
     return (GetKeyState(VK_SHIFT) & 0x8000) != 0;
 }
 
+[[nodiscard]] char ascii_letter_for_key(const WPARAM key) {
+    const bool caps_lock = (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
+    const bool uppercase = shift_is_down() != caps_lock;
+    const char letter = static_cast<char>(key);
+    return uppercase
+        ? letter
+        : static_cast<char>(std::tolower(static_cast<unsigned char>(letter)));
+}
+
 [[nodiscard]] bool is_punctuation_key(const WPARAM key) {
     if (key >= static_cast<WPARAM>('0') && key <= static_cast<WPARAM>('9')) {
         return shift_is_down();
@@ -252,6 +261,8 @@ STDMETHODIMP TextService::Deactivate() {
         thread_manager_ = nullptr;
     }
     session_.reset();
+    english_session_.reset();
+    english_lexicon_.reset();
     settings_manager_.reset();
     client_id_ = TF_CLIENTID_NULL;
     candidate_grid_.reset(0U);
@@ -347,6 +358,9 @@ STDMETHODIMP TextService::OnCompositionTerminated(TfEditCookie, ITfComposition* 
     if (session_ != nullptr) {
         session_->clear();
     }
+    if (english_session_ != nullptr) {
+        english_session_->clear();
+    }
     candidate_grid_.reset(0U);
     apply_settings_at_composition_boundary();
     symbol_candidates_.clear();
@@ -363,7 +377,35 @@ bool TextService::should_eat_key(const WPARAM wparam) const {
         return true;
     }
     if (english_mode_) {
-        return false;
+        if (!EnglishSession::should_start(english_mode_, settings_.english)) {
+            return false;
+        }
+        const bool composing = english_composing();
+        if (!composing) {
+            return is_ascii_letter(wparam);
+        }
+        if (is_punctuation_key(wparam) || is_ascii_letter(wparam) ||
+            is_number_key(wparam)) {
+            return true;
+        }
+        switch (wparam) {
+        case VK_BACK:
+        case VK_DELETE:
+        case VK_LEFT:
+        case VK_RIGHT:
+        case VK_HOME:
+        case VK_END:
+        case VK_UP:
+        case VK_DOWN:
+        case VK_PRIOR:
+        case VK_NEXT:
+        case VK_SPACE:
+        case VK_RETURN:
+        case VK_ESCAPE:
+            return true;
+        default:
+            return false;
+        }
     }
     const bool composing = !session_->snapshot().input.empty();
     const bool shifted = shift_is_down();
@@ -408,6 +450,10 @@ bool TextService::should_eat_key(const WPARAM wparam) const {
 
 void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
     if (session_ == nullptr || context == nullptr) {
+        return;
+    }
+    if (EnglishSession::should_start(english_mode_, settings_.english)) {
+        handle_english_key(context, wparam);
         return;
     }
     if (is_ascii_letter(wparam)) {
@@ -544,11 +590,146 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
     }
 }
 
+void TextService::handle_english_key(ITfContext* const context, const WPARAM wparam) {
+    if (is_ascii_letter(wparam)) {
+        if (!english_composing()) {
+            apply_settings_at_composition_boundary();
+            if (!settings_.english.enabled || !ensure_english_session()) {
+                request_commit(context, std::string(1U, ascii_letter_for_key(wparam)));
+                return;
+            }
+        }
+        english_session_->insert(ascii_letter_for_key(wparam));
+        candidate_grid_.reset(english_session_->snapshot().candidates.size());
+        request_update(context);
+        refresh_candidate_window();
+        return;
+    }
+    if (!english_composing()) {
+        return;
+    }
+
+    const bool shifted = shift_is_down();
+    if (!shifted && wparam == VK_OEM_MINUS) {
+        move_row(-1);
+        refresh_candidate_window();
+        return;
+    }
+    if (!shifted && wparam == VK_OEM_PLUS) {
+        move_row(1);
+        refresh_candidate_window();
+        return;
+    }
+    if (is_punctuation_key(wparam)) {
+        const char base_key = punctuation_base_key(wparam);
+        if (base_key == '\0') {
+            return;
+        }
+        if (!choose_candidate(context, candidate_grid_.selected_index())) {
+            commit_raw_input(context);
+        }
+        request_commit(
+            context,
+            punctuation_.transform(base_key, PunctuationMode::english, shifted));
+        return;
+    }
+    if (wparam == VK_BACK) {
+        english_session_->backspace();
+        candidate_grid_.reset(english_session_->snapshot().candidates.size());
+        if (english_session_->snapshot().input.empty()) {
+            request_cancel(context);
+        } else {
+            request_update(context);
+        }
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_DELETE) {
+        english_session_->delete_forward();
+        candidate_grid_.reset(english_session_->snapshot().candidates.size());
+        if (english_session_->snapshot().input.empty()) {
+            request_cancel(context);
+        } else {
+            request_update(context);
+        }
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_LEFT) {
+        english_session_->move_left();
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_RIGHT) {
+        english_session_->move_right();
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_HOME) {
+        english_session_->move_home();
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_END) {
+        english_session_->move_end();
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_UP) {
+        move_row(-1);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_DOWN) {
+        move_row(1);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_PRIOR) {
+        move_page(-1);
+        refresh_candidate_window();
+        return;
+    }
+    if (wparam == VK_NEXT) {
+        move_page(1);
+        refresh_candidate_window();
+        return;
+    }
+    if (is_number_key(wparam)) {
+        const auto digit = static_cast<std::size_t>(
+            wparam - static_cast<WPARAM>('0'));
+        const auto index = candidate_grid_.candidate_index_for_digit(digit);
+        if (index != CandidateGrid::invalid_index) {
+            choose_candidate(context, index);
+        }
+        return;
+    }
+    if (wparam == VK_SPACE) {
+        if (!choose_candidate(context, candidate_grid_.selected_index())) {
+            commit_raw_input(context);
+        }
+        return;
+    }
+    if (wparam == VK_RETURN) {
+        commit_raw_input(context);
+        return;
+    }
+    if (wparam == VK_ESCAPE) {
+        english_session_->clear();
+        candidate_grid_.reset(0U);
+        request_cancel(context);
+        refresh_candidate_window();
+    }
+}
+
 void TextService::request_update(ITfContext* const context) {
     if (session_ == nullptr) {
         return;
     }
-    const std::wstring text = utf8_to_wide(session_->snapshot().input);
+    const std::string& input = english_composing()
+        ? english_session_->snapshot().input
+        : session_->snapshot().input;
+    const std::wstring text = utf8_to_wide(input);
     auto* edit_session = new EditSession(this, context, text, false, false);
     HRESULT session_result = E_FAIL;
     context->RequestEditSession(client_id_, edit_session,
@@ -647,6 +828,16 @@ bool TextService::choose_candidate(ITfContext* const context, const std::size_t 
     if (session_ == nullptr) {
         return false;
     }
+    if (english_mode_ && english_session_ != nullptr) {
+        const auto chosen = english_session_->choose(index);
+        if (!chosen.has_value()) {
+            return false;
+        }
+        candidate_grid_.reset(0U);
+        save_english_learning();
+        request_commit(context, *chosen);
+        return true;
+    }
     if (symbol_mode_) {
         if (index >= symbol_candidates_.size()) {
             return false;
@@ -675,6 +866,13 @@ bool TextService::choose_candidate(ITfContext* const context, const std::size_t 
 }
 
 void TextService::commit_raw_input(ITfContext* const context) {
+    if (english_composing()) {
+        const std::string raw = english_session_->raw_input();
+        english_session_->clear();
+        candidate_grid_.reset(0U);
+        request_commit(context, raw);
+        return;
+    }
     if (session_ == nullptr || session_->snapshot().input.empty()) {
         return;
     }
@@ -690,7 +888,9 @@ void TextService::move_row(const int delta) {
     if (session_ == nullptr) {
         return;
     }
-    const std::size_t count = symbol_mode_ ? symbol_candidates_.size() : session_->snapshot().candidates.size();
+    const std::size_t count = english_composing()
+        ? english_session_->snapshot().candidates.size()
+        : (symbol_mode_ ? symbol_candidates_.size() : session_->snapshot().candidates.size());
     candidate_grid_.set_candidate_count(count);
     candidate_grid_.move_row(delta);
 }
@@ -699,24 +899,34 @@ void TextService::move_page(const int delta) {
     if (session_ == nullptr) {
         return;
     }
-    const std::size_t count = symbol_mode_ ? symbol_candidates_.size() : session_->snapshot().candidates.size();
+    const std::size_t count = english_composing()
+        ? english_session_->snapshot().candidates.size()
+        : (symbol_mode_ ? symbol_candidates_.size() : session_->snapshot().candidates.size());
     candidate_grid_.set_candidate_count(count);
     candidate_grid_.move_page(delta);
 }
 
 void TextService::refresh_candidate_window() {
-    if (session_ == nullptr || !foreground_ || session_->snapshot().input.empty()) {
-        if (session_ == nullptr || session_->snapshot().input.empty()) {
+    const bool english_active = english_composing();
+    const bool chinese_active = session_ != nullptr && !session_->snapshot().input.empty();
+    if (session_ == nullptr || !foreground_ || (!english_active && !chinese_active)) {
+        if (session_ == nullptr || (!english_active && !chinese_active)) {
             candidate_grid_.reset(0U);
         }
         candidate_window_.hide();
         return;
     }
     std::vector<std::wstring> display;
-    const std::string& input = session_->snapshot().input;
-    symbol_mode_ = !input.empty() && input.front() == ';';
+    const std::string& input = english_active
+        ? english_session_->snapshot().input
+        : session_->snapshot().input;
+    symbol_mode_ = !english_active && !input.empty() && input.front() == ';';
     symbol_candidates_.clear();
-    if (symbol_mode_) {
+    if (english_active) {
+        for (const auto& item : english_session_->snapshot().candidates) {
+            display.push_back(utf8_to_wide(item.word));
+        }
+    } else if (symbol_mode_) {
         const auto results = symbols_.search(
             input.substr(1U), static_cast<std::size_t>(settings_.candidates.max_items));
         for (const auto& result : results) {
@@ -757,6 +967,9 @@ void TextService::load_engine() {
         engine_.load_lexicon(base_tsv);
     }
     user_model_path_ = data_root / L"user_model.tsv";
+    english_builtin_path_ = installed_data / L"english_lexicon.tsv";
+    english_user_path_ = data_root / L"english_user.tsv";
+    english_learning_path_ = data_root / L"english_learning.tsv";
     engine_.load_user_model(user_model_path_);
     symbols_.load_tsv(installed_data / L"symbols.tsv");
     schema_ = load_schema();
@@ -783,9 +996,14 @@ void TextService::apply_settings_at_composition_boundary() {
     }
 
     const bool candidates_changed = next->candidates != settings_.candidates;
+    const bool english_changed = next->english != settings_.english;
     settings_ = *next;
-    if (candidates_changed) {
-        candidate_grid_ = CandidateGrid(settings_.candidates, 0U);
+    if (english_changed) {
+        english_session_.reset();
+        english_lexicon_.reset();
+    }
+    if (candidates_changed || english_changed) {
+        candidate_grid_ = CandidateGrid(active_candidate_settings(), 0U);
     } else {
         candidate_grid_.reset(0U);
     }
@@ -807,7 +1025,14 @@ void TextService::toggle_input_mode(ITfContext* const context) {
             request_cancel(context);
         }
     }
+    if (english_session_ != nullptr && !english_session_->snapshot().input.empty()) {
+        english_session_->clear();
+        if (context != nullptr) {
+            request_cancel(context);
+        }
+    }
     apply_settings_at_composition_boundary();
+    candidate_grid_ = CandidateGrid(active_candidate_settings(), 0U);
     candidate_window_.hide();
 }
 
@@ -817,6 +1042,62 @@ void TextService::save_user_model() noexcept {
     } catch (...) {
         // Input must not fail only because the learning file could not be written.
     }
+}
+
+void TextService::save_english_learning() noexcept {
+    if (!settings_.english.user_learning || english_lexicon_ == nullptr) {
+        return;
+    }
+    const bool saved = english_lexicon_->save_learning_tsv(english_learning_path_);
+    (void)saved;
+}
+
+bool TextService::ensure_english_session() noexcept {
+    if (!EnglishSession::should_start(english_mode_, settings_.english)) {
+        return false;
+    }
+    if (english_session_ != nullptr) {
+        return true;
+    }
+    try {
+        auto lexicon = std::make_unique<EnglishLexicon>();
+        if (settings_.english.builtin_dictionary) {
+            const auto loaded = lexicon->load_builtin_tsv(english_builtin_path_);
+            (void)loaded;
+        }
+        if (settings_.english.user_dictionary) {
+            const auto loaded = lexicon->load_user_tsv(english_user_path_);
+            (void)loaded;
+        }
+        if (settings_.english.user_learning) {
+            const auto loaded = lexicon->load_learning_tsv(english_learning_path_);
+            (void)loaded;
+        }
+        english_lexicon_ = std::move(lexicon);
+        english_session_ = std::make_unique<EnglishSession>(
+            *english_lexicon_,
+            static_cast<std::size_t>(settings_.candidates.max_items),
+            settings_.english.user_learning);
+        candidate_grid_ = CandidateGrid(active_candidate_settings(), 0U);
+        return true;
+    } catch (...) {
+        english_session_.reset();
+        english_lexicon_.reset();
+        return false;
+    }
+}
+
+bool TextService::english_composing() const noexcept {
+    return english_mode_ && english_session_ != nullptr &&
+        !english_session_->snapshot().input.empty();
+}
+
+CandidateSettings TextService::active_candidate_settings() const noexcept {
+    auto candidate_settings = settings_.candidates;
+    if (EnglishSession::should_start(english_mode_, settings_.english)) {
+        candidate_settings.items_per_row = settings_.english.items_per_row;
+    }
+    return candidate_settings;
 }
 
 std::string TextService::load_schema() const {

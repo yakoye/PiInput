@@ -1,6 +1,7 @@
 param(
     [string]$DictionaryRoot = "",
-    [switch]$Force
+    [switch]$Force,
+    [switch]$IncludeEnglish
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,6 +18,30 @@ foreach ($name in @("scel", "user", "generated", "cache")) {
 
 $sources = Get-Content -Raw (Join-Path $RepoRoot "dictionary_sources.json") | ConvertFrom-Json
 foreach ($source in $sources.sources) {
+    if ($source.id -eq "wordfreq-en-25000") {
+        if (-not $IncludeEnglish) {
+            Write-Host "Skipping optional English source (use -IncludeEnglish to download)." -ForegroundColor DarkGray
+            continue
+        }
+        $destination = Join-Path $SourcesRoot $source.id
+        New-Item -ItemType Directory -Force $destination | Out-Null
+        $cachedFile = Join-Path $destination $source.file
+        $downloadFile = "$cachedFile.download"
+        try {
+            Remove-Item -LiteralPath $downloadFile -Force -ErrorAction SilentlyContinue
+            Write-Host "Downloading pinned $($source.id)..." -ForegroundColor Cyan
+            Invoke-WebRequest -UseBasicParsing -Uri $source.rawFile -OutFile $downloadFile
+            $actualHash = (Get-FileHash -LiteralPath $downloadFile -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actualHash -ne $source.sha256.ToLowerInvariant()) {
+                throw "SHA-256 mismatch for $($source.id): $actualHash"
+            }
+            Move-Item -LiteralPath $downloadFile -Destination $cachedFile -Force
+        } catch {
+            Remove-Item -LiteralPath $downloadFile -Force -ErrorAction SilentlyContinue
+            Write-Warning "Updating $($source.id) failed; existing cache was preserved. $($_.Exception.Message)"
+        }
+        continue
+    }
     $destination = Join-Path $SourcesRoot $source.id
     if (-not (Test-Path (Join-Path $destination ".git"))) {
         Write-Host "Downloading $($source.id)..." -ForegroundColor Cyan

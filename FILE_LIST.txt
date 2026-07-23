@@ -12,6 +12,7 @@ build.cmd
 build.ps1
 build.sh
 data/base_lexicon.tsv
+data/english_lexicon.tsv
 data/symbols.tsv
 docs/01_product_definition.md
 docs/02_architecture.md
@@ -58,6 +59,8 @@ examples/sample_lexicon.tsv
 import-dicts.ps1
 include/piinput/binary_lexicon.h
 include/piinput/engine.h
+include/piinput/english_lexicon.h
+include/piinput/english_session.h
 include/piinput/lexicon.h
 include/piinput/pinyin.h
 include/piinput/punctuation.h
@@ -91,6 +94,8 @@ setup-dev.cmd
 setup-dev.ps1
 src/binary_lexicon.cpp
 src/engine.cpp
+src/english_lexicon.cpp
+src/english_session.cpp
 src/lexicon.cpp
 src/pinyin.cpp
 src/pinyin_syllables.inc
@@ -102,6 +107,8 @@ src/symbols.cpp
 src/user_model.cpp
 src/utf.cpp
 start-preview.cmd
+tests/data/english_candidates.tsv
+tests/english_lexicon_tests.cpp
 tests/test_main.cpp
 tests/windows_source_regression.cmake
 tools/benchmark/main.cpp

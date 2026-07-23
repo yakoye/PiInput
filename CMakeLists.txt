@@ -33,6 +33,8 @@ add_library(piinput_core STATIC
     src/candidate_grid.cpp
     src/candidate_layout.cpp
     src/input_mode.cpp
+    src/english_lexicon.cpp
+    src/english_session.cpp
     src/incremental_decoder.cpp
     src/full_pinyin_variants.cpp
     src/pinyin.cpp
@@ -161,7 +163,12 @@ if(WIN32)
         LIBRARY DESTINATION bin
     )
 endif()
-install(FILES data/symbols.tsv data/base_lexicon.tsv DESTINATION data)
+install(FILES
+    data/symbols.tsv
+    data/base_lexicon.tsv
+    data/english_lexicon.tsv
+    DESTINATION data
+)
 install(FILES examples/sample_lexicon.tsv DESTINATION data)
 
 if(PIINPUT_BUILD_TESTS)
@@ -204,6 +211,15 @@ if(PIINPUT_BUILD_TESTS)
     )
     piinput_enable_warnings(piinput-incremental-decoder-tests)
 
+    add_executable(piinput-english-lexicon-tests
+        tests/english_lexicon_tests.cpp
+    )
+    target_link_libraries(piinput-english-lexicon-tests PRIVATE piinput_core)
+    target_compile_definitions(piinput-english-lexicon-tests PRIVATE
+        PIINPUT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+    piinput_enable_warnings(piinput-english-lexicon-tests)
+
     if(WIN32)
         add_executable(piinput-installer-layout-tests
             tests/installer_layout_tests.cpp
@@ -218,6 +234,7 @@ if(PIINPUT_BUILD_TESTS)
     add_test(NAME piinput-candidate-grid COMMAND piinput-candidate-grid-tests)
     add_test(NAME piinput-full-pinyin-variants COMMAND piinput-full-pinyin-variants-tests)
     add_test(NAME piinput-incremental-decoder COMMAND piinput-incremental-decoder-tests)
+    add_test(NAME piinput-english-lexicon COMMAND piinput-english-lexicon-tests)
 
     if(WIN32)
         add_test(NAME piinput-installer-layout-tests COMMAND piinput-installer-layout-tests)

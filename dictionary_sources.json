@@ -24,6 +24,17 @@
       "repository": "https://github.com/thunlp/THUOCL.git",
       "license": "MIT",
       "purpose": "可选领域词表，默认不混入通用候选"
+    },
+    {
+      "id": "wordfreq-en-25000",
+      "repository": "https://github.com/aparrish/wordfreq-en-25000",
+      "revision": "9650fa612e121beb6126b9b4d7344da287013c6e",
+      "rawFile": "https://raw.githubusercontent.com/aparrish/wordfreq-en-25000/9650fa612e121beb6126b9b4d7344da287013c6e/wordfreq-en-25000-log.json",
+      "file": "wordfreq-en-25000-log.json",
+      "sha256": "51cc5521d1ff8cf4353f72199fd4d3ce3cbff9ca9e61858414b94314c9df35a6",
+      "license": "CC-BY-SA-4.0",
+      "optional": true,
+      "purpose": "可选英文候选词频源，仅下载到外部 dicts/sources，不直接打包"
     }
   ]
 }

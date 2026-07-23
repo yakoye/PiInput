@@ -75,6 +75,23 @@ Esc             取消输入
 
 中文空闲状态下直接标点会转换，例如 `,→，`、`.→。`、`;→；`、`?→？`、`<→《`。英文模式输出 ASCII。旧的 `;sheshidu` TSF 快速符号入口已经让位于中文分号；符号检索核心仍保留，新的可配置触发键尚未实现。
 
+离线英文候选默认关闭，因此切换到英文后仍由系统直接处理字母和标点。需要测试时，在
+`%LOCALAPPDATA%\PiInput\UserData\settings.ini` 增加：
+
+```ini
+[english]
+enabled=true
+builtin_dictionary=true
+user_dictionary=true
+user_learning=true
+items_per_row=6
+```
+
+开启后，英文模式输入 ASCII 字母会启动 Composition，并从安装目录
+`data/english_lexicon.tsv` 与可选的 `english_user.tsv` 读取本地候选；选择学习保存在
+`english_learning.tsv`。英文候选不联网。Space 或数字选择候选，Enter 提交原始输入，
+Composition 中输入标点会先提交当前候选（无候选则提交原始输入）再提交 ASCII 标点。
+
 ## 故障信息
 
 发生问题时提供 `setup-dev.cmd` 完整输出、`verify-windows.ps1` 输出、目标应用名、Composition/候选/上屏分别进行到哪一步，以及 `%LOCALAPPDATA%\PiInput\Dev\current.txt` 内容。
