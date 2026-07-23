@@ -91,7 +91,11 @@ Set-Content (Join-Path $Destination "VERSION") $Version -Encoding UTF8
 $UserDataDirectory = Join-Path $env:LOCALAPPDATA "PiInput/UserData"
 $CandidateSettings = Join-Path $UserDataDirectory "settings.ini"
 New-Item $UserDataDirectory -ItemType Directory -Force | Out-Null
-$settingsLines = if (Test-Path $CandidateSettings) { @(Get-Content $CandidateSettings) } else { @() }
+$settingsLines = if (Test-Path $CandidateSettings) {
+    @(Get-Content $CandidateSettings -Encoding UTF8)
+} else {
+    @()
+}
 $updatedSettings = @()
 $inCandidates = $false
 $foundCandidates = $false
@@ -138,7 +142,7 @@ if ($inCandidates) {
     $updatedSettings += "visible_rows=3"
     $updatedSettings += "max_items=90"
 }
-$updatedSettings | Set-Content $CandidateSettings -Encoding ASCII
+$updatedSettings | Set-Content $CandidateSettings -Encoding UTF8
 
 Invoke-NativeRequired -Description "Saving the PiInput input schema" -Command {
     & $ProfileTool --schema $Schema

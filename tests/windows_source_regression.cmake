@@ -36,6 +36,16 @@ if(NOT candidate_settings_script_text MATCHES "ItemsPerRow" OR
    NOT candidate_settings_script_text MATCHES "\\[candidates\\]")
     message(FATAL_ERROR "Candidate settings script must write the modern candidate grid section")
 endif()
+if(candidate_settings_script_text MATCHES "Set-Content[^\r\n]*-Encoding ASCII" OR
+   install_text MATCHES "Set-Content[^\r\n]*CandidateSettings[^\r\n]*-Encoding ASCII")
+    message(FATAL_ERROR "Settings writers must preserve non-ASCII INI content with UTF-8")
+endif()
+if(NOT candidate_settings_script_text MATCHES "Get-Content[^\r\n]*-Encoding UTF8" OR
+   NOT candidate_settings_script_text MATCHES "Set-Content[^\r\n]*-Encoding UTF8" OR
+   NOT install_text MATCHES "Get-Content[^\r\n]*CandidateSettings[^\r\n]*-Encoding UTF8" OR
+   NOT install_text MATCHES "Set-Content[^\r\n]*CandidateSettings[^\r\n]*-Encoding UTF8")
+    message(FATAL_ERROR "Settings writers must explicitly read and write UTF-8")
+endif()
 if(NOT installer_text MATCHES "\\[general\\]" OR
    NOT installer_text MATCHES "\\[candidates\\]" OR
    NOT installer_text MATCHES "items_per_row=6" OR

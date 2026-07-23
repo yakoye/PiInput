@@ -21,6 +21,7 @@ try {
     @"
 [general]
 schema=full
+# 保留中文注释
 
 [pinyin]
 uv_compatibility=false
@@ -33,7 +34,10 @@ horizontal=false
 
 [english]
 enabled=false
-"@ | Set-Content $SettingsPath -Encoding ASCII
+
+[custom]
+label=候选布局
+"@ | Set-Content $SettingsPath -Encoding UTF8
 
     & (Join-Path $RepositoryRoot "set-candidate-page-size.ps1") `
         -ItemsPerRow 9 -VisibleRows 5 -MaxItems 45
@@ -45,6 +49,9 @@ enabled=false
         "The candidate settings tool did not preserve [pinyin]."
     Assert-True ($Content -match '(?m)^\[english\]\r?$' -and $Content -match '(?m)^enabled=false\r?$') `
         "The candidate settings tool did not preserve [english]."
+    Assert-True ($Content -match '(?m)^# 保留中文注释\r?$' -and
+        $Content -match '(?m)^label=候选布局\r?$') `
+        "The candidate settings tool damaged non-ASCII comments or unknown values."
     Assert-True ($Content -match '(?m)^\[candidates\]\r?$') `
         "The candidate settings tool did not write [candidates]."
     Assert-True ($Content -match '(?m)^items_per_row=9\r?$' -and

@@ -18,7 +18,11 @@ $SettingsDirectory = Join-Path $env:LOCALAPPDATA "PiInput/UserData"
 $SettingsPath = Join-Path $SettingsDirectory "settings.ini"
 New-Item $SettingsDirectory -ItemType Directory -Force | Out-Null
 
-$Lines = if (Test-Path $SettingsPath) { @(Get-Content $SettingsPath) } else { @() }
+$Lines = if (Test-Path $SettingsPath) {
+    @(Get-Content $SettingsPath -Encoding UTF8)
+} else {
+    @()
+}
 $Output = @()
 $InCandidates = $false
 $FoundCandidates = $false
@@ -59,7 +63,7 @@ if ($InCandidates) {
     $Output += "max_items=$MaxItems"
 }
 
-$Output | Set-Content $SettingsPath -Encoding ASCII
+$Output | Set-Content $SettingsPath -Encoding UTF8
 Write-Host "PiInput candidate layout saved: columns=$ItemsPerRow, rows=$VisibleRows, max=$MaxItems" `
     -ForegroundColor Green
 Write-Host "The new layout will apply at the next composition boundary." -ForegroundColor Cyan
