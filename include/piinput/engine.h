@@ -80,15 +80,16 @@ public:
 
 private:
     struct PrefixQueryCache {
-        std::shared_mutex mutex;
+        std::shared_mutex state_mutex;
+        std::shared_mutex entries_mutex;
         std::unordered_map<std::string, std::vector<LexiconCandidate>> entries;
         std::atomic<std::size_t> lexicon_entry_count{};
     };
 
-    [[nodiscard]] std::vector<LexiconCandidate> query_exact(
+    [[nodiscard]] std::vector<LexiconCandidate> query_exact_unlocked(
         const std::string& pinyin,
         std::size_t limit) const;
-    [[nodiscard]] std::vector<LexiconCandidate> query_prefix(
+    [[nodiscard]] std::vector<LexiconCandidate> query_prefix_unlocked(
         const std::string& pinyin_prefix,
         std::size_t limit,
         std::size_t scan_limit) const;

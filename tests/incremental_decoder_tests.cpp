@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <unordered_set>
 #include <vector>
@@ -90,9 +91,11 @@ void check(const bool condition, const std::string& message) {
            << "明\tming\t900\n"
            << "天\ttian\t900\n"
            << "明天\tming'tian\t1800\n"
+           << "明天上午\tming'tian'shang'wu\t1800\n"
            << "如\tru\t850\n"
            << "果\tguo\t850\n"
            << "如果\tru'guo\t1700\n"
+           << "如果能不断地\tru'guo'neng'bu'duan'de\t1700\n"
            << "比如\tbi'ru\t1600\n"
            << "我\two\t1000\n"
            << "今天\tjin'tian\t1600\n"
@@ -102,6 +105,7 @@ void check(const bool condition, const std::string& message) {
            << "不\tbu\t1000\n"
            << "知\tzhi\t1000\n"
            << "知道\tzhi'dao\t1500\n"
+           << "真诚地恋爱\tzhen'cheng'de'lian'ai\t1500\n"
            << "去\tqu\t900\n"
            << "超市\tchao'shi\t1500\n"
            << "买\tmai\t900\n"
@@ -203,11 +207,8 @@ void test_query_scope_cache_and_canonical_parse_deduplication() {
         return value != 0U;
     }), "each prefix key receives a nonzero scan share when the budget is sufficient");
     check(std::all_of(prefix_scan_limits.begin(), prefix_scan_limits.end(), [](const auto value) {
-        constexpr std::size_t candidate_limit =
-            (std::min)(piinput::IncrementalDecodeOptions{}.result_limit,
-                piinput::IncrementalDecodeOptions{}.beam_width);
-        return value <= candidate_limit * 16U;
-    }), "each prefix key scan is bounded by candidate headroom");
+        return value <= piinput::IncrementalDecodeOptions{}.prefix_scan_limit;
+    }), "each prefix key scan stays within the shared scan budget");
 }
 
 void test_destination_paths_never_exceed_beam() {
@@ -274,6 +275,41 @@ void test_result_limit_bounds_effective_beam() {
     check(stats.max_source_paths <= options.result_limit &&
         stats.max_destination_paths <= options.result_limit,
         "result limit bounds the effective beam without weakening the configured maximum");
+}
+
+void test_exact_word_edge_score_is_computed_once_per_span() {
+    std::size_t tail_score_calls = 0U;
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t) {
+            std::vector<piinput::LexiconCandidate> words;
+            if (key == "a") {
+                for (std::size_t index = 0U; index < 8U; ++index) {
+                    words.push_back({
+                        "前" + std::to_string(index),
+                        "a",
+                        static_cast<std::uint32_t>(100U - index),
+                    });
+                }
+            } else if (key == "ba") {
+                words.push_back({"尾", "ba", 100U});
+            }
+            return words;
+        },
+        [](const std::string_view, const std::size_t, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [&](const std::string_view pinyin, const std::string_view word) {
+            if (pinyin == "ba" && word == "尾") {
+                ++tail_score_calls;
+            }
+            return 0;
+        });
+    const auto results = decoder.decode(
+        {{{"a", "ba"}, {}, "a'ba", 0}}, {});
+    check(results.size() == 8U, "exact edge score fixture keeps all source paths");
+    check(tail_score_calls == 1U,
+        "exact span-word edge score is computed once before Cartesian expansion "
+        "(calls=" + std::to_string(tail_score_calls) + ")");
 }
 
 void test_terminal_prefix_cross_product_is_result_bounded() {
@@ -453,6 +489,35 @@ void test_incomplete_prefix_keeps_user_score_headroom() {
         "learned prefix headroom keeps terminal submissions result-bounded");
 }
 
+void test_prefix_scan_budget_is_independent_from_output_headroom() {
+    std::size_t requested_limit = 0U;
+    std::size_t requested_scan_limit = 0U;
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [&](const std::string_view key, const std::size_t limit, const std::size_t scan_limit) {
+            requested_limit = limit;
+            requested_scan_limit = scan_limit;
+            if (key == "r" && scan_limit >= 512U) {
+                return std::vector<piinput::LexiconCandidate>{{"如果", "ru'guo", 1000U}};
+            }
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.result_limit = 10U;
+    options.prefix_scan_limit = 4096U;
+    const auto results = decoder.decode(
+        {{{}, "r", "r", 0}}, options);
+    check(requested_limit == 40U,
+        "prefix output retrieval keeps bounded learning headroom");
+    check(requested_scan_limit == options.prefix_scan_limit,
+        "single prefix key receives the configured shared scan budget");
+    check(!results.empty() && results.front().word == "如果",
+        "target beyond output headroom remains discoverable through the scan budget");
+}
+
 void test_direct_exact_ties_prefer_longer_words_then_dictionary_order() {
     piinput::IncrementalDecoder decoder(
         [](const std::string_view key, const std::size_t) {
@@ -504,28 +569,104 @@ void test_engine_direct_exact_tie_compatibility() {
 }
 
 void test_prefix_query_cache_is_invalidated_by_lexicon_reload() {
-    const auto path =
-        std::filesystem::temp_directory_path() / "piinput-prefix-cache-reload.tsv";
-    auto write_entry = [&](const std::string& word) {
+    const auto old_path =
+        std::filesystem::temp_directory_path() / "piinput-prefix-cache-old.tsv";
+    const auto new_path =
+        std::filesystem::temp_directory_path() / "piinput-prefix-cache-new.tsv";
+    const auto learned_path =
+        std::filesystem::temp_directory_path() / "piinput-prefix-cache-learned.tsv";
+    auto write_entry = [](const std::filesystem::path& path, const std::string& word) {
         std::ofstream output(path, std::ios::binary | std::ios::trunc);
         output << "word\tpinyin\tweight\n"
                << word << "\tming\t1000\n";
+        for (std::size_t index = 0U; index < 256U; ++index) {
+            output << word << "前" << index << "\tming\t900\n"
+                   << word << "后" << index << "\ttian\t900\n";
+        }
     };
+    write_entry(old_path, "旧");
+    write_entry(new_path, "新");
+    {
+        std::ofstream output(learned_path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n"
+               << "甲\tming\t1000\n"
+               << "乙\tming\t1000\n";
+    }
     piinput::Engine engine;
-    write_entry("旧");
-    engine.load_lexicon(path);
+    engine.load_lexicon(old_path);
     check(contains_word(engine.query("m", "full", 10U), "旧"),
         "prefix query cache fixture primes the first lexicon");
     piinput::Engine copied_engine = engine;
-    write_entry("新");
-    engine.load_lexicon(path);
+    engine.load_lexicon(new_path);
     const auto reloaded = engine.query("m", "full", 10U);
     check(contains_word(reloaded, "新") && !contains_word(reloaded, "旧"),
         "lexicon reload invalidates cached prefix query results");
     const auto copied = copied_engine.query("m", "full", 10U);
     check(contains_word(copied, "旧") && !contains_word(copied, "新"),
         "copied engines keep independent prefix cache and lexicon state");
-    std::filesystem::remove(path);
+
+    piinput::Engine moved_engine(std::move(copied_engine));
+    check(copied_engine.entry_count() == 0U &&
+        copied_engine.query("m", "full", 10U).empty(),
+        "move construction leaves the source Engine safely empty");
+    check(contains_word(moved_engine.query("m", "full", 10U), "旧"),
+        "move construction transfers the lexicon and cache");
+    copied_engine.record_selection("ming", "甲");
+    piinput::Engine copied_empty = copied_engine;
+    check(copied_empty.entry_count() == 0U &&
+        copied_empty.query("m", "full", 10U).empty(),
+        "copying a moved-from Engine produces a safely empty Engine");
+    copied_empty.load_lexicon(learned_path);
+    const auto copied_learned = copied_empty.query("ming", "full", 10U);
+    check(!copied_learned.empty() && copied_learned.front().word == "甲",
+        "copying a moved-from Engine preserves newly recorded learning");
+    copied_engine.load_lexicon(learned_path);
+    const auto learned = copied_engine.query("ming", "full", 10U);
+    check(!learned.empty() && learned.front().word == "甲",
+        "loading a lexicon into a moved-from Engine preserves newly recorded learning");
+    copied_engine.load_lexicon(new_path);
+    check(contains_word(copied_engine.query("m", "full", 10U), "新"),
+        "moved-from Engine can load and query a new lexicon");
+
+    piinput::Engine move_assigned;
+    move_assigned = std::move(moved_engine);
+    check(moved_engine.entry_count() == 0U &&
+        moved_engine.query("m", "full", 10U).empty(),
+        "move assignment leaves the source Engine safely empty");
+    check(contains_word(move_assigned.query("m", "full", 10U), "旧"),
+        "move assignment transfers the lexicon and cache");
+
+    std::atomic<bool> reload_done{false};
+    std::atomic<bool> concurrent_results_valid{true};
+    std::atomic<std::size_t> concurrent_queries{0U};
+    std::thread reader([&] {
+        while (!reload_done.load()) {
+            const auto candidates = engine.query("mingtian", "full", 30U);
+            const bool mixes_generations = std::any_of(
+                candidates.begin(), candidates.end(), [](const auto& candidate) {
+                    return candidate.word.find("旧") != std::string::npos &&
+                        candidate.word.find("新") != std::string::npos;
+                });
+            if (candidates.empty() || mixes_generations) {
+                concurrent_results_valid.store(false);
+            }
+            ++concurrent_queries;
+        }
+    });
+    while (concurrent_queries.load() == 0U) {
+        std::this_thread::yield();
+    }
+    for (std::size_t reload = 0U; reload < 200U; ++reload) {
+        engine.load_lexicon(reload % 2U == 0U ? old_path : new_path);
+    }
+    reload_done.store(true);
+    reader.join();
+    check(concurrent_queries.load() != 0U && concurrent_results_valid.load(),
+        "each multi-edge query stays within one atomically published lexicon generation");
+
+    std::filesystem::remove(old_path);
+    std::filesystem::remove(new_path);
+    std::filesystem::remove(learned_path);
 }
 
 void test_low_scan_budget_retains_complete_prefix_parses() {
@@ -620,10 +761,16 @@ void test_max_word_syllable_limit_does_not_overflow() {
 }
 
 void test_cross_start_prefix_and_complete_input(piinput::Engine& engine) {
-    check(contains_word(engine.query("mkt", "flypy", 20U), "明天"),
+    const auto flypy_mingtian = engine.query("mkt", "flypy", 20U);
+    check(contains_word(flypy_mingtian, "明天"),
         "Flypy mkt completes a word spanning start zero");
-    check(contains_word(engine.query("rug", "flypy", 20U), "如果"),
+    check(!flypy_mingtian.empty() && flypy_mingtian.front().word == "明天",
+        "Flypy mkt prefers the shortest reasonable completion");
+    const auto flypy_ruguo = engine.query("rug", "flypy", 20U);
+    check(contains_word(flypy_ruguo, "如果"),
         "Flypy rug completes 如果");
+    check(!flypy_ruguo.empty() && flypy_ruguo.front().word == "如果",
+        "Flypy rug does not reward untyped future syllables");
     check(contains_word(engine.query("mingt", "full", 20U), "明天"),
         "full pinyin mingt completes 明天");
     check(contains_word(engine.query("rug", "full", 20U), "如果"),
@@ -638,6 +785,8 @@ void test_arbitrary_length_and_variants(piinput::Engine& engine) {
     check(std::all_of(long_partial.begin(), long_partial.end(), [](const auto& candidate) {
         return candidate.word.starts_with("比如我要是不");
     }), "long partial candidates consume the complete sentence prefix");
+    check(!long_partial.empty() && long_partial.front().word == "比如我要是不知道",
+        "long partial prefers a concise completion over untyped future syllables");
     check(contains_word(engine.query("jvgeliz", "full", 20U), "举个例子"),
         "full pinyin v variant completes 举个例子");
     check(contains_word(engine.query("jugeliz", "full", 20U), "举个例子"),
@@ -794,10 +943,12 @@ int main(const int argc, char** argv) {
         test_query_scope_cache_and_canonical_parse_deduplication();
         test_destination_paths_never_exceed_beam();
         test_result_limit_bounds_effective_beam();
+        test_exact_word_edge_score_is_computed_once_per_span();
         test_terminal_prefix_cross_product_is_result_bounded();
         test_terminal_prefix_cap_matches_exhaustive_oracle();
         test_complete_exact_keeps_user_score_headroom();
         test_incomplete_prefix_keeps_user_score_headroom();
+        test_prefix_scan_budget_is_independent_from_output_headroom();
         test_direct_exact_ties_prefer_longer_words_then_dictionary_order();
         test_engine_direct_exact_tie_compatibility();
         test_prefix_query_cache_is_invalidated_by_lexicon_reload();
