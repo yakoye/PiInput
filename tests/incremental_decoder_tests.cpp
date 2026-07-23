@@ -1,0 +1,623 @@
+#include "piinput/engine.h"
+#include "piinput/incremental_decoder.h"
+
+#include <algorithm>
+#include <charconv>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
+namespace {
+
+int failures = 0;
+
+void check(const bool condition, const std::string& message) {
+    if (!condition) {
+        ++failures;
+        std::cerr << "FAIL: " << message << '\n';
+    }
+}
+
+[[nodiscard]] bool contains_word(
+    const std::vector<piinput::EngineCandidate>& candidates,
+    const std::string& word) {
+    return std::any_of(candidates.begin(), candidates.end(), [&](const auto& candidate) {
+        return candidate.word == word;
+    });
+}
+
+[[nodiscard]] std::filesystem::path write_lexicon() {
+    const auto path = std::filesystem::temp_directory_path() / "piinput-incremental-decoder.tsv";
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    output << "word\tpinyin\tweight\n"
+           << "明\tming\t900\n"
+           << "天\ttian\t900\n"
+           << "明天\tming'tian\t1800\n"
+           << "如\tru\t850\n"
+           << "果\tguo\t850\n"
+           << "如果\tru'guo\t1700\n"
+           << "比如\tbi'ru\t1600\n"
+           << "我\two\t1000\n"
+           << "今天\tjin'tian\t1600\n"
+           << "下午\txia'wu\t1500\n"
+           << "要\tyao\t1000\n"
+           << "是\tshi\t1000\n"
+           << "不\tbu\t1000\n"
+           << "知\tzhi\t1000\n"
+           << "知道\tzhi'dao\t1500\n"
+           << "去\tqu\t900\n"
+           << "超市\tchao'shi\t1500\n"
+           << "买\tmai\t900\n"
+           << "点\tdian\t900\n"
+           << "水果\tshui'guo\t1500\n"
+           << "举个例子\tju'ge'li'zi\t2200\n"
+           << "举\tju\t800\n"
+           << "个\tge\t800\n"
+           << "例子\tli'zi\t1400\n"
+           << "固件\tgu'jian\t1500\n"
+           << "开发\tkai'fa\t1500\n"
+           << "需要\txu'yao\t1500\n"
+           << "熟悉\tshu'xi\t1500\n"
+           << "底层\tdi'ceng\t1500\n"
+           << "寄存器\tji'cun'qi\t1600\n"
+           << "配置\tpei'zhi\t1500\n"
+           << "和\the\t1000\n"
+           << "链路\tlian'lu\t1500\n"
+           << "状态机\tzhuang'tai'ji\t1600\n"
+           << "西安\txi'an\t1200\n"
+           << "先\txian\t1200\n"
+           << "错误边界\tming'tianx\t9999\n";
+    return path;
+}
+
+void test_public_parse_contract() {
+    const piinput::IncrementalParse parse{{"ming"}, "t", "ming't", 42};
+    check(parse.complete_syllables.size() == 1U, "parse exposes complete syllables");
+    check(parse.trailing_prefix == "t" && parse.canonical_prefix == "ming't",
+        "parse exposes trailing and canonical prefixes");
+    check(parse.parse_score == 42, "parse exposes score");
+    const piinput::IncrementalDecodeOptions defaults;
+    check(defaults.beam_width == 32U && defaults.prefix_scan_limit == 4096U &&
+        defaults.result_limit == 90U && defaults.max_word_syllables == 8U,
+        "incremental options have documented defaults");
+}
+
+void test_query_scope_cache_and_canonical_parse_deduplication() {
+    std::size_t exact_calls = 0U;
+    std::size_t prefix_calls = 0U;
+    std::size_t prefix_scan_budget = 0U;
+    std::vector<std::string> prefix_callback_order;
+    std::vector<std::size_t> prefix_scan_limits;
+    std::unordered_set<std::string> exact_keys;
+    std::unordered_set<std::string> prefix_keys;
+    piinput::IncrementalDecoder decoder(
+        [&](const std::string_view key, const std::size_t) {
+            ++exact_calls;
+            exact_keys.emplace(key);
+            if (key == "ming") {
+                return std::vector<piinput::LexiconCandidate>{{"明", "ming", 900U}};
+            }
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [&](const std::string_view key, const std::size_t, const std::size_t scan_limit) {
+            ++prefix_calls;
+            prefix_scan_budget += scan_limit;
+            prefix_callback_order.emplace_back(key);
+            prefix_scan_limits.push_back(scan_limit);
+            prefix_keys.emplace(key);
+            if (key == "ming't" || key == "ming'ti") {
+                return std::vector<piinput::LexiconCandidate>{{"明天", "ming'tian", 1800U}};
+            }
+            if (key == "t" || key == "ti") {
+                return std::vector<piinput::LexiconCandidate>{{"天", "tian", 900U}};
+            }
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    const std::vector<piinput::IncrementalParse> parses{
+        {{"ming"}, "t", "ming't", 40},
+        {{"ming"}, "t", "ming't", 20},
+        {{"ming"}, "ti", "ming'ti", 30},
+    };
+    piinput::IncrementalDecodeStats stats;
+    const auto results = decoder.decode(parses, {}, &stats);
+    check(!results.empty(), "cache fixture produces candidates");
+    check(exact_calls == exact_keys.size(),
+        "each exact key is queried once per decode (calls=" + std::to_string(exact_calls) +
+            ", unique=" + std::to_string(exact_keys.size()) + ")");
+    check(prefix_calls == prefix_keys.size(),
+        "each prefix key is queried once per decode (calls=" + std::to_string(prefix_calls) +
+            ", unique=" + std::to_string(prefix_keys.size()) + ")");
+    check(stats.input_parse_count == 3U && stats.unique_parse_count == 2U,
+        "canonical duplicate parses are removed");
+    check(stats.exact_query_calls == stats.exact_unique_keys &&
+        stats.prefix_query_calls == stats.prefix_unique_keys,
+        "decode statistics report one callback per unique query key");
+    check(prefix_scan_budget <= piinput::IncrementalDecodeOptions{}.prefix_scan_limit,
+        "prefix scan budget is shared by the whole decode (budget=" +
+            std::to_string(prefix_scan_budget) + ")");
+    check(std::is_sorted(prefix_callback_order.begin(), prefix_callback_order.end()),
+        "prefix keys are queried in deterministic sorted order");
+    check(std::all_of(prefix_scan_limits.begin(), prefix_scan_limits.end(), [](const auto value) {
+        return value != 0U;
+    }), "each prefix key receives a nonzero scan share when the budget is sufficient");
+    check(std::all_of(prefix_scan_limits.begin(), prefix_scan_limits.end(), [](const auto value) {
+        constexpr std::size_t candidate_limit =
+            (std::min)(piinput::IncrementalDecodeOptions{}.result_limit,
+                piinput::IncrementalDecodeOptions{}.beam_width);
+        return value <= candidate_limit * 16U;
+    }), "each prefix key scan is bounded by candidate headroom");
+}
+
+void test_destination_paths_never_exceed_beam() {
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t) {
+            std::vector<piinput::LexiconCandidate> words;
+            if (key == "a") {
+                for (std::size_t index = 0U; index < 8U; ++index) {
+                    words.push_back({
+                        "候选" + std::to_string(index),
+                        "a",
+                        static_cast<std::uint32_t>(100U - index),
+                    });
+                }
+            } else if (key == "ba") {
+                words.push_back({"吧", "ba", 100U});
+            }
+            return words;
+        },
+        [](const std::string_view, const std::size_t, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.beam_width = 3U;
+    piinput::IncrementalDecodeStats stats;
+    const auto results = decoder.decode(
+        {{{"a", "ba"}, {}, "a'ba", 0}}, options, &stats);
+    check(results.size() == options.beam_width, "beam retains only configured path count");
+    check(stats.max_source_paths <= options.beam_width &&
+        stats.max_destination_paths <= options.beam_width,
+        "source and destination path counts obey the hard beam boundary (source=" +
+            std::to_string(stats.max_source_paths) + ", destination=" +
+            std::to_string(stats.max_destination_paths) + ")");
+}
+
+void test_terminal_prefix_cross_product_is_result_bounded() {
+    std::size_t exact_requested_limit = 0U;
+    piinput::IncrementalDecoder decoder(
+        [&](const std::string_view key, const std::size_t limit) {
+            exact_requested_limit = (std::max)(exact_requested_limit, limit);
+            std::vector<piinput::LexiconCandidate> words;
+            if (key == "a") {
+                for (std::size_t index = 0U; index < limit; ++index) {
+                    words.push_back({
+                        "前" + std::to_string(index),
+                        "a",
+                        static_cast<std::uint32_t>(1000U - index),
+                    });
+                }
+            }
+            return words;
+        },
+        [](const std::string_view key, const std::size_t limit, const std::size_t) {
+            std::vector<piinput::LexiconCandidate> words;
+            for (std::size_t index = 0U; index < limit; ++index) {
+                words.push_back({
+                    "尾" + std::to_string(index),
+                    key == "b" ? "ba" : "a'ba",
+                    static_cast<std::uint32_t>(1000U - index),
+                });
+            }
+            return words;
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.beam_width = 32U;
+    options.result_limit = 3U;
+    piinput::IncrementalDecodeStats stats;
+    const auto results = decoder.decode(
+        {{{"a"}, "b", "a'b", 0}}, options, &stats);
+    check(results.size() == options.result_limit,
+        "terminal prefix fixture respects result limit");
+    check(stats.submitted_candidates <= 18U,
+        "terminal prefix combinations are bounded by result limit (submitted=" +
+            std::to_string(stats.submitted_candidates) + ")");
+    check(exact_requested_limit <= 8U,
+        "exact edge query limit is result-bounded (requested=" +
+            std::to_string(exact_requested_limit) + ")");
+}
+
+void test_terminal_prefix_cap_matches_exhaustive_oracle() {
+    const std::vector<std::vector<std::uint32_t>> source_weight_matrices{
+        {1000U, 900U, 900U, 800U, 700U, 600U, 500U, 400U},
+        {1000U, 1000U, 1000U, 1000U, 900U, 900U, 800U, 800U},
+        {800U, 1000U, 700U, 900U, 600U, 500U, 400U, 300U},
+    };
+    for (std::size_t matrix = 0U; matrix < source_weight_matrices.size(); ++matrix) {
+        const auto& source_weights = source_weight_matrices[matrix];
+        auto make_decoder = [&]() {
+            return piinput::IncrementalDecoder(
+                [&](const std::string_view key, const std::size_t) {
+                    std::vector<piinput::LexiconCandidate> words;
+                    if (key == "a") {
+                        for (std::size_t index = 0U; index < source_weights.size(); ++index) {
+                            words.push_back({
+                                "源" + std::to_string(index),
+                                "a",
+                                source_weights[index],
+                            });
+                        }
+                        words.push_back({"源1", "a", 100U});
+                    }
+                    return words;
+                },
+                [](const std::string_view key, const std::size_t, const std::size_t) {
+                    if (key != "b") {
+                        return std::vector<piinput::LexiconCandidate>{};
+                    }
+                    return std::vector<piinput::LexiconCandidate>{
+                        {"尾0", "ba", 1000U},
+                        {"尾1", "ba", 1000U},
+                        {"尾2", "ba", 900U},
+                    };
+                },
+                [](const std::string_view, const std::string_view word) {
+                    return word.ends_with("2") ? 50 : 0;
+                });
+        };
+        piinput::IncrementalDecodeOptions capped_options;
+        capped_options.beam_width = 8U;
+        capped_options.result_limit = 3U;
+        const auto capped = make_decoder().decode(
+            {{{"a"}, "b", "a'b", 0}}, capped_options);
+
+        auto exhaustive_options = capped_options;
+        exhaustive_options.result_limit = 64U;
+        auto exhaustive = make_decoder().decode(
+            {{{"a"}, "b", "a'b", 0}}, exhaustive_options);
+        if (exhaustive.size() > capped_options.result_limit) {
+            exhaustive.resize(capped_options.result_limit);
+        }
+        bool matches = capped.size() == exhaustive.size();
+        for (std::size_t index = 0U; matches && index < capped.size(); ++index) {
+            matches = capped[index].word == exhaustive[index].word &&
+                capped[index].pinyin == exhaustive[index].pinyin &&
+                capped[index].base_weight == exhaustive[index].base_weight &&
+                capped[index].score == exhaustive[index].score &&
+                capped[index].word_count == exhaustive[index].word_count;
+        }
+        check(matches, "terminal prefix cap matches exhaustive top-N oracle matrix " +
+            std::to_string(matrix));
+    }
+}
+
+void test_complete_exact_keeps_user_score_headroom() {
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t limit) {
+            std::vector<piinput::LexiconCandidate> words;
+            if (key == "a") {
+                for (std::size_t index = 0U;
+                     index < (std::min)(limit, std::size_t{40U}); ++index) {
+                    words.push_back({
+                        "候选" + std::to_string(index),
+                        "a",
+                        static_cast<std::uint32_t>(1000U - index),
+                    });
+                }
+            }
+            return words;
+        },
+        [](const std::string_view, const std::size_t, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [](const std::string_view, const std::string_view word) {
+            return word == "候选33" ? 100'000'000 : 0;
+        });
+    piinput::IncrementalDecodeOptions options;
+    options.result_limit = 10U;
+    const auto results = decoder.decode(
+        {{{"a"}, {}, "a", 0}}, options);
+    check(std::any_of(results.begin(), results.end(), [](const auto& candidate) {
+        return candidate.word == "候选33";
+    }), "complete exact query retains headroom for a learned candidate below rank 32");
+}
+
+void test_low_scan_budget_retains_complete_prefix_parses() {
+    std::vector<piinput::IncrementalParse> parses;
+    for (std::size_t parse_index = 0U; parse_index < 24U; ++parse_index) {
+        std::vector<std::string> syllables;
+        for (std::size_t syllable = 0U; syllable < 7U; ++syllable) {
+            syllables.push_back(
+                "p" + std::to_string(parse_index) + "_" + std::to_string(syllable));
+        }
+        parses.push_back({
+            std::move(syllables),
+            "t",
+            "parse-" + std::to_string(parse_index),
+            static_cast<int>(100U - parse_index),
+        });
+    }
+    std::size_t total_scan_budget = 0U;
+    std::size_t minimum_scan_share = (std::numeric_limits<std::size_t>::max)();
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [&](const std::string_view, const std::size_t, const std::size_t scan_limit) {
+            total_scan_budget += scan_limit;
+            minimum_scan_share = (std::min)(minimum_scan_share, scan_limit);
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.prefix_scan_limit = 128U;
+    piinput::IncrementalDecodeStats stats;
+    (void)decoder.decode(parses, options, &stats);
+    check(stats.unique_parse_count == 24U,
+        "low-scan fixture begins with all canonical parses");
+    check(stats.retained_parse_count >= 16U &&
+        stats.retained_parse_count < stats.unique_parse_count,
+        "low scan budget deterministically retains only fully funded prefix parses");
+    check(total_scan_budget <= options.prefix_scan_limit && minimum_scan_share >= 1U,
+        "each retained prefix key has nonzero scan without exceeding total budget");
+}
+
+void test_low_scan_budget_keeps_short_parses_that_fit() {
+    std::vector<piinput::IncrementalParse> parses;
+    for (std::size_t parse_index = 0U; parse_index < 24U; ++parse_index) {
+        parses.push_back({
+            {"short-" + std::to_string(parse_index)},
+            "t",
+            "short-parse-" + std::to_string(parse_index),
+            static_cast<int>(100U - parse_index),
+        });
+    }
+    std::size_t total_scan_budget = 0U;
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [&](const std::string_view, const std::size_t, const std::size_t scan_limit) {
+            total_scan_budget += scan_limit;
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.prefix_scan_limit = 128U;
+    piinput::IncrementalDecodeStats stats;
+    (void)decoder.decode(parses, options, &stats);
+    check(stats.unique_parse_count == 24U && stats.retained_parse_count == 24U,
+        "all short prefix parses are retained when their actual keys fit the scan budget");
+    check(total_scan_budget <= options.prefix_scan_limit,
+        "short-parse callbacks stay within the shared scan budget");
+}
+
+void test_max_word_syllable_limit_does_not_overflow() {
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t) {
+            if (key == "a") {
+                return std::vector<piinput::LexiconCandidate>{{"阿", "a", 100U}};
+            }
+            if (key == "ba") {
+                return std::vector<piinput::LexiconCandidate>{{"吧", "ba", 100U}};
+            }
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [](const std::string_view, const std::size_t, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.max_word_syllables = (std::numeric_limits<std::size_t>::max)();
+    check(!decoder.decode({{{"a", "ba"}, {}, "a'ba", 0}}, options).empty(),
+        "SIZE_MAX max_word_syllables still expands exact edges");
+}
+
+void test_cross_start_prefix_and_complete_input(piinput::Engine& engine) {
+    check(contains_word(engine.query("mkt", "flypy", 20U), "明天"),
+        "Flypy mkt completes a word spanning start zero");
+    check(contains_word(engine.query("rug", "flypy", 20U), "如果"),
+        "Flypy rug completes 如果");
+    check(contains_word(engine.query("mingt", "full", 20U), "明天"),
+        "full pinyin mingt completes 明天");
+    check(contains_word(engine.query("rug", "full", 20U), "如果"),
+        "full pinyin rug completes 如果");
+    check(contains_word(engine.query("mingtian", "full", 20U), "明天"),
+        "complete full pinyin still decodes");
+}
+
+void test_arbitrary_length_and_variants(piinput::Engine& engine) {
+    const auto long_partial = engine.query("biruwoycuibuv", "flypy", 30U);
+    check(!long_partial.empty(), "long Flypy partial has candidates");
+    check(std::all_of(long_partial.begin(), long_partial.end(), [](const auto& candidate) {
+        return candidate.word.starts_with("比如我要是不");
+    }), "long partial candidates consume the complete sentence prefix");
+    check(contains_word(engine.query("jvgeliz", "full", 20U), "举个例子"),
+        "full pinyin v variant completes 举个例子");
+    check(contains_word(engine.query("jugeliz", "full", 20U), "举个例子"),
+        "full pinyin u spelling completes 举个例子");
+}
+
+void test_settings_limits_and_safety(piinput::Engine& engine) {
+    auto settings = piinput::default_settings();
+    settings.pinyin.incomplete_candidates = false;
+    check(engine.query("mkt", "flypy", 20U, settings).empty(),
+        "disabled incomplete candidates rejects trailing edge");
+    check(contains_word(engine.query("mktm", "flypy", 20U, settings), "明天"),
+        "disabled incomplete candidates keeps complete decoding");
+
+    settings = piinput::default_settings();
+    settings.pinyin.prefix_scan_limit = 0U;
+    check(engine.query("mkt", "flypy", 20U, settings).empty(), "zero prefix scan disables prefix edges");
+    settings.pinyin.prefix_scan_limit = 4096U;
+    settings.candidates.max_items = 1U;
+    check(engine.query("mingtian", "full", 20U, settings).size() == 1U,
+        "snapshot max_items caps requested limit");
+
+    piinput::Engine empty;
+    check(empty.query("ming", "full", 10U).empty(), "missing lexicon is safe");
+    check(engine.query("", "full", 10U).empty(), "empty input is safe");
+    check(engine.query("123", "full", 10U).empty(), "invalid input is safe");
+    check(engine.query("ming", "full", 0U).empty(), "zero result limit is safe");
+}
+
+void test_boundary_filter_and_determinism(piinput::Engine& engine) {
+    const auto candidates = engine.query("mkt", "flypy", 30U);
+    check(!contains_word(candidates, "错误边界"), "raw string prefix cannot cross a syllable boundary");
+
+    for (const auto width : {8U, 32U, 128U}) {
+        auto settings = piinput::default_settings();
+        settings.pinyin.prefix_beam_width = width;
+        check(contains_word(engine.query("biruwoycuibuv", "flypy", 30U, settings), "比如我要是不知道"),
+            "beam width retains legal long completion");
+    }
+
+    const auto baseline = engine.query("mingt", "full", 30U);
+#ifdef NDEBUG
+    constexpr int stability_iterations = 100;
+#else
+    constexpr int stability_iterations = 10;
+#endif
+    for (int iteration = 0; iteration < stability_iterations; ++iteration) {
+        const auto repeated = engine.query("mingt", "full", 30U);
+        check(repeated.size() == baseline.size(), "repeat count is stable");
+        for (std::size_t index = 0; index < baseline.size() && index < repeated.size(); ++index) {
+            check(repeated[index].word == baseline[index].word &&
+                repeated[index].pinyin == baseline[index].pinyin &&
+                repeated[index].score == baseline[index].score,
+                "repeat order and score are stable");
+        }
+    }
+}
+
+void test_prefix_sentence_table(piinput::Engine& engine) {
+    const auto path = std::filesystem::path(PIINPUT_SOURCE_DIR) / "tests" / "data" / "prefix_sentences.tsv";
+    std::ifstream input(path, std::ios::binary);
+    check(static_cast<bool>(input), "prefix sentence table opens");
+    std::string line;
+    std::size_t rows = 0U;
+    while (std::getline(input, line)) {
+        if (line.empty() || line.front() == '#') continue;
+        std::stringstream stream(line);
+        std::vector<std::string> fields;
+        for (std::string field; std::getline(stream, field, '\t');) {
+            fields.push_back(std::move(field));
+        }
+        ++rows;
+        if (fields.size() != 5U) {
+            check(false, "prefix sentence row " + std::to_string(rows) +
+                " has five tab-separated fields");
+            continue;
+        }
+        const auto& schema = fields[0U];
+        const auto& encoded = fields[1U];
+        const auto& canonical = fields[2U];
+        const auto& target = fields[3U];
+        std::size_t promised = 0U;
+        const auto promised_parse = std::from_chars(
+            fields[4U].data(), fields[4U].data() + fields[4U].size(), promised);
+        if (promised_parse.ec != std::errc{} ||
+            promised_parse.ptr != fields[4U].data() + fields[4U].size() ||
+            promised == 0U || promised > encoded.size()) {
+            check(false, "prefix sentence row " + std::to_string(rows) +
+                " has a valid promised_min_prefix");
+            continue;
+        }
+        if (schema == "flypy") {
+            const auto decoded = engine.shuangpin().decode(schema, encoded, 32U);
+            check(std::any_of(decoded.begin(), decoded.end(), [&](const auto& parse) {
+                return parse.canonical == canonical;
+            }), "Flypy fixture decodes to declared canonical pinyin: " + encoded);
+        }
+        for (std::size_t length = 1U; length <= encoded.size(); ++length) {
+            const auto results = engine.query(encoded.substr(0U, length), schema, 30U);
+            if (length >= promised) {
+                check(!results.empty(), "promised prefix is non-empty: " + encoded.substr(0U, length));
+            }
+        }
+        check(contains_word(engine.query(encoded, schema, 30U), target),
+            "complete sentence contains table target: " + target);
+    }
+    check(rows >= 10U, "prefix sentence table has at least ten rows");
+}
+
+void test_bounded_performance(piinput::Engine& engine) {
+#ifdef NDEBUG
+    constexpr int warmup_iterations = 20;
+    constexpr int measured_iterations = 100;
+#else
+    constexpr int warmup_iterations = 5;
+    constexpr int measured_iterations = 20;
+#endif
+    for (int warmup = 0; warmup < warmup_iterations; ++warmup) {
+        (void)engine.query("biruwoycuibuv", "flypy", 30U);
+    }
+    std::vector<double> microseconds;
+    microseconds.reserve(measured_iterations);
+    std::size_t result_guard = 0U;
+    for (int iteration = 0; iteration < measured_iterations; ++iteration) {
+        const auto started = std::chrono::steady_clock::now();
+        const auto results = engine.query(
+            iteration % 2 == 0 ? "mkt" : "biruwoycuibuv", "flypy", 30U);
+        const auto stopped = std::chrono::steady_clock::now();
+        result_guard += results.size();
+        microseconds.push_back(
+            std::chrono::duration<double, std::micro>(stopped - started).count());
+    }
+    std::sort(microseconds.begin(), microseconds.end());
+    const auto p95_index = static_cast<std::size_t>(
+        0.95 * static_cast<double>(microseconds.size() - 1U));
+    const double p95_us = microseconds[p95_index];
+#ifdef NDEBUG
+    check(p95_us < 10'000.0, "small-fixture incremental P95 stays below 10 ms");
+#endif
+    std::cout << "incremental benchmark: iterations=" << measured_iterations
+              << " p95_us=" << p95_us << " result_guard=" << result_guard << '\n';
+}
+
+}  // namespace
+
+int main(const int argc, char** argv) {
+    const std::string only = argc > 1 ? argv[1] : "";
+    if (only.empty() || only == "contract") std::cerr << "stage: contract\n";
+    test_public_parse_contract();
+    if (only.empty() || only == "cache") std::cerr << "stage: cache\n";
+    if (only.empty() || only == "cache") {
+        test_query_scope_cache_and_canonical_parse_deduplication();
+        test_destination_paths_never_exceed_beam();
+        test_terminal_prefix_cross_product_is_result_bounded();
+        test_terminal_prefix_cap_matches_exhaustive_oracle();
+        test_complete_exact_keeps_user_score_headroom();
+        test_low_scan_budget_retains_complete_prefix_parses();
+        test_low_scan_budget_keeps_short_parses_that_fit();
+        test_max_word_syllable_limit_does_not_overflow();
+    }
+    const auto path = write_lexicon();
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+    if (only.empty() || only == "cross") std::cerr << "stage: cross-start\n";
+    if (only.empty() || only == "cross") test_cross_start_prefix_and_complete_input(engine);
+    if (only.empty() || only == "arbitrary") std::cerr << "stage: arbitrary\n";
+    if (only.empty() || only == "arbitrary") test_arbitrary_length_and_variants(engine);
+    if (only.empty() || only == "settings") std::cerr << "stage: settings\n";
+    if (only.empty() || only == "settings") test_settings_limits_and_safety(engine);
+    if (only.empty() || only == "boundaries") std::cerr << "stage: boundaries\n";
+    if (only.empty() || only == "boundaries") test_boundary_filter_and_determinism(engine);
+    if (only.empty() || only == "table") std::cerr << "stage: table\n";
+    if (only.empty() || only == "table") test_prefix_sentence_table(engine);
+    if (only.empty() || only == "performance") std::cerr << "stage: performance\n";
+    if (only.empty() || only == "performance") test_bounded_performance(engine);
+    std::filesystem::remove(path);
+    if (failures != 0) {
+        std::cerr << failures << " incremental decoder test(s) failed\n";
+        return 1;
+    }
+    std::cout << "All incremental decoder tests passed\n";
+    return 0;
+}

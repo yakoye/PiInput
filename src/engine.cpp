@@ -1,9 +1,9 @@
 #include "piinput/engine.h"
 #include "piinput/full_pinyin_variants.h"
+#include "piinput/incremental_decoder.h"
 #include "piinput/pinyin_prefix.h"
 
 #include <algorithm>
-#include <cmath>
 #include <limits>
 #include <stdexcept>
 #include <unordered_map>
@@ -11,16 +11,6 @@
 
 namespace piinput {
 namespace {
-
-constexpr std::int64_t exact_phrase_bonus = 30'000'000;
-constexpr std::int64_t token_penalty = 12'000'000;
-constexpr std::int64_t joined_syllable_bonus = 4'000'000;
-constexpr std::int64_t incomplete_input_penalty = 8'000'000;
-constexpr std::int64_t completion_character_penalty = 100'000;
-
-[[nodiscard]] std::int64_t frequency_score(const std::uint32_t weight) {
-    return static_cast<std::int64_t>(std::log1p(static_cast<double>(weight)) * 1'000'000.0);
-}
 
 [[nodiscard]] bool is_full_pinyin_schema(const std::string_view schema) {
     return schema == "full" || schema == "full-pinyin" || schema == "pinyin";
@@ -131,7 +121,7 @@ std::vector<EngineCandidate> Engine::query(
     const std::string& input,
     const std::string& schema,
     const std::size_t limit) const {
-    return query(input, schema, limit, default_settings().pinyin);
+    return query(input, schema, limit, default_settings());
 }
 
 std::vector<EngineCandidate> Engine::query(
@@ -139,182 +129,124 @@ std::vector<EngineCandidate> Engine::query(
     const std::string& schema,
     const std::size_t limit,
     const PinyinSettings& settings) const {
-    if (limit == 0U) {
-        return {};
-    }
-    std::vector<std::string> full_variants;
-    std::vector<PinyinSegmentation> segmentations;
-    if (is_full_pinyin_schema(schema)) {
-        auto decoded = decode_full_pinyin(input, settings, 24U, pinyin_);
-        full_variants = std::move(decoded.variants);
-        segmentations = std::move(decoded.segmentations);
-    } else {
-        segmentations = shuangpin_.decode(schema, input, 24U);
-    }
-    std::unordered_map<std::string, EngineCandidate> best;
+    SettingsSnapshot snapshot = default_settings();
+    snapshot.pinyin = settings;
+    snapshot.candidates.max_items = (std::numeric_limits<std::uint32_t>::max)();
+    return query(input, schema, limit, snapshot);
+}
 
-    const bool merge_full_variant_words = is_full_pinyin_schema(schema) && full_variants.size() > 1U;
-    auto submit = [&best, merge_full_variant_words](EngineCandidate candidate) {
-        const std::string key = merge_full_variant_words
-            ? candidate.word
-            : candidate.word + "\n" + candidate.pinyin;
-        const auto found = best.find(key);
-        if (found == best.end() || candidate.score > found->second.score) {
-            best[key] = std::move(candidate);
-        }
+std::vector<EngineCandidate> Engine::query(
+    const std::string& input,
+    const std::string& schema,
+    const std::size_t limit,
+    const SettingsSnapshot& settings) const {
+    const std::size_t result_limit = (std::min)(
+        limit, static_cast<std::size_t>(settings.candidates.max_items));
+    if (result_limit == 0U || input.empty() || entry_count() == 0U) return {};
+
+    constexpr std::size_t parse_limit = 24U;
+    std::vector<IncrementalParse> parses;
+    std::unordered_set<std::string> seen_parses;
+    bool merge_full_variant_words = false;
+    auto add_parse = [&parses, &seen_parses](IncrementalParse parse) {
+        const std::string key = parse.canonical_prefix + "\n" + parse.trailing_prefix;
+        if (seen_parses.insert(key).second) parses.push_back(std::move(parse));
     };
 
-    if (segmentations.empty()) {
-        std::vector<PinyinPrefix> prefixes;
+    try {
         if (is_full_pinyin_schema(schema)) {
-            std::unordered_set<std::string> seen_prefixes;
-            for (const auto& variant : full_variants) {
-                for (auto& prefix : expand_input_prefix(variant, schema, pinyin_, shuangpin_, 24U)) {
-                    if (!seen_prefixes.insert(prefix.canonical_prefix).second) {
-                        continue;
-                    }
-                    prefixes.push_back(std::move(prefix));
-                    if (prefixes.size() == 24U) {
-                        break;
-                    }
+            const auto variants = normalize_full_pinyin_variants(input, settings.pinyin, parse_limit);
+            merge_full_variant_words = variants.size() > 1U;
+            for (const auto& variant : variants) {
+                for (const auto& segmentation : pinyin_.segment(variant, parse_limit)) {
+                    add_parse(IncrementalParse{
+                        segmentation.syllables, {}, segmentation.canonical, segmentation.score});
                 }
-                if (prefixes.size() == 24U) {
-                    break;
+                if (!settings.pinyin.incomplete_candidates) continue;
+                for (const auto& prefix : expand_input_prefix(
+                         variant, schema, pinyin_, shuangpin_, parse_limit)) {
+                    add_parse(IncrementalParse{
+                        prefix.complete_syllables,
+                        prefix.trailing_prefix,
+                        prefix.canonical_prefix,
+                        prefix.score,
+                    });
                 }
             }
         } else {
-            prefixes = expand_input_prefix(input, schema, pinyin_, shuangpin_, 24U);
-        }
-        for (std::size_t prefix_index = 0U; prefix_index < prefixes.size(); ++prefix_index) {
-            const auto& prefix = prefixes[prefix_index];
-            const auto candidates = query_prefix(
-                prefix.canonical_prefix,
-                (std::max<std::size_t>)(limit * 16U, 64U),
-                4096U);
-            for (const auto& candidate : candidates) {
-                const std::size_t remaining = candidate.pinyin.size() - prefix.canonical_prefix.size();
-                submit(EngineCandidate{
-                    candidate.word,
-                    candidate.pinyin,
-                    candidate.weight,
-                    frequency_score(candidate.weight) +
-                        user_model_.score_adjustment(candidate.pinyin, candidate.word) +
-                        prefix.score - incomplete_input_penalty -
-                        static_cast<std::int64_t>(remaining) * completion_character_penalty -
-                        static_cast<std::int64_t>(prefix_index * 20U),
-                });
+            for (const auto& segmentation : shuangpin_.decode(schema, input, parse_limit)) {
+                add_parse(IncrementalParse{
+                    segmentation.syllables, {}, segmentation.canonical, segmentation.score});
+            }
+            if (settings.pinyin.incomplete_candidates) {
+                for (const auto& prefix : expand_input_prefix(
+                         input, schema, pinyin_, shuangpin_, parse_limit)) {
+                    add_parse(IncrementalParse{
+                        prefix.complete_syllables,
+                        prefix.trailing_prefix,
+                        prefix.canonical_prefix,
+                        prefix.score,
+                    });
+                }
             }
         }
+    } catch (const std::invalid_argument&) {
+        return {};
     }
 
-    for (std::size_t segmentation_index = 0U; segmentation_index < segmentations.size(); ++segmentation_index) {
-        const auto& segmentation = segmentations[segmentation_index];
-        const int segmentation_penalty = static_cast<int>(segmentation_index * 20U);
+    IncrementalDecoder decoder(
+        [this](const std::string_view pinyin, const std::size_t query_limit) {
+            return query_exact(std::string(pinyin), query_limit);
+        },
+        [this](const std::string_view prefix, const std::size_t query_limit, const std::size_t scan_limit) {
+            return query_prefix(std::string(prefix), query_limit, scan_limit);
+        },
+        [this](const std::string_view pinyin, const std::string_view word) {
+            return user_model_.score_adjustment(std::string(pinyin), std::string(word));
+        });
+    const auto decoded = decoder.decode(parses, IncrementalDecodeOptions{
+        static_cast<std::size_t>(settings.pinyin.prefix_beam_width),
+        static_cast<std::size_t>(settings.pinyin.prefix_scan_limit),
+        result_limit,
+        8U,
+        settings.pinyin.incomplete_candidates,
+    });
 
-        const auto exact_candidates = query_exact(segmentation.canonical, limit * 4U);
-        for (const auto& candidate : exact_candidates) {
-            submit(EngineCandidate{
-                candidate.word,
-                candidate.pinyin,
-                candidate.weight,
-                frequency_score(candidate.weight) +
-                    user_model_.score_adjustment(candidate.pinyin, candidate.word) +
-                    segmentation.score - segmentation_penalty +
-                    (segmentation.syllables.size() > 1U ? exact_phrase_bonus : 0),
-            });
+    std::unordered_map<std::string, EngineCandidate> best;
+    auto better = [](const EngineCandidate& left, const EngineCandidate& right) {
+        if (left.score != right.score) return left.score > right.score;
+        if (left.base_weight != right.base_weight) return left.base_weight > right.base_weight;
+        if (left.consumed_syllables != right.consumed_syllables) {
+            return left.consumed_syllables > right.consumed_syllables;
         }
-
-        if (segmentation.syllables.size() <= 1U) {
-            continue;
-        }
-
-        struct SentencePath {
-            std::string text;
-            std::uint32_t aggregate_weight{};
-            std::int64_t score{};
+        if (left.word_count != right.word_count) return left.word_count < right.word_count;
+        if (left.word != right.word) return left.word < right.word;
+        return left.pinyin < right.pinyin;
+    };
+    for (const auto& candidate : decoded) {
+        EngineCandidate converted{
+            candidate.word,
+            candidate.pinyin,
+            candidate.base_weight,
+            candidate.score,
+            candidate.consumed_syllables,
+            candidate.word_count,
         };
-        std::vector<std::vector<SentencePath>> states(segmentation.syllables.size() + 1U);
-        states[0U].push_back(SentencePath{});
-        constexpr std::size_t max_word_syllables = 8U;
-        constexpr std::size_t beam_width = 32U;
-
-        for (std::size_t start_position = 0U; start_position < segmentation.syllables.size(); ++start_position) {
-            if (states[start_position].empty()) {
-                continue;
-            }
-            const std::size_t max_end = (std::min)(
-                segmentation.syllables.size(),
-                start_position + max_word_syllables);
-            std::vector<std::string> span_syllables;
-            for (std::size_t end_position = start_position + 1U; end_position <= max_end; ++end_position) {
-                span_syllables.push_back(segmentation.syllables[end_position - 1U]);
-                const std::string span_pinyin = PinyinSegmenter::join(span_syllables);
-                const auto words = query_exact(span_pinyin, 8U);
-                if (words.empty()) {
-                    continue;
-                }
-                auto& destination = states[end_position];
-                for (const auto& path : states[start_position]) {
-                    for (const auto& word : words) {
-                        SentencePath next = path;
-                        next.text.append(word.word);
-                        const std::uint64_t total_weight = static_cast<std::uint64_t>(next.aggregate_weight) + word.weight;
-                        next.aggregate_weight = static_cast<std::uint32_t>((std::min)(
-                            total_weight,
-                            static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max())));
-                        const std::size_t syllable_count = end_position - start_position;
-                        next.score += frequency_score(word.weight) - token_penalty +
-                            user_model_.score_adjustment(span_pinyin, word.word) +
-                            static_cast<std::int64_t>(syllable_count - 1U) * joined_syllable_bonus;
-                        destination.push_back(std::move(next));
-                    }
-                }
-                std::stable_sort(destination.begin(), destination.end(), [](const SentencePath& left, const SentencePath& right) {
-                    if (left.score != right.score) {
-                        return left.score > right.score;
-                    }
-                    return left.text < right.text;
-                });
-                if (destination.size() > beam_width) {
-                    destination.resize(beam_width);
-                }
-            }
-        }
-
-        for (const auto& path : states.back()) {
-            submit(EngineCandidate{
-                path.text,
-                segmentation.canonical,
-                path.aggregate_weight,
-                path.score + segmentation.score - segmentation_penalty,
-            });
+        const std::string key = merge_full_variant_words
+            ? converted.word : converted.word + "\n" + converted.pinyin;
+        const auto found = best.find(key);
+        if (found == best.end() || better(converted, found->second)) {
+            best[key] = std::move(converted);
         }
     }
-
     std::vector<EngineCandidate> results;
     results.reserve(best.size());
     for (auto& [key, candidate] : best) {
         (void)key;
         results.push_back(std::move(candidate));
     }
-    std::stable_sort(results.begin(), results.end(), [](const EngineCandidate& left, const EngineCandidate& right) {
-        if (left.score != right.score) {
-            return left.score > right.score;
-        }
-        if (left.base_weight != right.base_weight) {
-            return left.base_weight > right.base_weight;
-        }
-        if (left.word.size() != right.word.size()) {
-            return left.word.size() > right.word.size();
-        }
-        if (left.word != right.word) {
-            return left.word < right.word;
-        }
-        return left.pinyin < right.pinyin;
-    });
-    if (results.size() > limit) {
-        results.resize(limit);
-    }
+    std::sort(results.begin(), results.end(), better);
+    if (results.size() > result_limit) results.resize(result_limit);
     return results;
 }
 

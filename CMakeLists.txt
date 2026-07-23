@@ -31,6 +31,7 @@ add_library(piinput_core STATIC
     src/dictionary_builder.cpp
     src/candidate_paging.cpp
     src/input_mode.cpp
+    src/incremental_decoder.cpp
     src/full_pinyin_variants.cpp
     src/pinyin.cpp
     src/pinyin_prefix.cpp
@@ -186,6 +187,15 @@ if(PIINPUT_BUILD_TESTS)
     target_link_libraries(piinput-full-pinyin-variants-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-full-pinyin-variants-tests)
 
+    add_executable(piinput-incremental-decoder-tests
+        tests/incremental_decoder_tests.cpp
+    )
+    target_link_libraries(piinput-incremental-decoder-tests PRIVATE piinput_core)
+    target_compile_definitions(piinput-incremental-decoder-tests PRIVATE
+        PIINPUT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+    piinput_enable_warnings(piinput-incremental-decoder-tests)
+
     if(WIN32)
         add_executable(piinput-installer-layout-tests
             tests/installer_layout_tests.cpp
@@ -198,6 +208,7 @@ if(PIINPUT_BUILD_TESTS)
     add_test(NAME piinput-core-tests COMMAND piinput-core-tests)
     add_test(NAME piinput-settings-tests COMMAND piinput-settings-tests)
     add_test(NAME piinput-full-pinyin-variants COMMAND piinput-full-pinyin-variants-tests)
+    add_test(NAME piinput-incremental-decoder COMMAND piinput-incremental-decoder-tests)
 
     if(WIN32)
         add_test(NAME piinput-installer-layout-tests COMMAND piinput-installer-layout-tests)

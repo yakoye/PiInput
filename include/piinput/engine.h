@@ -21,6 +21,8 @@ struct EngineCandidate {
     std::string pinyin;
     std::uint32_t base_weight{};
     std::int64_t score{};
+    std::size_t consumed_syllables{};
+    std::size_t word_count{};
 };
 
 class Engine final {
@@ -56,6 +58,12 @@ public:
         const std::string& schema,
         std::size_t limit,
         const PinyinSettings& settings) const;
+
+    [[nodiscard]] std::vector<EngineCandidate> query(
+        const std::string& input,
+        const std::string& schema,
+        std::size_t limit,
+        const SettingsSnapshot& settings) const;
 
     [[nodiscard]] std::size_t entry_count() const noexcept;
     [[nodiscard]] const ShuangpinDecoder& shuangpin() const noexcept;

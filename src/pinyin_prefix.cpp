@@ -64,9 +64,9 @@ void sort_and_limit(std::vector<PinyinPrefix>& results, const std::size_t limit)
     std::vector<PinyinPrefix> results;
     const std::size_t separator = normalized.rfind('\'');
     const std::size_t first_tail = separator == std::string::npos ? 0U : separator + 1U;
-    const std::size_t last_tail = separator == std::string::npos ? normalized.size() : first_tail + 1U;
+    const std::size_t last_tail = normalized.size();
 
-    for (std::size_t tail_start = first_tail; tail_start < last_tail && tail_start < normalized.size(); ++tail_start) {
+    for (std::size_t tail_start = first_tail; tail_start < last_tail; ++tail_start) {
         const std::string trailing = normalized.substr(tail_start);
         if (trailing.find('\'') != std::string::npos || !pinyin.is_valid_prefix(trailing)) {
             continue;

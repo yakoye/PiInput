@@ -1,0 +1,14 @@
+# schema	encoded	canonical	target	promised_min_prefix
+full	mingtian	ming'tian	明天	1
+flypy	mktm	ming'tian	明天	1
+full	ruguo	ru'guo	如果	1
+flypy	rugo	ru'guo	如果	1
+full	jugelizi	ju'ge'li'zi	举个例子	1
+full	jvgelizi	ju'ge'li'zi	举个例子	1
+full	woyao	wo'yao	我要	1
+full	biru	bi'ru	比如	1
+full	xian	xi'an	西安	1
+flypy	biru	bi'ru	比如	3
+flypy	biruwoycuibuvidc	bi'ru'wo'yao'shi'bu'zhi'dao	比如我要是不知道	3
+full	wo'jin'tian'xia'wu'yao'qu'chao'shi'mai'dian'shui'guo	wo'jin'tian'xia'wu'yao'qu'chao'shi'mai'dian'shui'guo	我今天下午要去超市买点水果	1
+full	gu'jian'kai'fa'xu'yao'shu'xi'di'ceng'ji'cun'qi'pei'zhi'he'lian'lu'zhuang'tai'ji	gu'jian'kai'fa'xu'yao'shu'xi'di'ceng'ji'cun'qi'pei'zhi'he'lian'lu'zhuang'tai'ji	固件开发需要熟悉底层寄存器配置和链路状态机	1
