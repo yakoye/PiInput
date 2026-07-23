@@ -262,6 +262,12 @@ if(PIINPUT_BUILD_TESTS)
                 -NoProfile
                 -File ${CMAKE_SOURCE_DIR}/tests/uninstall_fail_closed_regression.ps1
         )
+        add_test(
+            NAME piinput-candidate-settings-script-regression
+            COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
+                -NoProfile
+                -File ${CMAKE_SOURCE_DIR}/tests/candidate_settings_script_regression.ps1
+        )
     endif()
     add_test(
         NAME piinput-windows-source-regression

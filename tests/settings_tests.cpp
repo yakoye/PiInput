@@ -669,6 +669,23 @@ void test_manager_candidate_grid_settings_apply_only_at_boundary() {
     std::filesystem::remove(path);
 }
 
+void test_settings_poll_throttle_limits_boundary_file_checks() {
+    using namespace std::chrono_literals;
+    using Clock = std::chrono::steady_clock;
+
+    piinput::SettingsPollThrottle throttle(1s);
+    const Clock::time_point initial{10s};
+    check(throttle.should_poll(initial), "settings poll is due initially");
+
+    throttle.mark_polled(initial);
+    check(!throttle.should_poll(initial), "same-boundary settings poll is throttled");
+    check(!throttle.should_poll(initial + 999ms), "settings poll remains throttled before one second");
+    check(throttle.should_poll(initial + 1s), "settings poll is due after one second");
+
+    throttle.mark_polled(initial + 1s);
+    check(!throttle.should_poll(initial + 1500ms), "new poll restarts the throttle interval");
+}
+
 void test_concurrent_current_reads() {
     const auto path = std::filesystem::temp_directory_path() / "piinput-settings-manager-concurrent.ini";
     const std::string compact =
@@ -738,6 +755,7 @@ int main() {
     test_manager_boundary_generation_and_immutability();
     test_manager_partial_errors_and_hot_reload_false();
     test_manager_candidate_grid_settings_apply_only_at_boundary();
+    test_settings_poll_throttle_limits_boundary_file_checks();
     test_concurrent_current_reads();
 
     if (failures != 0) {

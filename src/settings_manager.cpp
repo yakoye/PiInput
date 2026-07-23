@@ -45,6 +45,18 @@ public:
 
 }  // namespace
 
+SettingsPollThrottle::SettingsPollThrottle(const Duration interval) noexcept
+    : interval_(interval > Duration::zero() ? interval : Duration::zero()) {}
+
+bool SettingsPollThrottle::should_poll(const TimePoint now) const noexcept {
+    return !last_poll_.has_value() ||
+        (now >= *last_poll_ && now - *last_poll_ >= interval_);
+}
+
+void SettingsPollThrottle::mark_polled(const TimePoint now) noexcept {
+    last_poll_ = now;
+}
+
 SettingsManager::SettingsManager(std::filesystem::path path)
     : path_(std::move(path)),
       log_path_(path_.parent_path() / "logs" / "settings.log"),

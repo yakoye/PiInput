@@ -47,6 +47,9 @@ void write_schema(const std::string& schema) {
     const auto path = local_app_data() / L"PiInput" / L"UserData" / L"settings.ini";
     std::filesystem::create_directories(path.parent_path());
     std::vector<std::string> lines;
+    bool in_general = false;
+    bool in_named_section = false;
+    bool found_general = false;
     {
         std::ifstream input(path, std::ios::binary);
         std::string line;
@@ -54,12 +57,29 @@ void write_schema(const std::string& schema) {
             if (!line.empty() && line.back() == '\r') {
                 line.pop_back();
             }
-            if (line.rfind("schema=", 0U) != 0U) {
-                lines.push_back(std::move(line));
+            if (line.size() >= 2U && line.front() == '[' && line.back() == ']') {
+                in_named_section = true;
+                in_general = line == "[general]";
+                found_general = found_general || in_general;
+                lines.push_back(line);
+                if (in_general) {
+                    lines.push_back("schema=" + schema);
+                }
+                continue;
             }
+            if ((in_general || !in_named_section) && line.rfind("schema=", 0U) == 0U) {
+                continue;
+            }
+            lines.push_back(std::move(line));
         }
     }
-    lines.push_back("schema=" + schema);
+    if (!found_general) {
+        if (!lines.empty() && !lines.back().empty()) {
+            lines.emplace_back();
+        }
+        lines.push_back("[general]");
+        lines.push_back("schema=" + schema);
+    }
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
     if (!output) {
         throw std::runtime_error("Cannot write settings.ini");
@@ -78,13 +98,29 @@ void write_schema(const std::string& schema) {
     const auto path = local_app_data() / L"PiInput" / L"UserData" / L"settings.ini";
     std::ifstream input(path, std::ios::binary);
     std::string line;
+    std::string legacy;
+    bool in_general = false;
+    bool in_named_section = false;
     while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (line.size() >= 2U && line.front() == '[' && line.back() == ']') {
+            in_named_section = true;
+            in_general = line == "[general]";
+            continue;
+        }
         constexpr std::string_view prefix = "schema=";
         if (line.rfind(prefix, 0U) == 0U) {
-            return line.substr(prefix.size());
+            if (in_general) {
+                return line.substr(prefix.size());
+            }
+            if (!in_named_section) {
+                legacy = line.substr(prefix.size());
+            }
         }
     }
-    return "full";
+    return legacy.empty() ? "full" : legacy;
 }
 
 [[nodiscard]] int print_hresult_failure(const char* operation, const HRESULT result, const int exit_code) {

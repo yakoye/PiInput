@@ -183,9 +183,14 @@ void initialize_user_settings(const std::filesystem::path& user_data) {
     const auto settings = user_data / L"settings.ini";
     if (!std::filesystem::exists(settings)) {
         std::ofstream output(settings, std::ios::binary | std::ios::trunc);
-        output << "schema=flypy\n"
-               << "single_syllable_page_size=9\n"
-               << "phrase_page_size=6\n";
+        output << "[general]\n"
+               << "schema=flypy\n"
+               << "hot_reload=true\n"
+               << "\n"
+               << "[candidates]\n"
+               << "items_per_row=6\n"
+               << "visible_rows=3\n"
+               << "max_items=90\n";
     }
 }
 

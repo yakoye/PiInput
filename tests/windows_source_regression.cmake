@@ -11,6 +11,7 @@ file(READ "${PIINPUT_SOURCE_DIR}/refresh-installed-dev.ps1" refresh_text)
 file(READ "${PIINPUT_SOURCE_DIR}/uninstall-dev.ps1" uninstall_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/windows/resolve-installed-dev.ps1" resolver_text)
 file(READ "${PIINPUT_SOURCE_DIR}/install-dev.ps1" install_text)
+file(READ "${PIINPUT_SOURCE_DIR}/set-candidate-page-size.ps1" candidate_settings_script_text)
 file(READ "${PIINPUT_SOURCE_DIR}/setup-dev.ps1" setup_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/text_service.cpp" text_service_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/text_service.h" text_service_header_text)
@@ -22,6 +23,35 @@ if(NOT EXISTS "${PIINPUT_SOURCE_DIR}/platform/windows/installer/main.cpp")
 endif()
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/installer/main.cpp" installer_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/installer/install_layout.cpp" installer_layout_text)
+
+foreach(settings_writer IN ITEMS candidate_settings_script_text install_text installer_text)
+    if("${${settings_writer}}" MATCHES
+        "single_syllable_page_size=[0-9]|phrase_page_size=[0-9]")
+        message(FATAL_ERROR "Runtime settings writers must not emit obsolete paging keys")
+    endif()
+endforeach()
+if(NOT candidate_settings_script_text MATCHES "ItemsPerRow" OR
+   NOT candidate_settings_script_text MATCHES "VisibleRows" OR
+   NOT candidate_settings_script_text MATCHES "MaxItems" OR
+   NOT candidate_settings_script_text MATCHES "\\[candidates\\]")
+    message(FATAL_ERROR "Candidate settings script must write the modern candidate grid section")
+endif()
+if(NOT installer_text MATCHES "\\[general\\]" OR
+   NOT installer_text MATCHES "\\[candidates\\]" OR
+   NOT installer_text MATCHES "items_per_row=6" OR
+   NOT installer_text MATCHES "visible_rows=3" OR
+   NOT installer_text MATCHES "max_items=90")
+    message(FATAL_ERROR "Native installer defaults must use the modern settings format")
+endif()
+if(NOT install_text MATCHES "\\[candidates\\]" OR
+   NOT install_text MATCHES "items_per_row" OR
+   NOT install_text MATCHES "visible_rows" OR
+   NOT install_text MATCHES "max_items")
+    message(FATAL_ERROR "Developer installer must ensure modern candidate defaults")
+endif()
+if(NOT profile_text MATCHES "\\[general\\]")
+    message(FATAL_ERROR "Profile schema writer must use the modern [general] section")
+endif()
 
 if(cmake_text MATCHES "target_link_libraries\\(PiInputTSF[^\\)]*msctf")
     message(FATAL_ERROR "PiInputTSF must not link a non-existent msctf import library")
@@ -123,6 +153,11 @@ endif()
 if(NOT text_service_header_text MATCHES "SettingsManager" OR
    NOT text_service_header_text MATCHES "settings_manager_")
     message(FATAL_ERROR "TSF must own the shared SettingsManager")
+endif()
+if(NOT text_service_header_text MATCHES "SettingsPollThrottle settings_poll_throttle_" OR
+   NOT text_service_text MATCHES "settings_poll_throttle_\\.should_poll" OR
+   NOT text_service_text MATCHES "SettingsPollThrottle::Clock::now")
+    message(FATAL_ERROR "TSF settings file polling must be throttled with steady_clock")
 endif()
 if(NOT text_service_text MATCHES "SettingsManager>\\(data_root / L\"settings\\.ini\"\\)" OR
    NOT text_service_text MATCHES "settings_manager_->poll\\(\\)" OR

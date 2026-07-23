@@ -1,24 +1,65 @@
 param(
-    [ValidateRange(1, 9)]
-    [int]$SingleSyllable = 9,
-    [ValidateRange(1, 9)]
-    [int]$Phrase = 6
+    [ValidateRange(5, 9)]
+    [int]$ItemsPerRow = 6,
+    [ValidateRange(1, 5)]
+    [int]$VisibleRows = 3,
+    [ValidateRange(9, 180)]
+    [int]$MaxItems = 90
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
+if ($MaxItems -lt $ItemsPerRow * $VisibleRows) {
+    throw "MaxItems must be at least ItemsPerRow * VisibleRows."
+}
+
 $SettingsDirectory = Join-Path $env:LOCALAPPDATA "PiInput/UserData"
 $SettingsPath = Join-Path $SettingsDirectory "settings.ini"
 New-Item $SettingsDirectory -ItemType Directory -Force | Out-Null
-$preserved = @()
-if (Test-Path $SettingsPath) {
-    $preserved = @(Get-Content $SettingsPath | Where-Object {
-        $_ -notmatch '^(single_syllable_page_size|phrase_page_size)='
-    })
+
+$Lines = if (Test-Path $SettingsPath) { @(Get-Content $SettingsPath) } else { @() }
+$Output = @()
+$InCandidates = $false
+$FoundCandidates = $false
+
+foreach ($Line in $Lines) {
+    if ($Line -match '^\s*\[([^\]]+)\]\s*$') {
+        if ($InCandidates) {
+            $Output += "items_per_row=$ItemsPerRow"
+            $Output += "visible_rows=$VisibleRows"
+            $Output += "max_items=$MaxItems"
+        }
+        $InCandidates = $Matches[1] -ieq "candidates"
+        $FoundCandidates = $FoundCandidates -or $InCandidates
+        $Output += $Line
+        continue
+    }
+    if ($Line -match '^\s*(single_syllable_page_size|phrase_page_size)\s*=') {
+        continue
+    }
+    if ($InCandidates -and
+        $Line -match '^\s*(items_per_row|visible_rows|max_items)\s*=') {
+        continue
+    }
+    $Output += $Line
 }
-@(
-    $preserved
-    "single_syllable_page_size=$SingleSyllable"
-    "phrase_page_size=$Phrase"
-) | Set-Content $SettingsPath -Encoding ASCII
-Write-Host "PiInput candidate page sizes saved: single=$SingleSyllable, phrase=$Phrase" -ForegroundColor Green
-Write-Host "Switch away from PiInput and back once to reload the settings." -ForegroundColor Cyan
+
+if ($InCandidates) {
+    $Output += "items_per_row=$ItemsPerRow"
+    $Output += "visible_rows=$VisibleRows"
+    $Output += "max_items=$MaxItems"
+} elseif (-not $FoundCandidates) {
+    if ($Output.Count -gt 0 -and $Output[-1] -ne "") {
+        $Output += ""
+    }
+    $Output += "[candidates]"
+    $Output += "items_per_row=$ItemsPerRow"
+    $Output += "visible_rows=$VisibleRows"
+    $Output += "max_items=$MaxItems"
+}
+
+$Output | Set-Content $SettingsPath -Encoding ASCII
+Write-Host "PiInput candidate layout saved: columns=$ItemsPerRow, rows=$VisibleRows, max=$MaxItems" `
+    -ForegroundColor Green
+Write-Host "The new layout will apply at the next composition boundary." -ForegroundColor Cyan

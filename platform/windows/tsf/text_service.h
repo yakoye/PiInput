@@ -90,6 +90,7 @@ private:
     std::vector<std::string> symbol_candidates_;
     bool symbol_mode_{};
     std::unique_ptr<SettingsManager> settings_manager_;
+    SettingsPollThrottle settings_poll_throttle_;
     SettingsSnapshot settings_;
     CandidateGrid candidate_grid_;
     CandidateWindow candidate_window_;

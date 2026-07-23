@@ -92,13 +92,53 @@ $UserDataDirectory = Join-Path $env:LOCALAPPDATA "PiInput/UserData"
 $CandidateSettings = Join-Path $UserDataDirectory "settings.ini"
 New-Item $UserDataDirectory -ItemType Directory -Force | Out-Null
 $settingsLines = if (Test-Path $CandidateSettings) { @(Get-Content $CandidateSettings) } else { @() }
-if (-not ($settingsLines -match '^single_syllable_page_size=')) {
-    $settingsLines += "single_syllable_page_size=9"
+$updatedSettings = @()
+$inCandidates = $false
+$foundCandidates = $false
+$candidateKeys = @{
+    items_per_row = $false
+    visible_rows = $false
+    max_items = $false
 }
-if (-not ($settingsLines -match '^phrase_page_size=')) {
-    $settingsLines += "phrase_page_size=6"
+foreach ($line in $settingsLines) {
+    if ($line -match '^\s*\[([^\]]+)\]\s*$') {
+        if ($inCandidates) {
+            if (-not $candidateKeys.items_per_row) { $updatedSettings += "items_per_row=6" }
+            if (-not $candidateKeys.visible_rows) { $updatedSettings += "visible_rows=3" }
+            if (-not $candidateKeys.max_items) { $updatedSettings += "max_items=90" }
+        }
+        $inCandidates = $Matches[1] -ieq "candidates"
+        if ($inCandidates) {
+            $foundCandidates = $true
+            $candidateKeys.items_per_row = $false
+            $candidateKeys.visible_rows = $false
+            $candidateKeys.max_items = $false
+        }
+        $updatedSettings += $line
+        continue
+    }
+    if ($line -match '^\s*(single_syllable_page_size|phrase_page_size)\s*=') {
+        continue
+    }
+    if ($inCandidates -and $line -match '^\s*(items_per_row|visible_rows|max_items)\s*=') {
+        $candidateKeys[$Matches[1]] = $true
+    }
+    $updatedSettings += $line
 }
-$settingsLines | Set-Content $CandidateSettings -Encoding ASCII
+if ($inCandidates) {
+    if (-not $candidateKeys.items_per_row) { $updatedSettings += "items_per_row=6" }
+    if (-not $candidateKeys.visible_rows) { $updatedSettings += "visible_rows=3" }
+    if (-not $candidateKeys.max_items) { $updatedSettings += "max_items=90" }
+} elseif (-not $foundCandidates) {
+    if ($updatedSettings.Count -gt 0 -and $updatedSettings[-1] -ne "") {
+        $updatedSettings += ""
+    }
+    $updatedSettings += "[candidates]"
+    $updatedSettings += "items_per_row=6"
+    $updatedSettings += "visible_rows=3"
+    $updatedSettings += "max_items=90"
+}
+$updatedSettings | Set-Content $CandidateSettings -Encoding ASCII
 
 Invoke-NativeRequired -Description "Saving the PiInput input schema" -Command {
     & $ProfileTool --schema $Schema

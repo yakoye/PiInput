@@ -3,6 +3,7 @@
 #include "piinput/settings.h"
 
 #include <atomic>
+#include <chrono>
 #include <filesystem>
 #include <memory>
 #include <mutex>
@@ -11,6 +12,23 @@
 #include <vector>
 
 namespace piinput {
+
+class SettingsPollThrottle final {
+public:
+    using Clock = std::chrono::steady_clock;
+    using TimePoint = Clock::time_point;
+    using Duration = Clock::duration;
+
+    explicit SettingsPollThrottle(
+        Duration interval = std::chrono::seconds{1}) noexcept;
+
+    [[nodiscard]] bool should_poll(TimePoint now) const noexcept;
+    void mark_polled(TimePoint now) noexcept;
+
+private:
+    Duration interval_;
+    std::optional<TimePoint> last_poll_;
+};
 
 struct SettingsFileMetadata {
     std::filesystem::file_time_type last_write_time;

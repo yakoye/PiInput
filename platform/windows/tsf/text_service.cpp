@@ -761,6 +761,7 @@ void TextService::load_engine() {
     symbols_.load_tsv(installed_data / L"symbols.tsv");
     schema_ = load_schema();
     settings_manager_ = std::make_unique<SettingsManager>(data_root / L"settings.ini");
+    settings_poll_throttle_.mark_polled(SettingsPollThrottle::Clock::now());
     apply_settings_at_composition_boundary();
 }
 
@@ -770,7 +771,11 @@ void TextService::apply_settings_at_composition_boundary() {
         return;
     }
 
-    settings_manager_->poll();
+    const auto now = SettingsPollThrottle::Clock::now();
+    if (settings_poll_throttle_.should_poll(now)) {
+        settings_manager_->poll();
+        settings_poll_throttle_.mark_polled(now);
+    }
     settings_manager_->apply_pending_at_composition_boundary();
     const auto next = settings_manager_->current();
     if (next == nullptr) {
