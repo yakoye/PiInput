@@ -7,10 +7,14 @@
 #include "piinput/shuangpin.h"
 #include "piinput/user_model.h"
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <memory>
+#include <shared_mutex>
 #include <string>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -27,6 +31,12 @@ struct EngineCandidate {
 
 class Engine final {
 public:
+    Engine();
+    Engine(const Engine& other);
+    Engine& operator=(const Engine& other);
+    Engine(Engine&& other) noexcept = default;
+    Engine& operator=(Engine&& other) noexcept = default;
+
     void load_lexicon(const std::filesystem::path& path);
     void load_user_model(const std::filesystem::path& path);
     void save_user_model(const std::filesystem::path& path) const;
@@ -69,6 +79,12 @@ public:
     [[nodiscard]] const ShuangpinDecoder& shuangpin() const noexcept;
 
 private:
+    struct PrefixQueryCache {
+        std::shared_mutex mutex;
+        std::unordered_map<std::string, std::vector<LexiconCandidate>> entries;
+        std::atomic<std::size_t> lexicon_entry_count{};
+    };
+
     [[nodiscard]] std::vector<LexiconCandidate> query_exact(
         const std::string& pinyin,
         std::size_t limit) const;
@@ -78,6 +94,7 @@ private:
         std::size_t scan_limit) const;
 
     std::variant<std::monostate, DevLexicon, BinaryLexicon> lexicon_;
+    mutable std::shared_ptr<PrefixQueryCache> prefix_query_cache_;
     PinyinSegmenter pinyin_;
     ShuangpinDecoder shuangpin_;
     UserModel user_model_;

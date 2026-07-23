@@ -5,6 +5,8 @@
 
 #include <algorithm>
 #include <limits>
+#include <mutex>
+#include <shared_mutex>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -45,16 +47,44 @@ struct FullPinyinDecodeResult {
 
 }  // namespace
 
+Engine::Engine()
+    : prefix_query_cache_(std::make_shared<PrefixQueryCache>()) {}
+
+Engine::Engine(const Engine& other)
+    : prefix_query_cache_(std::make_shared<PrefixQueryCache>()) {
+    std::shared_lock lock(other.prefix_query_cache_->mutex);
+    lexicon_ = other.lexicon_;
+    pinyin_ = other.pinyin_;
+    shuangpin_ = other.shuangpin_;
+    user_model_ = other.user_model_;
+    prefix_query_cache_->lexicon_entry_count.store(
+        other.prefix_query_cache_->lexicon_entry_count.load());
+}
+
+Engine& Engine::operator=(const Engine& other) {
+    if (this != &other) {
+        Engine copy(other);
+        *this = std::move(copy);
+    }
+    return *this;
+}
+
 void Engine::load_lexicon(const std::filesystem::path& path) {
+    std::unique_lock cache_lock(prefix_query_cache_->mutex);
+    prefix_query_cache_->entries.clear();
     if (is_binary_lexicon(path)) {
         BinaryLexicon lexicon;
         lexicon.load(path);
+        const std::size_t loaded_entry_count = lexicon.entry_count();
         lexicon_ = std::move(lexicon);
+        prefix_query_cache_->lexicon_entry_count.store(loaded_entry_count);
         return;
     }
     DevLexicon lexicon;
     lexicon.load_tsv(path);
+    const std::size_t loaded_entry_count = lexicon.entry_count();
     lexicon_ = std::move(lexicon);
+    prefix_query_cache_->lexicon_entry_count.store(loaded_entry_count);
 }
 
 
@@ -95,6 +125,7 @@ std::vector<PinyinSegmentation> Engine::decode(
 std::vector<LexiconCandidate> Engine::query_exact(
     const std::string& pinyin,
     const std::size_t limit) const {
+    std::shared_lock cache_lock(prefix_query_cache_->mutex);
     if (const auto* tsv = std::get_if<DevLexicon>(&lexicon_)) {
         return tsv->query_exact(pinyin, limit);
     }
@@ -108,13 +139,34 @@ std::vector<LexiconCandidate> Engine::query_prefix(
     const std::string& pinyin_prefix,
     const std::size_t limit,
     const std::size_t scan_limit) const {
+    const std::string cache_key = pinyin_prefix + "\n" +
+        std::to_string(limit) + "\n" + std::to_string(scan_limit);
+    {
+        std::shared_lock cache_lock(prefix_query_cache_->mutex);
+        const auto cached = prefix_query_cache_->entries.find(cache_key);
+        if (cached != prefix_query_cache_->entries.end()) {
+            return cached->second;
+        }
+    }
+    std::unique_lock cache_lock(prefix_query_cache_->mutex);
+    const auto cached = prefix_query_cache_->entries.find(cache_key);
+    if (cached != prefix_query_cache_->entries.end()) {
+        return cached->second;
+    }
+    std::vector<LexiconCandidate> result;
     if (const auto* tsv = std::get_if<DevLexicon>(&lexicon_)) {
-        return tsv->query_prefix(pinyin_prefix, limit, scan_limit);
+        result = tsv->query_prefix(pinyin_prefix, limit, scan_limit);
+    } else if (const auto* binary = std::get_if<BinaryLexicon>(&lexicon_)) {
+        result = binary->query_prefix(pinyin_prefix, limit, scan_limit);
+    } else {
+        throw std::runtime_error("No lexicon has been loaded");
     }
-    if (const auto* binary = std::get_if<BinaryLexicon>(&lexicon_)) {
-        return binary->query_prefix(pinyin_prefix, limit, scan_limit);
+    constexpr std::size_t cache_capacity = 128U;
+    if (prefix_query_cache_->entries.size() == cache_capacity) {
+        prefix_query_cache_->entries.clear();
     }
-    throw std::runtime_error("No lexicon has been loaded");
+    prefix_query_cache_->entries.try_emplace(cache_key, result);
+    return result;
 }
 
 std::vector<EngineCandidate> Engine::query(
@@ -194,6 +246,12 @@ std::vector<EngineCandidate> Engine::query(
         return {};
     }
 
+    IncrementalDecoder::UserScore user_score;
+    if (user_model_.entry_count() != 0U) {
+        user_score = [this](const std::string_view pinyin, const std::string_view word) {
+            return user_model_.score_adjustment(pinyin, word);
+        };
+    }
     IncrementalDecoder decoder(
         [this](const std::string_view pinyin, const std::size_t query_limit) {
             return query_exact(std::string(pinyin), query_limit);
@@ -201,9 +259,7 @@ std::vector<EngineCandidate> Engine::query(
         [this](const std::string_view prefix, const std::size_t query_limit, const std::size_t scan_limit) {
             return query_prefix(std::string(prefix), query_limit, scan_limit);
         },
-        [this](const std::string_view pinyin, const std::string_view word) {
-            return user_model_.score_adjustment(pinyin, word);
-        });
+        std::move(user_score));
     const auto decoded = decoder.decode(parses, IncrementalDecodeOptions{
         static_cast<std::size_t>(settings.pinyin.prefix_beam_width),
         static_cast<std::size_t>(settings.pinyin.prefix_scan_limit),
@@ -254,13 +310,7 @@ std::vector<EngineCandidate> Engine::query(
 }
 
 std::size_t Engine::entry_count() const noexcept {
-    if (const auto* tsv = std::get_if<DevLexicon>(&lexicon_)) {
-        return tsv->entry_count();
-    }
-    if (const auto* binary = std::get_if<BinaryLexicon>(&lexicon_)) {
-        return binary->entry_count();
-    }
-    return 0U;
+    return prefix_query_cache_->lexicon_entry_count.load();
 }
 
 const ShuangpinDecoder& Engine::shuangpin() const noexcept {

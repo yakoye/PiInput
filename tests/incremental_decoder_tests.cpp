@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <unordered_set>
 #include <vector>
 
@@ -127,6 +128,10 @@ void check(const bool condition, const std::string& message) {
 }
 
 void test_public_parse_contract() {
+    static_assert(std::is_copy_constructible_v<piinput::Engine>);
+    static_assert(std::is_copy_assignable_v<piinput::Engine>);
+    static_assert(std::is_nothrow_move_constructible_v<piinput::Engine>);
+    static_assert(std::is_nothrow_move_assignable_v<piinput::Engine>);
     const piinput::IncrementalParse parse{{"ming"}, "t", "ming't", 42};
     check(parse.complete_syllables.size() == 1U, "parse exposes complete syllables");
     check(parse.trailing_prefix == "t" && parse.canonical_prefix == "ming't",
@@ -498,6 +503,31 @@ void test_engine_direct_exact_tie_compatibility() {
     std::filesystem::remove(path);
 }
 
+void test_prefix_query_cache_is_invalidated_by_lexicon_reload() {
+    const auto path =
+        std::filesystem::temp_directory_path() / "piinput-prefix-cache-reload.tsv";
+    auto write_entry = [&](const std::string& word) {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n"
+               << word << "\tming\t1000\n";
+    };
+    piinput::Engine engine;
+    write_entry("旧");
+    engine.load_lexicon(path);
+    check(contains_word(engine.query("m", "full", 10U), "旧"),
+        "prefix query cache fixture primes the first lexicon");
+    piinput::Engine copied_engine = engine;
+    write_entry("新");
+    engine.load_lexicon(path);
+    const auto reloaded = engine.query("m", "full", 10U);
+    check(contains_word(reloaded, "新") && !contains_word(reloaded, "旧"),
+        "lexicon reload invalidates cached prefix query results");
+    const auto copied = copied_engine.query("m", "full", 10U);
+    check(contains_word(copied, "旧") && !contains_word(copied, "新"),
+        "copied engines keep independent prefix cache and lexicon state");
+    std::filesystem::remove(path);
+}
+
 void test_low_scan_budget_retains_complete_prefix_parses() {
     std::vector<piinput::IncrementalParse> parses;
     for (std::size_t parse_index = 0U; parse_index < 24U; ++parse_index) {
@@ -770,6 +800,7 @@ int main(const int argc, char** argv) {
         test_incomplete_prefix_keeps_user_score_headroom();
         test_direct_exact_ties_prefer_longer_words_then_dictionary_order();
         test_engine_direct_exact_tie_compatibility();
+        test_prefix_query_cache_is_invalidated_by_lexicon_reload();
         test_low_scan_budget_retains_complete_prefix_parses();
         test_low_scan_budget_keeps_short_parses_that_fit();
         test_max_word_syllable_limit_does_not_overflow();

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -19,24 +20,6 @@ constexpr std::int64_t completion_character_penalty = 100'000;
 
 [[nodiscard]] std::int64_t frequency_score(const std::uint32_t weight) {
     return static_cast<std::int64_t>(std::log1p(static_cast<double>(weight)) * 1'000'000.0);
-}
-
-[[nodiscard]] std::vector<std::string_view> split_syllables(const std::string_view pinyin) {
-    std::vector<std::string_view> result;
-    std::size_t start = 0U;
-    while (start <= pinyin.size()) {
-        const std::size_t separator = pinyin.find('\'', start);
-        const std::size_t end = separator == std::string_view::npos ? pinyin.size() : separator;
-        if (end == start) {
-            return {};
-        }
-        result.push_back(pinyin.substr(start, end - start));
-        if (separator == std::string_view::npos) {
-            break;
-        }
-        start = separator + 1U;
-    }
-    return result;
 }
 
 [[nodiscard]] std::string join_range(
@@ -58,30 +41,50 @@ constexpr std::int64_t completion_character_penalty = 100'000;
     return result;
 }
 
-[[nodiscard]] bool candidate_matches_boundary(
+[[nodiscard]] std::optional<std::size_t> matching_candidate_syllable_count(
     const LexiconCandidate& candidate,
     const std::vector<std::string>& complete,
     const std::size_t start,
     const std::string_view trailing) {
-    const auto candidate_syllables = split_syllables(candidate.pinyin);
     static const std::unordered_set<std::string_view> standard_syllables(
         PinyinSegmenter::standard_syllables().begin(),
         PinyinSegmenter::standard_syllables().end());
-    if (std::any_of(candidate_syllables.begin(), candidate_syllables.end(), [](const auto syllable) {
-            return !standard_syllables.contains(syllable);
-        })) {
-        return false;
-    }
     const std::size_t exact_count = complete.size() - start;
-    if (trailing.empty() || candidate_syllables.size() < exact_count + 1U) {
-        return false;
+    if (trailing.empty()) {
+        return std::nullopt;
     }
-    for (std::size_t index = 0U; index < exact_count; ++index) {
-        if (candidate_syllables[index] != complete[start + index]) {
-            return false;
+    std::size_t syllable_count = 0U;
+    std::size_t syllable_start = 0U;
+    while (syllable_start <= candidate.pinyin.size()) {
+        const std::size_t separator = candidate.pinyin.find('\'', syllable_start);
+        const std::size_t syllable_end = separator == std::string::npos
+            ? candidate.pinyin.size() : separator;
+        if (syllable_end == syllable_start) {
+            return std::nullopt;
         }
+        const std::string_view syllable(
+            candidate.pinyin.data() + syllable_start,
+            syllable_end - syllable_start);
+        if (!standard_syllables.contains(syllable)) {
+            return std::nullopt;
+        }
+        if (syllable_count < exact_count) {
+            if (syllable != complete[start + syllable_count]) {
+                return std::nullopt;
+            }
+        } else if (syllable_count == exact_count && !syllable.starts_with(trailing)) {
+            return std::nullopt;
+        }
+        ++syllable_count;
+        if (separator == std::string::npos) {
+            break;
+        }
+        syllable_start = separator + 1U;
     }
-    return candidate_syllables[exact_count].starts_with(trailing);
+    if (syllable_count < exact_count + 1U) {
+        return std::nullopt;
+    }
+    return syllable_count;
 }
 
 struct SentencePath {
@@ -423,18 +426,19 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
             std::vector<RankedPrefixWord> words;
             words.reserve(cached->second.size());
             for (const auto& word : cached->second) {
-                if (!candidate_matches_boundary(word, parse.complete_syllables, start, parse.trailing_prefix)) {
+                const auto word_syllable_count = matching_candidate_syllable_count(
+                    word, parse.complete_syllables, start, parse.trailing_prefix);
+                if (!word_syllable_count.has_value()) {
                     continue;
                 }
-                const auto word_syllables = split_syllables(word.pinyin);
                 const std::size_t remaining_characters = word.pinyin.size() - key.size();
                 words.push_back(RankedPrefixWord{
                     &word,
-                    word_syllables.size(),
+                    *word_syllable_count,
                     remaining_characters,
                     frequency_score(word.weight) - token_penalty +
                         (user_score_ ? user_score_(word.pinyin, word.word) : 0) +
-                        static_cast<std::int64_t>(word_syllables.size() - 1U) *
+                        static_cast<std::int64_t>(*word_syllable_count - 1U) *
                             joined_syllable_bonus,
                 });
             }
