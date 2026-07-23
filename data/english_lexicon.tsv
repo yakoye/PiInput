@@ -1,44 +1,44 @@
-# PiInput compact built-in development lexicon: word<TAB>weight
-about	1000
-after	980
-again	960
-all	940
-also	920
-Apple	900
-application	880
-apply	860
-because	840
-before	820
-between	800
-build	780
-candidate	760
-change	740
-code	720
-computer	700
-configuration	680
-data	660
-development	640
-dictionary	620
-English	600
-example	580
-feature	560
-first	540
-function	520
-input	500
-language	480
-learning	460
-local	440
-offline	420
-only	400
-prefix	380
-project	360
-release	340
-settings	320
-system	300
-test	280
-text	260
-update	240
-user	220
-window	200
-word	180
-work	160
+# PiInput compact built-in development lexicon: word<TAB>weight<TAB>flags
+about	1000	builtin
+after	980	builtin
+again	960	builtin
+all	940	builtin
+also	920	builtin
+Apple	900	proper
+application	880	builtin
+apply	860	builtin
+because	840	builtin
+before	820	builtin
+between	800	builtin
+build	780	builtin
+candidate	760	builtin
+change	740	builtin
+code	720	builtin
+computer	700	builtin
+configuration	680	builtin
+data	660	builtin
+development	640	builtin
+dictionary	620	builtin
+English	600	proper
+example	580	builtin
+feature	560	builtin
+first	540	builtin
+function	520	builtin
+input	500	builtin
+language	480	builtin
+learning	460	builtin
+local	440	builtin
+offline	420	builtin
+only	400	builtin
+prefix	380	builtin
+project	360	builtin
+release	340	builtin
+settings	320	builtin
+system	300	builtin
+test	280	builtin
+text	260	builtin
+update	240	builtin
+user	220	builtin
+window	200	builtin
+word	180	builtin
+work	160	builtin

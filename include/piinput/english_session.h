@@ -33,6 +33,7 @@ public:
     bool move_right();
     bool move_home() noexcept;
     bool move_end() noexcept;
+    void set_candidate_limit(std::size_t candidate_limit);
     void clear();
 
     [[nodiscard]] const EnglishSessionSnapshot& snapshot() const noexcept;

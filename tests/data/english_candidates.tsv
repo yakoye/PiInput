@@ -1,7 +1,7 @@
-Apple	200
-application	180
-apply	160
-apt	160
-banana	120
-Band	100
-bandwidth	80
+Apple	200	proper
+application	180	builtin
+apply	160	builtin
+apt	159	builtin
+banana	120	builtin
+Band	100	proper
+bandwidth	80	builtin

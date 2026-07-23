@@ -14,6 +14,7 @@ build.sh
 data/base_lexicon.tsv
 data/english_lexicon.tsv
 data/symbols.tsv
+dictionary_sources.json
 docs/01_product_definition.md
 docs/02_architecture.md
 docs/03_development_tasks.md
@@ -58,7 +59,9 @@ docs/release_notes_v0.1.6-dev.md
 examples/sample_lexicon.tsv
 import-dicts.ps1
 include/piinput/binary_lexicon.h
+include/piinput/composition_caret.h
 include/piinput/engine.h
+include/piinput/english_key_policy.h
 include/piinput/english_lexicon.h
 include/piinput/english_session.h
 include/piinput/lexicon.h
@@ -87,13 +90,17 @@ run-tests.ps1
 scripts/build_linux.sh
 scripts/build_windows_vs2026.cmd
 scripts/build_windows_vs2026.ps1
+scripts/convert-english-wordfreq.ps1
 scripts/package_release.ps1
+scripts/update-dictionaries.ps1
 set-schema.cmd
 set-schema.ps1
 setup-dev.cmd
 setup-dev.ps1
 src/binary_lexicon.cpp
+src/composition_caret.cpp
 src/engine.cpp
+src/english_key_policy.cpp
 src/english_lexicon.cpp
 src/english_session.cpp
 src/lexicon.cpp
@@ -108,6 +115,7 @@ src/user_model.cpp
 src/utf.cpp
 start-preview.cmd
 tests/data/english_candidates.tsv
+tests/english_dictionary_conversion_regression.ps1
 tests/english_lexicon_tests.cpp
 tests/test_main.cpp
 tests/windows_source_regression.cmake

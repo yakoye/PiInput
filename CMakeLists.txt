@@ -32,8 +32,10 @@ add_library(piinput_core STATIC
     src/candidate_paging.cpp
     src/candidate_grid.cpp
     src/candidate_layout.cpp
+    src/composition_caret.cpp
     src/input_mode.cpp
     src/english_lexicon.cpp
+    src/english_key_policy.cpp
     src/english_session.cpp
     src/incremental_decoder.cpp
     src/full_pinyin_variants.cpp
@@ -284,6 +286,12 @@ if(PIINPUT_BUILD_TESTS)
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
                 -File ${CMAKE_SOURCE_DIR}/tests/candidate_settings_script_regression.ps1
+        )
+        add_test(
+            NAME piinput-english-dictionary-conversion-regression
+            COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
+                -NoProfile
+                -File ${CMAKE_SOURCE_DIR}/tests/english_dictionary_conversion_regression.ps1
         )
     endif()
     add_test(

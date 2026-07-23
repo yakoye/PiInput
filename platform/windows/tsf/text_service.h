@@ -4,6 +4,7 @@
 #include "piinput/candidate_grid.h"
 #include "piinput/engine.h"
 #include "piinput/english_lexicon.h"
+#include "piinput/english_key_policy.h"
 #include "piinput/english_session.h"
 #include "piinput/input_mode.h"
 #include "piinput/punctuation.h"
@@ -49,14 +50,18 @@ public:
     STDMETHODIMP OnCompositionTerminated(TfEditCookie edit_cookie, ITfComposition* composition) override;
 
     HRESULT apply_composition_edit(ITfContext* context, TfEditCookie edit_cookie,
-        const std::wstring& text, bool commit, bool cancel);
+        const std::wstring& text, std::size_t caret, bool commit, bool cancel);
 
 private:
     ~TextService();
 
     bool should_eat_key(WPARAM wparam) const;
     void handle_key(ITfContext* context, WPARAM wparam);
-    void handle_english_key(ITfContext* context, WPARAM wparam);
+    void handle_english_key(
+        ITfContext* context,
+        WPARAM wparam,
+        const EnglishKeyDecision& decision);
+    [[nodiscard]] EnglishKeyDecision english_key_decision(WPARAM wparam) const noexcept;
     void refresh_candidate_window();
     void request_update(ITfContext* context);
     void request_commit(ITfContext* context, const std::string& text);
@@ -96,6 +101,7 @@ private:
     std::unique_ptr<EnglishSession> english_session_;
     std::filesystem::path user_model_path_;
     std::filesystem::path english_builtin_path_;
+    std::filesystem::path english_downloaded_path_;
     std::filesystem::path english_user_path_;
     std::filesystem::path english_learning_path_;
     std::string schema_{"full"};

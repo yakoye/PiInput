@@ -188,12 +188,27 @@ if(NOT text_service_header_text MATCHES "EnglishLexicon" OR
    NOT text_service_header_text MATCHES "EnglishSession" OR
    NOT text_service_text MATCHES "settings_\\.english\\.enabled" OR
    NOT text_service_text MATCHES "english_lexicon\\.tsv" OR
+   NOT text_service_text MATCHES "english_downloaded\\.tsv" OR
    NOT text_service_text MATCHES "english_user\\.tsv" OR
    NOT text_service_text MATCHES "english_learning\\.tsv")
     message(FATAL_ERROR "TSF must own and lazily initialize the optional local English resources")
 endif()
+if(NOT text_service_text MATCHES "load_builtin_tsv\\(english_downloaded_path_\\)")
+    message(FATAL_ERROR "TSF must load the downloaded English TSV as an optional built-in source")
+endif()
 if(NOT text_service_text MATCHES "settings_\\.english\\.items_per_row")
     message(FATAL_ERROR "TSF must apply the English-only candidate column count")
+endif()
+if(NOT text_service_text MATCHES "english_session_->set_candidate_limit")
+    message(FATAL_ERROR "TSF must refresh the English session when max_items changes")
+endif()
+if(NOT text_service_text MATCHES "map_composition_caret" OR
+   NOT text_service_text MATCHES "range->ShiftEnd")
+    message(FATAL_ERROR "TSF must map the internal Composition caret into the host selection")
+endif()
+if(NOT text_service_header_text MATCHES "english_key_policy\\.h" OR
+   NOT text_service_text MATCHES "EnglishKeyPolicy::decide")
+    message(FATAL_ERROR "TSF must use the tested EnglishKeyPolicy decision layer")
 endif()
 if(NOT candidate_window_header_text MATCHES "items_per_row" OR
    NOT candidate_window_header_text MATCHES "visible_rows" OR

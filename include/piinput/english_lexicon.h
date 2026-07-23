@@ -16,6 +16,7 @@ struct EnglishCandidate {
     std::uint64_t base_weight{};
     std::uint64_t learning_count{};
     bool user_entry{};
+    std::string flags;
 
     bool operator==(const EnglishCandidate&) const = default;
 };

@@ -88,9 +88,29 @@ items_per_row=6
 ```
 
 开启后，英文模式输入 ASCII 字母会启动 Composition，并从安装目录
-`data/english_lexicon.tsv` 与可选的 `english_user.tsv` 读取本地候选；选择学习保存在
-`english_learning.tsv`。英文候选不联网。Space 或数字选择候选，Enter 提交原始输入，
-Composition 中输入标点会先提交当前候选（无候选则提交原始输入）再提交 ASCII 标点。
+`data/english_lexicon.tsv`、可选下载的 `english_downloaded.tsv` 与用户维护的
+`english_user.tsv` 读取本地候选；选择学习保存在 `english_learning.tsv`。英文候选不
+联网。Space 或数字选择候选，Enter 提交原始输入，Composition 中输入标点会先提交当前
+候选（无候选则提交原始输入）再提交 ASCII 标点。
+
+用户英文词典路径是
+`%LOCALAPPDATA%\PiInput\UserData\english_user.tsv`，每行格式为
+`word<TAB>positive_weight`，也兼容可选第三列
+`word<TAB>positive_weight<TAB>flags`。`word` 必须是 ASCII-only 的 `A-Z`/`a-z`，
+`positive_weight` 必须是正整数，非法行会被忽略。完全相同大小写的重复词合并为一项：
+保留首次稳定 ID、采用最大权重，用户词优先于内置词，用户行的非空 `flags` 替换内置
+flags；大小写不同的词保留为不同候选，但前缀匹配不区分大小写。
+
+- `builtin_dictionary=false`：不加载安装目录的内置英文 TSV，也不加载
+  `%LOCALAPPDATA%\PiInput\UserData\english_downloaded.tsv`；
+- `user_dictionary=false`：不加载 `english_user.tsv`；
+- `user_learning=false`：不加载、不记录也不保存英文选择学习；
+- `enabled=false`：英文模式保持系统直通，不加载或查询任何英文词库。
+
+`%LOCALAPPDATA%\PiInput\UserData\english_learning.tsv` 由程序管理并原子写入，请勿作为
+用户词典手工编辑；需要自定义单词时只编辑 `english_user.tsv`。
+`english_downloaded.tsv` 同样由词典更新脚本管理；它与 `english_user.tsv` 分离，更新
+第三方英文源不会覆盖用户维护的词典。
 
 ## 故障信息
 

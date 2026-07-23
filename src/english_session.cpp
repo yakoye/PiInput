@@ -76,6 +76,14 @@ bool EnglishSession::move_end() noexcept {
     return changed;
 }
 
+void EnglishSession::set_candidate_limit(const std::size_t candidate_limit) {
+    if (candidate_limit_ == candidate_limit) {
+        return;
+    }
+    candidate_limit_ = candidate_limit;
+    refresh();
+}
+
 void EnglishSession::clear() {
     snapshot_.input.clear();
     snapshot_.caret = 0U;

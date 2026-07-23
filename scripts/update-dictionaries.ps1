@@ -27,7 +27,12 @@ foreach ($source in $sources.sources) {
         New-Item -ItemType Directory -Force $destination | Out-Null
         $cachedFile = Join-Path $destination $source.file
         $downloadFile = "$cachedFile.download"
+        $generatedEnglish = Join-Path $DictionaryRoot "generated/english_lexicon.tsv"
         try {
+            if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+                throw "LOCALAPPDATA is unavailable; the runtime English TSV was not changed."
+            }
+            $runtimeEnglish = Join-Path $env:LOCALAPPDATA "PiInput/UserData/english_downloaded.tsv"
             Remove-Item -LiteralPath $downloadFile -Force -ErrorAction SilentlyContinue
             Write-Host "Downloading pinned $($source.id)..." -ForegroundColor Cyan
             Invoke-WebRequest -UseBasicParsing -Uri $source.rawFile -OutFile $downloadFile
@@ -35,6 +40,10 @@ foreach ($source in $sources.sources) {
             if ($actualHash -ne $source.sha256.ToLowerInvariant()) {
                 throw "SHA-256 mismatch for $($source.id): $actualHash"
             }
+            & (Join-Path $PSScriptRoot "convert-english-wordfreq.ps1") `
+                -InputJson $downloadFile `
+                -OutputTsv $generatedEnglish `
+                -RuntimeTsv $runtimeEnglish
             Move-Item -LiteralPath $downloadFile -Destination $cachedFile -Force
         } catch {
             Remove-Item -LiteralPath $downloadFile -Force -ErrorAction SilentlyContinue

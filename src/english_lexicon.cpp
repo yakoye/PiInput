@@ -62,6 +62,34 @@ constexpr std::size_t kMaximumLineLength = 4096U;
     return true;
 }
 
+[[nodiscard]] bool split_dictionary_row(
+    const std::string_view line,
+    std::string_view& word,
+    std::string_view& number,
+    std::string_view& flags) noexcept {
+    const auto first = line.find('\t');
+    if (first == std::string_view::npos) {
+        return false;
+    }
+    const auto second = line.find('\t', first + 1U);
+    if (second == std::string_view::npos) {
+        word = line.substr(0U, first);
+        number = line.substr(first + 1U);
+        flags = {};
+        return true;
+    }
+    if (line.find('\t', second + 1U) != std::string_view::npos) {
+        return false;
+    }
+    word = line.substr(0U, first);
+    number = line.substr(first + 1U, second - first - 1U);
+    flags = line.substr(second + 1U);
+    return std::all_of(flags.begin(), flags.end(), [](const char character) {
+        const auto value = static_cast<unsigned char>(character);
+        return value >= 0x21U && value <= 0x7EU;
+    });
+}
+
 [[nodiscard]] bool replace_file_atomically(
     const std::filesystem::path& temporary,
     const std::filesystem::path& destination) noexcept {
@@ -141,15 +169,20 @@ std::vector<EnglishCandidate> EnglishLexicon::query(
         }
         result.push_back(entry.candidate);
     }
-    std::sort(result.begin(), result.end(), [](const EnglishCandidate& left, const EnglishCandidate& right) {
-        if (left.learning_count != right.learning_count) {
-            return left.learning_count > right.learning_count;
-        }
+    std::sort(result.begin(), result.end(), [&](const EnglishCandidate& left, const EnglishCandidate& right) {
         if (left.user_entry != right.user_entry) {
             return left.user_entry;
         }
+        if (left.learning_count != right.learning_count) {
+            return left.learning_count > right.learning_count;
+        }
         if (left.base_weight != right.base_weight) {
             return left.base_weight > right.base_weight;
+        }
+        const auto left_completion = left.word.size() - lowercase_prefix.size();
+        const auto right_completion = right.word.size() - lowercase_prefix.size();
+        if (left_completion != right_completion) {
+            return left_completion < right_completion;
         }
         if (left.id != right.id) {
             return left.id < right.id;
@@ -240,8 +273,9 @@ std::size_t EnglishLexicon::load_dictionary_tsv(
         }
         std::string_view word;
         std::string_view weight_text;
+        std::string_view flags;
         std::uint64_t weight = 0U;
-        if (!split_tsv_row(line, word, weight_text) || !is_ascii_word(word) ||
+        if (!split_dictionary_row(line, word, weight_text, flags) || !is_ascii_word(word) ||
             !parse_positive_integer(weight_text, weight)) {
             continue;
         }
@@ -249,7 +283,7 @@ std::size_t EnglishLexicon::load_dictionary_tsv(
         if (found == entry_by_word_.end()) {
             const std::size_t index = entries_.size();
             entries_.push_back({
-                {next_id_++, std::string(word), weight, 0U, user_dictionary},
+                {next_id_++, std::string(word), weight, 0U, user_dictionary, std::string(flags)},
                 ascii_lower(word),
             });
             entry_by_word_.emplace(entries_.back().candidate.word, index);
@@ -257,6 +291,9 @@ std::size_t EnglishLexicon::load_dictionary_tsv(
             auto& candidate = entries_[found->second].candidate;
             candidate.base_weight = (std::max)(candidate.base_weight, weight);
             candidate.user_entry = candidate.user_entry || user_dictionary;
+            if (!flags.empty() && (candidate.flags.empty() || user_dictionary)) {
+                candidate.flags.assign(flags);
+            }
         }
         ++accepted;
     }

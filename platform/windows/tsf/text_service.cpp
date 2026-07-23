@@ -1,5 +1,6 @@
 #include "text_service.h"
 
+#include "piinput/composition_caret.h"
 #include "piinput/utf.h"
 
 #include <shlobj.h>
@@ -20,8 +21,10 @@ namespace {
 
 class EditSession final : public ITfEditSession {
 public:
-    EditSession(TextService* service, ITfContext* context, std::wstring text, bool commit, bool cancel)
-        : service_(service), context_(context), text_(std::move(text)), commit_(commit), cancel_(cancel) {
+    EditSession(TextService* service, ITfContext* context, std::wstring text,
+        const std::size_t caret, const bool commit, const bool cancel)
+        : service_(service), context_(context), text_(std::move(text)), caret_(caret),
+          commit_(commit), cancel_(cancel) {
         service_->AddRef();
         context_->AddRef();
     }
@@ -52,7 +55,8 @@ public:
     }
 
     STDMETHODIMP DoEditSession(const TfEditCookie edit_cookie) override {
-        return service_->apply_composition_edit(context_, edit_cookie, text_, commit_, cancel_);
+        return service_->apply_composition_edit(
+            context_, edit_cookie, text_, caret_, commit_, cancel_);
     }
 
 private:
@@ -65,6 +69,7 @@ private:
     TextService* service_{};
     ITfContext* context_{};
     std::wstring text_;
+    std::size_t caret_{};
     bool commit_{};
     bool cancel_{};
 };
@@ -163,6 +168,41 @@ private:
     case VK_OEM_6: return ']';
     case VK_OEM_7: return '\'';
     default: return '\0';
+    }
+}
+
+[[nodiscard]] EnglishKeyKind english_key_kind(const WPARAM key) {
+    if (is_ascii_letter(key)) {
+        return EnglishKeyKind::letter;
+    }
+    const bool shifted = shift_is_down();
+    if (!shifted && key == VK_OEM_MINUS) {
+        return EnglishKeyKind::previous_row;
+    }
+    if (!shifted && key == VK_OEM_PLUS) {
+        return EnglishKeyKind::next_row;
+    }
+    if (is_punctuation_key(key)) {
+        return EnglishKeyKind::punctuation;
+    }
+    if (is_number_key(key)) {
+        return EnglishKeyKind::digit;
+    }
+    switch (key) {
+    case VK_SPACE: return EnglishKeyKind::space;
+    case VK_RETURN: return EnglishKeyKind::enter;
+    case VK_ESCAPE: return EnglishKeyKind::escape;
+    case VK_BACK: return EnglishKeyKind::backspace;
+    case VK_DELETE: return EnglishKeyKind::delete_forward;
+    case VK_LEFT: return EnglishKeyKind::move_left;
+    case VK_RIGHT: return EnglishKeyKind::move_right;
+    case VK_HOME: return EnglishKeyKind::move_home;
+    case VK_END: return EnglishKeyKind::move_end;
+    case VK_UP: return EnglishKeyKind::previous_row;
+    case VK_DOWN: return EnglishKeyKind::next_row;
+    case VK_PRIOR: return EnglishKeyKind::previous_page;
+    case VK_NEXT: return EnglishKeyKind::next_page;
+    default: return EnglishKeyKind::other;
     }
 }
 
@@ -377,35 +417,7 @@ bool TextService::should_eat_key(const WPARAM wparam) const {
         return true;
     }
     if (english_mode_) {
-        if (!EnglishSession::should_start(english_mode_, settings_.english)) {
-            return false;
-        }
-        const bool composing = english_composing();
-        if (!composing) {
-            return is_ascii_letter(wparam);
-        }
-        if (is_punctuation_key(wparam) || is_ascii_letter(wparam) ||
-            is_number_key(wparam)) {
-            return true;
-        }
-        switch (wparam) {
-        case VK_BACK:
-        case VK_DELETE:
-        case VK_LEFT:
-        case VK_RIGHT:
-        case VK_HOME:
-        case VK_END:
-        case VK_UP:
-        case VK_DOWN:
-        case VK_PRIOR:
-        case VK_NEXT:
-        case VK_SPACE:
-        case VK_RETURN:
-        case VK_ESCAPE:
-            return true;
-        default:
-            return false;
-        }
+        return english_key_decision(wparam).consume;
     }
     const bool composing = !session_->snapshot().input.empty();
     const bool shifted = shift_is_down();
@@ -452,9 +464,12 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
     if (session_ == nullptr || context == nullptr) {
         return;
     }
-    if (EnglishSession::should_start(english_mode_, settings_.english)) {
-        handle_english_key(context, wparam);
-        return;
+    if (english_mode_) {
+        const auto decision = english_key_decision(wparam);
+        if (decision.consume) {
+            handle_english_key(context, wparam, decision);
+            return;
+        }
     }
     if (is_ascii_letter(wparam)) {
         if (session_->snapshot().input.empty()) {
@@ -590,37 +605,29 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
     }
 }
 
-void TextService::handle_english_key(ITfContext* const context, const WPARAM wparam) {
-    if (is_ascii_letter(wparam)) {
-        if (!english_composing()) {
-            apply_settings_at_composition_boundary();
-            if (!settings_.english.enabled || !ensure_english_session()) {
-                request_commit(context, std::string(1U, ascii_letter_for_key(wparam)));
-                return;
-            }
+void TextService::handle_english_key(
+    ITfContext* const context,
+    const WPARAM wparam,
+    const EnglishKeyDecision& decision) {
+    switch (decision.action) {
+    case EnglishKeyAction::start_composition: {
+        apply_settings_at_composition_boundary();
+        const auto refreshed = english_key_decision(wparam);
+        if (refreshed.action != EnglishKeyAction::start_composition ||
+            (refreshed.load_resources && !ensure_english_session()) ||
+            english_session_ == nullptr) {
+            request_commit(context, std::string(1U, ascii_letter_for_key(wparam)));
+            return;
         }
+        [[fallthrough]];
+    }
+    case EnglishKeyAction::insert_letter:
         english_session_->insert(ascii_letter_for_key(wparam));
         candidate_grid_.reset(english_session_->snapshot().candidates.size());
         request_update(context);
         refresh_candidate_window();
         return;
-    }
-    if (!english_composing()) {
-        return;
-    }
-
-    const bool shifted = shift_is_down();
-    if (!shifted && wparam == VK_OEM_MINUS) {
-        move_row(-1);
-        refresh_candidate_window();
-        return;
-    }
-    if (!shifted && wparam == VK_OEM_PLUS) {
-        move_row(1);
-        refresh_candidate_window();
-        return;
-    }
-    if (is_punctuation_key(wparam)) {
+    case EnglishKeyAction::commit_then_punctuation: {
         const char base_key = punctuation_base_key(wparam);
         if (base_key == '\0') {
             return;
@@ -630,10 +637,10 @@ void TextService::handle_english_key(ITfContext* const context, const WPARAM wpa
         }
         request_commit(
             context,
-            punctuation_.transform(base_key, PunctuationMode::english, shifted));
+            punctuation_.transform(base_key, PunctuationMode::english, shift_is_down()));
         return;
     }
-    if (wparam == VK_BACK) {
+    case EnglishKeyAction::backspace:
         english_session_->backspace();
         candidate_grid_.reset(english_session_->snapshot().candidates.size());
         if (english_session_->snapshot().input.empty()) {
@@ -643,8 +650,7 @@ void TextService::handle_english_key(ITfContext* const context, const WPARAM wpa
         }
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_DELETE) {
+    case EnglishKeyAction::delete_forward:
         english_session_->delete_forward();
         candidate_grid_.reset(english_session_->snapshot().candidates.size());
         if (english_session_->snapshot().input.empty()) {
@@ -654,48 +660,43 @@ void TextService::handle_english_key(ITfContext* const context, const WPARAM wpa
         }
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_LEFT) {
+    case EnglishKeyAction::move_left:
         english_session_->move_left();
+        request_update(context);
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_RIGHT) {
+    case EnglishKeyAction::move_right:
         english_session_->move_right();
+        request_update(context);
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_HOME) {
+    case EnglishKeyAction::move_home:
         english_session_->move_home();
+        request_update(context);
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_END) {
+    case EnglishKeyAction::move_end:
         english_session_->move_end();
+        request_update(context);
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_UP) {
+    case EnglishKeyAction::previous_row:
         move_row(-1);
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_DOWN) {
+    case EnglishKeyAction::next_row:
         move_row(1);
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_PRIOR) {
+    case EnglishKeyAction::previous_page:
         move_page(-1);
         refresh_candidate_window();
         return;
-    }
-    if (wparam == VK_NEXT) {
+    case EnglishKeyAction::next_page:
         move_page(1);
         refresh_candidate_window();
         return;
-    }
-    if (is_number_key(wparam)) {
+    case EnglishKeyAction::choose_digit: {
         const auto digit = static_cast<std::size_t>(
             wparam - static_cast<WPARAM>('0'));
         const auto index = candidate_grid_.candidate_index_for_digit(digit);
@@ -704,22 +705,34 @@ void TextService::handle_english_key(ITfContext* const context, const WPARAM wpa
         }
         return;
     }
-    if (wparam == VK_SPACE) {
+    case EnglishKeyAction::choose_current:
         if (!choose_candidate(context, candidate_grid_.selected_index())) {
             commit_raw_input(context);
         }
         return;
-    }
-    if (wparam == VK_RETURN) {
+    case EnglishKeyAction::commit_raw:
         commit_raw_input(context);
         return;
-    }
-    if (wparam == VK_ESCAPE) {
+    case EnglishKeyAction::cancel:
         english_session_->clear();
         candidate_grid_.reset(0U);
         request_cancel(context);
         refresh_candidate_window();
+        return;
+    case EnglishKeyAction::pass_through:
+        return;
     }
+}
+
+EnglishKeyDecision TextService::english_key_decision(const WPARAM wparam) const noexcept {
+    return EnglishKeyPolicy::decide(
+        {
+            english_mode_,
+            settings_.english.enabled,
+            english_composing(),
+            english_session_ != nullptr,
+        },
+        english_key_kind(wparam));
 }
 
 void TextService::request_update(ITfContext* const context) {
@@ -730,7 +743,10 @@ void TextService::request_update(ITfContext* const context) {
         ? english_session_->snapshot().input
         : session_->snapshot().input;
     const std::wstring text = utf8_to_wide(input);
-    auto* edit_session = new EditSession(this, context, text, false, false);
+    const std::size_t caret = english_composing()
+        ? english_session_->snapshot().caret
+        : text.size();
+    auto* edit_session = new EditSession(this, context, text, caret, false, false);
     HRESULT session_result = E_FAIL;
     context->RequestEditSession(client_id_, edit_session,
         TF_ES_SYNC | TF_ES_READWRITE, &session_result);
@@ -742,7 +758,9 @@ void TextService::request_commit(ITfContext* const context, const std::string& t
     symbol_candidates_.clear();
     symbol_mode_ = false;
     apply_settings_at_composition_boundary();
-    auto* edit_session = new EditSession(this, context, utf8_to_wide(text), true, false);
+    const std::wstring wide_text = utf8_to_wide(text);
+    auto* edit_session = new EditSession(
+        this, context, wide_text, wide_text.size(), true, false);
     HRESULT session_result = E_FAIL;
     context->RequestEditSession(client_id_, edit_session,
         TF_ES_SYNC | TF_ES_READWRITE, &session_result);
@@ -755,7 +773,7 @@ void TextService::request_cancel(ITfContext* const context) {
     symbol_candidates_.clear();
     symbol_mode_ = false;
     apply_settings_at_composition_boundary();
-    auto* edit_session = new EditSession(this, context, L"", false, true);
+    auto* edit_session = new EditSession(this, context, L"", 0U, false, true);
     HRESULT session_result = E_FAIL;
     context->RequestEditSession(client_id_, edit_session,
         TF_ES_SYNC | TF_ES_READWRITE, &session_result);
@@ -767,6 +785,7 @@ HRESULT TextService::apply_composition_edit(
     ITfContext* const context,
     const TfEditCookie edit_cookie,
     const std::wstring& text,
+    const std::size_t caret,
     const bool commit,
     const bool cancel) {
     if (context == nullptr) {
@@ -805,6 +824,20 @@ HRESULT TextService::apply_composition_edit(
     }
     const wchar_t* data = text.empty() ? L"" : text.c_str();
     result = range->SetText(edit_cookie, 0U, data, static_cast<LONG>(text.size()));
+    if (SUCCEEDED(result)) {
+        const auto mapping = map_composition_caret(text.size(), caret);
+        result = range->Collapse(edit_cookie, TF_ANCHOR_START);
+        if (FAILED(result)) {
+            range->Release();
+            return result;
+        }
+        LONG shifted = 0L;
+        result = range->ShiftEnd(
+            edit_cookie,
+            static_cast<LONG>(mapping.shift_end),
+            &shifted,
+            nullptr);
+    }
     if (SUCCEEDED(result)) {
         TF_SELECTION selection{};
         selection.range = range;
@@ -968,6 +1001,7 @@ void TextService::load_engine() {
     }
     user_model_path_ = data_root / L"user_model.tsv";
     english_builtin_path_ = installed_data / L"english_lexicon.tsv";
+    english_downloaded_path_ = data_root / L"english_downloaded.tsv";
     english_user_path_ = data_root / L"english_user.tsv";
     english_learning_path_ = data_root / L"english_learning.tsv";
     engine_.load_user_model(user_model_path_);
@@ -1001,6 +1035,10 @@ void TextService::apply_settings_at_composition_boundary() {
     if (english_changed) {
         english_session_.reset();
         english_lexicon_.reset();
+    }
+    if (english_session_ != nullptr) {
+        english_session_->set_candidate_limit(
+            static_cast<std::size_t>(settings_.candidates.max_items));
     }
     if (candidates_changed || english_changed) {
         candidate_grid_ = CandidateGrid(active_candidate_settings(), 0U);
@@ -1064,6 +1102,8 @@ bool TextService::ensure_english_session() noexcept {
         if (settings_.english.builtin_dictionary) {
             const auto loaded = lexicon->load_builtin_tsv(english_builtin_path_);
             (void)loaded;
+            const auto downloaded = lexicon->load_builtin_tsv(english_downloaded_path_);
+            (void)downloaded;
         }
         if (settings_.english.user_dictionary) {
             const auto loaded = lexicon->load_user_tsv(english_user_path_);

@@ -1,4 +1,6 @@
+#include "piinput/composition_caret.h"
 #include "piinput/english_lexicon.h"
+#include "piinput/english_key_policy.h"
 #include "piinput/english_session.h"
 #include "piinput/settings.h"
 
@@ -72,7 +74,9 @@ void test_prefix_case_and_stable_sorting() {
 
     check(words(lexicon.query("AP", 10U)) ==
             std::vector<std::string>({"Apple", "application", "apply", "apt"}),
-        "ASCII prefix matching is case-insensitive and stable IDs break equal-weight ties");
+        "ASCII prefix matching is case-insensitive and base weights sort deterministically");
+    check(lexicon.query("apple", 1U).front().flags == "proper",
+        "optional third-column flags are preserved on candidates");
     check(words(lexicon.query("ban", 10U)) ==
             std::vector<std::string>({"banana", "Band", "bandwidth"}),
         "original candidate casing is preserved");
@@ -87,20 +91,20 @@ void test_invalid_rows_duplicates_and_user_merge() {
     const auto builtin = directory / "builtin.tsv";
     const auto user = directory / "user.tsv";
     write_text(builtin,
-        "alpha\t10\n"
+        "alpha\t10\tbuiltin\n"
         "alpha\t30\n"
-        "ALPHA\t20\n"
-        "algebra\t1000\n"
+        "ALPHA\t20\tacronym\n"
+        "algebra\t1000\tbuiltin\n"
         "beta\tbad\n"
         "two words\t99\n"
         "\t20\n"
         "gamma\t0\n"
-        "delta\t40\textra\n"
+        "delta\t40\textra\tunexpected\n"
         "cafe\xCC\x81\t60\n");
     write_text(user,
-        "alpine\t1\n"
-        "alpha\t80\n"
-        "ALPHA\t90\n");
+        "alpine\t1\tuser\n"
+        "alpha\t80\tuser\n"
+        "ALPHA\t90\tuser\n");
 
     piinput::EnglishLexicon lexicon;
     check(lexicon.load_builtin_tsv(builtin) == 4U,
@@ -117,6 +121,8 @@ void test_invalid_rows_duplicates_and_user_merge() {
         "user duplicate raises the merged base weight");
     check(candidates[1].word == "alpha" && candidates[1].base_weight == 80U,
         "exact duplicate merges deterministically by maximum weight");
+    check(candidates[1].flags == "user",
+        "user duplicate deterministically replaces built-in flags");
     std::filesystem::remove_all(directory);
 }
 
@@ -236,6 +242,169 @@ void test_english_session_can_disable_learning() {
     std::filesystem::remove_all(directory);
 }
 
+void test_english_session_candidate_limit_updates_at_boundary() {
+    const auto directory = make_temp_directory("session-limit");
+    const auto builtin = directory / "builtin.tsv";
+    write_text(builtin, "Apple\t100\napplication\t80\napply\t60\n");
+
+    piinput::EnglishLexicon lexicon;
+    check(lexicon.load_builtin_tsv(builtin) == 3U, "candidate-limit fixture loads");
+    piinput::EnglishSession session(lexicon, 1U);
+    session.insert('a');
+    session.insert('p');
+    check(session.snapshot().candidates.size() == 1U,
+        "old candidate limit applies before settings update");
+    session.set_candidate_limit(3U);
+    check(session.snapshot().candidates.size() == 3U,
+        "updated candidate limit refreshes the active session safely");
+    std::filesystem::remove_all(directory);
+}
+
+void test_composition_caret_mapping_covers_navigation_boundaries() {
+    check(piinput::map_composition_caret(4U, 0U) ==
+            piinput::CompositionCaretMapping{0U, 0L},
+        "composition caret maps the start to a zero ShiftEnd distance");
+    check(piinput::map_composition_caret(4U, 2U) ==
+            piinput::CompositionCaretMapping{2U, 2L},
+        "composition caret maps a middle position");
+    check(piinput::map_composition_caret(4U, 4U) ==
+            piinput::CompositionCaretMapping{4U, 4L},
+        "composition caret maps the end");
+    check(piinput::map_composition_caret(4U, 99U) ==
+            piinput::CompositionCaretMapping{4U, 4L},
+        "composition caret clamps a position beyond the text");
+}
+
+void test_composition_caret_mapping_follows_delete_edits() {
+    const auto directory = make_temp_directory("caret-delete");
+    const auto builtin = directory / "builtin.tsv";
+    write_text(builtin, "Apple\t100\n");
+
+    piinput::EnglishLexicon lexicon;
+    check(lexicon.load_builtin_tsv(builtin) == 1U, "caret fixture loads");
+    piinput::EnglishSession session(lexicon);
+    session.insert('a');
+    session.insert('p');
+    session.insert('p');
+    session.move_home();
+    session.delete_forward();
+    const auto& snapshot = session.snapshot();
+    check(snapshot.input == "pp" && snapshot.caret == 0U,
+        "delete retains the internal caret before host mapping");
+    check(piinput::map_composition_caret(snapshot.input.size(), snapshot.caret) ==
+            piinput::CompositionCaretMapping{0U, 0L},
+        "host caret mapping follows the post-delete position");
+    std::filesystem::remove_all(directory);
+}
+
+void test_user_priority_precedes_builtin_learning() {
+    const auto directory = make_temp_directory("ranking-user-learning");
+    const auto builtin = directory / "builtin.tsv";
+    const auto user = directory / "user.tsv";
+    write_text(builtin, "alpha\t100\n");
+    write_text(user, "alpine\t1\n");
+
+    piinput::EnglishLexicon lexicon;
+    check(lexicon.load_builtin_tsv(builtin) == 1U, "ranking built-in fixture loads");
+    check(lexicon.load_user_tsv(user) == 1U, "ranking user fixture loads");
+    for (int count = 0; count < 20; ++count) {
+        check(lexicon.record_selection("alpha"), "built-in learning selection records");
+    }
+    check(words(lexicon.query("al", 2U)) ==
+            std::vector<std::string>({"alpine", "alpha"}),
+        "user priority precedes learning count");
+    std::filesystem::remove_all(directory);
+}
+
+void test_shorter_completion_precedes_stable_id_on_equal_scores() {
+    const auto directory = make_temp_directory("ranking-completion");
+    const auto builtin = directory / "builtin.tsv";
+    write_text(builtin, "application\t50\napply\t50\naptly\t50\n");
+
+    piinput::EnglishLexicon lexicon;
+    check(lexicon.load_builtin_tsv(builtin) == 3U, "completion fixture loads");
+    check(words(lexicon.query("ap", 3U)) ==
+            std::vector<std::string>({"apply", "aptly", "application"}),
+        "shorter completion precedes stable ID and stable ID resolves equal lengths");
+    std::filesystem::remove_all(directory);
+}
+
+void test_english_key_policy_gates_mode_and_lazy_loading() {
+    using piinput::EnglishKeyAction;
+    using piinput::EnglishKeyContext;
+    using piinput::EnglishKeyKind;
+    using piinput::EnglishKeyPolicy;
+
+    const auto disabled = EnglishKeyPolicy::decide(
+        EnglishKeyContext{true, false, false, false}, EnglishKeyKind::letter);
+    check(disabled == piinput::EnglishKeyDecision{
+            EnglishKeyAction::pass_through, false, false},
+        "default-off English letters pass through without loading");
+
+    const auto chinese = EnglishKeyPolicy::decide(
+        EnglishKeyContext{false, true, false, false}, EnglishKeyKind::letter);
+    check(chinese == piinput::EnglishKeyDecision{
+            EnglishKeyAction::pass_through, false, false},
+        "Chinese mode never triggers English resources");
+
+    const auto first_letter = EnglishKeyPolicy::decide(
+        EnglishKeyContext{true, true, false, false}, EnglishKeyKind::letter);
+    check(first_letter == piinput::EnglishKeyDecision{
+            EnglishKeyAction::start_composition, true, true},
+        "first enabled English letter starts Composition and loads once");
+
+    const auto warm_start = EnglishKeyPolicy::decide(
+        EnglishKeyContext{true, true, false, true}, EnglishKeyKind::letter);
+    check(warm_start == piinput::EnglishKeyDecision{
+            EnglishKeyAction::start_composition, true, false},
+        "an already loaded resource is reused at the next Composition");
+
+    const auto next_letter = EnglishKeyPolicy::decide(
+        EnglishKeyContext{true, true, true, true}, EnglishKeyKind::letter);
+    check(next_letter == piinput::EnglishKeyDecision{
+            EnglishKeyAction::insert_letter, true, false},
+        "each following letter queries memory without loading resources");
+}
+
+void test_english_key_policy_covers_passthrough_commit_and_grid_actions() {
+    using piinput::EnglishKeyAction;
+    using piinput::EnglishKeyContext;
+    using piinput::EnglishKeyKind;
+    using piinput::EnglishKeyPolicy;
+
+    const EnglishKeyContext idle{true, true, false, false};
+    check(EnglishKeyPolicy::decide(idle, EnglishKeyKind::punctuation).action ==
+            EnglishKeyAction::pass_through,
+        "idle English punctuation remains system passthrough");
+
+    const EnglishKeyContext composing{true, true, true, true};
+    const std::vector<std::pair<EnglishKeyKind, EnglishKeyAction>> cases{
+        {EnglishKeyKind::punctuation, EnglishKeyAction::commit_then_punctuation},
+        {EnglishKeyKind::digit, EnglishKeyAction::choose_digit},
+        {EnglishKeyKind::space, EnglishKeyAction::choose_current},
+        {EnglishKeyKind::enter, EnglishKeyAction::commit_raw},
+        {EnglishKeyKind::escape, EnglishKeyAction::cancel},
+        {EnglishKeyKind::backspace, EnglishKeyAction::backspace},
+        {EnglishKeyKind::delete_forward, EnglishKeyAction::delete_forward},
+        {EnglishKeyKind::move_left, EnglishKeyAction::move_left},
+        {EnglishKeyKind::move_right, EnglishKeyAction::move_right},
+        {EnglishKeyKind::move_home, EnglishKeyAction::move_home},
+        {EnglishKeyKind::move_end, EnglishKeyAction::move_end},
+        {EnglishKeyKind::previous_row, EnglishKeyAction::previous_row},
+        {EnglishKeyKind::next_row, EnglishKeyAction::next_row},
+        {EnglishKeyKind::previous_page, EnglishKeyAction::previous_page},
+        {EnglishKeyKind::next_page, EnglishKeyAction::next_page},
+    };
+    for (const auto& [key, expected] : cases) {
+        const auto decision = EnglishKeyPolicy::decide(composing, key);
+        check(decision.action == expected && decision.consume && !decision.load_resources,
+            "composing English key maps to its state-machine action");
+    }
+    check(EnglishKeyPolicy::decide(composing, EnglishKeyKind::other).action ==
+            EnglishKeyAction::pass_through,
+        "unsupported English keys remain passthrough");
+}
+
 }  // namespace
 
 int main() {
@@ -246,6 +415,13 @@ int main() {
     test_learning_overflow_and_damaged_rows_are_safe();
     test_english_session_composition_editing_and_choice();
     test_english_session_can_disable_learning();
+    test_english_session_candidate_limit_updates_at_boundary();
+    test_composition_caret_mapping_covers_navigation_boundaries();
+    test_composition_caret_mapping_follows_delete_edits();
+    test_user_priority_precedes_builtin_learning();
+    test_shorter_completion_precedes_stable_id_on_equal_scores();
+    test_english_key_policy_gates_mode_and_lazy_loading();
+    test_english_key_policy_covers_passthrough_commit_and_grid_actions();
 
     if (failures != 0) {
         std::cerr << failures << " English lexicon test(s) failed\n";
