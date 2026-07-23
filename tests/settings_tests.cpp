@@ -622,6 +622,53 @@ void test_manager_partial_errors_and_hot_reload_false() {
     std::filesystem::remove(path);
 }
 
+void test_manager_candidate_grid_settings_apply_only_at_boundary() {
+    const auto path =
+        std::filesystem::temp_directory_path() / "piinput-settings-manager-candidate-grid.ini";
+    write_text(path,
+        "[candidates]\n"
+        "items_per_row=9\n"
+        "visible_rows=5\n"
+        "max_items=45\n");
+    piinput::SettingsManager manager(path);
+
+    const auto before_boundary = manager.current();
+    check(before_boundary->candidates.items_per_row == 6U &&
+            before_boundary->candidates.visible_rows == 3U &&
+            before_boundary->candidates.max_items == 90U,
+        "candidate grid settings stay pending before the composition boundary");
+
+    manager.apply_pending_at_composition_boundary();
+    const auto loaded = manager.current();
+    check(loaded->candidates.items_per_row == 9U &&
+            loaded->candidates.visible_rows == 5U &&
+            loaded->candidates.max_items == 45U,
+        "candidate grid settings load at the composition boundary");
+
+    write_text(path,
+        "[candidates]\n"
+        "items_per_row=5\n"
+        "visible_rows=1\n"
+        "max_items=9\n");
+    manager.poll();
+    check(manager.current().get() == loaded.get(),
+        "candidate grid hot reload does not alter an active composition snapshot");
+
+    manager.apply_pending_at_composition_boundary();
+    const auto reloaded = manager.current();
+    check(reloaded->candidates.items_per_row == 5U &&
+            reloaded->candidates.visible_rows == 1U &&
+            reloaded->candidates.max_items == 9U,
+        "candidate grid hot reload applies at the next composition boundary");
+
+    write_text(path, std::string("\xFF", 1U));
+    manager.poll();
+    manager.apply_pending_at_composition_boundary();
+    check(manager.current().get() == reloaded.get(),
+        "damaged candidate settings preserve the previous boundary snapshot");
+    std::filesystem::remove(path);
+}
+
 void test_concurrent_current_reads() {
     const auto path = std::filesystem::temp_directory_path() / "piinput-settings-manager-concurrent.ini";
     const std::string compact =
@@ -690,6 +737,7 @@ int main() {
     test_manager_does_not_repeat_stable_document_fatal_errors();
     test_manager_boundary_generation_and_immutability();
     test_manager_partial_errors_and_hot_reload_false();
+    test_manager_candidate_grid_settings_apply_only_at_boundary();
     test_concurrent_current_reads();
 
     if (failures != 0) {

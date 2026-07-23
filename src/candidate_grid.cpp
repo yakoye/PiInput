@@ -32,11 +32,15 @@ void CandidateGrid::move_row(const int delta) noexcept {
         return;
     }
     const auto last_row = row_count() - 1U;
-    const auto next = (std::clamp)(
-        static_cast<std::int64_t>(active_row_) + static_cast<std::int64_t>(delta),
-        std::int64_t{0},
-        static_cast<std::int64_t>(last_row));
-    active_row_ = static_cast<std::size_t>(next);
+    if (delta > 0) {
+        const std::size_t step = static_cast<std::size_t>(delta);
+        const std::size_t remaining = last_row - active_row_;
+        active_row_ += (std::min)(step, remaining);
+    } else {
+        const std::size_t step =
+            static_cast<std::size_t>(-static_cast<std::int64_t>(delta));
+        active_row_ = step > active_row_ ? 0U : active_row_ - step;
+    }
     clamp_view();
 }
 

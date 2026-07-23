@@ -6,6 +6,7 @@
 #include "piinput/input_mode.h"
 #include "piinput/punctuation.h"
 #include "piinput/session.h"
+#include "piinput/settings_manager.h"
 #include "piinput/symbols.h"
 #include "piinput_tsf_guids.h"
 
@@ -61,6 +62,7 @@ private:
     void commit_raw_input(ITfContext* context);
     void move_row(int delta);
     void move_page(int delta);
+    void apply_settings_at_composition_boundary();
     void toggle_input_mode(ITfContext* context);
     void load_engine();
     void save_user_model() noexcept;
@@ -87,6 +89,7 @@ private:
     std::string schema_{"full"};
     std::vector<std::string> symbol_candidates_;
     bool symbol_mode_{};
+    std::unique_ptr<SettingsManager> settings_manager_;
     SettingsSnapshot settings_;
     CandidateGrid candidate_grid_;
     CandidateWindow candidate_window_;

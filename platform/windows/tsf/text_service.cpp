@@ -252,6 +252,7 @@ STDMETHODIMP TextService::Deactivate() {
         thread_manager_ = nullptr;
     }
     session_.reset();
+    settings_manager_.reset();
     client_id_ = TF_CLIENTID_NULL;
     candidate_grid_.reset(0U);
     symbol_candidates_.clear();
@@ -347,6 +348,7 @@ STDMETHODIMP TextService::OnCompositionTerminated(TfEditCookie, ITfComposition* 
         session_->clear();
     }
     candidate_grid_.reset(0U);
+    apply_settings_at_composition_boundary();
     symbol_candidates_.clear();
     symbol_mode_ = false;
     candidate_window_.hide();
@@ -409,6 +411,9 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
         return;
     }
     if (is_ascii_letter(wparam)) {
+        if (session_->snapshot().input.empty()) {
+            apply_settings_at_composition_boundary();
+        }
         session_->insert(static_cast<char>(std::tolower(static_cast<unsigned char>(wparam))));
         candidate_grid_.reset(session_->snapshot().candidates.size());
         request_update(context);
@@ -555,6 +560,7 @@ void TextService::request_commit(ITfContext* const context, const std::string& t
     candidate_grid_.reset(0U);
     symbol_candidates_.clear();
     symbol_mode_ = false;
+    apply_settings_at_composition_boundary();
     auto* edit_session = new EditSession(this, context, utf8_to_wide(text), true, false);
     HRESULT session_result = E_FAIL;
     context->RequestEditSession(client_id_, edit_session,
@@ -567,6 +573,7 @@ void TextService::request_cancel(ITfContext* const context) {
     candidate_grid_.reset(0U);
     symbol_candidates_.clear();
     symbol_mode_ = false;
+    apply_settings_at_composition_boundary();
     auto* edit_session = new EditSession(this, context, L"", false, true);
     HRESULT session_result = E_FAIL;
     context->RequestEditSession(client_id_, edit_session,
@@ -753,8 +760,34 @@ void TextService::load_engine() {
     engine_.load_user_model(user_model_path_);
     symbols_.load_tsv(installed_data / L"symbols.tsv");
     schema_ = load_schema();
-    session_ = std::make_unique<ImeSession>(
-        engine_, schema_, static_cast<std::size_t>(settings_.candidates.max_items));
+    settings_manager_ = std::make_unique<SettingsManager>(data_root / L"settings.ini");
+    apply_settings_at_composition_boundary();
+}
+
+void TextService::apply_settings_at_composition_boundary() {
+    if (settings_manager_ == nullptr ||
+        (session_ != nullptr && !session_->snapshot().input.empty())) {
+        return;
+    }
+
+    settings_manager_->poll();
+    settings_manager_->apply_pending_at_composition_boundary();
+    const auto next = settings_manager_->current();
+    if (next == nullptr) {
+        return;
+    }
+
+    const bool candidates_changed = next->candidates != settings_.candidates;
+    settings_ = *next;
+    if (candidates_changed) {
+        candidate_grid_ = CandidateGrid(settings_.candidates, 0U);
+    } else {
+        candidate_grid_.reset(0U);
+    }
+    if (session_ == nullptr || candidates_changed) {
+        session_ = std::make_unique<ImeSession>(
+            engine_, schema_, static_cast<std::size_t>(settings_.candidates.max_items));
+    }
 }
 
 void TextService::toggle_input_mode(ITfContext* const context) {
@@ -769,6 +802,7 @@ void TextService::toggle_input_mode(ITfContext* const context) {
             request_cancel(context);
         }
     }
+    apply_settings_at_composition_boundary();
     candidate_window_.hide();
 }
 

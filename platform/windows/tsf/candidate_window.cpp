@@ -1,5 +1,7 @@
 #include "candidate_window.h"
 
+#include "piinput/candidate_layout.h"
+
 #include <algorithm>
 
 namespace piinput::windows {
@@ -109,8 +111,10 @@ void CandidateWindow::show_near_caret() {
     if (GetMonitorInfoW(monitor, &monitor_info) != FALSE) {
         const int work_width = static_cast<int>(monitor_info.rcWork.right - monitor_info.rcWork.left);
         const int work_height = static_cast<int>(monitor_info.rcWork.bottom - monitor_info.rcWork.top);
-        width = (std::min)(width, work_width - 16);
-        height = (std::min)(height, work_height - 16);
+        const int maximum_width = (std::max)(1, work_width - 16);
+        const int maximum_height = (std::max)(1, work_height - 16);
+        width = (std::clamp)(width, 1, maximum_width);
+        height = (std::clamp)(height, 1, maximum_height);
         point.x = (std::min)(point.x, monitor_info.rcWork.right - width);
         point.x = (std::max)(point.x, monitor_info.rcWork.left);
         point.y = (std::min)(point.y, monitor_info.rcWork.bottom - height);
@@ -196,27 +200,17 @@ void CandidateWindow::paint() {
     const std::size_t end = (std::min)(
         candidates_.size(), first + actual_visible_rows() * items_per_row_);
     const int available_width = (std::max)(1, static_cast<int>(client.right) - 2 * kPadding);
-    auto widths = item_widths(dc);
-    int desired_items_width = 0;
-    for (const int width : widths) {
-        desired_items_width += width;
-    }
-    const double scale = desired_items_width > available_width && desired_items_width > 0
-        ? static_cast<double>(available_width) / static_cast<double>(desired_items_width)
-        : 1.0;
+    const auto widths = fit_candidate_column_widths(item_widths(dc), available_width);
     for (std::size_t index = first; index < end; ++index) {
         const int column = static_cast<int>(index % items_per_row_);
         const int row = static_cast<int>(index / items_per_row_ - first_visible_row_);
         int left = kPadding;
         for (int preceding = 0; preceding < column; ++preceding) {
-            left += (std::max)(40, static_cast<int>(
-                static_cast<double>(widths[static_cast<std::size_t>(preceding)]) * scale));
+            left += widths[static_cast<std::size_t>(preceding)];
         }
-        const int scaled_width = column + 1 == static_cast<int>(widths.size())
-            ? client.right - kPadding - left
-            : (std::max)(40, static_cast<int>(static_cast<double>(widths[static_cast<std::size_t>(column)]) * scale));
+        const int fitted_width = widths[static_cast<std::size_t>(column)];
         RECT item{left, kPadding + kHeaderHeight,
-                  (std::min)(static_cast<int>(client.right) - kPadding, left + scaled_width),
+                  left + fitted_width,
                   kPadding + kHeaderHeight + kRowHeight};
         item.top += row * kRowHeight;
         item.bottom += row * kRowHeight;

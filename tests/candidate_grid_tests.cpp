@@ -1,10 +1,15 @@
+#include "piinput/candidate_layout.h"
 #include "piinput/candidate_grid.h"
 #include "piinput/settings.h"
 
+#include <algorithm>
+#include <climits>
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <numeric>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -138,6 +143,48 @@ void test_candidate_count_arithmetic_does_not_overflow() {
     check(grid.visible_item_count() == 15U, "maximum candidate count retains a full visible window");
 }
 
+void test_row_movement_saturates_without_signed_conversion() {
+    piinput::CandidateGrid grid(
+        settings(1U, 1U), (std::numeric_limits<std::size_t>::max)());
+
+    grid.move_row(INT_MAX);
+    check(grid.active_row() == static_cast<std::size_t>(INT_MAX),
+        "INT_MAX moves safely within a SIZE_MAX row range");
+
+    grid.move_row(INT_MAX);
+    check(grid.active_row() == static_cast<std::size_t>(INT_MAX) * 2U,
+        "repeated positive movement uses size_t saturation");
+
+    grid.move_row(INT_MIN);
+    check(grid.active_row() == static_cast<std::size_t>(INT_MAX) - 1U,
+        "INT_MIN subtracts its full magnitude without signed overflow");
+
+    grid.move_row(INT_MIN);
+    check(grid.active_row() == 0U, "negative movement saturates at the first row");
+}
+
+void test_candidate_column_layout_fits_narrow_widths() {
+    const std::vector<int> desired(9U, 180);
+    const auto fitted = piinput::fit_candidate_column_widths(desired, 100);
+    check(fitted.size() == desired.size(), "layout preserves all configured columns");
+    check(std::all_of(fitted.begin(), fitted.end(), [](const int width) {
+        return width >= 1;
+    }), "layout keeps columns non-empty when the width budget permits");
+    check(std::accumulate(fitted.begin(), fitted.end(), 0) <= 100,
+        "layout never exceeds a narrow monitor width");
+
+    const auto minimal = piinput::fit_candidate_column_widths(desired, -20);
+    check(std::all_of(minimal.begin(), minimal.end(), [](const int width) {
+        return width >= 0;
+    }), "layout never produces negative column widths");
+    check(std::accumulate(minimal.begin(), minimal.end(), 0) <= 1,
+        "layout normalizes a non-positive monitor width to one pixel");
+
+    const std::vector<int> already_fits{64, 72, 80};
+    check(piinput::fit_candidate_column_widths(already_fits, 400) == already_fits,
+        "layout preserves desired widths when they already fit");
+}
+
 }  // namespace
 
 int main() {
@@ -147,6 +194,8 @@ int main() {
     test_candidate_count_changes_are_clamped();
     test_page_navigation_clamps_without_wrapping();
     test_candidate_count_arithmetic_does_not_overflow();
+    test_row_movement_saturates_without_signed_conversion();
+    test_candidate_column_layout_fits_narrow_widths();
     std::cout << "All CandidateGrid tests passed\n";
     return 0;
 }

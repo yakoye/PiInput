@@ -31,6 +31,7 @@ add_library(piinput_core STATIC
     src/dictionary_builder.cpp
     src/candidate_paging.cpp
     src/candidate_grid.cpp
+    src/candidate_layout.cpp
     src/input_mode.cpp
     src/incremental_decoder.cpp
     src/full_pinyin_variants.cpp

@@ -120,6 +120,16 @@ endif()
 if(NOT text_service_header_text MATCHES "CandidateGrid candidate_grid_")
     message(FATAL_ERROR "TSF must own the shared CandidateGrid state")
 endif()
+if(NOT text_service_header_text MATCHES "SettingsManager" OR
+   NOT text_service_header_text MATCHES "settings_manager_")
+    message(FATAL_ERROR "TSF must own the shared SettingsManager")
+endif()
+if(NOT text_service_text MATCHES "SettingsManager>\\(data_root / L\"settings\\.ini\"\\)" OR
+   NOT text_service_text MATCHES "settings_manager_->poll\\(\\)" OR
+   NOT text_service_text MATCHES "settings_manager_->apply_pending_at_composition_boundary\\(\\)" OR
+   NOT text_service_text MATCHES "apply_settings_at_composition_boundary")
+    message(FATAL_ERROR "TSF must poll and apply settings only at composition boundaries")
+endif()
 if(text_service_header_text MATCHES "page_start_" OR
    text_service_text MATCHES "move_candidate_page" OR
    text_service_text MATCHES "current_page_size")
@@ -133,6 +143,11 @@ if(NOT candidate_window_header_text MATCHES "items_per_row" OR
    NOT candidate_window_header_text MATCHES "visible_rows" OR
    NOT candidate_window_text MATCHES "actual_visible_rows")
     message(FATAL_ERROR "Candidate window must render the configured multi-row grid")
+endif()
+if(NOT candidate_window_text MATCHES "fit_candidate_column_widths" OR
+   NOT candidate_window_text MATCHES "maximum_width = \\(std::max\\)\\(1, work_width - 16\\)" OR
+   NOT candidate_window_text MATCHES "maximum_height = \\(std::max\\)\\(1, work_height - 16\\)")
+    message(FATAL_ERROR "Candidate window must keep narrow-work-area geometry non-negative")
 endif()
 
 if(NOT cmake_text MATCHES "add_executable\\(PiInput-Install")
