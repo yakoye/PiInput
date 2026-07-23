@@ -48,6 +48,17 @@ constexpr std::size_t kMaximumLineLength = 4096U;
     return parsed.ec == std::errc{} && parsed.ptr == text.data() + text.size() && value > 0U;
 }
 
+[[nodiscard]] bool parse_candidate_flags(
+    const std::string_view text,
+    std::uint32_t& value) noexcept {
+    if (text.empty()) {
+        return false;
+    }
+    value = 0U;
+    const auto parsed = std::from_chars(text.data(), text.data() + text.size(), value, 10);
+    return parsed.ec == std::errc{} && parsed.ptr == text.data() + text.size();
+}
+
 [[nodiscard]] bool split_tsv_row(
     const std::string_view line,
     std::string_view& word,
@@ -66,7 +77,7 @@ constexpr std::size_t kMaximumLineLength = 4096U;
     const std::string_view line,
     std::string_view& word,
     std::string_view& number,
-    std::string_view& flags) noexcept {
+    std::uint32_t& flags) noexcept {
     const auto first = line.find('\t');
     if (first == std::string_view::npos) {
         return false;
@@ -75,7 +86,7 @@ constexpr std::size_t kMaximumLineLength = 4096U;
     if (second == std::string_view::npos) {
         word = line.substr(0U, first);
         number = line.substr(first + 1U);
-        flags = {};
+        flags = 0U;
         return true;
     }
     if (line.find('\t', second + 1U) != std::string_view::npos) {
@@ -83,11 +94,7 @@ constexpr std::size_t kMaximumLineLength = 4096U;
     }
     word = line.substr(0U, first);
     number = line.substr(first + 1U, second - first - 1U);
-    flags = line.substr(second + 1U);
-    return std::all_of(flags.begin(), flags.end(), [](const char character) {
-        const auto value = static_cast<unsigned char>(character);
-        return value >= 0x21U && value <= 0x7EU;
-    });
+    return parse_candidate_flags(line.substr(second + 1U), flags);
 }
 
 [[nodiscard]] bool replace_file_atomically(
@@ -273,7 +280,7 @@ std::size_t EnglishLexicon::load_dictionary_tsv(
         }
         std::string_view word;
         std::string_view weight_text;
-        std::string_view flags;
+        std::uint32_t flags = 0U;
         std::uint64_t weight = 0U;
         if (!split_dictionary_row(line, word, weight_text, flags) || !is_ascii_word(word) ||
             !parse_positive_integer(weight_text, weight)) {
@@ -283,7 +290,7 @@ std::size_t EnglishLexicon::load_dictionary_tsv(
         if (found == entry_by_word_.end()) {
             const std::size_t index = entries_.size();
             entries_.push_back({
-                {next_id_++, std::string(word), weight, 0U, user_dictionary, std::string(flags)},
+                {next_id_++, std::string(word), weight, 0U, user_dictionary, flags},
                 ascii_lower(word),
             });
             entry_by_word_.emplace(entries_.back().candidate.word, index);
@@ -291,9 +298,7 @@ std::size_t EnglishLexicon::load_dictionary_tsv(
             auto& candidate = entries_[found->second].candidate;
             candidate.base_weight = (std::max)(candidate.base_weight, weight);
             candidate.user_entry = candidate.user_entry || user_dictionary;
-            if (!flags.empty() && (candidate.flags.empty() || user_dictionary)) {
-                candidate.flags.assign(flags);
-            }
+            candidate.flags |= flags;
         }
         ++accepted;
     }

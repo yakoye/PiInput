@@ -10,13 +10,21 @@
 
 namespace piinput {
 
+// Stable uint32 TSV bits. Source provenance and word traits can be ORed together.
+enum class EnglishCandidateFlag : std::uint32_t {
+    builtin = 1U << 0U,
+    downloaded = 1U << 1U,
+    user = 1U << 2U,
+    proper = 1U << 3U,
+};
+
 struct EnglishCandidate {
     std::uint64_t id{};
     std::string word;
     std::uint64_t base_weight{};
     std::uint64_t learning_count{};
     bool user_entry{};
-    std::string flags;
+    std::uint32_t flags{};
 
     bool operator==(const EnglishCandidate&) const = default;
 };

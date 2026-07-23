@@ -26,9 +26,9 @@ try {
     & $Converter -InputJson $InputJson -OutputTsv $OutputTsv -RuntimeTsv $RuntimeTsv
     $actual = @(Get-Content -LiteralPath $OutputTsv -Encoding UTF8)
     $expected = @(
-        "the`t3`twordfreq-en-25000",
-        "Apple`t2`twordfreq-en-25000",
-        "alpha`t1`twordfreq-en-25000"
+        "the`t3`t2",
+        "Apple`t2`t2",
+        "alpha`t1`t2"
     )
     if (($actual -join "`n") -cne ($expected -join "`n")) {
         throw "Unexpected converted English TSV: $($actual -join ' | ')"

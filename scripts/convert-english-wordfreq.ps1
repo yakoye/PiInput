@@ -7,6 +7,8 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$DownloadedFlag = 2
+
 function Write-AtomicUtf8Lines {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
@@ -62,7 +64,7 @@ if ($words.Count -eq 0) {
 $lines = [System.Collections.Generic.List[string]]::new()
 for ($index = 0; $index -lt $words.Count; ++$index) {
     $weight = $words.Count - $index
-    $lines.Add("$($words[$index])`t$weight`twordfreq-en-25000")
+    $lines.Add("$($words[$index])`t$weight`t$DownloadedFlag")
 }
 Write-AtomicUtf8Lines -Path $OutputTsv -Lines $lines
 if (-not [string]::IsNullOrWhiteSpace($RuntimeTsv)) {

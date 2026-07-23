@@ -17,6 +17,11 @@ endforeach()
 
 foreach(required_doc_text
     "word<TAB>positive_weight"
+    "uint32"
+    "builtin=1"
+    "downloaded=2"
+    "user=4"
+    "proper=8"
     "ASCII-only"
     "english_user.tsv"
     "english_downloaded.tsv"

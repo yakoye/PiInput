@@ -96,10 +96,13 @@ items_per_row=6
 用户英文词典路径是
 `%LOCALAPPDATA%\PiInput\UserData\english_user.tsv`，每行格式为
 `word<TAB>positive_weight`，也兼容可选第三列
-`word<TAB>positive_weight<TAB>flags`。`word` 必须是 ASCII-only 的 `A-Z`/`a-z`，
-`positive_weight` 必须是正整数，非法行会被忽略。完全相同大小写的重复词合并为一项：
-保留首次稳定 ID、采用最大权重，用户词优先于内置词，用户行的非空 `flags` 替换内置
-flags；大小写不同的词保留为不同候选，但前缀匹配不区分大小写。
+`word<TAB>positive_weight<TAB>flags`。`flags` 是严格的十进制 `uint32` 位掩码，`0`
+合法；不接受负数、溢出值、文本或额外列。稳定 bit 含义为 `builtin=1`、
+`downloaded=2`、`user=4`、`proper=8`，需要同时表达多个含义时按位 OR，例如内置专名为
+`9`。`word` 必须是 ASCII-only 的 `A-Z`/`a-z`，`positive_weight` 必须是正整数，非法
+行会被忽略。完全相同大小写的重复词合并为一项：保留首次稳定 ID、采用最大权重并按位
+OR `flags`。用户词优先由加载来源得到的独立 `user_entry` 状态决定，不依赖 `user=4`
+位；大小写不同的词保留为不同候选，但前缀匹配不区分大小写。
 
 - `builtin_dictionary=false`：不加载安装目录的内置英文 TSV，也不加载
   `%LOCALAPPDATA%\PiInput\UserData\english_downloaded.tsv`；

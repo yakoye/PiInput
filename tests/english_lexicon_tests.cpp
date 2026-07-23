@@ -19,6 +19,11 @@ namespace {
 
 int failures = 0;
 
+static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::builtin) == 1U);
+static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::downloaded) == 2U);
+static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::user) == 4U);
+static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::proper) == 8U);
+
 void check(const bool condition, const std::string& message) {
     if (!condition) {
         ++failures;
@@ -75,8 +80,8 @@ void test_prefix_case_and_stable_sorting() {
     check(words(lexicon.query("AP", 10U)) ==
             std::vector<std::string>({"Apple", "application", "apply", "apt"}),
         "ASCII prefix matching is case-insensitive and base weights sort deterministically");
-    check(lexicon.query("apple", 1U).front().flags == "proper",
-        "optional third-column flags are preserved on candidates");
+    check(lexicon.query("apple", 1U).front().flags == 9U,
+        "numeric third-column flags are preserved on candidates");
     check(words(lexicon.query("ban", 10U)) ==
             std::vector<std::string>({"banana", "Band", "bandwidth"}),
         "original candidate casing is preserved");
@@ -91,24 +96,29 @@ void test_invalid_rows_duplicates_and_user_merge() {
     const auto builtin = directory / "builtin.tsv";
     const auto user = directory / "user.tsv";
     write_text(builtin,
-        "alpha\t10\tbuiltin\n"
-        "alpha\t30\n"
-        "ALPHA\t20\tacronym\n"
-        "algebra\t1000\tbuiltin\n"
+        "alpha\t10\t1\n"
+        "alpha\t30\t8\n"
+        "ALPHA\t20\t0\n"
+        "algebra\t1000\n"
         "beta\tbad\n"
         "two words\t99\n"
         "\t20\n"
         "gamma\t0\n"
-        "delta\t40\textra\tunexpected\n"
-        "cafe\xCC\x81\t60\n");
+        "delta\t40\t1\textra\n"
+        "cafe\xCC\x81\t60\n"
+        "negative\t1\t-1\n"
+        "overflow\t1\t4294967296\n"
+        "textflag\t1\tbuiltin\n"
+        "emptyflag\t1\t\n"
+        "zero\t1\t0\n");
     write_text(user,
-        "alpine\t1\tuser\n"
-        "alpha\t80\tuser\n"
-        "ALPHA\t90\tuser\n");
+        "alpine\t1\t4\n"
+        "alpha\t80\t4\n"
+        "ALPHA\t90\n");
 
     piinput::EnglishLexicon lexicon;
-    check(lexicon.load_builtin_tsv(builtin) == 4U,
-        "damaged rows are rejected and exact duplicates merge");
+    check(lexicon.load_builtin_tsv(builtin) == 5U,
+        "negative, overflow, text, empty, and extra-column flags are rejected");
     check(lexicon.load_user_tsv(user) == 3U,
         "valid user rows load without duplicating exact words");
     check(words(lexicon.query("al", 10U)) ==
@@ -121,8 +131,16 @@ void test_invalid_rows_duplicates_and_user_merge() {
         "user duplicate raises the merged base weight");
     check(candidates[1].word == "alpha" && candidates[1].base_weight == 80U,
         "exact duplicate merges deterministically by maximum weight");
-    check(candidates[1].flags == "user",
-        "user duplicate deterministically replaces built-in flags");
+    check(candidates[0].flags == 0U && candidates[0].user_entry,
+        "two-column user rows default flags to zero while user_entry stays independent");
+    check(candidates[1].flags == 13U,
+        "exact duplicates deterministically merge numeric flags with bitwise OR");
+    const auto algebra = lexicon.query("algebra", 1U);
+    check(algebra.front().flags == 0U,
+        "two-column built-in rows default flags to zero");
+    const auto alpine = lexicon.query("alpine", 1U);
+    check(alpine.front().flags == 4U && alpine.front().user_entry,
+        "numeric user flags load without replacing the independent user_entry marker");
     std::filesystem::remove_all(directory);
 }
 
