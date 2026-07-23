@@ -30,6 +30,7 @@ add_library(piinput_core STATIC
     src/binary_lexicon.cpp
     src/dictionary_builder.cpp
     src/candidate_paging.cpp
+    src/candidate_grid.cpp
     src/input_mode.cpp
     src/incremental_decoder.cpp
     src/full_pinyin_variants.cpp
@@ -181,6 +182,12 @@ if(PIINPUT_BUILD_TESTS)
     target_link_libraries(piinput-settings-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-settings-tests)
 
+    add_executable(piinput-candidate-grid-tests
+        tests/candidate_grid_tests.cpp
+    )
+    target_link_libraries(piinput-candidate-grid-tests PRIVATE piinput_core)
+    piinput_enable_warnings(piinput-candidate-grid-tests)
+
     add_executable(piinput-full-pinyin-variants-tests
         tests/full_pinyin_variants_tests.cpp
     )
@@ -207,6 +214,7 @@ if(PIINPUT_BUILD_TESTS)
 
     add_test(NAME piinput-core-tests COMMAND piinput-core-tests)
     add_test(NAME piinput-settings-tests COMMAND piinput-settings-tests)
+    add_test(NAME piinput-candidate-grid COMMAND piinput-candidate-grid-tests)
     add_test(NAME piinput-full-pinyin-variants COMMAND piinput-full-pinyin-variants-tests)
     add_test(NAME piinput-incremental-decoder COMMAND piinput-incremental-decoder-tests)
 

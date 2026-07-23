@@ -1,7 +1,7 @@
 #pragma once
 
 #include "candidate_window.h"
-#include "piinput/candidate_paging.h"
+#include "piinput/candidate_grid.h"
 #include "piinput/engine.h"
 #include "piinput/input_mode.h"
 #include "piinput/punctuation.h"
@@ -59,9 +59,8 @@ private:
     void request_cancel(ITfContext* context);
     bool choose_candidate(ITfContext* context, std::size_t index);
     void commit_raw_input(ITfContext* context);
-    void move_selection(int delta);
+    void move_row(int delta);
     void move_page(int delta);
-    [[nodiscard]] std::size_t current_page_size() const;
     void toggle_input_mode(ITfContext* context);
     void load_engine();
     void save_user_model() noexcept;
@@ -86,11 +85,10 @@ private:
     std::unique_ptr<ImeSession> session_;
     std::filesystem::path user_model_path_;
     std::string schema_{"full"};
-    std::size_t selected_index_{};
-    std::size_t page_start_{};
     std::vector<std::string> symbol_candidates_;
     bool symbol_mode_{};
-    CandidatePageSettings page_settings_;
+    SettingsSnapshot settings_;
+    CandidateGrid candidate_grid_;
     CandidateWindow candidate_window_;
 };
 

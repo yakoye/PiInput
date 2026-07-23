@@ -70,14 +70,18 @@ void CandidateWindow::update(
     const std::wstring& composition,
     const std::vector<std::wstring>& candidates,
     const std::size_t selected,
-    const std::size_t page_start,
-    const std::size_t page_size) {
+    const std::size_t active_row,
+    const std::size_t first_visible_row,
+    const std::size_t items_per_row,
+    const std::size_t visible_rows) {
     schema_name_ = schema_name;
     composition_ = composition;
     candidates_ = candidates;
     selected_ = selected;
-    page_start_ = page_start;
-    page_size_ = (std::max)(std::size_t{1U}, page_size);
+    active_row_ = active_row;
+    first_visible_row_ = first_visible_row;
+    items_per_row_ = (std::max)(std::size_t{1U}, items_per_row);
+    visible_rows_ = (std::max)(std::size_t{1U}, visible_rows);
     if (window_ != nullptr) {
         InvalidateRect(window_, nullptr, TRUE);
     }
@@ -98,15 +102,19 @@ void CandidateWindow::show_near_caret() {
         point.y += 20;
     }
 
-    const int height = kHeaderHeight + kRowHeight + 2 * kPadding;
+    int height = kHeaderHeight + static_cast<int>(actual_visible_rows()) * kRowHeight + 2 * kPadding;
     int width = desired_width();
     const HMONITOR monitor = MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
     MONITORINFO monitor_info{sizeof(monitor_info)};
     if (GetMonitorInfoW(monitor, &monitor_info) != FALSE) {
         const int work_width = static_cast<int>(monitor_info.rcWork.right - monitor_info.rcWork.left);
+        const int work_height = static_cast<int>(monitor_info.rcWork.bottom - monitor_info.rcWork.top);
         width = (std::min)(width, work_width - 16);
+        height = (std::min)(height, work_height - 16);
         point.x = (std::min)(point.x, monitor_info.rcWork.right - width);
         point.x = (std::max)(point.x, monitor_info.rcWork.left);
+        point.y = (std::min)(point.y, monitor_info.rcWork.bottom - height);
+        point.y = (std::max)(point.y, monitor_info.rcWork.top);
     }
     SetWindowPos(window_, HWND_TOPMOST, point.x, point.y, width, height,
         SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -130,15 +138,33 @@ int CandidateWindow::desired_width() const {
     return (std::max)(320, width);
 }
 
+std::size_t CandidateWindow::actual_visible_rows() const noexcept {
+    const std::size_t first = first_visible_row_ * items_per_row_;
+    if (first >= candidates_.size()) {
+        return 0U;
+    }
+    const std::size_t remaining = candidates_.size() - first;
+    const std::size_t available_rows = (remaining + items_per_row_ - 1U) / items_per_row_;
+    return (std::min)(visible_rows_, available_rows);
+}
+
 std::vector<int> CandidateWindow::item_widths(HDC dc) const {
-    std::vector<int> widths;
-    const std::size_t end = (std::min)(candidates_.size(), page_start_ + page_size_);
-    widths.reserve(end - page_start_);
-    for (std::size_t index = page_start_; index < end; ++index) {
-        const std::wstring text = std::to_wstring(index - page_start_ + 1U) + L". " + candidates_[index];
+    const std::size_t first = first_visible_row_ * items_per_row_;
+    if (first >= candidates_.size()) {
+        return {};
+    }
+    const std::size_t capacity = actual_visible_rows() * items_per_row_;
+    const std::size_t end = (std::min)(candidates_.size(), first + capacity);
+    const std::size_t visible_columns = (std::min)(items_per_row_, end - first);
+    std::vector<int> widths(visible_columns, kMinimumItemWidth);
+    for (std::size_t index = first; index < end; ++index) {
+        const std::size_t column = index % items_per_row_;
+        const std::wstring text = std::to_wstring(column + 1U) + L". " + candidates_[index];
         SIZE extent{};
         GetTextExtentPoint32W(dc, text.c_str(), static_cast<int>(text.size()), &extent);
-        widths.push_back((std::clamp)(static_cast<int>(extent.cx) + 18, kMinimumItemWidth, kMaximumItemWidth));
+        widths[column] = (std::max)(
+            widths[column],
+            (std::clamp)(static_cast<int>(extent.cx) + 18, kMinimumItemWidth, kMaximumItemWidth));
     }
     return widths;
 }
@@ -166,7 +192,9 @@ void CandidateWindow::paint() {
     const std::wstring header_text = composition_ + L"    [" + schema_name_ + L"]";
     DrawTextW(dc, header_text.c_str(), -1, &header, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
 
-    const std::size_t end = (std::min)(candidates_.size(), page_start_ + page_size_);
+    const std::size_t first = first_visible_row_ * items_per_row_;
+    const std::size_t end = (std::min)(
+        candidates_.size(), first + actual_visible_rows() * items_per_row_);
     const int available_width = (std::max)(1, static_cast<int>(client.right) - 2 * kPadding);
     auto widths = item_widths(dc);
     int desired_items_width = 0;
@@ -176,17 +204,23 @@ void CandidateWindow::paint() {
     const double scale = desired_items_width > available_width && desired_items_width > 0
         ? static_cast<double>(available_width) / static_cast<double>(desired_items_width)
         : 1.0;
-    int left = kPadding;
-    for (std::size_t index = page_start_; index < end; ++index) {
-        const int column = static_cast<int>(index - page_start_);
+    for (std::size_t index = first; index < end; ++index) {
+        const int column = static_cast<int>(index % items_per_row_);
+        const int row = static_cast<int>(index / items_per_row_ - first_visible_row_);
+        int left = kPadding;
+        for (int preceding = 0; preceding < column; ++preceding) {
+            left += (std::max)(40, static_cast<int>(
+                static_cast<double>(widths[static_cast<std::size_t>(preceding)]) * scale));
+        }
         const int scaled_width = column + 1 == static_cast<int>(widths.size())
             ? client.right - kPadding - left
             : (std::max)(40, static_cast<int>(static_cast<double>(widths[static_cast<std::size_t>(column)]) * scale));
         RECT item{left, kPadding + kHeaderHeight,
                   (std::min)(static_cast<int>(client.right) - kPadding, left + scaled_width),
                   kPadding + kHeaderHeight + kRowHeight};
-        left = item.right;
-        if (index == selected_) {
+        item.top += row * kRowHeight;
+        item.bottom += row * kRowHeight;
+        if (index == selected_ && index / items_per_row_ == active_row_) {
             HBRUSH selected_brush = CreateSolidBrush(RGB(225, 239, 255));
             FillRect(dc, &item, selected_brush);
             DeleteObject(selected_brush);
