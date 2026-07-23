@@ -1,5 +1,7 @@
 #include "piinput/engine.h"
+#include "piinput/full_pinyin_variants.h"
 #include "piinput/incremental_decoder.h"
+#include "piinput/pinyin_prefix.h"
 
 #include <algorithm>
 #include <charconv>
@@ -29,6 +31,55 @@ void check(const bool condition, const std::string& message) {
     return std::any_of(candidates.begin(), candidates.end(), [&](const auto& candidate) {
         return candidate.word == word;
     });
+}
+
+[[nodiscard]] std::size_t syllable_count(const std::string_view canonical) {
+    if (canonical.empty()) {
+        return 0U;
+    }
+    return 1U + static_cast<std::size_t>(
+        std::count(canonical.begin(), canonical.end(), '\''));
+}
+
+[[nodiscard]] bool candidate_matches_input_prefix(
+    const piinput::EngineCandidate& candidate,
+    const std::string& input,
+    const std::string& schema,
+    const piinput::Engine& engine) {
+    if (candidate.consumed_syllables != syllable_count(candidate.pinyin)) {
+        return false;
+    }
+    std::vector<std::string> variants{input};
+    if (schema == "full") {
+        variants = piinput::normalize_full_pinyin_variants(
+            input, piinput::PinyinSettings{}, 128U);
+    }
+    for (const auto& variant : variants) {
+        const auto exact = engine.decode(variant, schema, 128U);
+        if (std::any_of(exact.begin(), exact.end(), [&](const auto& parse) {
+                const bool canonical_boundary =
+                    candidate.pinyin == parse.canonical ||
+                    (candidate.pinyin.starts_with(parse.canonical) &&
+                        candidate.pinyin.size() > parse.canonical.size() &&
+                        candidate.pinyin[parse.canonical.size()] == '\'');
+                return canonical_boundary &&
+                    candidate.consumed_syllables >= parse.syllables.size();
+            })) {
+            return true;
+        }
+        const auto prefixes = piinput::expand_input_prefix(
+            variant, schema, piinput::PinyinSegmenter{}, engine.shuangpin(), 128U);
+        if (std::any_of(prefixes.begin(), prefixes.end(), [&](const auto& prefix) {
+                const std::size_t minimum_consumed =
+                    prefix.complete_syllables.size() +
+                    (prefix.trailing_prefix.empty() ? 0U : 1U);
+                return candidate.pinyin.starts_with(prefix.canonical_prefix) &&
+                    candidate.consumed_syllables >= minimum_consumed;
+            })) {
+            return true;
+        }
+    }
+    return false;
 }
 
 [[nodiscard]] std::filesystem::path write_lexicon() {
@@ -188,6 +239,38 @@ void test_destination_paths_never_exceed_beam() {
             std::to_string(stats.max_destination_paths) + ")");
 }
 
+void test_result_limit_bounds_effective_beam() {
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t) {
+            std::vector<piinput::LexiconCandidate> words;
+            if (key == "a") {
+                for (std::size_t index = 0U; index < 8U; ++index) {
+                    words.push_back({
+                        "候选" + std::to_string(index),
+                        "a",
+                        static_cast<std::uint32_t>(100U - index),
+                    });
+                }
+            } else if (key == "ba") {
+                words.push_back({"吧", "ba", 100U});
+            }
+            return words;
+        },
+        [](const std::string_view, const std::size_t, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.beam_width = 32U;
+    options.result_limit = 3U;
+    piinput::IncrementalDecodeStats stats;
+    (void)decoder.decode(
+        {{{"a", "ba"}, {}, "a'ba", 0}}, options, &stats);
+    check(stats.max_source_paths <= options.result_limit &&
+        stats.max_destination_paths <= options.result_limit,
+        "result limit bounds the effective beam without weakening the configured maximum");
+}
+
 void test_terminal_prefix_cross_product_is_result_bounded() {
     std::size_t exact_requested_limit = 0U;
     piinput::IncrementalDecoder decoder(
@@ -326,6 +409,93 @@ void test_complete_exact_keeps_user_score_headroom() {
     check(std::any_of(results.begin(), results.end(), [](const auto& candidate) {
         return candidate.word == "候选33";
     }), "complete exact query retains headroom for a learned candidate below rank 32");
+}
+
+void test_incomplete_prefix_keeps_user_score_headroom() {
+    std::size_t requested_limit = 0U;
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [&](const std::string_view key, const std::size_t limit, const std::size_t) {
+            requested_limit = limit;
+            std::vector<piinput::LexiconCandidate> words;
+            if (key == "a") {
+                for (std::size_t index = 0U;
+                     index < (std::min)(limit, std::size_t{40U}); ++index) {
+                    words.push_back({
+                        "前缀候选" + std::to_string(index),
+                        "ai",
+                        static_cast<std::uint32_t>(1000U - index),
+                    });
+                }
+            }
+            return words;
+        },
+        [](const std::string_view, const std::string_view word) {
+            return word == "前缀候选33" ? 100'000'000 : 0;
+        });
+    piinput::IncrementalDecodeOptions options;
+    options.result_limit = 10U;
+    piinput::IncrementalDecodeStats stats;
+    const auto results = decoder.decode(
+        {{{}, "a", "a", 0}}, options, &stats);
+    check(requested_limit >= 34U,
+        "incomplete prefix query retains candidate headroom before user scoring");
+    check(!results.empty() && results.front().word == "前缀候选33",
+        "learned incomplete prefix candidate below rank 32 can become first");
+    check(stats.submitted_candidates <= options.result_limit * 16U,
+        "learned prefix headroom keeps terminal submissions result-bounded");
+}
+
+void test_direct_exact_ties_prefer_longer_words_then_dictionary_order() {
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t) {
+            if (key == "a") {
+                return std::vector<piinput::LexiconCandidate>{
+                    {"安", "a", 1000U},
+                    {"长长", "a", 1000U},
+                    {"长安", "a", 1000U},
+                };
+            }
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [](const std::string_view, const std::size_t, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    const auto results = decoder.decode(
+        {{{"a"}, {}, "a", 0}}, {});
+    check(results.size() >= 3U, "direct exact tie fixture returns all candidates");
+    if (results.size() >= 3U) {
+        check(results[0U].word == "长安" &&
+            results[1U].word == "长长" &&
+            results[2U].word == "安",
+            "direct exact ties sort by score, weight, word length, then dictionary order");
+    }
+}
+
+void test_engine_direct_exact_tie_compatibility() {
+    const auto path =
+        std::filesystem::temp_directory_path() / "piinput-direct-exact-order.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n"
+               << "安\ta\t1000\n"
+               << "长长\ta\t1000\n"
+               << "长安\ta\t1000\n";
+    }
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+    const auto results = engine.query("a", "full", 10U);
+    check(results.size() >= 3U, "engine direct exact tie fixture returns all candidates");
+    if (results.size() >= 3U) {
+        check(results[0U].word == "长安" &&
+            results[1U].word == "长长" &&
+            results[2U].word == "安",
+            "engine preserves direct exact word-length and dictionary-order ties");
+    }
+    std::filesystem::remove(path);
 }
 
 void test_low_scan_budget_retains_complete_prefix_parses() {
@@ -529,16 +699,18 @@ void test_prefix_sentence_table(piinput::Engine& engine) {
                 " has a valid promised_min_prefix");
             continue;
         }
-        if (schema == "flypy") {
-            const auto decoded = engine.shuangpin().decode(schema, encoded, 32U);
-            check(std::any_of(decoded.begin(), decoded.end(), [&](const auto& parse) {
-                return parse.canonical == canonical;
-            }), "Flypy fixture decodes to declared canonical pinyin: " + encoded);
-        }
+        const auto decoded = engine.decode(encoded, schema, 128U);
+        check(std::any_of(decoded.begin(), decoded.end(), [&](const auto& parse) {
+            return parse.canonical == canonical;
+        }), schema + " fixture decodes to declared canonical pinyin: " + encoded);
         for (std::size_t length = 1U; length <= encoded.size(); ++length) {
-            const auto results = engine.query(encoded.substr(0U, length), schema, 30U);
+            const std::string prefix = encoded.substr(0U, length);
+            const auto results = engine.query(prefix, schema, 30U);
             if (length >= promised) {
-                check(!results.empty(), "promised prefix is non-empty: " + encoded.substr(0U, length));
+                check(!results.empty(), "promised prefix is non-empty: " + prefix);
+                check(std::all_of(results.begin(), results.end(), [&](const auto& candidate) {
+                    return candidate_matches_input_prefix(candidate, prefix, schema, engine);
+                }), "promised prefix candidates consume compatible pinyin: " + prefix);
             }
         }
         check(contains_word(engine.query(encoded, schema, 30U), target),
@@ -591,9 +763,13 @@ int main(const int argc, char** argv) {
     if (only.empty() || only == "cache") {
         test_query_scope_cache_and_canonical_parse_deduplication();
         test_destination_paths_never_exceed_beam();
+        test_result_limit_bounds_effective_beam();
         test_terminal_prefix_cross_product_is_result_bounded();
         test_terminal_prefix_cap_matches_exhaustive_oracle();
         test_complete_exact_keeps_user_score_headroom();
+        test_incomplete_prefix_keeps_user_score_headroom();
+        test_direct_exact_ties_prefer_longer_words_then_dictionary_order();
+        test_engine_direct_exact_tie_compatibility();
         test_low_scan_budget_retains_complete_prefix_parses();
         test_low_scan_budget_keeps_short_parses_that_fit();
         test_max_word_syllable_limit_does_not_overflow();

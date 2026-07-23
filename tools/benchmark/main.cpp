@@ -21,6 +21,10 @@ struct Options {
     std::string query{"jisuanji"};
     std::size_t iterations{10000U};
     std::size_t warmup{1000U};
+    std::size_t rounds{1U};
+    std::size_t min_entries{};
+    bool skip_if_missing{};
+    bool require_results{};
     double max_p95_us{};
     double max_p99_us{};
 };
@@ -54,6 +58,14 @@ struct Options {
             options.iterations = parse_size(require_value("--iterations"), "--iterations");
         } else if (argument == "--warmup") {
             options.warmup = parse_size(require_value("--warmup"), "--warmup");
+        } else if (argument == "--rounds") {
+            options.rounds = parse_size(require_value("--rounds"), "--rounds");
+        } else if (argument == "--skip-if-missing") {
+            options.skip_if_missing = true;
+        } else if (argument == "--min-entries") {
+            options.min_entries = parse_size(require_value("--min-entries"), "--min-entries");
+        } else if (argument == "--require-results") {
+            options.require_results = true;
         } else if (argument == "--max-p95-us") {
             options.max_p95_us = std::stod(require_value("--max-p95-us"));
         } else if (argument == "--max-p99-us") {
@@ -66,6 +78,10 @@ struct Options {
                 << "  --query <input>\n"
                 << "  --iterations <count>\n"
                 << "  --warmup <count>\n"
+                << "  --rounds <count>\n"
+                << "  --skip-if-missing\n"
+                << "  --min-entries <count>\n"
+                << "  --require-results\n"
                 << "  --max-p95-us <microseconds>\n"
                 << "  --max-p99-us <microseconds>\n";
             std::exit(0);
@@ -89,47 +105,88 @@ struct Options {
 
 int run(const std::vector<std::string>& arguments) {
     const Options options = parse_options(arguments);
+    if (options.skip_if_missing && !std::filesystem::exists(options.lexicon)) {
+        std::cout << "SKIP: external benchmark lexicon not found: "
+                  << options.lexicon.string() << '\n';
+        return 77;
+    }
     piinput::Engine engine;
 
     const auto load_start = std::chrono::steady_clock::now();
     engine.load_lexicon(options.lexicon);
     const auto load_end = std::chrono::steady_clock::now();
+    if (options.min_entries != 0U && engine.entry_count() < options.min_entries) {
+        std::cerr << "Lexicon entry count " << engine.entry_count()
+                  << " is below required minimum " << options.min_entries << ".\n";
+        return 3;
+    }
 
     std::size_t result_guard = 0U;
-    for (std::size_t index = 0U; index < options.warmup; ++index) {
-        result_guard += engine.query(options.query, options.schema, 10U).size();
-    }
-
-    std::vector<double> microseconds;
-    microseconds.reserve(options.iterations);
-    for (std::size_t index = 0U; index < options.iterations; ++index) {
-        const auto start = std::chrono::steady_clock::now();
-        const auto candidates = engine.query(options.query, options.schema, 10U);
-        const auto end = std::chrono::steady_clock::now();
-        result_guard += candidates.size();
-        microseconds.push_back(std::chrono::duration<double, std::micro>(end - start).count());
-    }
-
-    std::sort(microseconds.begin(), microseconds.end());
+    std::vector<double> round_p50;
+    std::vector<double> round_p95;
+    std::vector<double> round_p99;
+    round_p50.reserve(options.rounds);
+    round_p95.reserve(options.rounds);
+    round_p99.reserve(options.rounds);
     double total = 0.0;
-    for (const double value : microseconds) {
-        total += value;
+    double maximum = 0.0;
+    for (std::size_t round = 0U; round < options.rounds; ++round) {
+        for (std::size_t index = 0U; index < options.warmup; ++index) {
+            result_guard += engine.query(options.query, options.schema, 10U).size();
+        }
+        std::vector<double> microseconds;
+        microseconds.reserve(options.iterations);
+        for (std::size_t index = 0U; index < options.iterations; ++index) {
+            const auto start = std::chrono::steady_clock::now();
+            const auto candidates = engine.query(options.query, options.schema, 10U);
+            const auto end = std::chrono::steady_clock::now();
+            result_guard += candidates.size();
+            const double elapsed =
+                std::chrono::duration<double, std::micro>(end - start).count();
+            total += elapsed;
+            maximum = (std::max)(maximum, elapsed);
+            microseconds.push_back(elapsed);
+        }
+        std::sort(microseconds.begin(), microseconds.end());
+        round_p50.push_back(percentile(microseconds, 0.50));
+        round_p95.push_back(percentile(microseconds, 0.95));
+        round_p99.push_back(percentile(microseconds, 0.99));
+        std::cout << std::fixed << std::setprecision(3)
+                  << "round_" << round + 1U
+                  << "_p50_us=" << round_p50.back() << '\n'
+                  << "round_" << round + 1U
+                  << "_p95_us=" << round_p95.back() << '\n'
+                  << "round_" << round + 1U
+                  << "_p99_us=" << round_p99.back() << '\n';
     }
-    const double average = total / static_cast<double>(microseconds.size());
+    std::sort(round_p50.begin(), round_p50.end());
+    std::sort(round_p95.begin(), round_p95.end());
+    std::sort(round_p99.begin(), round_p99.end());
+    const double p50 = percentile(round_p50, 0.50);
+    const double p95 = percentile(round_p95, 0.50);
+    const double p99 = percentile(round_p99, 0.50);
+    const double average = total /
+        (static_cast<double>(options.iterations) * static_cast<double>(options.rounds));
     const double load_ms = std::chrono::duration<double, std::milli>(load_end - load_start).count();
+    if (options.require_results && result_guard == 0U) {
+        std::cerr << "Benchmark query produced no candidates.\n";
+        return 3;
+    }
 
-    const double p95 = percentile(microseconds, 0.95);
-    const double p99 = percentile(microseconds, 0.99);
     std::cout << std::fixed << std::setprecision(3)
               << "PiInput benchmark\n"
               << "lexicon_entries=" << engine.entry_count() << '\n'
               << "load_ms=" << load_ms << '\n'
+              << "rounds=" << options.rounds << '\n'
               << "iterations=" << options.iterations << '\n'
               << "average_us=" << average << '\n'
-              << "p50_us=" << percentile(microseconds, 0.50) << '\n'
+              << "median_p50_us=" << p50 << '\n'
+              << "median_p95_us=" << p95 << '\n'
+              << "median_p99_us=" << p99 << '\n'
+              << "p50_us=" << p50 << '\n'
               << "p95_us=" << p95 << '\n'
               << "p99_us=" << p99 << '\n'
-              << "max_us=" << microseconds.back() << '\n'
+              << "max_us=" << maximum << '\n'
               << "result_guard=" << result_guard << '\n';
     if ((options.max_p95_us > 0.0 && p95 > options.max_p95_us) ||
         (options.max_p99_us > 0.0 && p99 > options.max_p99_us)) {

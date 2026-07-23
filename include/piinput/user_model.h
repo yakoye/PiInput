@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 namespace piinput {
@@ -15,7 +16,7 @@ public:
     void record_selection(const std::string& pinyin, const std::string& word);
     void remove(const std::string& pinyin, const std::string& word);
 
-    [[nodiscard]] int score_adjustment(const std::string& pinyin, const std::string& word) const;
+    [[nodiscard]] int score_adjustment(std::string_view pinyin, std::string_view word) const;
     [[nodiscard]] std::size_t entry_count() const noexcept;
 
 private:
@@ -24,7 +25,7 @@ private:
         std::uint64_t last_used{};
     };
 
-    [[nodiscard]] static std::string make_key(const std::string& pinyin, const std::string& word);
+    [[nodiscard]] static std::string make_key(std::string_view pinyin, std::string_view word);
 
     std::unordered_map<std::string, Entry> entries_;
 };

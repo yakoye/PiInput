@@ -44,8 +44,13 @@ template <typename T>
 
 }  // namespace
 
-std::string UserModel::make_key(const std::string& pinyin, const std::string& word) {
-    return pinyin + '\n' + word;
+std::string UserModel::make_key(const std::string_view pinyin, const std::string_view word) {
+    std::string key;
+    key.reserve(pinyin.size() + 1U + word.size());
+    key.append(pinyin);
+    key.push_back('\n');
+    key.append(word);
+    return key;
 }
 
 void UserModel::load(const std::filesystem::path& path) {
@@ -136,7 +141,12 @@ void UserModel::remove(const std::string& pinyin, const std::string& word) {
     entries_.erase(make_key(pinyin, word));
 }
 
-int UserModel::score_adjustment(const std::string& pinyin, const std::string& word) const {
+int UserModel::score_adjustment(
+    const std::string_view pinyin,
+    const std::string_view word) const {
+    if (entries_.empty()) {
+        return 0;
+    }
     const auto found = entries_.find(make_key(pinyin, word));
     if (found == entries_.end()) {
         return 0;

@@ -285,6 +285,46 @@ if(PIINPUT_BUILD_TESTS)
     )
 
     if(PIINPUT_TESTDATA_DIR)
+        set(
+            PIINPUT_INCREMENTAL_BENCHMARK_LEXICON_DEFAULT
+            "${PIINPUT_TESTDATA_DIR}/generated/piinput-combined.tsv"
+        )
+    else()
+        set(
+            PIINPUT_INCREMENTAL_BENCHMARK_LEXICON_DEFAULT
+            "${CMAKE_SOURCE_DIR}/../dicts/generated/piinput-combined.tsv"
+        )
+    endif()
+    set(
+        PIINPUT_INCREMENTAL_BENCHMARK_LEXICON
+        "${PIINPUT_INCREMENTAL_BENCHMARK_LEXICON_DEFAULT}"
+        CACHE FILEPATH
+        "External large lexicon used by the incremental Release performance gate"
+    )
+    add_test(
+        NAME piinput-external-incremental-performance
+        COMMAND piinput-benchmark
+            --lexicon "${PIINPUT_INCREMENTAL_BENCHMARK_LEXICON}"
+            --schema flypy
+            --query biruwoycuibuv
+            --iterations 2000
+            --warmup 200
+            --rounds 3
+            --skip-if-missing
+            --min-entries 450000
+            --require-results
+            --max-p95-us 2000
+            --max-p99-us 5000
+        CONFIGURATIONS Release
+    )
+    set_tests_properties(
+        piinput-external-incremental-performance
+        PROPERTIES
+            DISABLED "$<NOT:$<CONFIG:Release>>"
+            SKIP_RETURN_CODE 77
+    )
+
+    if(PIINPUT_TESTDATA_DIR)
         set(EXTERNAL_LEXICON "${PIINPUT_TESTDATA_DIR}/cache/piinput-base.lex")
         if(EXISTS "${EXTERNAL_LEXICON}")
             add_test(

@@ -43,10 +43,19 @@ constexpr std::int64_t completion_character_penalty = 100'000;
     const std::vector<std::string>& syllables,
     const std::size_t begin,
     const std::size_t end) {
-    std::vector<std::string> range(
-        syllables.begin() + static_cast<std::ptrdiff_t>(begin),
-        syllables.begin() + static_cast<std::ptrdiff_t>(end));
-    return PinyinSegmenter::join(range);
+    std::size_t size = end > begin ? end - begin - 1U : 0U;
+    for (std::size_t index = begin; index < end; ++index) {
+        size += syllables[index].size();
+    }
+    std::string result;
+    result.reserve(size);
+    for (std::size_t index = begin; index < end; ++index) {
+        if (index != begin) {
+            result.push_back('\'');
+        }
+        result.append(syllables[index]);
+    }
+    return result;
 }
 
 [[nodiscard]] bool candidate_matches_boundary(
@@ -122,6 +131,9 @@ void insert_bounded_path(
     const IncrementalCandidate& right) {
     if (left.score != right.score) return left.score > right.score;
     if (left.base_weight != right.base_weight) return left.base_weight > right.base_weight;
+    if (left.word.size() != right.word.size()) {
+        return left.word.size() > right.word.size();
+    }
     if (left.consumed_syllables != right.consumed_syllables) {
         return left.consumed_syllables > right.consumed_syllables;
     }
@@ -156,6 +168,8 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
     std::unordered_map<std::string, IncrementalCandidate> best;
     std::unordered_map<std::string, std::vector<LexiconCandidate>> exact_cache;
     std::unordered_map<std::string, std::vector<LexiconCandidate>> prefix_cache;
+    const std::size_t state_beam_width = (std::min)(
+        options.beam_width, options.result_limit);
     const std::size_t exact_candidate_limit = (std::min)(
         options.beam_width, (std::max<std::size_t>)(8U, options.result_limit));
     std::vector<const IncrementalParse*> unique_parses;
@@ -257,12 +271,16 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
     if (!prefix_keys.empty()) {
         const std::size_t scan_share = options.prefix_scan_limit / prefix_keys.size();
         const std::size_t scan_remainder = options.prefix_scan_limit % prefix_keys.size();
-        const std::size_t prefix_candidate_limit = (std::min)(
-            options.result_limit, options.beam_width);
-        const std::size_t scan_headroom = prefix_candidate_limit >
+        const std::size_t prefix_query_headroom = options.result_limit >
+                (std::numeric_limits<std::size_t>::max)() / 4U
+            ? (std::numeric_limits<std::size_t>::max)()
+            : options.result_limit * 4U;
+        const std::size_t beam_scan_headroom = state_beam_width >
                 (std::numeric_limits<std::size_t>::max)() / 16U
             ? (std::numeric_limits<std::size_t>::max)()
-            : prefix_candidate_limit * 16U;
+            : state_beam_width * 16U;
+        const std::size_t scan_headroom = (std::min)(
+            prefix_query_headroom, beam_scan_headroom);
         for (std::size_t index = 0U; index < prefix_keys.size(); ++index) {
             const std::size_t query_scan_limit = (std::min)(
                 scan_share + (index < scan_remainder ? 1U : 0U),
@@ -270,13 +288,13 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
             if (query_scan_limit == 0U) {
                 continue;
             }
-            const std::size_t query_limit = (std::min)(
-                prefix_candidate_limit, query_scan_limit);
             auto [cached, inserted] = prefix_cache.try_emplace(prefix_keys[index]);
             if (inserted) {
                 if (stats != nullptr) {
                     ++stats->prefix_query_calls;
                 }
+                const std::size_t query_limit = (std::min)(
+                    query_scan_limit, prefix_query_headroom);
                 cached->second = prefix_query_(
                     prefix_keys[index], query_limit, query_scan_limit);
             }
@@ -356,7 +374,7 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
                             (user_score_ ? user_score_(span, word.word) : 0) +
                             static_cast<std::int64_t>(syllable_count - 1U) * joined_syllable_bonus;
                         ++next.word_count;
-                        insert_bounded_path(destination, std::move(next), options.beam_width);
+                        insert_bounded_path(destination, std::move(next), state_beam_width);
                         if (stats != nullptr) {
                             stats->max_destination_paths = (std::max)(
                                 stats->max_destination_paths, destination.size());
@@ -396,34 +414,75 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
             if (cached == prefix_cache.end()) {
                 continue;
             }
-            const auto& words = cached->second;
-            for (const auto& word : words) {
+            struct RankedPrefixWord {
+                const LexiconCandidate* word{};
+                std::size_t syllable_count{};
+                std::size_t remaining_characters{};
+                std::int64_t edge_score{};
+            };
+            std::vector<RankedPrefixWord> words;
+            words.reserve(cached->second.size());
+            for (const auto& word : cached->second) {
                 if (!candidate_matches_boundary(word, parse.complete_syllables, start, parse.trailing_prefix)) {
                     continue;
                 }
                 const auto word_syllables = split_syllables(word.pinyin);
                 const std::size_t remaining_characters = word.pinyin.size() - key.size();
+                words.push_back(RankedPrefixWord{
+                    &word,
+                    word_syllables.size(),
+                    remaining_characters,
+                    frequency_score(word.weight) - token_penalty +
+                        (user_score_ ? user_score_(word.pinyin, word.word) : 0) +
+                        static_cast<std::int64_t>(word_syllables.size() - 1U) *
+                            joined_syllable_bonus,
+                });
+            }
+            std::stable_sort(words.begin(), words.end(), [](const auto& left, const auto& right) {
+                const std::int64_t left_score = left.edge_score -
+                    static_cast<std::int64_t>(left.remaining_characters) *
+                        completion_character_penalty;
+                const std::int64_t right_score = right.edge_score -
+                    static_cast<std::int64_t>(right.remaining_characters) *
+                        completion_character_penalty;
+                if (left_score != right_score) return left_score > right_score;
+                if (left.word->weight != right.word->weight) {
+                    return left.word->weight > right.word->weight;
+                }
+                if (left.word->word.size() != right.word->word.size()) {
+                    return left.word->word.size() > right.word->word.size();
+                }
+                if (left.word->word != right.word->word) {
+                    return left.word->word < right.word->word;
+                }
+                return left.word->pinyin < right.word->pinyin;
+            });
+            const std::size_t prefix_candidate_limit = (std::min)(
+                options.result_limit, options.beam_width);
+            if (words.size() > prefix_candidate_limit) {
+                words.resize(prefix_candidate_limit);
+            }
+            for (const auto& ranked_word : words) {
+                const auto& word = *ranked_word.word;
                 const std::size_t terminal_path_limit = (std::min)(
                     states[start].size(),
-                    (std::min)(options.result_limit, options.beam_width));
+                    state_beam_width);
                 for (std::size_t path_index = 0U;
                      path_index < terminal_path_limit; ++path_index) {
                     const auto& path = states[start][path_index];
                     std::uint64_t aggregate = static_cast<std::uint64_t>(path.aggregate_weight) + word.weight;
                     aggregate = (std::min)(
                         aggregate, static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max()));
-                    const std::int64_t edge_score = frequency_score(word.weight) - token_penalty +
-                        (user_score_ ? user_score_(word.pinyin, word.word) : 0) +
-                        static_cast<std::int64_t>(word_syllables.size() - 1U) * joined_syllable_bonus;
                     submit(IncrementalCandidate{
                         path.text + word.word,
                         join_range(parse.complete_syllables, 0U, start) +
                             (start == 0U ? std::string{} : std::string{"'"}) + word.pinyin,
                         static_cast<std::uint32_t>(aggregate),
-                        path.score + edge_score + parse.parse_score -
+                        path.score + ranked_word.edge_score + parse.parse_score -
                             static_cast<std::int64_t>(parse_index * 20U) - incomplete_input_penalty -
-                            static_cast<std::int64_t>(remaining_characters) * completion_character_penalty,
-                        start + word_syllables.size(),
+                            static_cast<std::int64_t>(ranked_word.remaining_characters) *
+                                completion_character_penalty,
+                        start + ranked_word.syllable_count,
                         path.word_count + 1U,
                     });
                 }

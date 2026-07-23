@@ -202,7 +202,7 @@ std::vector<EngineCandidate> Engine::query(
             return query_prefix(std::string(prefix), query_limit, scan_limit);
         },
         [this](const std::string_view pinyin, const std::string_view word) {
-            return user_model_.score_adjustment(std::string(pinyin), std::string(word));
+            return user_model_.score_adjustment(pinyin, word);
         });
     const auto decoded = decoder.decode(parses, IncrementalDecodeOptions{
         static_cast<std::size_t>(settings.pinyin.prefix_beam_width),
@@ -216,6 +216,9 @@ std::vector<EngineCandidate> Engine::query(
     auto better = [](const EngineCandidate& left, const EngineCandidate& right) {
         if (left.score != right.score) return left.score > right.score;
         if (left.base_weight != right.base_weight) return left.base_weight > right.base_weight;
+        if (left.word.size() != right.word.size()) {
+            return left.word.size() > right.word.size();
+        }
         if (left.consumed_syllables != right.consumed_syllables) {
             return left.consumed_syllables > right.consumed_syllables;
         }
