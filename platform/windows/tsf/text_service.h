@@ -63,9 +63,9 @@ private:
         const EnglishKeyDecision& decision);
     [[nodiscard]] EnglishKeyDecision english_key_decision(WPARAM wparam) const noexcept;
     void refresh_candidate_window();
-    void request_update(ITfContext* context);
-    void request_commit(ITfContext* context, const std::string& text);
-    void request_cancel(ITfContext* context);
+    bool request_update(ITfContext* context);
+    bool request_commit(ITfContext* context, const std::string& text);
+    bool request_cancel(ITfContext* context);
     bool choose_candidate(ITfContext* context, std::size_t index);
     void commit_raw_input(ITfContext* context);
     void move_row(int delta);

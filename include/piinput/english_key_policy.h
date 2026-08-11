@@ -1,10 +1,16 @@
 #pragma once
 
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
+
 namespace piinput {
 
 enum class EnglishKeyKind {
     letter,
     punctuation,
+    literal,
     digit,
     space,
     enter,
@@ -27,6 +33,7 @@ enum class EnglishKeyAction {
     start_composition,
     insert_letter,
     commit_then_punctuation,
+    commit_then_literal,
     choose_digit,
     choose_current,
     commit_raw,
@@ -42,6 +49,22 @@ enum class EnglishKeyAction {
     previous_page,
     next_page,
 };
+
+struct EnglishCommitPlan {
+    std::string text;
+    bool used_candidate{};
+
+    bool operator==(const EnglishCommitPlan&) const = default;
+};
+
+[[nodiscard]] bool edit_session_succeeded(
+    std::int32_t request_result,
+    std::int32_t session_result) noexcept;
+
+[[nodiscard]] EnglishCommitPlan build_english_commit_plan(
+    std::string_view raw_input,
+    std::optional<std::string_view> candidate,
+    std::string_view suffix);
 
 struct EnglishKeyContext {
     bool english_mode{};
@@ -64,5 +87,9 @@ public:
         const EnglishKeyContext& context,
         EnglishKeyKind key) noexcept;
 };
+
+[[nodiscard]] EnglishKeyKind classify_english_ascii_key(
+    char key,
+    bool shifted) noexcept;
 
 }  // namespace piinput

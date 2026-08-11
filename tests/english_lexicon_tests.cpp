@@ -195,6 +195,33 @@ void test_learning_overflow_and_damaged_rows_are_safe() {
     std::filesystem::remove_all(directory);
 }
 
+void test_independent_lexicons_merge_pending_learning_without_lost_updates() {
+    const auto directory = make_temp_directory("learning-merge");
+    const auto builtin = directory / "builtin.tsv";
+    const auto learning = directory / "learning.tsv";
+    write_text(builtin, "alpha\t10\n");
+
+    piinput::EnglishLexicon first;
+    piinput::EnglishLexicon second;
+    check(first.load_builtin_tsv(builtin) == 1U && second.load_builtin_tsv(builtin) == 1U,
+        "independent learning fixtures load");
+    check(first.record_selection("alpha") && second.record_selection("alpha"),
+        "independent processes can each record a local delta");
+    check(first.save_learning_tsv(learning), "first process saves its pending delta");
+    check(second.save_learning_tsv(learning), "second process merges instead of overwriting");
+
+    piinput::EnglishLexicon reloaded;
+    check(reloaded.load_builtin_tsv(builtin) == 1U, "merged learning fixture reloads");
+    check(reloaded.load_learning_tsv(learning) == 1U, "merged learning row is valid");
+    check(reloaded.query("a", 1U).front().learning_count == 2U,
+        "two independent saves preserve both selection counts");
+    for (const auto& item : std::filesystem::directory_iterator(directory)) {
+        check(item.path().filename().string().find(".tmp.") == std::string::npos,
+            "successful learning save leaves no unique temporary file");
+    }
+    std::filesystem::remove_all(directory);
+}
+
 void test_english_session_composition_editing_and_choice() {
     const auto directory = make_temp_directory("session");
     const auto builtin = directory / "builtin.tsv";
@@ -398,6 +425,7 @@ void test_english_key_policy_covers_passthrough_commit_and_grid_actions() {
     const EnglishKeyContext composing{true, true, true, true};
     const std::vector<std::pair<EnglishKeyKind, EnglishKeyAction>> cases{
         {EnglishKeyKind::punctuation, EnglishKeyAction::commit_then_punctuation},
+        {EnglishKeyKind::literal, EnglishKeyAction::commit_then_literal},
         {EnglishKeyKind::digit, EnglishKeyAction::choose_digit},
         {EnglishKeyKind::space, EnglishKeyAction::choose_current},
         {EnglishKeyKind::enter, EnglishKeyAction::commit_raw},
@@ -423,6 +451,31 @@ void test_english_key_policy_covers_passthrough_commit_and_grid_actions() {
         "unsupported English keys remain passthrough");
 }
 
+void test_edit_session_results_and_single_commit_plans_are_atomic() {
+    check(piinput::classify_english_ascii_key('0', false) ==
+            piinput::EnglishKeyKind::literal,
+        "unshifted zero is consumed as a literal suffix during composition");
+    check(piinput::classify_english_ascii_key('0', true) ==
+            piinput::EnglishKeyKind::punctuation,
+        "shifted zero remains closing-parenthesis punctuation");
+    check(piinput::classify_english_ascii_key('5', false) ==
+            piinput::EnglishKeyKind::digit,
+        "digits one through nine still select candidates");
+    check(piinput::edit_session_succeeded(0, 0),
+        "successful RequestEditSession and DoEditSession results commit state");
+    check(!piinput::edit_session_succeeded(static_cast<std::int32_t>(0x80004005U), 0),
+        "failed RequestEditSession keeps input state");
+    check(!piinput::edit_session_succeeded(0, static_cast<std::int32_t>(0x80004005U)),
+        "failed DoEditSession keeps input state");
+
+    const auto candidate = piinput::build_english_commit_plan("app", "Apple", ",");
+    check(candidate.text == "Apple," && candidate.used_candidate,
+        "candidate and punctuation are submitted in one commit string");
+    const auto raw = piinput::build_english_commit_plan("zz", std::nullopt, "0");
+    check(raw.text == "zz0" && !raw.used_candidate,
+        "raw composition and an unshifted zero are submitted atomically");
+}
+
 }  // namespace
 
 int main() {
@@ -431,6 +484,7 @@ int main() {
     test_invalid_rows_duplicates_and_user_merge();
     test_learning_promotes_and_persists_atomically();
     test_learning_overflow_and_damaged_rows_are_safe();
+    test_independent_lexicons_merge_pending_learning_without_lost_updates();
     test_english_session_composition_editing_and_choice();
     test_english_session_can_disable_learning();
     test_english_session_candidate_limit_updates_at_boundary();
@@ -440,6 +494,7 @@ int main() {
     test_shorter_completion_precedes_stable_id_on_equal_scores();
     test_english_key_policy_gates_mode_and_lazy_loading();
     test_english_key_policy_covers_passthrough_commit_and_grid_actions();
+    test_edit_session_results_and_single_commit_plans_are_atomic();
 
     if (failures != 0) {
         std::cerr << failures << " English lexicon test(s) failed\n";

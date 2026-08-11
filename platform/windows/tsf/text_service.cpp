@@ -172,10 +172,11 @@ private:
 }
 
 [[nodiscard]] EnglishKeyKind english_key_kind(const WPARAM key) {
-    if (is_ascii_letter(key)) {
-        return EnglishKeyKind::letter;
-    }
     const bool shifted = shift_is_down();
+    if ((key >= static_cast<WPARAM>('0') && key <= static_cast<WPARAM>('9')) ||
+        is_ascii_letter(key)) {
+        return classify_english_ascii_key(static_cast<char>(key), shifted);
+    }
     if (!shifted && key == VK_OEM_MINUS) {
         return EnglishKeyKind::previous_row;
     }
@@ -497,7 +498,7 @@ void TextService::handle_key(ITfContext* const context, const WPARAM wparam) {
             return;
         }
         const std::string punctuation = punctuation_.transform(
-            base_key, PunctuationMode::chinese, shifted);
+            base_key, settings_.punctuation, shifted);
         if (composing) {
             if (!choose_candidate(context, candidate_grid_.selected_index())) {
                 commit_raw_input(context);
@@ -609,6 +610,37 @@ void TextService::handle_english_key(
     ITfContext* const context,
     const WPARAM wparam,
     const EnglishKeyDecision& decision) {
+    const auto update_after_edit = [&]() {
+        const auto previous_grid_count = candidate_grid_.candidate_count();
+        candidate_grid_.reset(english_session_->snapshot().candidates.size());
+        if (request_update(context)) {
+            refresh_candidate_window();
+            return true;
+        }
+        candidate_grid_.reset(previous_grid_count);
+        return false;
+    };
+    const auto commit_with_suffix = [&](const std::string_view suffix) {
+        const std::size_t index = candidate_grid_.selected_index();
+        const auto selected = english_session_->candidate(index);
+        const auto plan = build_english_commit_plan(
+            english_session_->raw_input(),
+            selected.has_value()
+                ? std::optional<std::string_view>(*selected)
+                : std::nullopt,
+            suffix);
+        if (!request_commit(context, plan.text)) {
+            return;
+        }
+        if (plan.used_candidate) {
+            const auto accepted = english_session_->choose(index);
+            (void)accepted;
+            save_english_learning();
+        } else {
+            english_session_->clear();
+        }
+        apply_settings_at_composition_boundary();
+    };
     switch (decision.action) {
     case EnglishKeyAction::start_composition: {
         apply_settings_at_composition_boundary();
@@ -621,65 +653,88 @@ void TextService::handle_english_key(
         }
         [[fallthrough]];
     }
-    case EnglishKeyAction::insert_letter:
+    case EnglishKeyAction::insert_letter: {
+        const auto previous = english_session_->snapshot();
         english_session_->insert(ascii_letter_for_key(wparam));
-        candidate_grid_.reset(english_session_->snapshot().candidates.size());
-        request_update(context);
-        refresh_candidate_window();
+        if (!update_after_edit()) {
+            english_session_->restore(previous);
+            candidate_grid_.reset(previous.candidates.size());
+        }
         return;
+    }
     case EnglishKeyAction::commit_then_punctuation: {
         const char base_key = punctuation_base_key(wparam);
         if (base_key == '\0') {
             return;
         }
-        if (!choose_candidate(context, candidate_grid_.selected_index())) {
-            commit_raw_input(context);
-        }
-        request_commit(
-            context,
+        commit_with_suffix(
             punctuation_.transform(base_key, PunctuationMode::english, shift_is_down()));
         return;
     }
-    case EnglishKeyAction::backspace:
+    case EnglishKeyAction::commit_then_literal: {
+        commit_with_suffix(std::string(1U, static_cast<char>(wparam)));
+        return;
+    }
+    case EnglishKeyAction::backspace: {
+        const auto previous = english_session_->snapshot();
         english_session_->backspace();
         candidate_grid_.reset(english_session_->snapshot().candidates.size());
         if (english_session_->snapshot().input.empty()) {
-            request_cancel(context);
-        } else {
-            request_update(context);
+            if (!request_cancel(context)) {
+                english_session_->restore(previous);
+                candidate_grid_.reset(previous.candidates.size());
+            }
+        } else if (!request_update(context)) {
+            english_session_->restore(previous);
+            candidate_grid_.reset(previous.candidates.size());
         }
         refresh_candidate_window();
         return;
-    case EnglishKeyAction::delete_forward:
+    }
+    case EnglishKeyAction::delete_forward: {
+        const auto previous = english_session_->snapshot();
         english_session_->delete_forward();
         candidate_grid_.reset(english_session_->snapshot().candidates.size());
         if (english_session_->snapshot().input.empty()) {
-            request_cancel(context);
-        } else {
-            request_update(context);
+            if (!request_cancel(context)) {
+                english_session_->restore(previous);
+                candidate_grid_.reset(previous.candidates.size());
+            }
+        } else if (!request_update(context)) {
+            english_session_->restore(previous);
+            candidate_grid_.reset(previous.candidates.size());
         }
         refresh_candidate_window();
         return;
-    case EnglishKeyAction::move_left:
+    }
+    case EnglishKeyAction::move_left: {
+        const auto previous = english_session_->snapshot();
         english_session_->move_left();
-        request_update(context);
+        if (!request_update(context)) { english_session_->restore(previous); }
         refresh_candidate_window();
         return;
-    case EnglishKeyAction::move_right:
+    }
+    case EnglishKeyAction::move_right: {
+        const auto previous = english_session_->snapshot();
         english_session_->move_right();
-        request_update(context);
+        if (!request_update(context)) { english_session_->restore(previous); }
         refresh_candidate_window();
         return;
-    case EnglishKeyAction::move_home:
+    }
+    case EnglishKeyAction::move_home: {
+        const auto previous = english_session_->snapshot();
         english_session_->move_home();
-        request_update(context);
+        if (!request_update(context)) { english_session_->restore(previous); }
         refresh_candidate_window();
         return;
-    case EnglishKeyAction::move_end:
+    }
+    case EnglishKeyAction::move_end: {
+        const auto previous = english_session_->snapshot();
         english_session_->move_end();
-        request_update(context);
+        if (!request_update(context)) { english_session_->restore(previous); }
         refresh_candidate_window();
         return;
+    }
     case EnglishKeyAction::previous_row:
         move_row(-1);
         refresh_candidate_window();
@@ -714,9 +769,11 @@ void TextService::handle_english_key(
         commit_raw_input(context);
         return;
     case EnglishKeyAction::cancel:
-        english_session_->clear();
-        candidate_grid_.reset(0U);
-        request_cancel(context);
+        if (request_cancel(context)) {
+            english_session_->clear();
+            candidate_grid_.reset(0U);
+            apply_settings_at_composition_boundary();
+        }
         refresh_candidate_window();
         return;
     case EnglishKeyAction::pass_through:
@@ -735,9 +792,9 @@ EnglishKeyDecision TextService::english_key_decision(const WPARAM wparam) const 
         english_key_kind(wparam));
 }
 
-void TextService::request_update(ITfContext* const context) {
+bool TextService::request_update(ITfContext* const context) {
     if (session_ == nullptr) {
-        return;
+        return false;
     }
     const std::string& input = english_composing()
         ? english_session_->snapshot().input
@@ -748,37 +805,50 @@ void TextService::request_update(ITfContext* const context) {
         : text.size();
     auto* edit_session = new EditSession(this, context, text, caret, false, false);
     HRESULT session_result = E_FAIL;
-    context->RequestEditSession(client_id_, edit_session,
+    const HRESULT request_result = context->RequestEditSession(client_id_, edit_session,
         TF_ES_SYNC | TF_ES_READWRITE, &session_result);
     edit_session->Release();
+    return edit_session_succeeded(
+        static_cast<std::int32_t>(request_result),
+        static_cast<std::int32_t>(session_result));
 }
 
-void TextService::request_commit(ITfContext* const context, const std::string& text) {
-    candidate_grid_.reset(0U);
-    symbol_candidates_.clear();
-    symbol_mode_ = false;
-    apply_settings_at_composition_boundary();
+bool TextService::request_commit(ITfContext* const context, const std::string& text) {
     const std::wstring wide_text = utf8_to_wide(text);
     auto* edit_session = new EditSession(
         this, context, wide_text, wide_text.size(), true, false);
     HRESULT session_result = E_FAIL;
-    context->RequestEditSession(client_id_, edit_session,
+    const HRESULT request_result = context->RequestEditSession(client_id_, edit_session,
         TF_ES_SYNC | TF_ES_READWRITE, &session_result);
     edit_session->Release();
-    candidate_window_.hide();
+    const bool succeeded = edit_session_succeeded(
+        static_cast<std::int32_t>(request_result),
+        static_cast<std::int32_t>(session_result));
+    if (succeeded) {
+        candidate_grid_.reset(0U);
+        symbol_candidates_.clear();
+        symbol_mode_ = false;
+        candidate_window_.hide();
+    }
+    return succeeded;
 }
 
-void TextService::request_cancel(ITfContext* const context) {
-    candidate_grid_.reset(0U);
-    symbol_candidates_.clear();
-    symbol_mode_ = false;
-    apply_settings_at_composition_boundary();
+bool TextService::request_cancel(ITfContext* const context) {
     auto* edit_session = new EditSession(this, context, L"", 0U, false, true);
     HRESULT session_result = E_FAIL;
-    context->RequestEditSession(client_id_, edit_session,
+    const HRESULT request_result = context->RequestEditSession(client_id_, edit_session,
         TF_ES_SYNC | TF_ES_READWRITE, &session_result);
     edit_session->Release();
-    candidate_window_.hide();
+    const bool succeeded = edit_session_succeeded(
+        static_cast<std::int32_t>(request_result),
+        static_cast<std::int32_t>(session_result));
+    if (succeeded) {
+        candidate_grid_.reset(0U);
+        symbol_candidates_.clear();
+        symbol_mode_ = false;
+        candidate_window_.hide();
+    }
+    return succeeded;
 }
 
 HRESULT TextService::apply_composition_edit(
@@ -799,7 +869,11 @@ HRESULT TextService::apply_composition_edit(
         if (FAILED(result) || fetched == 0U || selection.range == nullptr) {
             return FAILED(result) ? result : E_FAIL;
         }
-        selection.range->Collapse(edit_cookie, TF_ANCHOR_END);
+        result = selection.range->Collapse(edit_cookie, TF_ANCHOR_END);
+        if (FAILED(result)) {
+            selection.range->Release();
+            return result;
+        }
         ITfContextComposition* composition_context = nullptr;
         result = context->QueryInterface(IID_PPV_ARGS(&composition_context));
         if (SUCCEEDED(result)) {
@@ -862,13 +936,17 @@ bool TextService::choose_candidate(ITfContext* const context, const std::size_t 
         return false;
     }
     if (english_mode_ && english_session_ != nullptr) {
-        const auto chosen = english_session_->choose(index);
+        const auto chosen = english_session_->candidate(index);
         if (!chosen.has_value()) {
             return false;
         }
-        candidate_grid_.reset(0U);
+        if (!request_commit(context, *chosen)) {
+            return false;
+        }
+        const auto accepted = english_session_->choose(index);
+        (void)accepted;
         save_english_learning();
-        request_commit(context, *chosen);
+        apply_settings_at_composition_boundary();
         return true;
     }
     if (symbol_mode_) {
@@ -901,9 +979,10 @@ bool TextService::choose_candidate(ITfContext* const context, const std::size_t 
 void TextService::commit_raw_input(ITfContext* const context) {
     if (english_composing()) {
         const std::string raw = english_session_->raw_input();
-        english_session_->clear();
-        candidate_grid_.reset(0U);
-        request_commit(context, raw);
+        if (request_commit(context, raw)) {
+            english_session_->clear();
+            apply_settings_at_composition_boundary();
+        }
         return;
     }
     if (session_ == nullptr || session_->snapshot().input.empty()) {
@@ -1014,7 +1093,8 @@ void TextService::load_engine() {
 
 void TextService::apply_settings_at_composition_boundary() {
     if (settings_manager_ == nullptr ||
-        (session_ != nullptr && !session_->snapshot().input.empty())) {
+        (session_ != nullptr && !session_->snapshot().input.empty()) ||
+        english_composing()) {
         return;
     }
 

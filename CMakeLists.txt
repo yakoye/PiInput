@@ -146,14 +146,19 @@ if(WIN32)
     add_executable(PiInput-Install WIN32
         platform/windows/installer/main.cpp
         platform/windows/installer/install_layout.cpp
+        platform/windows/installer/migration.cpp
     )
     target_include_directories(PiInput-Install PRIVATE
         include
         platform/windows/installer
         platform/windows/tsf
     )
-    target_compile_definitions(PiInput-Install PRIVATE PIINPUT_VERSION=L"${PROJECT_VERSION}")
-    target_link_libraries(PiInput-Install PRIVATE ole32 shell32 advapi32 user32)
+    target_compile_definitions(PiInput-Install PRIVATE PIINPUT_INSTALLER_VERSION=L"${PROJECT_VERSION}")
+    target_link_libraries(PiInput-Install PRIVATE piinput_core ole32 shell32 advapi32 user32)
+    if(MSVC)
+        target_link_options(PiInput-Install PRIVATE
+            "/MANIFESTUAC:level='requireAdministrator' uiAccess='false'")
+    endif()
     piinput_enable_warnings(PiInput-Install)
 
     install(TARGETS
@@ -229,6 +234,17 @@ if(PIINPUT_BUILD_TESTS)
         )
         target_include_directories(piinput-installer-layout-tests PRIVATE platform/windows/installer)
         piinput_enable_warnings(piinput-installer-layout-tests)
+
+        add_executable(piinput-migration-tests
+            tests/migration_tests.cpp
+            platform/windows/installer/migration.cpp
+        )
+        target_include_directories(piinput-migration-tests PRIVATE
+            include
+            platform/windows/installer
+        )
+        target_link_libraries(piinput-migration-tests PRIVATE piinput_core)
+        piinput_enable_warnings(piinput-migration-tests)
     endif()
 
     add_test(NAME piinput-core-tests COMMAND piinput-core-tests)
@@ -240,6 +256,7 @@ if(PIINPUT_BUILD_TESTS)
 
     if(WIN32)
         add_test(NAME piinput-installer-layout-tests COMMAND piinput-installer-layout-tests)
+        add_test(NAME piinput-migration COMMAND piinput-migration-tests)
     endif()
 
     add_test(

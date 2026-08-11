@@ -37,4 +37,14 @@ std::wstring current_marker_value(const std::filesystem::path& version_root) {
     return version_root.filename().wstring();
 }
 
+InstallerPayloadLayout locate_installer_payload(
+    const std::filesystem::path& installer_path) {
+    const auto root = installer_path.parent_path();
+    const auto packaged_bin = root / L"bin";
+    if (std::filesystem::is_regular_file(packaged_bin / L"PiInputTSF.dll")) {
+        return {packaged_bin, root / L"data"};
+    }
+    return {root, root.parent_path() / L"data"};
+}
+
 }  // namespace piinput::windows::installer

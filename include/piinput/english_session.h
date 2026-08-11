@@ -38,7 +38,9 @@ public:
 
     [[nodiscard]] const EnglishSessionSnapshot& snapshot() const noexcept;
     [[nodiscard]] const std::string& raw_input() const noexcept;
+    [[nodiscard]] std::optional<std::string> candidate(std::size_t index) const;
     [[nodiscard]] std::optional<std::string> choose(std::size_t index);
+    void restore(EnglishSessionSnapshot snapshot);
 
 private:
     void refresh();

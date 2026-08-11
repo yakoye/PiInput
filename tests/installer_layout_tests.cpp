@@ -1,6 +1,7 @@
 #include "install_layout.h"
 
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 
 int main() {
@@ -24,6 +25,18 @@ int main() {
         std::cerr << "Current marker must contain only the active version directory name\n";
         return 4;
     }
+    const auto package = std::filesystem::temp_directory_path() / "piinput-installer-layout";
+    std::filesystem::remove_all(package);
+    std::filesystem::create_directories(package / "bin");
+    std::filesystem::create_directories(package / "data");
+    std::ofstream(package / "bin" / "PiInputTSF.dll") << "fixture";
+    const auto payload = piinput::windows::installer::locate_installer_payload(
+        package / "PiInput-Install.exe");
+    if (payload.bin != package / "bin" || payload.data != package / "data") {
+        std::cerr << "Root installer did not resolve the packaged bin/data layout\n";
+        return 5;
+    }
+    std::filesystem::remove_all(package);
     std::cout << "PiInput installer layout tests passed.\n";
     return 0;
 }

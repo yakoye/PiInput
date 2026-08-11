@@ -8,6 +8,7 @@ $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
 $InputJson = Join-Path $TempRoot "wordfreq.json"
 $OutputTsv = Join-Path $TempRoot "generated/english_lexicon.tsv"
 $RuntimeTsv = Join-Path $TempRoot "localappdata/PiInput/UserData/english_downloaded.tsv"
+$CachedJson = Join-Path $TempRoot "sources/wordfreq.json"
 
 try {
     New-Item -ItemType Directory -Force $TempRoot | Out-Null
@@ -44,6 +45,51 @@ try {
         throw "Successful runtime publish left a temporary file"
     }
 
+    New-Item -ItemType Directory -Force (Split-Path -Parent $CachedJson) | Out-Null
+    "cached-old" | Set-Content -LiteralPath $CachedJson -Encoding UTF8
+    $beforeFailure = Get-Content -Raw -LiteralPath $OutputTsv -Encoding UTF8
+    $runtimeBeforeFailure = Get-Content -Raw -LiteralPath $RuntimeTsv -Encoding UTF8
+    $cacheBeforeFailure = Get-Content -Raw -LiteralPath $CachedJson -Encoding UTF8
+    '[["replacement", -1.0]]' | Set-Content -LiteralPath $InputJson -Encoding UTF8
+    $runtimeLock = [System.IO.File]::Open(
+        $RuntimeTsv,
+        [System.IO.FileMode]::Open,
+        [System.IO.FileAccess]::ReadWrite,
+        [System.IO.FileShare]::None)
+    $failed = $false
+    try {
+        & $Converter -InputJson $InputJson -OutputTsv $OutputTsv -RuntimeTsv $RuntimeTsv
+    } catch {
+        $failed = $true
+    } finally {
+        $runtimeLock.Dispose()
+    }
+    if (-not $failed) {
+        throw "Injected second-target publish failure did not fail"
+    }
+    if ((Get-Content -Raw -LiteralPath $OutputTsv -Encoding UTF8) -cne $beforeFailure) {
+        throw "Second-target failure did not roll back the generated TSV"
+    }
+    if ((Get-Content -Raw -LiteralPath $RuntimeTsv -Encoding UTF8) -cne
+        $runtimeBeforeFailure) {
+        throw "Second-target failure replaced the installed downloaded English TSV"
+    }
+    if ((Get-Content -Raw -LiteralPath $CachedJson -Encoding UTF8) -cne
+        $cacheBeforeFailure) {
+        throw "Second-target failure changed the cached source"
+    }
+
+    '["one", -1.0]' | Set-Content -LiteralPath $InputJson -Encoding UTF8
+    & $Converter -InputJson $InputJson -OutputTsv $OutputTsv -RuntimeTsv $RuntimeTsv
+    if ((Get-Content -Raw -LiteralPath $OutputTsv -Encoding UTF8).Trim() -cne
+        "one`t1`t2") {
+        throw "Single-row root JSON did not overwrite an existing generated TSV"
+    }
+    if ((Get-Content -Raw -LiteralPath $RuntimeTsv -Encoding UTF8) -cne
+        (Get-Content -Raw -LiteralPath $OutputTsv -Encoding UTF8)) {
+        throw "Single-row root JSON did not overwrite both targets"
+    }
+
     $beforeFailure = Get-Content -Raw -LiteralPath $OutputTsv -Encoding UTF8
     $runtimeBeforeFailure = Get-Content -Raw -LiteralPath $RuntimeTsv -Encoding UTF8
     "{ damaged json" | Set-Content -LiteralPath $InputJson -Encoding UTF8
@@ -69,6 +115,10 @@ try {
     }
     if (Test-Path -LiteralPath "$RuntimeTsv.tmp") {
         throw "Failed conversion left a runtime temporary file"
+    }
+    $converterSource = Get-Content -Raw -LiteralPath $Converter
+    if ($converterSource -match '\[System\.IO\.File\]::Replace\([^)]*,\s*\$null\)') {
+        throw "Converter still uses the PowerShell 5.1-incompatible File.Replace null backup form"
     }
 } finally {
     if (Test-Path -LiteralPath $TempRoot) {

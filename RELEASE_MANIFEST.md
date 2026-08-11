@@ -1,59 +1,60 @@
-# Release Manifest — PiInput v0.1.6-dev
+# PiInput v0.3.0-dev 发布清单
 
-## Package
+## Windows x64 用户包
 
 ```text
-piinput-v0.1.6-dev.zip
-└── piinput-dev/
+PiInput-v0.3.0-dev-windows-x64.zip
+└── PiInput-v0.3.0-dev-windows-x64/
+    ├── PiInput-Install.exe
+    ├── 安装与使用指南.md
+    ├── LICENSE_NOTICE.md
+    ├── bin/
+    │   ├── PiInputTSF.dll
+    │   ├── PiInput-Install.exe
+    │   ├── piinput-profile.exe
+    │   ├── piinput-preview.exe
+    │   └── 其他开发工具
+    └── data/
+        ├── base_lexicon.tsv
+        ├── english_lexicon.tsv
+        └── symbols.tsv
 ```
 
-## Core deliverables
+用户完整解压后双击最外层 `PiInput-Install.exe`。安装器自动完成：
 
-- C++20 cross-platform input core;
-- full-pinyin segmentation;
-- Flypy, Natural, Microsoft and Intelligent ABC shuangpin;
-- SCEL converter;
-- binary lexicon compiler;
-- sentence candidate decoder;
-- candidate snapshot/session model;
-- local user learning;
-- punctuation transformer;
-- symbol search index;
-- built-in starter base lexicon;
-- deterministic base + SCEL merge workflow;
-- performance benchmark;
-- improved native Windows preview;
-- Windows TSF DLL source and build target;
-- idempotent TSF install/repair/uninstall workflow;
-- modern `ITfInputProcessorProfileMgr::RegisterProfile` registration;
-- profile status and explicit register/unregister commands;
-- root build/setup/install workflow.
+- Windows 管理员权限确认；
+- TSF DLL 和语言 Profile 注册；
+- 版本并存安装，不覆盖已加载 DLL；
+- 自动发现唯一的旧运行目录；
+- 用户设置、词库和学习数据事务迁移；
+- 冲突文件保留为 `.legacy-import`；
+- 失败回滚；
+- 锁定旧文件安排在重启后删除。
 
-## Required documentation
+## 发布门禁
 
-- `README.md`;
-- `PROJECT_CONTEXT.md`;
-- `docs/03_development_tasks.md`;
-- `docs/04_development_constraints.md`;
-- `docs/RELEASE_WORKFLOW.md`;
-- `docs/TSF_DEVELOPER_TEST.md`;
-- `docs/release_notes_v0.1.6-dev.md`;
-- `docs/VERIFICATION_v0.1.6-dev.md`;
-- `docs/next_develop_plan_v0.1.7.md`;
-- `docs/10_continuation_guide.md`;
-- `docs/GIT_COMMANDS_v0.1.6-dev.md`.
+- Windows Release 全目标构建；
+- 全量 CTest；
+- 407 个全拼音节和 786 条结构化语料校验；
+- 全拼、小鹤双拼、增量前缀、长句和专业词汇回归；
+- 全部内置符号和键盘标点回归；
+- 英文候选、事务下载、学习合并和排序稳定性回归；
+- 安装布局、迁移、回滚和路径边界回归；
+- 品牌、发布元数据和 SHA-256 完整性门禁；
+- 外部大词库性能与真实 SCEL 回归。
 
-## Excluded from the source package
+## 不进入用户包
 
-- `build/`;
-- `dist/`;
-- `.vs/`;
-- `.git/`;
-- CMake caches;
-- generated EXE/DLL/LIB/PDB/OBJ files;
-- user SCEL dictionaries;
-- user learning data.
+- `build/`、`dist/`、`.git/`、`.vs/`；
+- OBJ、PDB、LIB 等中间文件；
+- 用户自行下载的 SCEL；
+- 用户设置和学习数据；
+- 测试源码与开发历史文档。
 
-## Known boundary
+## 已知边界
 
-`v0.1.6-dev` fixes the repair/install control flow that stopped on an absent or inactive previous profile and migrates profile registration to `ITfInputProcessorProfileMgr::RegisterProfile`. Core code, starter dictionary, SCEL regressions and Windows source regressions are verified in the available environment. Windows TSF DLL compilation, registration, Settings visibility and real application input must still be verified on the user's Visual Studio 2026 machine.
+- 当前仅发布 Windows x64 开发测试版；
+- 尚未提供正式代码签名；
+- 32 位宿主和 ARM64 尚未验证；
+- 候选 UI、高 DPI、多显示器和完整设置界面仍需继续完善；
+- 英文候选默认关闭，所有输入功能均可离线使用。

@@ -433,12 +433,32 @@ void test_exact_phrase_beats_character_composition() {
 
 void test_symbols() {
     piinput::SymbolIndex index;
-    index.load_tsv(std::filesystem::path(PIINPUT_SOURCE_DIR) / "data" / "symbols.tsv");
+    const auto path = std::filesystem::path(PIINPUT_SOURCE_DIR) / "data" / "symbols.tsv";
+    index.load_tsv(path);
     check(index.entry_count() >= 100U, "Built-in symbol table size");
     const auto celsius = index.search("sheshidu", 10U);
     check(!celsius.empty() && celsius.front().symbol == "℃", "Pinyin symbol search");
     const auto copyright = index.search("copyright", 10U);
     check(!copyright.empty() && copyright.front().symbol == "©", "English symbol search");
+
+    std::ifstream input(path, std::ios::binary);
+    std::string line;
+    std::size_t checked = 0U;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty() || line.front() == '#' || line.starts_with("symbol\tcategory")) continue;
+        std::stringstream stream(line);
+        std::vector<std::string> fields;
+        for (std::string field; std::getline(stream, field, '\t');) fields.push_back(field);
+        check(fields.size() >= 4U, "Every symbol row has four searchable fields");
+        if (fields.size() < 4U) continue;
+        const auto results = index.search(fields[0], index.entry_count());
+        check(std::any_of(results.begin(), results.end(), [&](const auto& candidate) {
+            return candidate.symbol == fields[0];
+        }), "Every built-in symbol is searchable by the symbol itself");
+        ++checked;
+    }
+    check(checked == index.entry_count(), "Every loaded symbol row is covered by search tests");
 }
 
 void test_punctuation() {

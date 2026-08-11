@@ -210,6 +210,14 @@ if(NOT text_service_header_text MATCHES "english_key_policy\\.h" OR
    NOT text_service_text MATCHES "EnglishKeyPolicy::decide")
     message(FATAL_ERROR "TSF must use the tested EnglishKeyPolicy decision layer")
 endif()
+if(NOT text_service_text MATCHES "classify_english_ascii_key" OR
+   NOT text_service_text MATCHES "build_english_commit_plan" OR
+   NOT text_service_text MATCHES "edit_session_succeeded")
+    message(FATAL_ERROR "TSF must use the tested English key, commit, and edit-session helpers")
+endif()
+if(NOT text_service_text MATCHES "result = selection\\.range->Collapse")
+    message(FATAL_ERROR "TSF must stop when the initial selection cannot be collapsed safely")
+endif()
 if(NOT candidate_window_header_text MATCHES "items_per_row" OR
    NOT candidate_window_header_text MATCHES "visible_rows" OR
    NOT candidate_window_text MATCHES "actual_visible_rows")

@@ -2,6 +2,38 @@
 
 namespace piinput {
 
+bool edit_session_succeeded(
+    const std::int32_t request_result,
+    const std::int32_t session_result) noexcept {
+    return request_result >= 0 && session_result >= 0;
+}
+
+EnglishCommitPlan build_english_commit_plan(
+    const std::string_view raw_input,
+    const std::optional<std::string_view> candidate,
+    const std::string_view suffix) {
+    EnglishCommitPlan plan;
+    plan.used_candidate = candidate.has_value();
+    const std::string_view base = candidate.value_or(raw_input);
+    plan.text.reserve(base.size() + suffix.size());
+    plan.text.append(base);
+    plan.text.append(suffix);
+    return plan;
+}
+
+EnglishKeyKind classify_english_ascii_key(const char key, const bool shifted) noexcept {
+    if ((key >= 'A' && key <= 'Z') || (key >= 'a' && key <= 'z')) {
+        return EnglishKeyKind::letter;
+    }
+    if (key >= '0' && key <= '9') {
+        if (shifted) {
+            return EnglishKeyKind::punctuation;
+        }
+        return key == '0' ? EnglishKeyKind::literal : EnglishKeyKind::digit;
+    }
+    return EnglishKeyKind::other;
+}
+
 EnglishKeyDecision EnglishKeyPolicy::decide(
     const EnglishKeyContext& context,
     const EnglishKeyKind key) noexcept {
@@ -24,6 +56,9 @@ EnglishKeyDecision EnglishKeyPolicy::decide(
     case EnglishKeyKind::letter: action = EnglishKeyAction::insert_letter; break;
     case EnglishKeyKind::punctuation:
         action = EnglishKeyAction::commit_then_punctuation;
+        break;
+    case EnglishKeyKind::literal:
+        action = EnglishKeyAction::commit_then_literal;
         break;
     case EnglishKeyKind::digit: action = EnglishKeyAction::choose_digit; break;
     case EnglishKeyKind::space: action = EnglishKeyAction::choose_current; break;

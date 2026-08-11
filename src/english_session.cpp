@@ -98,6 +98,13 @@ const std::string& EnglishSession::raw_input() const noexcept {
     return snapshot_.input;
 }
 
+std::optional<std::string> EnglishSession::candidate(const std::size_t index) const {
+    if (index >= snapshot_.candidates.size()) {
+        return std::nullopt;
+    }
+    return snapshot_.candidates[index].word;
+}
+
 std::optional<std::string> EnglishSession::choose(const std::size_t index) {
     if (index >= snapshot_.candidates.size()) {
         return std::nullopt;
@@ -109,6 +116,10 @@ std::optional<std::string> EnglishSession::choose(const std::size_t index) {
     }
     clear();
     return result;
+}
+
+void EnglishSession::restore(EnglishSessionSnapshot snapshot) {
+    snapshot_ = std::move(snapshot);
 }
 
 void EnglishSession::refresh() {

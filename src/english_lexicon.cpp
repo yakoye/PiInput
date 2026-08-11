@@ -3,15 +3,66 @@
 #include "piinput/windows_compat.h"
 
 #include <algorithm>
+#include <atomic>
 #include <charconv>
+#include <chrono>
 #include <fstream>
 #include <limits>
+#include <mutex>
 #include <system_error>
 
 namespace piinput {
 namespace {
 
 constexpr std::size_t kMaximumLineLength = 4096U;
+std::atomic<std::uint64_t> learning_temporary_counter{0U};
+#ifndef _WIN32
+std::mutex learning_file_mutex;
+#endif
+
+[[nodiscard]] std::uint64_t saturating_add(
+    const std::uint64_t left,
+    const std::uint64_t right) noexcept {
+    const auto maximum = (std::numeric_limits<std::uint64_t>::max)();
+    return right > maximum - left ? maximum : left + right;
+}
+
+class LearningFileLock final {
+public:
+    LearningFileLock() noexcept {
+#ifdef _WIN32
+        handle_ = CreateMutexW(nullptr, FALSE, L"Local\\PiInput.EnglishLearning.v1");
+        if (handle_ != nullptr) {
+            const DWORD result = WaitForSingleObject(handle_, 1000U);
+            locked_ = result == WAIT_OBJECT_0 || result == WAIT_ABANDONED;
+        }
+#else
+        lock_ = std::unique_lock<std::mutex>(learning_file_mutex);
+        locked_ = true;
+#endif
+    }
+
+    ~LearningFileLock() {
+#ifdef _WIN32
+        if (locked_) {
+            ReleaseMutex(handle_);
+        }
+        if (handle_ != nullptr) {
+            CloseHandle(handle_);
+        }
+#endif
+    }
+
+    [[nodiscard]] bool locked() const noexcept { return locked_; }
+
+private:
+    bool locked_{};
+#ifdef _WIN32
+    HANDLE handle_{};
+#else
+    std::unique_lock<std::mutex> lock_;
+#endif
+};
 
 [[nodiscard]] bool is_ascii_word(const std::string_view word) noexcept {
     return !word.empty() &&
@@ -112,6 +163,43 @@ constexpr std::size_t kMaximumLineLength = 4096U;
 #endif
 }
 
+[[nodiscard]] std::unordered_map<std::string, std::uint64_t> read_learning_counts(
+    const std::filesystem::path& path) {
+    std::unordered_map<std::string, std::uint64_t> result;
+    std::ifstream input(path, std::ios::binary);
+    std::string line;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        std::string_view word;
+        std::string_view count_text;
+        std::uint64_t count = 0U;
+        if (line.empty() || line.size() > kMaximumLineLength || line.front() == '#' ||
+            !split_tsv_row(line, word, count_text) || !is_ascii_word(word) ||
+            !parse_positive_integer(count_text, count)) {
+            continue;
+        }
+        auto& stored = result[std::string(word)];
+        stored = (std::max)(stored, count);
+    }
+    return result;
+}
+
+[[nodiscard]] std::filesystem::path unique_learning_temporary(
+    const std::filesystem::path& path) {
+    auto temporary = path;
+    temporary += ".tmp." + std::to_string(
+#ifdef _WIN32
+        static_cast<std::uint64_t>(GetCurrentProcessId())) + "." +
+#else
+        static_cast<std::uint64_t>(
+            std::chrono::steady_clock::now().time_since_epoch().count())) + "." +
+#endif
+        std::to_string(++learning_temporary_counter);
+    return temporary;
+}
+
 }  // namespace
 
 std::size_t EnglishLexicon::load_builtin_tsv(const std::filesystem::path& path) {
@@ -203,46 +291,53 @@ std::vector<EnglishCandidate> EnglishLexicon::query(
 }
 
 bool EnglishLexicon::record_selection(const std::string_view word) noexcept {
-    const auto found = std::find_if(entries_.begin(), entries_.end(), [&](const Entry& entry) {
-        return entry.candidate.word == word;
-    });
-    if (found == entries_.end()) {
+    const auto located = entry_by_word_.find(std::string(word));
+    if (located == entry_by_word_.end()) {
         return false;
     }
-    auto& learning_count = found->candidate.learning_count;
+    auto& candidate = entries_[located->second].candidate;
+    auto& learning_count = candidate.learning_count;
     if (learning_count != (std::numeric_limits<std::uint64_t>::max)()) {
         ++learning_count;
+        auto& pending = pending_learning_[candidate.word];
+        if (pending != (std::numeric_limits<std::uint64_t>::max)()) {
+            ++pending;
+        }
     }
     return true;
 }
 
-bool EnglishLexicon::save_learning_tsv(const std::filesystem::path& path) const noexcept {
+bool EnglishLexicon::save_learning_tsv(const std::filesystem::path& path) noexcept {
     try {
+        if (pending_learning_.empty()) {
+            return true;
+        }
+        LearningFileLock lock;
+        if (!lock.locked()) {
+            return false;
+        }
         const auto parent = path.parent_path();
         if (!parent.empty()) {
             std::filesystem::create_directories(parent);
         }
-        auto temporary = path;
-        temporary += ".tmp";
+        auto merged = read_learning_counts(path);
+        for (const auto& [word, delta] : pending_learning_) {
+            merged[word] = saturating_add(merged[word], delta);
+        }
+        const auto temporary = unique_learning_temporary(path);
         std::error_code ignored;
-        std::filesystem::remove(temporary, ignored);
         {
             std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
             if (!output) {
                 return false;
             }
-            std::vector<const Entry*> learned;
-            for (const auto& entry : entries_) {
-                if (entry.candidate.learning_count > 0U) {
-                    learned.push_back(&entry);
+            std::vector<std::pair<std::string, std::uint64_t>> learned(
+                merged.begin(), merged.end());
+            std::sort(learned.begin(), learned.end());
+            for (const auto& [word, count] : learned) {
+                if (count > 0U) {
+                    output << word << '\t' << count << '\n';
                 }
-            }
-            std::sort(learned.begin(), learned.end(), [](const Entry* left, const Entry* right) {
-                return left->candidate.word < right->candidate.word;
-            });
-            for (const Entry* entry : learned) {
-                output << entry->candidate.word << '\t'
-                       << entry->candidate.learning_count << '\n';
             }
             output.flush();
             if (!output) {
@@ -252,6 +347,14 @@ bool EnglishLexicon::save_learning_tsv(const std::filesystem::path& path) const 
             }
         }
         if (replace_file_atomically(temporary, path)) {
+            for (const auto& [word, count] : merged) {
+                const auto found = entry_by_word_.find(word);
+                if (found != entry_by_word_.end()) {
+                    entries_[found->second].candidate.learning_count = (std::max)(
+                        entries_[found->second].candidate.learning_count, count);
+                }
+            }
+            pending_learning_.clear();
             return true;
         }
         std::filesystem::remove(temporary, ignored);

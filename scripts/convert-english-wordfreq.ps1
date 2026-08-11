@@ -9,7 +9,15 @@ Set-StrictMode -Version Latest
 
 $DownloadedFlag = 2
 
-function Write-AtomicUtf8Lines {
+function New-TransactionFileName {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Kind
+    )
+    return "$Path.$Kind.$PID.$([Guid]::NewGuid().ToString('N'))"
+}
+
+function Write-Utf8Lines {
     param(
         [Parameter(Mandatory = $true)][string]$Path,
         [Parameter(Mandatory = $true)]$Lines
@@ -18,29 +26,84 @@ function Write-AtomicUtf8Lines {
     if (-not [string]::IsNullOrWhiteSpace($parent)) {
         New-Item -ItemType Directory -Force $parent | Out-Null
     }
-    $temporary = "$Path.tmp"
-    Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllLines($Path, $Lines, $encoding)
+}
+
+function Publish-TransactionalUtf8Lines {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$Paths,
+        [Parameter(Mandatory = $true)]$Lines
+    )
+
+    $items = @()
     try {
-        $encoding = [System.Text.UTF8Encoding]::new($false)
-        [System.IO.File]::WriteAllLines($temporary, $Lines, $encoding)
-        if (Test-Path -LiteralPath $Path) {
-            [System.IO.File]::Replace($temporary, $Path, $null)
-        } else {
-            [System.IO.File]::Move($temporary, $Path)
+        foreach ($path in $Paths) {
+            if ([string]::IsNullOrWhiteSpace($path)) { continue }
+            $temporary = New-TransactionFileName -Path $path -Kind "tmp"
+            $backup = New-TransactionFileName -Path $path -Kind "bak"
+            Write-Utf8Lines -Path $temporary -Lines $Lines
+            $items += [pscustomobject]@{
+                Path = $path
+                Temporary = $temporary
+                Backup = $backup
+                Existed = [System.IO.File]::Exists($path)
+                Published = $false
+            }
+        }
+
+        foreach ($item in $items) {
+            if ($item.Existed) {
+                # A non-empty backup path is required by Windows PowerShell 5.1.
+                [System.IO.File]::Replace($item.Temporary, $item.Path, $item.Backup)
+            } else {
+                [System.IO.File]::Move($item.Temporary, $item.Path)
+            }
+            $item.Published = $true
         }
     } catch {
-        Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+        for ($index = $items.Count - 1; $index -ge 0; --$index) {
+            $item = $items[$index]
+            if (-not $item.Published) { continue }
+            try {
+                if ($item.Existed -and [System.IO.File]::Exists($item.Backup)) {
+                    $rollback = New-TransactionFileName -Path $item.Path -Kind "rollback"
+                    [System.IO.File]::Replace($item.Backup, $item.Path, $rollback)
+                    [System.IO.File]::Delete($rollback)
+                } elseif (-not $item.Existed -and [System.IO.File]::Exists($item.Path)) {
+                    [System.IO.File]::Delete($item.Path)
+                }
+            } catch {
+                throw "English dictionary publish failed and rollback could not restore '$($item.Path)': $($_.Exception.Message)"
+            }
+        }
         throw
+    } finally {
+        foreach ($item in $items) {
+            foreach ($artifact in @($item.Temporary, $item.Backup)) {
+                if ([System.IO.File]::Exists($artifact)) {
+                    [System.IO.File]::Delete($artifact)
+                }
+            }
+        }
     }
 }
 
 $parsed = Get-Content -Raw -LiteralPath $InputJson -Encoding UTF8 | ConvertFrom-Json
+$entries = [System.Collections.ArrayList]::new()
+if ($parsed -is [System.Array] -and $parsed.Count -ge 2 -and
+    $parsed[0] -is [string] -and -not ($parsed[1] -is [System.Array])) {
+    [void]$entries.Add($parsed)
+} else {
+    foreach ($parsedEntry in @($parsed)) { [void]$entries.Add($parsedEntry) }
+}
 $words = [System.Collections.Generic.List[string]]::new()
 $seen = [System.Collections.Generic.HashSet[string]]::new(
     [System.StringComparer]::Ordinal)
 
-foreach ($entry in @($parsed)) {
-    if ($null -eq $entry -or $entry.Count -lt 2) {
+foreach ($entry in $entries) {
+    if ($null -eq $entry -or -not ($entry -is [System.Array]) -or
+        @($entry).Count -lt 2) {
         continue
     }
     $word = [string]$entry[0]
@@ -66,7 +129,6 @@ for ($index = 0; $index -lt $words.Count; ++$index) {
     $weight = $words.Count - $index
     $lines.Add("$($words[$index])`t$weight`t$DownloadedFlag")
 }
-Write-AtomicUtf8Lines -Path $OutputTsv -Lines $lines
-if (-not [string]::IsNullOrWhiteSpace($RuntimeTsv)) {
-    Write-AtomicUtf8Lines -Path $RuntimeTsv -Lines $lines
-}
+$targets = @($OutputTsv)
+if (-not [string]::IsNullOrWhiteSpace($RuntimeTsv)) { $targets += $RuntimeTsv }
+Publish-TransactionalUtf8Lines -Paths $targets -Lines $lines

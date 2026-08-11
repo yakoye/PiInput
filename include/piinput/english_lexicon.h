@@ -39,7 +39,7 @@ public:
         std::string_view prefix,
         std::size_t limit) const;
     [[nodiscard]] bool record_selection(std::string_view word) noexcept;
-    [[nodiscard]] bool save_learning_tsv(const std::filesystem::path& path) const noexcept;
+    [[nodiscard]] bool save_learning_tsv(const std::filesystem::path& path) noexcept;
 
 private:
     struct Entry {
@@ -55,6 +55,7 @@ private:
     std::vector<Entry> entries_;
     std::vector<std::size_t> prefix_index_;
     std::unordered_map<std::string, std::size_t> entry_by_word_;
+    std::unordered_map<std::string, std::uint64_t> pending_learning_;
     std::uint64_t next_id_{1U};
 };
 

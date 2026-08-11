@@ -1,4 +1,5 @@
 #include "install_layout.h"
+#include "migration.h"
 #include "piinput_tsf_guids.h"
 
 #include "piinput/windows_compat.h"
@@ -11,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -20,6 +22,11 @@
 namespace {
 
 using piinput::windows::installer::current_marker_value;
+using piinput::windows::installer::discover_legacy_runtime;
+using piinput::windows::installer::is_safe_migration_source;
+using piinput::windows::installer::locate_installer_payload;
+using piinput::windows::installer::migrate_legacy_user_data;
+using piinput::windows::installer::remove_or_schedule_legacy_runtime;
 using piinput::windows::installer::version_directory;
 
 [[nodiscard]] std::filesystem::path executable_path() {
@@ -225,18 +232,28 @@ void clean_unlocked_versions(const std::filesystem::path& versions, const std::f
     }
 }
 
-[[nodiscard]] std::filesystem::path install() {
+[[nodiscard]] std::filesystem::path install(
+    const std::optional<std::filesystem::path>& migration_source) {
     const auto installer = executable_path();
-    const auto source_bin = installer.parent_path();
-    const auto source_data = source_bin.parent_path() / L"data";
+    const auto payload = locate_installer_payload(installer);
+    const auto& source_bin = payload.bin;
+    const auto& source_data = payload.data;
     require_file(source_bin / L"PiInputTSF.dll");
     require_file(source_bin / L"piinput-profile.exe");
     require_file(source_data / L"base_lexicon.tsv");
     require_file(source_data / L"symbols.tsv");
 
-    const auto piinput_root = local_app_data() / L"PiInput";
+    const auto local_root = local_app_data();
+    const auto piinput_root = local_root / L"PiInput";
+    const auto effective_migration = migration_source.has_value()
+        ? migration_source
+        : discover_legacy_runtime(local_root, piinput_root);
+    if (effective_migration.has_value() && !is_safe_migration_source(
+            *effective_migration, local_root, piinput_root)) {
+        throw std::runtime_error("Unsafe --migrate-from path");
+    }
     const auto developer_root = piinput_root / L"Dev";
-    const auto target = version_directory(developer_root, PIINPUT_VERSION, build_id());
+    const auto target = version_directory(developer_root, PIINPUT_INSTALLER_VERSION, build_id());
     const auto target_bin = target / L"bin";
     copy_tree(source_bin, target_bin);
     copy_tree(source_data, target / L"data");
@@ -261,6 +278,9 @@ void clean_unlocked_versions(const std::filesystem::path& versions, const std::f
         if (run_hidden(profile, L"--activate") != 0U || run_hidden(profile, L"--status") != 0U) {
             throw std::runtime_error("TSF profile activation or verification failed");
         }
+        if (effective_migration.has_value()) {
+            migrate_legacy_user_data(*effective_migration, piinput_root);
+        }
         write_current_marker(developer_root, target);
     } catch (...) {
         if (!previous_dll.empty()) {
@@ -272,6 +292,9 @@ void clean_unlocked_versions(const std::filesystem::path& versions, const std::f
     }
 
     clean_unlocked_versions(developer_root / L"versions", target);
+    if (effective_migration.has_value()) {
+        remove_or_schedule_legacy_runtime(*effective_migration);
+    }
     return target;
 }
 
@@ -297,12 +320,32 @@ void clean_unlocked_versions(const std::filesystem::path& versions, const std::f
     return found;
 }
 
+[[nodiscard]] std::optional<std::wstring> argument_value(const std::wstring_view expected) {
+    int count = 0;
+    wchar_t** arguments = CommandLineToArgvW(GetCommandLineW(), &count);
+    if (arguments == nullptr) {
+        return std::nullopt;
+    }
+    std::optional<std::wstring> value;
+    for (int index = 1; index + 1 < count; ++index) {
+        if (std::wstring_view(arguments[index]) == expected) {
+            value = arguments[index + 1];
+            break;
+        }
+    }
+    LocalFree(arguments);
+    return value;
+}
+
 }  // namespace
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     const bool silent = has_argument(L"--silent");
     try {
-        const auto target = install();
+        const auto migration = argument_value(L"--migrate-from");
+        const auto target = install(migration.has_value()
+            ? std::optional<std::filesystem::path>(*migration)
+            : std::nullopt);
         const std::wstring message =
             L"PiInput 已安装完成。\n\n"
             L"不需要关闭当前正在编辑的程序。请重新打开要测试的程序，"
