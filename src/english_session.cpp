@@ -1,6 +1,29 @@
 #include "piinput/english_session.h"
 
+#include <algorithm>
+#include <limits>
+
 namespace piinput {
+namespace {
+
+[[nodiscard]] bool ascii_case_equal(
+    const std::string_view left,
+    const std::string_view right) noexcept {
+    if (left.size() != right.size()) {
+        return false;
+    }
+    return std::equal(left.begin(), left.end(), right.begin(), [](char a, char b) {
+        if (a >= 'A' && a <= 'Z') {
+            a = static_cast<char>(a - 'A' + 'a');
+        }
+        if (b >= 'A' && b <= 'Z') {
+            b = static_cast<char>(b - 'A' + 'a');
+        }
+        return a == b;
+    });
+}
+
+}  // namespace
 
 EnglishSession::EnglishSession(
     EnglishLexicon& lexicon,
@@ -123,9 +146,35 @@ void EnglishSession::restore(EnglishSessionSnapshot snapshot) {
 }
 
 void EnglishSession::refresh() {
-    snapshot_.candidates = snapshot_.input.empty()
-        ? std::vector<EnglishCandidate>{}
-        : lexicon_->query(snapshot_.input, candidate_limit_);
+    if (snapshot_.input.empty() || candidate_limit_ == 0U) {
+        snapshot_.candidates.clear();
+        return;
+    }
+
+    auto candidates = lexicon_->query(snapshot_.input, candidate_limit_);
+    EnglishCandidate typed{
+        0U,
+        snapshot_.input,
+        (std::numeric_limits<std::uint64_t>::max)(),
+        0U,
+        false,
+        static_cast<std::uint32_t>(EnglishCandidateFlag::typed),
+    };
+    const auto exact = std::find_if(candidates.begin(), candidates.end(), [&](const auto& item) {
+        return ascii_case_equal(item.word, snapshot_.input);
+    });
+    if (exact != candidates.end()) {
+        typed.id = exact->id;
+        typed.learning_count = exact->learning_count;
+        typed.user_entry = exact->user_entry;
+        typed.flags |= exact->flags;
+        candidates.erase(exact);
+    }
+    candidates.insert(candidates.begin(), std::move(typed));
+    if (candidates.size() > candidate_limit_) {
+        candidates.resize(candidate_limit_);
+    }
+    snapshot_.candidates = std::move(candidates);
 }
 
 }  // namespace piinput

@@ -42,6 +42,18 @@ public:
     virtual ~SettingsFileReader() = default;
     [[nodiscard]] virtual SettingsFileMetadata metadata(
         const std::filesystem::path& path) = 0;
+    // Non-throwing probe used on the keystroke hot path: poll() runs at every
+    // composition boundary, and a missing settings file must not raise (and
+    // unwind) an exception once per key. Readers that only implement
+    // metadata() keep their existing behaviour through this default.
+    [[nodiscard]] virtual std::optional<SettingsFileMetadata> try_metadata(
+        const std::filesystem::path& path) {
+        try {
+            return metadata(path);
+        } catch (...) {
+            return std::nullopt;
+        }
+    }
     [[nodiscard]] virtual std::string read(
         const std::filesystem::path& path,
         std::uintmax_t expected_size) = 0;

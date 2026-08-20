@@ -54,32 +54,37 @@ function Invoke-NativeRequired {
     }
 }
 
-Write-Host "[1/6] Deactivating any old PiInput profile (absence is allowed)..." -ForegroundColor Cyan
+Write-Host "[1/7] Deactivating any old PiInput profile (absence is allowed)..." -ForegroundColor Cyan
 Invoke-NativeBestEffort -Description "Old profile deactivation" -Command {
     & $Profile --deactivate
 } | Out-Null
 
-Write-Host "[2/6] Unregistering any old DLL registration (absence is allowed)..." -ForegroundColor Cyan
+Write-Host "[2/7] Unregistering any old DLL registration (absence is allowed)..." -ForegroundColor Cyan
 Invoke-NativeBestEffort -Description "Old DLL unregistration" -Command {
     & $RegSvr32 /u /s $Dll
 } | Out-Null
 
-Write-Host "[3/6] Registering PiInputTSF.dll..." -ForegroundColor Cyan
+Write-Host "[3/7] Registering PiInputTSF.dll..." -ForegroundColor Cyan
 Invoke-NativeRequired -Description "regsvr32 registration" -Command {
     & $RegSvr32 /s $Dll
 }
 
-Write-Host "[4/6] Registering and enabling the TSF profile explicitly..." -ForegroundColor Cyan
+Write-Host "[4/7] Registering and enabling the TSF profile explicitly..." -ForegroundColor Cyan
 Invoke-NativeRequired -Description "PiInput profile registration" -Command {
     & $Profile --register
 }
 
-Write-Host "[5/6] Activating the PiInput profile..." -ForegroundColor Cyan
+Write-Host "[5/7] Adding PiInput to the current user keyboard list..." -ForegroundColor Cyan
+Invoke-NativeRequired -Description "PiInput current-user keyboard registration" -Command {
+    & $Profile --enable-user
+}
+
+Write-Host "[6/7] Activating the PiInput profile..." -ForegroundColor Cyan
 Invoke-NativeRequired -Description "PiInput profile activation" -Command {
     & $Profile --activate
 }
 
-Write-Host "[6/6] Verifying profile status..." -ForegroundColor Cyan
+Write-Host "[7/7] Verifying profile status..." -ForegroundColor Cyan
 Invoke-NativeRequired -Description "PiInput profile verification" -Command {
     & $Profile --status
 }

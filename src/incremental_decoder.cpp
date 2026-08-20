@@ -17,9 +17,65 @@ constexpr std::int64_t token_penalty = 12'000'000;
 constexpr std::int64_t joined_syllable_bonus = 4'000'000;
 constexpr std::int64_t incomplete_input_penalty = 8'000'000;
 constexpr std::int64_t completion_character_penalty = 100'000;
+constexpr std::int64_t single_word_completion_bonus = 30'000'000;
+// Completing the syllable that the user has started is useful; inventing
+// additional, entirely untyped syllables is much less certain.  Keep concise
+// boundary completions (rug -> 如果/入股/乳沟) ahead of a high-frequency long
+// phrase that merely shares the same prefix (如鲠在喉).
+constexpr std::int64_t untyped_syllable_penalty = 20'000'000;
+constexpr std::int64_t reopened_syllable_penalty = 60'000'000;
+constexpr std::int64_t nonfinal_particle_penalty = 6'000'000;
+constexpr std::int64_t supplementary_character_penalty = 5'000'000;
+
+// Every completion word for an unfinished syllable is combined with the decoded
+// sentence prefixes that precede it. The sentence beam itself stays wide so
+// segmentation quality is unchanged, but pairing a completion with the 9th-best
+// reading of the same leading syllables only produces near-duplicates far below
+// the visible rows, and the full cross product dominated the keystroke budget.
+constexpr std::size_t terminal_prefix_path_budget = 8U;
+
+[[nodiscard]] std::int64_t untyped_syllable_cost(
+    const std::size_t untyped_syllables) noexcept {
+    // One extra syllable may be needed to finish a common lexical unit
+    // (zh -> 知道).  Penalize only the second and later speculative syllables.
+    return static_cast<std::int64_t>(
+        untyped_syllables > 1U ? untyped_syllables - 1U : 0U) *
+        untyped_syllable_penalty;
+}
+
+[[nodiscard]] std::int64_t reopened_syllable_cost(
+    const std::size_t reopened_syllables) noexcept {
+    // Looking back one complete syllable is needed for ordinary two-syllable
+    // words (m + t -> 明天).  Reopening a longer, already stable suffix during
+    // an incomplete keystroke tends to produce unrelated phrases.
+    return static_cast<std::int64_t>(
+        reopened_syllables > 1U ? reopened_syllables - 1U : 0U) *
+        reopened_syllable_penalty;
+}
+// Pinyin boundary length is only a weak prior. A strong scale makes the
+// longest legal syllable split override clear dictionary evidence, e.g.
+// qian'gao -> qiang'ao and cha'na -> chan'a.
+constexpr std::int64_t parse_score_scale = 100'000;
 
 [[nodiscard]] std::int64_t frequency_score(const std::uint32_t weight) {
     return static_cast<std::int64_t>(std::log1p(static_cast<double>(weight)) * 1'000'000.0);
+}
+
+[[nodiscard]] bool is_sentence_final_particle(const std::string_view word) noexcept {
+    return word == "吧" || word == "吗" || word == "呢" || word == "啊" ||
+           word == "呀" || word == "哇" || word == "啦" || word == "呗" ||
+           word == "嘛";
+}
+
+[[nodiscard]] std::int64_t character_rarity_penalty(
+    const std::string_view word) noexcept {
+    return std::any_of(word.begin(), word.end(), [](const char value) {
+        return static_cast<unsigned char>(value) >= 0xF0U;
+    }) ? supplementary_character_penalty : 0;
+}
+
+[[nodiscard]] std::int64_t scaled_parse_score(const int score) noexcept {
+    return static_cast<std::int64_t>(score) * parse_score_scale;
 }
 
 [[nodiscard]] std::string join_range(
@@ -39,6 +95,16 @@ constexpr std::int64_t completion_character_penalty = 100'000;
         result.append(syllables[index]);
     }
     return result;
+}
+
+[[nodiscard]] std::size_t utf8_codepoint_count(const std::string_view text) noexcept {
+    std::size_t count = 0U;
+    for (const unsigned char byte : text) {
+        if ((byte & 0xC0U) != 0x80U) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 [[nodiscard]] std::optional<std::size_t> matching_candidate_syllable_count(
@@ -92,6 +158,7 @@ struct SentencePath {
     std::uint32_t aggregate_weight{};
     std::int64_t score{};
     std::size_t word_count{};
+    std::size_t single_character_tokens{};
 };
 
 struct ScoredExactWord {
@@ -102,6 +169,8 @@ struct ScoredExactWord {
 struct RankedPrefixWord {
     const LexiconCandidate* word{};
     std::size_t syllable_count{};
+    std::size_t untyped_syllables{};
+    std::size_t reopened_syllables{};
     std::size_t remaining_characters{};
     std::int64_t edge_score{};
 };
@@ -111,6 +180,27 @@ struct RankedPrefixWord {
     if (left.aggregate_weight != right.aggregate_weight) return left.aggregate_weight > right.aggregate_weight;
     if (left.word_count != right.word_count) return left.word_count < right.word_count;
     return left.text < right.text;
+}
+
+// Admission test that runs before the candidate path text is built. `paths` is
+// kept sorted worst-last, so a full beam rejects anything the last entry
+// already beats -- including duplicates, because a duplicate this path could
+// replace would itself rank at or above the last entry. Ties on the numeric
+// fields fall through to the full comparison, which needs the text.
+[[nodiscard]] bool path_can_enter(
+    const std::vector<SentencePath>& paths,
+    const std::int64_t score,
+    const std::uint32_t aggregate_weight,
+    const std::size_t word_count,
+    const std::size_t beam_width) noexcept {
+    if (paths.size() < beam_width) return true;
+    const SentencePath& worst = paths.back();
+    if (score != worst.score) return score > worst.score;
+    if (aggregate_weight != worst.aggregate_weight) {
+        return aggregate_weight > worst.aggregate_weight;
+    }
+    if (word_count != worst.word_count) return word_count < worst.word_count;
+    return true;
 }
 
 void insert_bounded_path(
@@ -269,30 +359,69 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
             cached->second = exact_query_(key, direct_exact_limit);
         }
     }
-    std::vector<std::string> prefix_keys;
+    std::unordered_map<std::string, std::size_t> prefix_key_priorities;
     if (options.incomplete_candidates && options.prefix_scan_limit != 0U) {
         for (const auto* parse : unique_parses) {
             if (parse->trailing_prefix.empty()) {
                 continue;
             }
             for (auto& key : collect_prefix_keys(*parse)) {
-                prefix_keys.push_back(std::move(key));
+                std::size_t priority = 1U;
+                if (key == parse->trailing_prefix) {
+                    priority = 32U;
+                } else if (key == parse->canonical_prefix) {
+                    priority = 2U;
+                }
+                auto [found, inserted] = prefix_key_priorities.emplace(key, priority);
+                if (!inserted) found->second = (std::max)(found->second, priority);
             }
         }
-        std::sort(prefix_keys.begin(), prefix_keys.end());
-        prefix_keys.erase(
-            std::unique(prefix_keys.begin(), prefix_keys.end()), prefix_keys.end());
     }
+    std::vector<std::string> prefix_keys;
+    prefix_keys.reserve(prefix_key_priorities.size());
+    for (const auto& [key, priority] : prefix_key_priorities) {
+        (void)priority;
+        prefix_keys.push_back(key);
+    }
+    std::sort(prefix_keys.begin(), prefix_keys.end());
     if (!prefix_keys.empty()) {
-        const std::size_t scan_share = options.prefix_scan_limit / prefix_keys.size();
-        const std::size_t scan_remainder = options.prefix_scan_limit % prefix_keys.size();
+        std::vector<std::size_t> scan_limits(prefix_keys.size(), 0U);
+        if (options.prefix_scan_limit >= prefix_keys.size()) {
+            std::fill(scan_limits.begin(), scan_limits.end(), 1U);
+            const std::size_t distributable =
+                options.prefix_scan_limit - prefix_keys.size();
+            std::size_t priority_total = 0U;
+            for (const auto& key : prefix_keys) {
+                priority_total += prefix_key_priorities.at(key);
+            }
+            std::size_t distributed = 0U;
+            for (std::size_t index = 0U; index < prefix_keys.size(); ++index) {
+                const std::size_t share = distributable *
+                    prefix_key_priorities.at(prefix_keys[index]) / priority_total;
+                scan_limits[index] += share;
+                distributed += share;
+            }
+            std::vector<std::size_t> priority_order(prefix_keys.size());
+            for (std::size_t index = 0U; index < priority_order.size(); ++index) {
+                priority_order[index] = index;
+            }
+            std::stable_sort(
+                priority_order.begin(), priority_order.end(),
+                [&](const std::size_t left, const std::size_t right) {
+                    return prefix_key_priorities.at(prefix_keys[left]) >
+                        prefix_key_priorities.at(prefix_keys[right]);
+                });
+            std::size_t leftover = distributable - distributed;
+            for (std::size_t index = 0U; index < leftover; ++index) {
+                ++scan_limits[priority_order[index]];
+            }
+        }
         const std::size_t prefix_query_headroom = options.result_limit >
                 (std::numeric_limits<std::size_t>::max)() / 4U
             ? (std::numeric_limits<std::size_t>::max)()
             : options.result_limit * 4U;
         for (std::size_t index = 0U; index < prefix_keys.size(); ++index) {
-            const std::size_t query_scan_limit =
-                scan_share + (index < scan_remainder ? 1U : 0U);
+            const std::size_t query_scan_limit = scan_limits[index];
             if (query_scan_limit == 0U) {
                 continue;
             }
@@ -308,15 +437,26 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
             }
         }
     }
-    auto submit = [&best, stats](IncrementalCandidate candidate) {
+    // The prefix-completion stage submits a path/word cross product, so the
+    // lookup key is rebuilt thousands of times per keystroke. Reusing one
+    // buffer keeps that off the allocator.
+    std::string submit_key;
+    auto submit = [&best, &submit_key, stats](IncrementalCandidate candidate) {
         if (stats != nullptr) {
             ++stats->submitted_candidates;
         }
-        const std::string key = candidate.word + "\n" + candidate.pinyin;
-        const auto found = best.find(key);
-        if (found == best.end() || candidate_better(candidate, found->second)) {
-            best[key] = std::move(candidate);
+        submit_key.clear();
+        submit_key.append(candidate.word);
+        submit_key.push_back('\n');
+        submit_key.append(candidate.pinyin);
+        const auto found = best.find(submit_key);
+        if (found != best.end()) {
+            if (candidate_better(candidate, found->second)) {
+                found->second = std::move(candidate);
+            }
+            return;
         }
+        best.emplace(submit_key, std::move(candidate));
     };
 
     for (std::size_t parse_index = 0U; parse_index < unique_parses.size(); ++parse_index) {
@@ -329,16 +469,26 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
                 const std::int64_t phrase_bonus =
                     complete_count > 1U ? exact_phrase_bonus : 0;
                 for (const auto& word : cached->second) {
+                    const bool single_character = utf8_codepoint_count(word.word) == 1U;
                     submit(IncrementalCandidate{
                         word.word,
                         word.pinyin,
                         word.weight,
-                        frequency_score(word.weight) +
+                        frequency_score(word.weight) - character_rarity_penalty(word.word) +
                             (user_score_ ? user_score_(word.pinyin, word.word) : 0) +
-                            parse.parse_score -
+                            scaled_parse_score(parse.parse_score) -
                             static_cast<std::int64_t>(parse_index * 20U) + phrase_bonus,
                         complete_count,
                         1U,
+                        CandidateEvidence{
+                            complete_count == 1U && single_character
+                                ? CandidateKind::single_character
+                                : CandidateKind::exact_lexicon,
+                            complete_count,
+                            1U,
+                            single_character ? 1U : 0U,
+                            true,
+                        },
                     });
                 }
             }
@@ -380,7 +530,10 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
                     const auto& word = words[word_index];
                     scored_words.push_back(ScoredExactWord{
                         &word,
-                        frequency_score(word.weight) - token_penalty +
+                        frequency_score(word.weight) - token_penalty -
+                            character_rarity_penalty(word.word) -
+                            (end < complete_count && is_sentence_final_particle(word.word)
+                                ? nonfinal_particle_penalty : 0) +
                             (user_score_ ? user_score_(span, word.word) : 0) +
                             static_cast<std::int64_t>(syllable_count - 1U) *
                                 joined_syllable_bonus,
@@ -389,13 +542,27 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
                 for (const auto& path : states[start]) {
                     for (const auto& scored_word : scored_words) {
                         const auto& word = *scored_word.word;
+                        const std::uint64_t aggregate =
+                            static_cast<std::uint64_t>(path.aggregate_weight) + word.weight;
+                        const auto next_weight = static_cast<std::uint32_t>((std::min)(
+                            aggregate,
+                            static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max())));
+                        const std::int64_t next_score = path.score + scored_word.edge_score;
+                        // Concatenating the sentence text for every path/word
+                        // pair dominated the keystroke budget at the real
+                        // 90-candidate page size. Reject first, build second.
+                        if (!path_can_enter(destination, next_score, next_weight,
+                                path.word_count + 1U, state_beam_width)) {
+                            continue;
+                        }
                         SentencePath next = path;
                         next.text.append(word.word);
-                        const std::uint64_t aggregate = static_cast<std::uint64_t>(next.aggregate_weight) + word.weight;
-                        next.aggregate_weight = static_cast<std::uint32_t>((std::min)(
-                            aggregate, static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max())));
-                        next.score += scored_word.edge_score;
+                        next.aggregate_weight = next_weight;
+                        next.score = next_score;
                         ++next.word_count;
+                        if (utf8_codepoint_count(word.word) == 1U) {
+                            ++next.single_character_tokens;
+                        }
                         insert_bounded_path(destination, std::move(next), state_beam_width);
                         if (stats != nullptr) {
                             stats->max_destination_paths = (std::max)(
@@ -413,10 +580,17 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
                     path.text,
                     PinyinSegmenter::join(parse.complete_syllables),
                     path.aggregate_weight,
-                    path.score + parse.parse_score -
+                    path.score + scaled_parse_score(parse.parse_score) -
                         static_cast<std::int64_t>(parse_index * 20U),
                     complete_count,
                     path.word_count,
+                    CandidateEvidence{
+                        CandidateKind::decoded_sentence,
+                        complete_count,
+                        path.word_count,
+                        path.single_character_tokens,
+                        true,
+                    },
                 });
             }
             continue;
@@ -448,11 +622,18 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
                     continue;
                 }
                 const std::size_t remaining_characters = word.pinyin.size() - key.size();
+                const std::size_t untyped_syllables =
+                    *word_syllable_count - matched_syllable_count;
+                const std::size_t reopened_syllables =
+                    start == 0U ? 0U : complete_count - start;
                 ranked_prefix_words.push_back(RankedPrefixWord{
                     &word,
                     *word_syllable_count,
+                    untyped_syllables,
+                    reopened_syllables,
                     remaining_characters,
-                    frequency_score(word.weight) - token_penalty +
+                    frequency_score(word.weight) - token_penalty -
+                        character_rarity_penalty(word.word) +
                         (user_score_ ? user_score_(word.pinyin, word.word) : 0) +
                         static_cast<std::int64_t>(matched_syllable_count - 1U) *
                             joined_syllable_bonus,
@@ -462,9 +643,13 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
                 ranked_prefix_words.begin(), ranked_prefix_words.end(),
                 [](const auto& left, const auto& right) {
                 const std::int64_t left_score = left.edge_score -
+                    untyped_syllable_cost(left.untyped_syllables) -
+                    reopened_syllable_cost(left.reopened_syllables) -
                     static_cast<std::int64_t>(left.remaining_characters) *
                         completion_character_penalty;
                 const std::int64_t right_score = right.edge_score -
+                    untyped_syllable_cost(right.untyped_syllables) -
+                    reopened_syllable_cost(right.reopened_syllables) -
                     static_cast<std::int64_t>(right.remaining_characters) *
                         completion_character_penalty;
                 if (left_score != right_score) return left_score > right_score;
@@ -484,11 +669,19 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
             if (ranked_prefix_words.size() > prefix_candidate_limit) {
                 ranked_prefix_words.resize(prefix_candidate_limit);
             }
+            // The consumed-syllable prefix only depends on `start`; building it
+            // inside the path/word cross product repeated the same join and two
+            // string allocations thousands of times per keystroke.
+            std::string consumed_pinyin = join_range(parse.complete_syllables, 0U, start);
+            if (start != 0U) consumed_pinyin.push_back('\'');
+            std::string candidate_pinyin;
+            const std::size_t terminal_path_limit = (std::min)(
+                states[start].size(),
+                (std::min)(state_beam_width, terminal_prefix_path_budget));
             for (const auto& ranked_word : ranked_prefix_words) {
                 const auto& word = *ranked_word.word;
-                const std::size_t terminal_path_limit = (std::min)(
-                    states[start].size(),
-                    state_beam_width);
+                candidate_pinyin.assign(consumed_pinyin);
+                candidate_pinyin.append(word.pinyin);
                 for (std::size_t path_index = 0U;
                      path_index < terminal_path_limit; ++path_index) {
                     const auto& path = states[start][path_index];
@@ -497,15 +690,27 @@ std::vector<IncrementalCandidate> IncrementalDecoder::decode(
                         aggregate, static_cast<std::uint64_t>(std::numeric_limits<std::uint32_t>::max()));
                     submit(IncrementalCandidate{
                         path.text + word.word,
-                        join_range(parse.complete_syllables, 0U, start) +
-                            (start == 0U ? std::string{} : std::string{"'"}) + word.pinyin,
+                        candidate_pinyin,
                         static_cast<std::uint32_t>(aggregate),
-                        path.score + ranked_word.edge_score + parse.parse_score -
+                        path.score + ranked_word.edge_score + scaled_parse_score(parse.parse_score) -
                             static_cast<std::int64_t>(parse_index * 20U) - incomplete_input_penalty -
+                            untyped_syllable_cost(ranked_word.untyped_syllables) -
+                            reopened_syllable_cost(ranked_word.reopened_syllables) -
                             static_cast<std::int64_t>(ranked_word.remaining_characters) *
-                                completion_character_penalty,
+                                completion_character_penalty +
+                            (path.word_count == 0U && matched_syllable_count > 1U
+                                ? single_word_completion_bonus
+                                : 0),
                         start + ranked_word.syllable_count,
                         path.word_count + 1U,
+                        CandidateEvidence{
+                            CandidateKind::incomplete_completion,
+                            start + ranked_word.syllable_count,
+                            path.word_count + 1U,
+                            path.single_character_tokens +
+                                (utf8_codepoint_count(word.word) == 1U ? 1U : 0U),
+                            true,
+                        },
                     });
                 }
             }

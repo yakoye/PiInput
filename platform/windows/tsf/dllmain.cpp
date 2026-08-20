@@ -1,4 +1,4 @@
-#include "text_service.h"
+#include "stable_text_service.h"
 #include "piinput_tsf_guids.h"
 #include "profile_registration.h"
 
@@ -19,6 +19,7 @@ using piinput::windows::g_object_count;
 namespace {
 
 std::atomic<long> g_server_locks{0};
+
 
 class ClassFactory final : public IClassFactory {
 public:
@@ -132,7 +133,17 @@ HRESULT unregister_com_server() {
 }
 
 HRESULT register_tsf_profile() {
-    HRESULT result = piinput::windows::tsf::register_profile();
+    wchar_t module_path[32768]{};
+    const DWORD module_path_length = GetModuleFileNameW(
+        g_module_instance,
+        module_path,
+        static_cast<DWORD>(std::size(module_path)));
+    if (module_path_length == 0U || module_path_length >= std::size(module_path)) {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    HRESULT result = piinput::windows::tsf::register_profile(
+        std::wstring_view(module_path, module_path_length));
     if (FAILED(result)) {
         return result;
     }
@@ -141,8 +152,32 @@ HRESULT register_tsf_profile() {
     result = CoCreateInstance(CLSID_TF_CategoryMgr, nullptr,
         CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&category_manager));
     if (SUCCEEDED(result)) {
-        result = category_manager->RegisterCategory(
-            CLSID_PiInputTextService, GUID_TFCAT_TIP_KEYBOARD, CLSID_PiInputTextService);
+        // A text service is only offered to a host whose activation mode it
+        // declares support for. Registering the keyboard category alone leaves
+        // PiInput out of hosts that run TSF in UI-element or immersive mode --
+        // Windows then silently keeps the previous input method, which is why
+        // the tray icon never changed in the ChatGPT desktop app while the same
+        // profile switched normally in ordinary desktop windows.
+        //
+        // COMLESS and SECUREMODE are deliberately not declared: they promise
+        // behaviour this service does not implement.
+        //
+        // INPUTMODECOMPARTMENT is what tells Windows to read this service's
+        // conversion-mode compartment. Without it the shell never looks, so the
+        // 中/英 mark never appears in the taskbar input indicator no matter what
+        // the service publishes -- which is exactly what happened here.
+        static const GUID* const categories[] = {
+            &GUID_TFCAT_TIP_KEYBOARD,
+            &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
+            &GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
+            &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
+            &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
+        };
+        for (const GUID* const category : categories) {
+            result = category_manager->RegisterCategory(
+                CLSID_PiInputTextService, *category, CLSID_PiInputTextService);
+            if (FAILED(result)) break;
+        }
         category_manager->Release();
     }
     if (FAILED(result)) {
@@ -156,8 +191,19 @@ HRESULT unregister_tsf_profile() {
     HRESULT category_result = CoCreateInstance(CLSID_TF_CategoryMgr, nullptr,
         CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&category_manager));
     if (SUCCEEDED(category_result)) {
-        category_result = category_manager->UnregisterCategory(
-            CLSID_PiInputTextService, GUID_TFCAT_TIP_KEYBOARD, CLSID_PiInputTextService);
+        static const GUID* const categories[] = {
+            &GUID_TFCAT_TIP_KEYBOARD,
+            &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
+            &GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
+            &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
+            &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
+        };
+        category_result = S_OK;
+        for (const GUID* const category : categories) {
+            const HRESULT removed = category_manager->UnregisterCategory(
+                CLSID_PiInputTextService, *category, CLSID_PiInputTextService);
+            if (FAILED(removed) && SUCCEEDED(category_result)) category_result = removed;
+        }
         category_manager->Release();
     }
 

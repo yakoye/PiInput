@@ -1,6 +1,9 @@
 #include "install_layout.h"
 #include "migration.h"
+#include "stable_runtime.h"
+#include "uninstall_layout.h"
 #include "piinput_tsf_guids.h"
+#include "piinput/host_protocol.h"
 
 #include "piinput/windows_compat.h"
 
@@ -9,9 +12,11 @@
 
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -22,12 +27,33 @@
 namespace {
 
 using piinput::windows::installer::current_marker_value;
+using piinput::windows::installer::can_reuse_registered_stable_shim;
 using piinput::windows::installer::discover_legacy_runtime;
+using piinput::windows::installer::files_are_identical;
 using piinput::windows::installer::is_safe_migration_source;
 using piinput::windows::installer::locate_installer_payload;
 using piinput::windows::installer::migrate_legacy_user_data;
+using piinput::windows::installer::profile_install_commands;
 using piinput::windows::installer::remove_or_schedule_legacy_runtime;
+using piinput::windows::installer::make_stable_runtime_layout;
+using piinput::windows::installer::make_uninstall_layout;
+using piinput::windows::installer::make_uninstall_registry_values;
+using piinput::windows::installer::RuntimeMarker;
+using piinput::windows::installer::StableShimRefreshResult;
+using piinput::windows::installer::refresh_stable_shim;
+using piinput::windows::installer::write_runtime_marker_atomic;
+using piinput::windows::installer::sanitize_component;
+using piinput::windows::installer::stable_shim_registration_fallback;
 using piinput::windows::installer::version_directory;
+
+// Retired product identity. It is intentionally kept as numeric GUID fields so
+// new packages can remove the obsolete TSF registration without publishing the
+// retired identifier as a current product string.
+inline constexpr CLSID kRetiredTextService =
+    {0x84e21a77, 0x3a42, 0x4d7b, {0x93, 0xb8, 0xbc, 0xdf, 0x81, 0x8f, 0xc4, 0x14}};
+
+inline constexpr CLSID kLegacyPiInputTextService =
+    {0xd73aaba7, 0xbe3e, 0x4e53, {0x8d, 0xe2, 0x65, 0x2d, 0x35, 0x27, 0x43, 0xf3}};
 
 [[nodiscard]] std::filesystem::path executable_path() {
     std::wstring buffer(32768U, L'\0');
@@ -44,6 +70,17 @@ using piinput::windows::installer::version_directory;
     const HRESULT result = SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &raw);
     if (FAILED(result) || raw == nullptr) {
         throw std::runtime_error("Cannot locate LocalAppData");
+    }
+    const std::filesystem::path path(raw);
+    CoTaskMemFree(raw);
+    return path;
+}
+
+[[nodiscard]] std::filesystem::path roaming_app_data() {
+    PWSTR raw = nullptr;
+    const HRESULT result = SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &raw);
+    if (FAILED(result) || raw == nullptr) {
+        throw std::runtime_error("Cannot locate RoamingAppData");
     }
     const std::filesystem::path path(raw);
     CoTaskMemFree(raw);
@@ -77,6 +114,30 @@ void require_file(const std::filesystem::path& path) {
     }
 }
 
+// Installing in place means overwriting files a running process may still hold
+// open -- the Host until it drains, and the Shim for as long as any application
+// that loaded it is running. A held file is renamed out of the way and deleted
+// at the next restart, so the new one can take its place immediately.
+void copy_file_replacing_locked(
+    const std::filesystem::path& source,
+    const std::filesystem::path& target) {
+    std::error_code error;
+    std::filesystem::copy_file(
+        source, target, std::filesystem::copy_options::overwrite_existing, error);
+    if (!error) return;
+
+    const auto retired = target.wstring() + L".retired." +
+        std::to_wstring(GetTickCount64());
+    if (MoveFileExW(target.c_str(), retired.c_str(), MOVEFILE_REPLACE_EXISTING) == FALSE) {
+        throw std::runtime_error(
+            "copy_file: " + error.message() + ": \"" + source.string() + "\", \"" +
+            target.string() + "\"");
+    }
+    (void)MoveFileExW(retired.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT);
+    std::filesystem::copy_file(
+        source, target, std::filesystem::copy_options::overwrite_existing);
+}
+
 void copy_tree(const std::filesystem::path& source, const std::filesystem::path& destination) {
     if (!std::filesystem::is_directory(source)) {
         throw std::runtime_error("Installer payload directory is missing");
@@ -89,18 +150,33 @@ void copy_tree(const std::filesystem::path& source, const std::filesystem::path&
             std::filesystem::create_directories(target);
         } else if (item.is_regular_file()) {
             std::filesystem::create_directories(target.parent_path());
-            std::filesystem::copy_file(item.path(), target, std::filesystem::copy_options::overwrite_existing);
+            copy_file_replacing_locked(item.path(), target);
         }
     }
 }
 
-[[nodiscard]] std::wstring com_registry_key() {
-    return L"Software\\Classes\\CLSID\\" + guid_string(CLSID_PiInputTextService) + L"\\InprocServer32";
+std::filesystem::path install_or_refresh_stable_shim(
+    const std::filesystem::path& source,
+    const std::filesystem::path& destination,
+    const std::wstring_view refresh_id) {
+    const StableShimRefreshResult refreshed =
+        refresh_stable_shim(source, destination, refresh_id);
+    if (refreshed.exact_bytes) return refreshed.path;
+    std::ostringstream message;
+    message << "The stable PiInput input entry could not be refreshed (Windows error "
+            << refreshed.error << "). Close the listed applications or restart Windows, "
+            << "then run this installer again.";
+    throw std::runtime_error(message.str());
 }
 
-[[nodiscard]] std::wstring read_registered_dll() {
+[[nodiscard]] std::wstring com_registry_key(const CLSID& class_id) {
+    return L"Software\\Classes\\CLSID\\" + guid_string(class_id) + L"\\InprocServer32";
+}
+
+[[nodiscard]] std::wstring read_registered_dll(const CLSID& class_id) {
     HKEY key = nullptr;
-    if (RegOpenKeyExW(HKEY_CURRENT_USER, com_registry_key().c_str(), 0U, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS) {
+    const std::wstring registry_key = com_registry_key(class_id);
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, registry_key.c_str(), 0U, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS) {
         return {};
     }
     DWORD type = 0U;
@@ -121,7 +197,8 @@ void copy_tree(const std::filesystem::path& source, const std::filesystem::path&
 
 void write_registered_dll(const std::filesystem::path& dll) {
     HKEY key = nullptr;
-    const LONG create = RegCreateKeyExW(HKEY_CURRENT_USER, com_registry_key().c_str(), 0U, nullptr,
+    const std::wstring registry_key = com_registry_key(CLSID_PiInputTextService);
+    const LONG create = RegCreateKeyExW(HKEY_CURRENT_USER, registry_key.c_str(), 0U, nullptr,
         REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &key, nullptr);
     if (create != ERROR_SUCCESS) {
         throw std::runtime_error("Cannot update the PiInput COM registration");
@@ -158,6 +235,141 @@ void write_registered_dll(const std::filesystem::path& dll) {
     return exit_code;
 }
 
+[[nodiscard]] std::wstring read_runtime_registry_string(const wchar_t* const name) {
+    constexpr wchar_t key_path[] = L"Software\\PiInput\\Runtime";
+    DWORD type = 0U;
+    DWORD bytes = 0U;
+    if (RegGetValueW(HKEY_CURRENT_USER, key_path, name, RRF_RT_REG_SZ,
+            &type, nullptr, &bytes) != ERROR_SUCCESS || bytes < sizeof(wchar_t)) {
+        return {};
+    }
+    std::wstring value(bytes / sizeof(wchar_t), L'\0');
+    if (RegGetValueW(HKEY_CURRENT_USER, key_path, name, RRF_RT_REG_SZ,
+            &type, value.data(), &bytes) != ERROR_SUCCESS) {
+        return {};
+    }
+    while (!value.empty() && value.back() == L'\0') value.pop_back();
+    return value;
+}
+
+void write_runtime_registry_string(const wchar_t* const name, const std::wstring& value) {
+    constexpr wchar_t key_path[] = L"Software\\PiInput\\Runtime";
+    HKEY key = nullptr;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, key_path, 0U, nullptr, REG_OPTION_NON_VOLATILE,
+            KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS) {
+        throw std::runtime_error("Cannot create the PiInput runtime registry key");
+    }
+    const DWORD bytes = static_cast<DWORD>((value.size() + 1U) * sizeof(wchar_t));
+    const LONG result = RegSetValueExW(key, name, 0U, REG_SZ,
+        reinterpret_cast<const BYTE*>(value.c_str()), bytes);
+    RegCloseKey(key);
+    if (result != ERROR_SUCCESS) {
+        throw std::runtime_error("Cannot update the PiInput runtime path");
+    }
+}
+
+void remove_runtime_registry_value(const wchar_t* const name) noexcept {
+    constexpr wchar_t key_path[] = L"Software\\PiInput\\Runtime";
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, key_path, 0U, KEY_SET_VALUE, &key) == ERROR_SUCCESS) {
+        (void)RegDeleteValueW(key, name);
+        RegCloseKey(key);
+    }
+}
+
+void remove_host_autostart() noexcept {
+    constexpr wchar_t run_key[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, run_key, 0U, KEY_SET_VALUE, &key) == ERROR_SUCCESS) {
+        (void)RegDeleteValueW(key, L"PiInputHost");
+        RegCloseKey(key);
+    }
+}
+
+[[nodiscard]] bool start_detached(const std::filesystem::path& program) noexcept {
+    std::wstring command = L"\"" + program.wstring() + L"\" --serve";
+    STARTUPINFOW startup{};
+    startup.cb = sizeof(startup);
+    PROCESS_INFORMATION process{};
+    if (CreateProcessW(program.c_str(), command.data(), nullptr, nullptr, FALSE,
+            CREATE_NO_WINDOW | DETACHED_PROCESS, nullptr, program.parent_path().c_str(),
+            &startup, &process) == FALSE) {
+        return false;
+    }
+    CloseHandle(process.hThread);
+    CloseHandle(process.hProcess);
+    return true;
+}
+
+void drain_installed_host(const std::filesystem::path& host) noexcept {
+    std::error_code error;
+    if (!std::filesystem::is_regular_file(host, error) || error) return;
+    (void)run_hidden(host, L"--drain");
+    for (unsigned int attempt = 0U; attempt < 100U; ++attempt) {
+        if (run_hidden(host, L"--health") != 0U) return;
+        Sleep(50U);
+    }
+}
+
+void activate_versioned_host(
+    const std::filesystem::path& host,
+    const std::wstring& previous_host) {
+    if (!previous_host.empty() && std::filesystem::is_regular_file(previous_host)) {
+        (void)run_hidden(previous_host, L"--drain");
+    }
+    for (unsigned int attempt = 0U; attempt < 100U; ++attempt) {
+        if (run_hidden(host, L"--health") != 0U) break;
+        if (attempt + 1U == 100U) {
+            throw std::runtime_error("The previous PiInput Host did not finish draining");
+        }
+        Sleep(50U);
+    }
+    write_runtime_registry_string(L"CurrentHostPath", host.wstring());
+    if (!start_detached(host)) {
+        throw std::runtime_error("Cannot start the versioned PiInput Host");
+    }
+    const std::wstring expected_health =
+        L"--health " + std::wstring(PIINPUT_INSTALLER_VERSION);
+    for (unsigned int attempt = 0U; attempt < 40U; ++attempt) {
+        if (run_hidden(host, expected_health) == 0U) return;
+        Sleep(50U);
+    }
+    (void)run_hidden(host, L"--drain");
+    throw std::runtime_error("The versioned PiInput Host did not match the requested build ID");
+}
+
+void retire_tsf_identity(const CLSID& identity) noexcept {
+    const std::wstring registered = read_registered_dll(identity);
+    if (registered.empty()) {
+        return;
+    }
+
+    const std::filesystem::path retired_dll(registered);
+    const std::filesystem::path retired_profile = retired_dll.parent_path() / L"piinput-profile.exe";
+    if (std::filesystem::is_regular_file(retired_profile)) {
+        (void)run_hidden(retired_profile, L"--deactivate");
+        (void)run_hidden(retired_profile, L"--disable-user");
+    }
+
+    const HMODULE module = LoadLibraryExW(retired_dll.c_str(), nullptr,
+        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
+    if (module == nullptr) {
+        return;
+    }
+    using UnregisterServer = HRESULT(__stdcall*)();
+    const auto unregister_server = reinterpret_cast<UnregisterServer>(
+        GetProcAddress(module, "DllUnregisterServer"));
+    if (unregister_server != nullptr) {
+        (void)unregister_server();
+    }
+    FreeLibrary(module);
+}
+
+void retire_previous_tsf_identities() noexcept {
+    retire_tsf_identity(kRetiredTextService);
+    retire_tsf_identity(kLegacyPiInputTextService);
+}
+
 [[nodiscard]] HRESULT register_first_install(const std::filesystem::path& dll) {
     const HMODULE module = LoadLibraryExW(dll.c_str(), nullptr,
         LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
@@ -192,12 +404,30 @@ void initialize_user_settings(const std::filesystem::path& user_data) {
         std::ofstream output(settings, std::ios::binary | std::ios::trunc);
         output << "[general]\n"
                << "schema=flypy\n"
+               << "default_language=chinese\n"
                << "hot_reload=true\n"
                << "\n"
                << "[candidates]\n"
                << "items_per_row=6\n"
-               << "visible_rows=3\n"
-               << "max_items=90\n";
+               << "visible_rows=5\n"
+               << "max_items=90\n"
+               << "font_size=16\n"
+               << "window_height=40\n"
+               << "\n"
+               << "[punctuation]\n"
+               << "mode=chinese\n"
+               << "bracket_style=sogou\n";
+        return;
+    }
+
+    std::ifstream input(settings, std::ios::binary);
+    const std::string existing{
+        std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+    if (existing.find("bracket_style=") == std::string::npos) {
+        std::ofstream output(settings, std::ios::binary | std::ios::app);
+        if (!existing.empty() && existing.back() != '\n') output << '\n';
+        output << "\n[punctuation]\n"
+               << "bracket_style=sogou\n";
     }
 }
 
@@ -224,23 +454,88 @@ void clean_unlocked_versions(const std::filesystem::path& versions, const std::f
             error.clear();
             continue;
         }
-        const auto pending = item.path().wstring() + L".delete";
-        if (MoveFileExW(item.path().c_str(), pending.c_str(), 0U) != FALSE) {
-            std::filesystem::remove_all(pending, error);
-            error.clear();
+        try {
+            remove_or_schedule_legacy_runtime(item.path());
+        } catch (...) {
+            // Cleanup is best effort after the new version has been registered.
+            // A locked old runtime must not roll back a working installation.
         }
     }
 }
 
-[[nodiscard]] std::filesystem::path install(
+void set_registry_string(HKEY key, const wchar_t* name, const std::wstring& value) {
+    const DWORD bytes = static_cast<DWORD>((value.size() + 1U) * sizeof(wchar_t));
+    if (RegSetValueExW(key, name, 0U, REG_SZ,
+            reinterpret_cast<const BYTE*>(value.c_str()), bytes) != ERROR_SUCCESS) {
+        throw std::runtime_error("Cannot write the PiInput uninstall registry entry");
+    }
+}
+
+void install_uninstaller(
+    const std::filesystem::path& source,
+    const std::filesystem::path& local_root,
+    const std::filesystem::path& active_dll) {
+    const auto layout = make_uninstall_layout(local_root, roaming_app_data());
+    std::filesystem::create_directories(layout.uninstall_root);
+    const auto temporary = layout.uninstall_root / L"PiInput-Uninstall.tmp";
+    std::filesystem::copy_file(source, temporary,
+        std::filesystem::copy_options::overwrite_existing);
+    if (MoveFileExW(temporary.c_str(), layout.stable_uninstaller.c_str(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) == FALSE) {
+        throw std::runtime_error("Cannot install PiInput-Uninstall.exe");
+    }
+
+    const auto values = make_uninstall_registry_values(
+        layout, PIINPUT_INSTALLER_VERSION, active_dll);
+    constexpr wchar_t path[] =
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\PiInput";
+    HKEY key = nullptr;
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, path, 0U, nullptr, REG_OPTION_NON_VOLATILE,
+            KEY_SET_VALUE, nullptr, &key, nullptr) != ERROR_SUCCESS) {
+        throw std::runtime_error("Cannot create the PiInput uninstall registry entry");
+    }
+    try {
+        set_registry_string(key, L"DisplayName", values.display_name);
+        set_registry_string(key, L"DisplayVersion", values.display_version);
+        set_registry_string(key, L"Publisher", values.publisher);
+        set_registry_string(key, L"InstallLocation", values.install_location);
+        set_registry_string(key, L"DisplayIcon", values.display_icon);
+        set_registry_string(key, L"UninstallString", values.uninstall_string);
+        set_registry_string(key, L"QuietUninstallString", values.quiet_uninstall_string);
+        constexpr DWORD one = 1U;
+        if (RegSetValueExW(key, L"NoModify", 0U, REG_DWORD,
+                reinterpret_cast<const BYTE*>(&one), sizeof(one)) != ERROR_SUCCESS ||
+            RegSetValueExW(key, L"NoRepair", 0U, REG_DWORD,
+                reinterpret_cast<const BYTE*>(&one), sizeof(one)) != ERROR_SUCCESS) {
+            throw std::runtime_error("Cannot finalize the PiInput uninstall registry entry");
+        }
+    } catch (...) {
+        RegCloseKey(key);
+        throw;
+    }
+    RegCloseKey(key);
+}
+
+struct InstallResult {
+    std::filesystem::path program_root;
+    std::filesystem::path user_data;
+};
+
+[[nodiscard]] InstallResult install(
     const std::optional<std::filesystem::path>& migration_source) {
     const auto installer = executable_path();
     const auto payload = locate_installer_payload(installer);
     const auto& source_bin = payload.bin;
     const auto& source_data = payload.data;
     require_file(source_bin / L"PiInputTSF.dll");
+    require_file(source_bin / L"PiInputHost.exe");
+    require_file(source_bin / L"PiInput-Settings.exe");
     require_file(source_bin / L"piinput-profile.exe");
-    require_file(source_data / L"base_lexicon.tsv");
+    require_file(source_bin / L"PiInput-Uninstall.exe");
+    require_file(source_bin / L"piinput_icon.ico");
+    // yesymbol.exe is optional: an older package may not carry it, and the
+    // language bar falls back to a message telling the user where to set one.
+    require_file(source_data / L"piinput-base.lex");
     require_file(source_data / L"symbols.tsv");
 
     const auto local_root = local_app_data();
@@ -252,50 +547,127 @@ void clean_unlocked_versions(const std::filesystem::path& versions, const std::f
             *effective_migration, local_root, piinput_root)) {
         throw std::runtime_error("Unsafe --migrate-from path");
     }
-    const auto developer_root = piinput_root / L"Dev";
-    const auto target = version_directory(developer_root, PIINPUT_INSTALLER_VERSION, build_id());
-    const auto target_bin = target / L"bin";
+    const std::wstring version_id =
+        sanitize_component(PIINPUT_INSTALLER_VERSION) + L"-" + sanitize_component(build_id());
+    const auto runtime = make_stable_runtime_layout(piinput_root, version_id);
+    if (!runtime.has_value()) {
+        throw std::runtime_error("Cannot create a safe PiInput stable-runtime layout");
+    }
+    // One fixed location: bin beside data, both overwritten in place. There is
+    // no per-version directory to accumulate and no versioned path that a
+    // registration can be captured against and then outlive.
+    const auto target = runtime->root;
+    const auto target_bin = runtime->shim_directory;
+    // The Host lives at a fixed path now and is overwritten in place, so it has
+    // to be shut down before the copy rather than after it.
+    drain_installed_host(target_bin / L"PiInputHost.exe");
     copy_tree(source_bin, target_bin);
     copy_tree(source_data, target / L"data");
     initialize_user_settings(piinput_root / L"UserData");
 
-    const auto new_dll = target_bin / L"PiInputTSF.dll";
+    const std::wstring previous_dll = read_registered_dll(CLSID_PiInputTextService);
+    const auto versioned_shim = target_bin / L"PiInputTSF.dll";
+    const auto new_dll = can_reuse_registered_stable_shim(
+            previous_dll, runtime->shim_dll, versioned_shim)
+        ? runtime->shim_dll
+        : install_or_refresh_stable_shim(
+            versioned_shim, runtime->shim_dll, version_id);
+    const auto new_host = target_bin / L"PiInputHost.exe";
     const auto profile = target_bin / L"piinput-profile.exe";
-    const std::wstring previous_dll = read_registered_dll();
+    const auto stable_icon = runtime->shim_dll.parent_path() / L"piinput_icon.ico";
+    std::filesystem::copy_file(
+        source_bin / L"piinput_icon.ico", stable_icon,
+        std::filesystem::copy_options::overwrite_existing);
+    const std::wstring previous_host = read_runtime_registry_string(L"CurrentHostPath");
     bool first_registration_attempted = false;
+    bool user_keyboard_enabled = false;
     try {
-        const DWORD previous_status = run_hidden(profile, L"--status");
-        if (previous_status == 0U) {
-            write_registered_dll(new_dll);
-        } else {
+        const bool stable_shim_already_registered = !previous_dll.empty() &&
+            _wcsicmp(previous_dll.c_str(), new_dll.c_str()) == 0;
+        if (!stable_shim_already_registered) {
             first_registration_attempted = true;
             const HRESULT registration = register_first_install(new_dll);
-            if (FAILED(registration) && run_hidden(profile, L"--status") != 0U) {
-                throw std::runtime_error("TSF registration failed");
+            if (FAILED(registration)) {
+                std::ostringstream message;
+                message << "TSF registration or capability refresh failed: HRESULT 0x"
+                        << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+                        << static_cast<std::uint32_t>(registration);
+                throw std::runtime_error(message.str());
             }
             write_registered_dll(new_dll);
         }
-        if (run_hidden(profile, L"--activate") != 0U || run_hidden(profile, L"--status") != 0U) {
-            throw std::runtime_error("TSF profile activation or verification failed");
+        for (const auto& command : profile_install_commands()) {
+            DWORD exit_code = 1U;
+            for (unsigned int attempt = 0U; attempt < command.max_attempts; ++attempt) {
+                exit_code = run_hidden(profile, std::wstring(command.arguments));
+                if (exit_code == 0U) {
+                    break;
+                }
+                if (attempt + 1U < command.max_attempts && command.retry_delay_ms != 0U) {
+                    Sleep(command.retry_delay_ms);
+                }
+            }
+            if (exit_code != 0U) {
+                throw std::runtime_error(std::string(command.failure_message));
+            }
+            user_keyboard_enabled = user_keyboard_enabled || command.enables_user_keyboard;
         }
+        retire_previous_tsf_identities();
         if (effective_migration.has_value()) {
             migrate_legacy_user_data(*effective_migration, piinput_root);
         }
-        write_current_marker(developer_root, target);
+        activate_versioned_host(new_host, previous_host);
+        if (!write_runtime_marker_atomic(
+                runtime->current_marker, RuntimeMarker{version_id, piinput::host_protocol_current})) {
+            throw std::runtime_error("Cannot atomically publish the PiInput runtime marker");
+        }
+        // The Host is a console executable. Launching it from HKCU\Run creates
+        // a visible terminal at every sign-in. It is already started detached
+        // above and the TSF Shim can restart it invisibly on first use, so the
+        // login entry is both unnecessary and user-visible. Upgrades also
+        // remove the entry left by older releases.
+        remove_host_autostart();
+        install_uninstaller(source_bin / L"PiInput-Uninstall.exe", local_root, new_dll);
     } catch (...) {
+        if (user_keyboard_enabled && first_registration_attempted) {
+            (void)run_hidden(profile, L"--disable-user");
+        }
         if (!previous_dll.empty()) {
             write_registered_dll(previous_dll);
         } else if (first_registration_attempted) {
             unregister_failed_first_install(new_dll);
         }
+        if (!previous_host.empty()) {
+            write_runtime_registry_string(L"CurrentHostPath", previous_host);
+            remove_host_autostart();
+            if (std::filesystem::is_regular_file(previous_host)) {
+                (void)start_detached(previous_host);
+            }
+        } else {
+            remove_runtime_registry_value(L"CurrentHostPath");
+            remove_host_autostart();
+        }
         throw;
     }
 
-    clean_unlocked_versions(developer_root / L"versions", target);
+    // Upgrading also cleans up: the old layout left a Runtime tree (a permanent
+    // Shim plus one directory per version, none of which anything removed) and
+    // an older Dev tree beside it. Both are gone now, and a locked file is
+    // scheduled rather than left behind.
+    for (const std::wstring_view legacy : {L"Runtime", L"Dev"}) {
+        const auto path = piinput_root / legacy;
+        std::error_code legacy_error;
+        if (!std::filesystem::is_directory(path, legacy_error) || legacy_error) continue;
+        try {
+            remove_or_schedule_legacy_runtime(path);
+        } catch (...) {
+            // Best effort once the new version is registered and working.
+        }
+    }
     if (effective_migration.has_value()) {
         remove_or_schedule_legacy_runtime(*effective_migration);
     }
-    return target;
+    return {target, piinput_root / L"UserData"};
 }
 
 [[nodiscard]] std::wstring widen_error(const std::exception& error) {
@@ -343,15 +715,21 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     const bool silent = has_argument(L"--silent");
     try {
         const auto migration = argument_value(L"--migrate-from");
-        const auto target = install(migration.has_value()
+        const auto result = install(migration.has_value()
             ? std::optional<std::filesystem::path>(*migration)
             : std::nullopt);
         const std::wstring message =
             L"PiInput 已安装完成。\n\n"
-            L"不需要关闭当前正在编辑的程序。请重新打开要测试的程序，"
-            L"再通过 Win+Space 选择 PiInput。\n\n安装目录：\n" + target.wstring();
+            L"安装器没有自动激活输入法，也没有关闭任何程序。请重新打开要测试的程序，"
+            L"再通过 Win+Space 主动选择 PiInput。\n\n安装目录：\n" + result.program_root.wstring() +
+            L"\n\n用户设置和词库：\n" + result.user_data.wstring() +
+            L"\n\n点击「确定」后会打开设置目录。";
         if (!silent) {
             MessageBoxW(nullptr, message.c_str(), L"PiInput 安装完成", MB_OK | MB_ICONINFORMATION);
+            // Settings are edited by hand in settings.ini, so put the user in
+            // front of the file instead of making them find AppData themselves.
+            ShellExecuteW(nullptr, L"open", result.user_data.c_str(),
+                nullptr, nullptr, SW_SHOWNORMAL);
         }
         return 0;
     } catch (const std::filesystem::filesystem_error& error) {

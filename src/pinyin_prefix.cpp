@@ -38,14 +38,20 @@ namespace {
 
 void sort_and_limit(std::vector<PinyinPrefix>& results, const std::size_t limit) {
     std::stable_sort(results.begin(), results.end(), [](const PinyinPrefix& left, const PinyinPrefix& right) {
-        if (left.complete_syllables.size() != right.complete_syllables.size()) {
-            return left.complete_syllables.size() > right.complete_syllables.size();
-        }
+        // Fewer unresolved letters first: that parse explains more of what the
+        // user actually typed.
         if (left.trailing_prefix.size() != right.trailing_prefix.size()) {
-            return left.trailing_prefix.size() > right.trailing_prefix.size();
+            return left.trailing_prefix.size() < right.trailing_prefix.size();
         }
+        // Over the same resolved text, trust the segmenter's own score. It
+        // already prefers fewer, longer syllables; ranking by raw syllable
+        // count instead picked "wo'xi'an'zai" over "wo'xian'zai" and dropped
+        // 我现在, and did the same to 你好 and 喜欢.
         if (left.score != right.score) {
             return left.score > right.score;
+        }
+        if (left.complete_syllables.size() != right.complete_syllables.size()) {
+            return left.complete_syllables.size() < right.complete_syllables.size();
         }
         return left.canonical_prefix < right.canonical_prefix;
     });
@@ -95,7 +101,8 @@ void sort_and_limit(std::vector<PinyinPrefix>& results, const std::size_t limit)
 [[nodiscard]] std::vector<PinyinPrefix> expand_flypy_prefix(
     const std::string& normalized,
     const ShuangpinDecoder& shuangpin,
-    const std::size_t limit) {
+    const std::size_t limit,
+    const bool uv_compatibility) {
     std::string compact;
     compact.reserve(normalized.size());
     for (const char character : normalized) {
@@ -117,7 +124,7 @@ void sort_and_limit(std::vector<PinyinPrefix>& results, const std::size_t limit)
     if (compact.empty()) {
         bases.push_back(PinyinSegmentation{});
     } else {
-        bases = shuangpin.decode("flypy", compact, limit);
+        bases = shuangpin.decode("flypy", compact, limit, uv_compatibility);
     }
 
     std::vector<PinyinPrefix> results;
@@ -140,7 +147,8 @@ std::vector<PinyinPrefix> expand_input_prefix(
     const std::string_view schema,
     const PinyinSegmenter& pinyin,
     const ShuangpinDecoder& shuangpin,
-    const std::size_t limit) {
+    const std::size_t limit,
+    const bool uv_compatibility) {
     if (limit == 0U || input.empty()) {
         return {};
     }
@@ -152,7 +160,7 @@ std::vector<PinyinPrefix> expand_input_prefix(
         return expand_full_prefix(normalized, pinyin, limit);
     }
     if (schema == "flypy") {
-        return expand_flypy_prefix(normalized, shuangpin, limit);
+        return expand_flypy_prefix(normalized, shuangpin, limit, uv_compatibility);
     }
     return {};
 }

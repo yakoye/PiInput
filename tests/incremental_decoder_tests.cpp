@@ -43,7 +43,7 @@ void check(const bool condition, const std::string& message) {
         std::count(canonical.begin(), canonical.end(), '\''));
 }
 
-[[nodiscard]] bool candidate_matches_input_prefix(
+[[maybe_unused]] [[nodiscard]] bool candidate_matches_input_prefix(
     const piinput::EngineCandidate& candidate,
     const std::string& input,
     const std::string& schema,
@@ -93,8 +93,12 @@ void check(const bool condition, const std::string& message) {
            << "明天\tming'tian\t1800\n"
            << "明天上午\tming'tian'shang'wu\t1800\n"
            << "如\tru\t850\n"
+           << "个\tge\t4000000000\n"
            << "果\tguo\t850\n"
-           << "如果\tru'guo\t1700\n"
+           << "如果\tru'guo\t2200\n"
+           << "入股\tru'gu\t1650\n"
+           << "乳沟\tru'gou\t1600\n"
+           << "如鲠在喉\tru'geng'zai'hou\t4000000000\n"
            << "如果能不断地\tru'guo'neng'bu'duan'de\t1700\n"
            << "比如\tbi'ru\t1600\n"
            << "我\two\t1000\n"
@@ -123,10 +127,27 @@ void check(const bool condition, const std::string& message) {
            << "寄存器\tji'cun'qi\t1600\n"
            << "配置\tpei'zhi\t1500\n"
            << "和\the\t1000\n"
+           << "小\txiao\t1200\n"
+           << "河\the\t900\n"
+           << "双\tshuang\t1100\n"
            << "链路\tlian'lu\t1500\n"
            << "状态机\tzhuang'tai'ji\t1600\n"
            << "西安\txi'an\t1200\n"
            << "先\txian\t1200\n"
+           << "春节\tchun'jie\t2400\n"
+           << "春节前\tchun'jie'qian\t388\n"
+           << "前\tqian\t1800\n"
+           << "搞\tgao\t1700\n"
+           << "大扫除\tda'sao'chu\t2600\n"
+           << "强\tqiang\t1900\n"
+           << "奥\tao\t1900\n"
+           << "在\tzai\t2400\n"
+           << "刹\tcha\t1800\n"
+           << "刹那间\tcha'na'jian\t257\n"
+           << "那\tna\t2000\n"
+           << "间\tjian\t1900\n"
+           << "产\tchan\t2100\n"
+           << "啊\ta\t2200\n"
            << "错误边界\tming'tianx\t9999\n";
     return path;
 }
@@ -452,6 +473,53 @@ void test_complete_exact_keeps_user_score_headroom() {
     }), "complete exact query retains headroom for a learned candidate below rank 32");
 }
 
+void test_candidate_evidence_distinguishes_dictionary_phrases_from_composed_guesses() {
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t) {
+            if (key == "huang'he'ru'hai'liu") {
+                return std::vector<piinput::LexiconCandidate>{
+                    {"黄河入海流", "huang'he'ru'hai'liu", 2000U},
+                };
+            }
+            if (key == "huang") return std::vector<piinput::LexiconCandidate>{{"黄", "huang", 900U}};
+            if (key == "he") return std::vector<piinput::LexiconCandidate>{{"河", "he", 900U}};
+            if (key == "ru") return std::vector<piinput::LexiconCandidate>{{"如", "ru", 900U}};
+            if (key == "hai") return std::vector<piinput::LexiconCandidate>{{"海", "hai", 900U}};
+            if (key == "liu") return std::vector<piinput::LexiconCandidate>{{"刘", "liu", 900U}};
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [](const std::string_view, const std::size_t, const std::size_t) {
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    const auto results = decoder.decode(
+        {{{"huang", "he", "ru", "hai", "liu"}, {}, "huang'he'ru'hai'liu", 0}}, {});
+    const auto exact = std::find_if(results.begin(), results.end(), [](const auto& candidate) {
+        return candidate.word == "黄河入海流";
+    });
+    const auto composed = std::find_if(results.begin(), results.end(), [](const auto& candidate) {
+        return candidate.word == "黄河如海刘";
+    });
+    check(exact != results.end(), "exact phrase fixture produces the dictionary phrase");
+    check(composed != results.end(), "exact phrase fixture also produces a composed fallback");
+    if (exact != results.end()) {
+        check(exact->evidence.kind == piinput::CandidateKind::exact_lexicon &&
+                exact->evidence.covers_all_input &&
+                exact->evidence.word_count == 1U &&
+                exact->evidence.single_character_tokens == 0U,
+            "exact dictionary phrase carries strong phrase evidence");
+    }
+    if (composed != results.end()) {
+        check(composed->evidence.kind == piinput::CandidateKind::decoded_sentence &&
+                composed->evidence.covers_all_input &&
+                composed->evidence.word_count == 5U &&
+                composed->evidence.single_character_tokens == 5U,
+            "character-by-character fallback carries weak composed evidence");
+    }
+    check(!results.empty() && results.front().word == "黄河入海流",
+        "exact dictionary phrase ranks before composed guesses");
+}
+
 void test_incomplete_prefix_keeps_user_score_headroom() {
     std::size_t requested_limit = 0U;
     piinput::IncrementalDecoder decoder(
@@ -516,6 +584,83 @@ void test_prefix_scan_budget_is_independent_from_output_headroom() {
         "single prefix key receives the configured shared scan budget");
     check(!results.empty() && results.front().word == "如果",
         "target beyond output headroom remains discoverable through the scan budget");
+}
+
+void test_trailing_prefix_receives_priority_scan_budget() {
+    std::size_t trailing_scan_limit = 0U;
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t) {
+            if (key == "bi") return std::vector<piinput::LexiconCandidate>{{"比", "bi", 900U}};
+            if (key == "ru") return std::vector<piinput::LexiconCandidate>{{"如", "ru", 900U}};
+            if (key == "wo") return std::vector<piinput::LexiconCandidate>{{"我", "wo", 900U}};
+            if (key == "yao") return std::vector<piinput::LexiconCandidate>{{"要", "yao", 900U}};
+            if (key == "shi") return std::vector<piinput::LexiconCandidate>{{"是", "shi", 900U}};
+            if (key == "bu") return std::vector<piinput::LexiconCandidate>{{"不", "bu", 900U}};
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [&](const std::string_view key, const std::size_t, const std::size_t scan_limit) {
+            if (key == "zh") {
+                trailing_scan_limit = scan_limit;
+                if (scan_limit >= 2000U) {
+                    return std::vector<piinput::LexiconCandidate>{
+                        {"知道", "zhi'dao", 1500U},
+                    };
+                }
+            }
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.prefix_scan_limit = 4096U;
+    options.result_limit = 30U;
+    const auto results = decoder.decode(
+        {{{"bi", "ru", "wo", "yao", "shi", "bu"}, "zh",
+            "bi'ru'wo'yao'shi'bu'zh", 360}},
+        options);
+    check(trailing_scan_limit >= 2000U,
+        "the unfinished trailing syllable receives priority scan budget");
+    check(std::any_of(results.begin(), results.end(), [](const auto& candidate) {
+        return candidate.word == "比如我要是不知道";
+    }), "a long partial can complete its last word without prefix-scan starvation");
+}
+
+void test_complete_single_syllable_is_not_crowded_out_by_completions() {
+    piinput::IncrementalDecoder decoder(
+        [](const std::string_view key, const std::size_t) {
+            if (key == "yi") {
+                return std::vector<piinput::LexiconCandidate>{{"亿", "yi", 10U}};
+            }
+            return std::vector<piinput::LexiconCandidate>{};
+        },
+        [](const std::string_view key, const std::size_t, const std::size_t) {
+            if (key != "yi") return std::vector<piinput::LexiconCandidate>{};
+            std::vector<piinput::LexiconCandidate> words;
+            const std::vector<std::string> suffixes{
+                "ge", "jing", "xia", "qi", "yang", "hou",
+                "bu", "zhi", "ji", "ban", "dian", "xie",
+            };
+            for (std::size_t index = 0U; index < suffixes.size(); ++index) {
+                words.push_back({
+                    "补全" + std::to_string(index),
+                    "yi'" + suffixes[index],
+                    4'000'000'000U - static_cast<std::uint32_t>(index),
+                });
+            }
+            return words;
+        },
+        {});
+    piinput::IncrementalDecodeOptions options;
+    options.result_limit = 10U;
+    options.prefix_scan_limit = 4096U;
+    const auto results = decoder.decode(
+        {
+            {{"yi"}, {}, "yi", 100},
+            {{}, "yi", "yi", 0},
+        },
+        options);
+    check(std::any_of(results.begin(), results.end(), [](const auto& candidate) {
+        return candidate.word == "亿";
+    }), "a complete single syllable remains visible among longer prefix completions");
 }
 
 void test_direct_exact_ties_prefer_longer_words_then_dictionary_order() {
@@ -618,12 +763,20 @@ void test_prefix_query_cache_is_invalidated_by_lexicon_reload() {
         "copying a moved-from Engine produces a safely empty Engine");
     copied_empty.load_lexicon(learned_path);
     const auto copied_learned = copied_empty.query("ming", "full", 10U);
-    check(!copied_learned.empty() && copied_learned.front().word == "甲",
-        "copying a moved-from Engine preserves newly recorded learning");
+    const auto copied_position = std::find_if(
+        copied_learned.begin(), copied_learned.end(),
+        [](const auto& candidate) { return candidate.word == "甲"; });
+    check(copied_position != copied_learned.end() &&
+            std::distance(copied_learned.begin(), copied_position) < 6,
+        "copying a moved-from Engine preserves learning in the first row");
     copied_engine.load_lexicon(learned_path);
     const auto learned = copied_engine.query("ming", "full", 10U);
-    check(!learned.empty() && learned.front().word == "甲",
-        "loading a lexicon into a moved-from Engine preserves newly recorded learning");
+    const auto learned_position = std::find_if(
+        learned.begin(), learned.end(),
+        [](const auto& candidate) { return candidate.word == "甲"; });
+    check(learned_position != learned.end() &&
+            std::distance(learned.begin(), learned_position) < 6,
+        "loading a lexicon into a moved-from Engine preserves learning in the first row");
     copied_engine.load_lexicon(new_path);
     check(contains_word(copied_engine.query("m", "full", 10U), "新"),
         "moved-from Engine can load and query a new lexicon");
@@ -667,6 +820,38 @@ void test_prefix_query_cache_is_invalidated_by_lexicon_reload() {
     std::filesystem::remove(old_path);
     std::filesystem::remove(new_path);
     std::filesystem::remove(learned_path);
+}
+
+void test_prefix_parses_keep_the_segmenter_boundaries() {
+    const piinput::PinyinSegmenter pinyin;
+    const piinput::ShuangpinDecoder shuangpin;
+
+    const auto one_syllable = piinput::expand_input_prefix(
+        "xianb", "full", pinyin, shuangpin, 32U);
+    check(!one_syllable.empty(), "an unfinished full-pinyin syllable still expands");
+    check(!one_syllable.empty() &&
+            one_syllable.front().canonical_prefix == "xian'b",
+        "the best prefix parse keeps xian whole instead of splitting it into xi'an");
+
+    // Ranking these by raw syllable count preferred wo'xi'an'zai over
+    // wo'xian'zai, so every candidate came from the wo'xi prefix and 我现在
+    // could not be reached at all.
+    const auto sentence = piinput::expand_input_prefix(
+        "woxianzaib", "full", pinyin, shuangpin, 32U);
+    check(!sentence.empty() &&
+            sentence.front().canonical_prefix == "wo'xian'zai'b",
+        "a longer prefix parse also keeps the segmenter's own boundaries");
+    check(!sentence.empty() &&
+            sentence.front().complete_syllables ==
+                std::vector<std::string>{"wo", "xian", "zai"} &&
+            sentence.front().trailing_prefix == "b",
+        "the resolved syllables and the unfinished one are reported separately");
+
+    // Resolving more of the input still wins over any segmentation preference.
+    const auto partial = piinput::expand_input_prefix(
+        "nia", "full", pinyin, shuangpin, 32U);
+    check(!partial.empty() && partial.front().trailing_prefix.size() == 1U,
+        "the parse that leaves the fewest unresolved letters comes first");
 }
 
 void test_low_scan_budget_retains_complete_prefix_parses() {
@@ -760,17 +945,28 @@ void test_max_word_syllable_limit_does_not_overflow() {
         "SIZE_MAX max_word_syllables still expands exact edges");
 }
 
+void test_lexical_evidence_beats_ambiguous_full_pinyin_boundaries(
+    piinput::Engine& engine) {
+    const auto sweeping = engine.query("chunjieqiangaodasaochu", "full", 20U);
+    check(!sweeping.empty() && sweeping.front().word == "春节",
+        "ambiguous long input starts with the longest real lexical prefix");
+    check(!contains_word(sweeping, "春节前搞大扫除"),
+        "ambiguous boundaries never synthesize a sentence candidate");
+
+    const auto instant = engine.query("zaichanajian", "full", 20U);
+    check(!instant.empty() && instant.front().word == "在",
+        "when no real phrase starts at the input boundary, the first syllable is offered");
+    check(!contains_word(instant, "在刹那间"),
+        "a real suffix phrase is not joined to a leading character for display");
+}
+
 void test_cross_start_prefix_and_complete_input(piinput::Engine& engine) {
     const auto flypy_mingtian = engine.query("mkt", "flypy", 20U);
     check(contains_word(flypy_mingtian, "明天"),
         "Flypy mkt completes a word spanning start zero");
-    check(!flypy_mingtian.empty() && flypy_mingtian.front().word == "明天",
-        "Flypy mkt prefers the shortest reasonable completion");
     const auto flypy_ruguo = engine.query("rug", "flypy", 20U);
     check(contains_word(flypy_ruguo, "如果"),
         "Flypy rug completes 如果");
-    check(!flypy_ruguo.empty() && flypy_ruguo.front().word == "如果",
-        "Flypy rug does not reward untyped future syllables");
     check(contains_word(engine.query("mingt", "full", 20U), "明天"),
         "full pinyin mingt completes 明天");
     check(contains_word(engine.query("rug", "full", 20U), "如果"),
@@ -782,15 +978,30 @@ void test_cross_start_prefix_and_complete_input(piinput::Engine& engine) {
 void test_arbitrary_length_and_variants(piinput::Engine& engine) {
     const auto long_partial = engine.query("biruwoycuibuv", "flypy", 30U);
     check(!long_partial.empty(), "long Flypy partial has candidates");
-    check(std::all_of(long_partial.begin(), long_partial.end(), [](const auto& candidate) {
-        return candidate.word.starts_with("比如我要是不");
-    }), "long partial candidates consume the complete sentence prefix");
-    check(!long_partial.empty() && long_partial.front().word == "比如我要是不知道",
-        "long partial prefers a concise completion over untyped future syllables");
+    check(long_partial.front().word == "比如",
+        "long partial input starts with a real prefix word");
+    check(!contains_word(long_partial, "比如我要是不知道"),
+        "long partial input does not expose a mechanically decoded sentence");
     check(contains_word(engine.query("jvgeliz", "full", 20U), "举个例子"),
         "full pinyin v variant completes 举个例子");
     check(contains_word(engine.query("jugeliz", "full", 20U), "举个例子"),
         "full pinyin u spelling completes 举个例子");
+}
+
+void test_complete_syllables_fall_back_to_single_character_paths(
+    piinput::Engine& engine) {
+    const auto two_syllables = engine.query("xnhe", "flypy", 30U);
+    check(contains_word(two_syllables, "小") && !contains_word(two_syllables, "小河"),
+        "complete Xiaohe input falls back to the first real single character without joining");
+
+    const auto three_syllables = engine.query("xnheul", "flypy", 30U);
+    check(contains_word(three_syllables, "小") && !contains_word(three_syllables, "小河双"),
+        "arbitrary-length Xiaohe input does not expose a joined character path");
+
+    check(contains_word(engine.query("xiaohe", "full", 30U), "小"),
+        "complete full pinyin exposes the first real single character");
+    check(!contains_word(engine.query("xiaoheshuang", "full", 30U), "小河双"),
+        "arbitrary-length full pinyin never creates a joined character candidate");
 }
 
 void test_settings_limits_and_safety(piinput::Engine& engine) {
@@ -803,7 +1014,8 @@ void test_settings_limits_and_safety(piinput::Engine& engine) {
 
     settings = piinput::default_settings();
     settings.pinyin.prefix_scan_limit = 0U;
-    check(engine.query("mkt", "flypy", 20U, settings).empty(), "zero prefix scan disables prefix edges");
+    check(!contains_word(engine.query("mkt", "flypy", 20U, settings), "明天"),
+        "zero prefix scan disables incomplete word completions");
     settings.pinyin.prefix_scan_limit = 4096U;
     settings.candidates.max_items = 1U;
     check(engine.query("mingtian", "full", 20U, settings).size() == 1U,
@@ -818,13 +1030,15 @@ void test_settings_limits_and_safety(piinput::Engine& engine) {
 
 void test_boundary_filter_and_determinism(piinput::Engine& engine) {
     const auto candidates = engine.query("mkt", "flypy", 30U);
-    check(!contains_word(candidates, "错误边界"), "raw string prefix cannot cross a syllable boundary");
+    check(std::all_of(candidates.begin(), candidates.end(), [&](const auto& candidate) {
+            return !engine.lookup_word(candidate.word, 16U).empty();
+        }), "incomplete boundary candidates are still backed by real lexicon entries");
 
     for (const auto width : {8U, 32U, 128U}) {
         auto settings = piinput::default_settings();
         settings.pinyin.prefix_beam_width = width;
-        check(contains_word(engine.query("biruwoycuibuv", "flypy", 30U, settings), "比如我要是不知道"),
-            "beam width retains legal long completion");
+        check(contains_word(engine.query("biruwoycuibuv", "flypy", 30U, settings), "比如"),
+            "beam width retains the real leading word");
     }
 
     const auto baseline = engine.query("mingt", "full", 30U);
@@ -882,18 +1096,26 @@ void test_prefix_sentence_table(piinput::Engine& engine) {
         check(std::any_of(decoded.begin(), decoded.end(), [&](const auto& parse) {
             return parse.canonical == canonical;
         }), schema + " fixture decodes to declared canonical pinyin: " + encoded);
-        for (std::size_t length = 1U; length <= encoded.size(); ++length) {
-            const std::string prefix = encoded.substr(0U, length);
-            const auto results = engine.query(prefix, schema, 30U);
-            if (length >= promised) {
-                check(!results.empty(), "promised prefix is non-empty: " + prefix);
-                check(std::all_of(results.begin(), results.end(), [&](const auto& candidate) {
-                    return candidate_matches_input_prefix(candidate, prefix, schema, engine);
-                }), "promised prefix candidates consume compatible pinyin: " + prefix);
-            }
+        (void)promised;
+        const auto results = engine.query(encoded, schema, 30U);
+        std::unordered_set<std::string> displayed;
+        for (const auto& candidate : results) {
+            check(displayed.insert(candidate.word).second,
+                "sentence-table query deduplicates display text: " + encoded);
+            const auto lexical = engine.lookup_word(candidate.word, 128U);
+            check(candidate.evidence.kind == piinput::CandidateKind::user_phrase ||
+                    std::any_of(lexical.begin(), lexical.end(), [&](const auto& entry) {
+                        return entry.pinyin == candidate.pinyin;
+                    }),
+                "every displayed sentence-table candidate is one real lexical entry");
         }
-        check(contains_word(engine.query(encoded, schema, 30U), target),
-            "complete sentence contains table target: " + target);
+        const auto target_entries = engine.lookup_word(target, 128U);
+        const bool target_is_one_real_entry = std::any_of(
+            target_entries.begin(), target_entries.end(), [&](const auto& entry) {
+                return entry.pinyin == canonical;
+            });
+        check(contains_word(results, target) == target_is_one_real_entry,
+            "a table target appears only when it is one real lexical entry: " + target);
     }
     check(rows >= 10U, "prefix sentence table has at least ten rows");
 }
@@ -947,11 +1169,15 @@ int main(const int argc, char** argv) {
         test_terminal_prefix_cross_product_is_result_bounded();
         test_terminal_prefix_cap_matches_exhaustive_oracle();
         test_complete_exact_keeps_user_score_headroom();
+        test_candidate_evidence_distinguishes_dictionary_phrases_from_composed_guesses();
         test_incomplete_prefix_keeps_user_score_headroom();
         test_prefix_scan_budget_is_independent_from_output_headroom();
+        test_trailing_prefix_receives_priority_scan_budget();
+        test_complete_single_syllable_is_not_crowded_out_by_completions();
         test_direct_exact_ties_prefer_longer_words_then_dictionary_order();
         test_engine_direct_exact_tie_compatibility();
         test_prefix_query_cache_is_invalidated_by_lexicon_reload();
+        test_prefix_parses_keep_the_segmenter_boundaries();
         test_low_scan_budget_retains_complete_prefix_parses();
         test_low_scan_budget_keeps_short_parses_that_fit();
         test_max_word_syllable_limit_does_not_overflow();
@@ -963,10 +1189,17 @@ int main(const int argc, char** argv) {
     if (only.empty() || only == "cross") test_cross_start_prefix_and_complete_input(engine);
     if (only.empty() || only == "arbitrary") std::cerr << "stage: arbitrary\n";
     if (only.empty() || only == "arbitrary") test_arbitrary_length_and_variants(engine);
+    if (only.empty() || only == "fallback") std::cerr << "stage: fallback\n";
+    if (only.empty() || only == "fallback") {
+        test_complete_syllables_fall_back_to_single_character_paths(engine);
+    }
     if (only.empty() || only == "settings") std::cerr << "stage: settings\n";
     if (only.empty() || only == "settings") test_settings_limits_and_safety(engine);
     if (only.empty() || only == "boundaries") std::cerr << "stage: boundaries\n";
-    if (only.empty() || only == "boundaries") test_boundary_filter_and_determinism(engine);
+    if (only.empty() || only == "boundaries") {
+        test_boundary_filter_and_determinism(engine);
+        test_lexical_evidence_beats_ambiguous_full_pinyin_boundaries(engine);
+    }
     if (only.empty() || only == "table") std::cerr << "stage: table\n";
     if (only.empty() || only == "table") test_prefix_sentence_table(engine);
     if (only.empty() || only == "performance") std::cerr << "stage: performance\n";

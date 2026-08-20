@@ -1,0 +1,4 @@
+#include "resource.h"
+
+IDI_PIINPUT ICON "piinput_icon.ico"
+

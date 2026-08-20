@@ -204,4 +204,120 @@ std::vector<PinyinSegmentation> PinyinSegmenter::segment(
     return results;
 }
 
+std::string simplified_pinyin_key(const std::string_view canonical_pinyin) {
+    std::string key;
+    bool at_syllable_start = true;
+    for (const char character : canonical_pinyin) {
+        if (character == '\'') {
+            at_syllable_start = true;
+            continue;
+        }
+        if (at_syllable_start) {
+            key.push_back(character);
+            at_syllable_start = false;
+        }
+    }
+    return key;
+}
+
+namespace {
+
+// Initials a syllable can start with, longest first so zh/ch/sh win over z/c/s
+// when both could apply. A bare vowel is its own initial: 安 is reachable as a.
+constexpr std::string_view simplified_initials[] = {
+    "zh", "ch", "sh",
+    "b", "p", "m", "f", "d", "t", "n", "l", "g", "k", "h",
+    "j", "q", "x", "r", "z", "c", "s", "y", "w",
+    "a", "e", "o",
+};
+
+}  // namespace
+
+std::vector<SimplifiedPinyinReading> simplified_pinyin_readings(
+    const std::string_view input,
+    const PinyinSegmenter& segmenter,
+    const std::size_t limit) {
+    // The search below branches at every position, so its cost is exponential
+    // in the input length without these bounds. Nobody spells a phrase longer
+    // than eight syllables in initials anyway.
+    constexpr std::size_t max_simplified_syllables = 8U;
+    constexpr std::size_t max_simplified_input = 32U;
+    if (input.empty() || limit == 0U || input.size() > max_simplified_input) {
+        return {};
+    }
+    std::vector<SimplifiedPinyinReading> readings;
+    // Depth-first over the input: at each position take either a full syllable
+    // or a bare initial. Both branches are kept because the same letters can be
+    // either -- "sruf" is s + ru + f, and "ru" there is a spelled-out syllable
+    // that also happens to start a longer one.
+    const auto walk = [&](auto&& self, const std::size_t position,
+                          SimplifiedPinyinReading& current) -> void {
+        if (readings.size() >= limit || current.key.size() > max_simplified_syllables) {
+            return;
+        }
+        if (position == input.size()) {
+            if (current.key.size() >= 2U) {
+                readings.push_back(current);
+            }
+            return;
+        }
+        for (std::size_t length = (std::min)(input.size() - position, std::size_t{6U});
+             length >= 1U; --length) {
+            const auto candidate = input.substr(position, length);
+            if (!segmenter.is_syllable(candidate)) {
+                continue;
+            }
+            const auto key_size = current.key.size();
+            current.key.push_back(candidate.front());
+            current.syllables.emplace_back(candidate);
+            self(self, position + length, current);
+            current.syllables.pop_back();
+            current.key.resize(key_size);
+            if (readings.size() >= limit) {
+                return;
+            }
+        }
+        for (const auto initial : simplified_initials) {
+            if (input.compare(position, initial.size(), initial) != 0) {
+                continue;
+            }
+            const auto key_size = current.key.size();
+            current.key.push_back(initial.front());
+            current.syllables.emplace_back();
+            self(self, position + initial.size(), current);
+            current.syllables.pop_back();
+            current.key.resize(key_size);
+            if (readings.size() >= limit) {
+                return;
+            }
+        }
+    };
+    SimplifiedPinyinReading current;
+    walk(walk, 0U, current);
+
+    std::stable_sort(readings.begin(), readings.end(),
+        [](const SimplifiedPinyinReading& left, const SimplifiedPinyinReading& right) {
+            // More spelled-out syllables first: that reading explains more of
+            // what the user actually typed.
+            const auto spelled = [](const SimplifiedPinyinReading& reading) {
+                return std::count_if(reading.syllables.begin(), reading.syllables.end(),
+                    [](const std::string& syllable) { return !syllable.empty(); });
+            };
+            const auto left_spelled = spelled(left);
+            const auto right_spelled = spelled(right);
+            if (left_spelled != right_spelled) {
+                return left_spelled > right_spelled;
+            }
+            return left.key.size() < right.key.size();
+        });
+    readings.erase(std::unique(readings.begin(), readings.end(),
+        [](const SimplifiedPinyinReading& left, const SimplifiedPinyinReading& right) {
+            return left.key == right.key && left.syllables == right.syllables;
+        }), readings.end());
+    if (readings.size() > limit) {
+        readings.resize(limit);
+    }
+    return readings;
+}
+
 }  // namespace piinput

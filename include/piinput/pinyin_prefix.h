@@ -22,6 +22,7 @@ struct PinyinPrefix {
     std::string_view schema,
     const PinyinSegmenter& pinyin,
     const ShuangpinDecoder& shuangpin,
-    std::size_t limit = 16U);
+    std::size_t limit = 16U,
+    bool uv_compatibility = true);
 
 }  // namespace piinput

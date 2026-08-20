@@ -1,8 +1,8 @@
 param(
     [ValidateRange(5, 9)]
     [int]$ItemsPerRow = 6,
-    [ValidateRange(1, 5)]
-    [int]$VisibleRows = 3,
+    [ValidateRange(1, 6)]
+    [int]$VisibleRows = 5,
     [ValidateRange(9, 180)]
     [int]$MaxItems = 90
 )

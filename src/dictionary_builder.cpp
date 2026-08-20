@@ -1,11 +1,16 @@
 #include "piinput/dictionary_builder.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cctype>
+#include <cmath>
 #include <fstream>
+#include <limits>
 #include <map>
 #include <stdexcept>
 #include <string_view>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace piinput {
 namespace {
@@ -83,7 +88,153 @@ void replace_all(std::string& value, const std::string_view from, const char to)
     }
 }
 
+[[nodiscard]] std::vector<std::string> split_utf8_characters(const std::string& value) {
+    std::vector<std::string> result;
+    for (std::size_t offset = 0U; offset < value.size();) {
+        const unsigned char first = static_cast<unsigned char>(value[offset]);
+        std::size_t length = 0U;
+        if (first < 0x80U) {
+            length = 1U;
+        } else if ((first & 0xE0U) == 0xC0U) {
+            length = 2U;
+        } else if ((first & 0xF0U) == 0xE0U) {
+            length = 3U;
+        } else if ((first & 0xF8U) == 0xF0U) {
+            length = 4U;
+        } else {
+            throw std::runtime_error("Invalid UTF-8 in dictionary term");
+        }
+        if (offset + length > value.size()) {
+            throw std::runtime_error("Truncated UTF-8 in dictionary term");
+        }
+        for (std::size_t index = 1U; index < length; ++index) {
+            const unsigned char continuation = static_cast<unsigned char>(value[offset + index]);
+            if ((continuation & 0xC0U) != 0x80U) {
+                throw std::runtime_error("Invalid UTF-8 continuation in dictionary term");
+            }
+        }
+        result.emplace_back(value.substr(offset, length));
+        offset += length;
+    }
+    return result;
+}
+
+[[nodiscard]] std::uint32_t normalized_thuocl_weight(
+    const std::uint64_t frequency,
+    const std::uint32_t base_weight) {
+    const long double scaled = std::log1p(static_cast<long double>(frequency)) * 1000.0L;
+    const std::uint64_t bonus = static_cast<std::uint64_t>(std::llround(scaled));
+    const std::uint64_t total = static_cast<std::uint64_t>(base_weight) + bonus;
+    return static_cast<std::uint32_t>((std::min)(
+        total, static_cast<std::uint64_t>((std::numeric_limits<std::uint32_t>::max)())));
+}
+
 }  // namespace
+
+std::vector<DictionaryTerm> read_thuocl_terms(const std::filesystem::path& path) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        throw std::runtime_error("Cannot open THUOCL source: " + path.string());
+    }
+    std::vector<DictionaryTerm> terms;
+    std::string line;
+    std::size_t line_number = 0U;
+    while (std::getline(input, line)) {
+        ++line_number;
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (line.empty() || line.front() == '#') {
+            continue;
+        }
+        const auto columns = split_tabs(line);
+        if (columns.size() != 2U) {
+            throw std::runtime_error("Invalid THUOCL line " + std::to_string(line_number));
+        }
+        DictionaryTerm term;
+        term.word = trim(columns[0]);
+        const std::string frequency_text = trim(columns[1]);
+        const auto parsed = std::from_chars(
+            frequency_text.data(), frequency_text.data() + frequency_text.size(), term.frequency);
+        if (term.word.empty() || frequency_text.empty() || parsed.ec != std::errc{} ||
+            parsed.ptr != frequency_text.data() + frequency_text.size() || term.frequency == 0U) {
+            throw std::runtime_error("Invalid THUOCL value at line " + std::to_string(line_number));
+        }
+        terms.push_back(std::move(term));
+    }
+    return terms;
+}
+
+std::vector<LexiconCandidate> resolve_dictionary_terms(
+    const std::vector<DictionaryTerm>& terms,
+    const std::vector<LexiconCandidate>& pronunciations,
+    const std::uint32_t base_weight,
+    DictionaryBuildReport& report) {
+    report = {};
+    std::unordered_map<std::string, const LexiconCandidate*> exact;
+    std::unordered_map<std::string, const LexiconCandidate*> characters;
+    for (const auto& pronunciation : pronunciations) {
+        auto [found, inserted] = exact.emplace(pronunciation.word, &pronunciation);
+        if (!inserted && (pronunciation.weight > found->second->weight ||
+            (pronunciation.weight == found->second->weight &&
+             pronunciation.pinyin < found->second->pinyin))) {
+            found->second = &pronunciation;
+        }
+        if (split_utf8_characters(pronunciation.word).size() == 1U) {
+            auto [character, character_inserted] = characters.emplace(
+                pronunciation.word, &pronunciation);
+            if (!character_inserted &&
+                (pronunciation.weight > character->second->weight ||
+                 (pronunciation.weight == character->second->weight &&
+                  pronunciation.pinyin < character->second->pinyin))) {
+                character->second = &pronunciation;
+            }
+        }
+    }
+
+    std::vector<LexiconCandidate> resolved;
+    resolved.reserve(terms.size());
+    for (const auto& term : terms) {
+        const auto phrase = exact.find(term.word);
+        if (phrase != exact.end() && split_utf8_characters(term.word).size() > 1U) {
+            resolved.push_back({
+                term.word,
+                phrase->second->pinyin,
+                normalized_thuocl_weight(term.frequency, base_weight),
+                false,
+            });
+            ++report.exact_phrase_count;
+            continue;
+        }
+
+        std::string pinyin;
+        bool complete = true;
+        for (const auto& character : split_utf8_characters(term.word)) {
+            const auto found = characters.find(character);
+            if (found == characters.end() || found->second->pinyin.empty() ||
+                found->second->pinyin.find('\'') != std::string::npos) {
+                complete = false;
+                break;
+            }
+            if (!pinyin.empty()) {
+                pinyin.push_back('\'');
+            }
+            pinyin.append(found->second->pinyin);
+        }
+        if (!complete) {
+            ++report.unresolved_count;
+            continue;
+        }
+        resolved.push_back({
+            term.word,
+            std::move(pinyin),
+            normalized_thuocl_weight(term.frequency, base_weight),
+            false,
+        });
+        ++report.character_derived_count;
+    }
+    return resolved;
+}
 
 std::vector<LexiconCandidate> read_dictionary_source(
     const std::filesystem::path& path,
@@ -95,6 +246,10 @@ std::vector<LexiconCandidate> read_dictionary_source(
     }
     std::vector<LexiconCandidate> entries;
     std::string line;
+    if (format == DictionarySourceFormat::thuocl) {
+        throw std::invalid_argument(
+            "THUOCL sources require pronunciation resolution before merging");
+    }
     bool rime_body = format != DictionarySourceFormat::rime_yaml;
     while (std::getline(input, line)) {
         if (!line.empty() && line.back() == '\r') {
@@ -155,6 +310,87 @@ std::vector<LexiconCandidate> read_dictionary_source(
         }
     }
     return entries;
+}
+
+std::vector<LexiconCandidate> read_rime_dictionary(
+    const std::filesystem::path& master_path,
+    const std::uint32_t default_weight,
+    RimeDictionaryImportReport& report) {
+    std::ifstream input(master_path, std::ios::binary);
+    if (!input) {
+        throw std::runtime_error("Cannot open Rime master dictionary: " +
+            master_path.string());
+    }
+
+    std::vector<std::filesystem::path> tables;
+    bool imports = false;
+    std::string line;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        const std::string stripped = trim(line);
+        if (stripped == "...") break;
+        if (stripped.empty() || stripped.front() == '#') continue;
+        if (stripped == "import_tables:") {
+            imports = true;
+            continue;
+        }
+        if (!imports) continue;
+        if (!stripped.starts_with("- ")) {
+            if (!line.empty() && std::isspace(static_cast<unsigned char>(line.front())) == 0) {
+                imports = false;
+            }
+            continue;
+        }
+        std::string table = trim(stripped.substr(2U));
+        if (const auto comment = table.find('#'); comment != std::string::npos) {
+            table = trim(table.substr(0U, comment));
+        }
+        if (table.size() >= 2U &&
+            ((table.front() == '"' && table.back() == '"') ||
+             (table.front() == '\'' && table.back() == '\''))) {
+            table = table.substr(1U, table.size() - 2U);
+        }
+        if (table.empty()) continue;
+        std::filesystem::path path = master_path.parent_path() /
+            std::filesystem::path(table);
+        if (path.extension() != ".yaml") {
+            path += ".dict.yaml";
+        }
+        tables.push_back(std::move(path));
+    }
+    if (tables.empty()) {
+        throw std::runtime_error("Rime master dictionary has no active import_tables: " +
+            master_path.string());
+    }
+
+    report = {};
+    std::vector<LexiconCandidate> result;
+    std::unordered_set<std::string> seen;
+    for (const auto& table : tables) {
+        auto entries = read_dictionary_source(
+            table, DictionarySourceFormat::rime_yaml, default_weight);
+        RimeDictionarySourceReport source;
+        source.path = table;
+        source.raw_entries = entries.size();
+        report.raw_entries += entries.size();
+        for (auto& entry : entries) {
+            const std::string key = entry.word + "\n" + entry.pinyin;
+            if (!seen.insert(key).second) {
+                ++source.duplicate_entries;
+                ++report.duplicate_entries;
+                continue;
+            }
+            ++source.accepted_entries;
+            ++report.accepted_entries;
+            result.push_back(std::move(entry));
+        }
+        report.sources.push_back(std::move(source));
+    }
+    if (result.empty()) {
+        throw std::runtime_error("Rime master dictionary produced no entries: " +
+            master_path.string());
+    }
+    return result;
 }
 
 void write_dictionary_tsv(

@@ -11,9 +11,18 @@ enum class PunctuationMode {
     programmer,
 };
 
+enum class PunctuationBracketStyle {
+    sogou,
+    wechat,
+};
+
 class PunctuationTransformer final {
 public:
-    [[nodiscard]] std::string transform(char key, PunctuationMode mode, bool shift) const;
+    [[nodiscard]] std::string transform(
+        char key,
+        PunctuationMode mode,
+        bool shift,
+        PunctuationBracketStyle bracket_style = PunctuationBracketStyle::sogou) const;
     void reset_quotes() noexcept;
 
 private:

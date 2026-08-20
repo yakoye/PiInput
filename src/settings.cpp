@@ -104,6 +104,13 @@ namespace {
     return std::nullopt;
 }
 
+[[nodiscard]] std::optional<DefaultInputLanguage> parse_default_language(
+    const std::string_view value) noexcept {
+    if (value == "chinese") return DefaultInputLanguage::chinese;
+    if (value == "english") return DefaultInputLanguage::english;
+    return std::nullopt;
+}
+
 [[nodiscard]] std::optional<RowNavigationAction> parse_navigation(
     const std::string_view value) noexcept {
     if (value == "next_row") {
@@ -126,6 +133,21 @@ namespace {
     if (value == "programmer") {
         return PunctuationMode::programmer;
     }
+    return std::nullopt;
+}
+
+[[nodiscard]] std::optional<PunctuationBracketStyle> parse_punctuation_bracket_style(
+    const std::string_view value) noexcept {
+    if (value == "sogou") return PunctuationBracketStyle::sogou;
+    if (value == "wechat") return PunctuationBracketStyle::wechat;
+    return std::nullopt;
+}
+
+[[nodiscard]] std::optional<CommandHotkey> parse_command_hotkey(
+    const std::string_view value) noexcept {
+    if (value == "ctrl_alt_grave") return CommandHotkey::ctrl_alt_grave;
+    if (value == "ctrl_grave") return CommandHotkey::ctrl_grave;
+    if (value == "disabled") return CommandHotkey::disabled;
     return std::nullopt;
 }
 
@@ -183,6 +205,11 @@ void parse_general(
     const std::size_t line) {
     if (key == "schema") {
         assign_parsed(result, result.settings.general.schema, parse_schema, value, line, "general", key);
+    } else if (key == "default_language") {
+        assign_parsed(result, result.settings.general.default_language,
+            parse_default_language, value, line, "general", key);
+    } else if (key == "symbol_tool") {
+        result.settings.general.symbol_tool = std::string(value);
     } else if (key == "hot_reload") {
         assign_parsed(result, result.settings.general.hot_reload, parse_bool, value, line, "general", key);
     }
@@ -200,6 +227,12 @@ void parse_pinyin(
     } else if (key == "incomplete_candidates") {
         assign_parsed(
             result, result.settings.pinyin.incomplete_candidates, parse_bool, value, line, "pinyin", key);
+    } else if (key == "user_learning") {
+        assign_parsed(
+            result, result.settings.pinyin.user_learning, parse_bool, value, line, "pinyin", key);
+    } else if (key == "simplified_pinyin") {
+        assign_parsed(
+            result, result.settings.pinyin.simplified_pinyin, parse_bool, value, line, "pinyin", key);
     } else if (key == "prefix_beam_width") {
         const auto parsed = parse_integer(value);
         if (!parsed || *parsed < 8U || *parsed > 128U) {
@@ -234,7 +267,7 @@ void parse_candidates(
         }
     } else if (key == "visible_rows") {
         const auto parsed = parse_integer(value);
-        if (!parsed || *parsed < 1U || *parsed > 5U) {
+        if (!parsed || *parsed < 1U || *parsed > 6U) {
             add_error(result, line, "candidates", key, "invalid value");
         } else {
             candidate_assignment(assignments, CandidateNumericField::visible_rows).line = line;
@@ -247,6 +280,20 @@ void parse_candidates(
         } else {
             candidate_assignment(assignments, CandidateNumericField::max_items).line = line;
             candidates.max_items = *parsed;
+        }
+    } else if (key == "font_size") {
+        const auto parsed = parse_integer(value);
+        if (!parsed || *parsed < 10U || *parsed > 28U) {
+            add_error(result, line, "candidates", key, "invalid value");
+        } else {
+            candidates.font_size = *parsed;
+        }
+    } else if (key == "window_height") {
+        const auto parsed = parse_integer(value);
+        if (!parsed || *parsed < 20U || *parsed > 72U) {
+            add_error(result, line, "candidates", key, "invalid value");
+        } else {
+            candidates.window_height = *parsed;
         }
     } else if (key == "horizontal") {
         assign_parsed(result, candidates.horizontal, parse_bool, value, line, "candidates", key);
@@ -350,6 +397,22 @@ void parse_english(
     }
 }
 
+void parse_commands(
+    SettingsParseResult& result,
+    const std::string_view key,
+    const std::string_view value,
+    const std::size_t line) {
+    auto& commands = result.settings.commands;
+    if (key == "enabled") {
+        assign_parsed(result, commands.enabled, parse_bool, value, line, "commands", key);
+    } else if (key == "hotkey") {
+        assign_parsed(result, commands.hotkey, parse_command_hotkey, value, line, "commands", key);
+    } else if (key == "middle_dot_alias") {
+        assign_parsed(
+            result, commands.middle_dot_alias, parse_bool, value, line, "commands", key);
+    }
+}
+
 }  // namespace
 
 SettingsSnapshot default_settings() {
@@ -399,7 +462,7 @@ SettingsParseResult parse_settings_text(
             }
             if (parsed_section == "general" || parsed_section == "pinyin" ||
                 parsed_section == "candidates" || parsed_section == "english" ||
-                parsed_section == "punctuation") {
+                parsed_section == "commands" || parsed_section == "punctuation") {
                 section.assign(parsed_section);
             } else {
                 section = "<unknown-section>";
@@ -431,9 +494,14 @@ SettingsParseResult parse_settings_text(
             parse_candidates(result, key, value, line_number, candidate_assignments);
         } else if (section == "english") {
             parse_english(result, key, value, line_number);
+        } else if (section == "commands") {
+            parse_commands(result, key, value, line_number);
         } else if (section == "punctuation" && key == "mode") {
             assign_parsed(
                 result, result.settings.punctuation, parse_punctuation, value, line_number, "punctuation", key);
+        } else if (section == "punctuation" && key == "bracket_style") {
+            assign_parsed(result, result.settings.punctuation_bracket_style,
+                parse_punctuation_bracket_style, value, line_number, "punctuation", key);
         }
     }
     if (result.document_fatal) {
@@ -448,17 +516,22 @@ std::string serialize_default_settings() {
     return
         "[general]\n"
         "schema=flypy\n"
+        "default_language=chinese\n"
         "hot_reload=true\n"
         "[pinyin]\n"
         "uv_compatibility=true\n"
         "accept_u_colon=true\n"
         "incomplete_candidates=true\n"
+        "user_learning=true\n"
         "prefix_beam_width=32\n"
+        "simplified_pinyin=true\n"
         "prefix_scan_limit=4096\n"
         "[candidates]\n"
         "items_per_row=6\n"
-        "visible_rows=3\n"
+        "visible_rows=5\n"
         "max_items=90\n"
+        "font_size=16\n"
+        "window_height=40\n"
         "horizontal=true\n"
         "equal_key=next_row\n"
         "minus_key=previous_row\n"
@@ -470,8 +543,13 @@ std::string serialize_default_settings() {
         "user_dictionary=true\n"
         "user_learning=true\n"
         "items_per_row=6\n"
+        "[commands]\n"
+        "enabled=true\n"
+        "hotkey=ctrl_alt_grave\n"
+        "middle_dot_alias=false\n"
         "[punctuation]\n"
-        "mode=chinese\n";
+        "mode=chinese\n"
+        "bracket_style=sogou\n";
 }
 
 }  // namespace piinput

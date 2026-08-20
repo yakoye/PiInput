@@ -4,12 +4,15 @@
 #include "piinput/english_session.h"
 #include "piinput/settings.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <limits>
+#include <set>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -23,6 +26,8 @@ static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::builtin)
 static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::downloaded) == 2U);
 static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::user) == 4U);
 static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::proper) == 8U);
+static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::typed) == 16U);
+static_assert(static_cast<std::uint32_t>(piinput::EnglishCandidateFlag::fuzzy) == 32U);
 
 void check(const bool condition, const std::string& message) {
     if (!condition) {
@@ -55,6 +60,32 @@ void write_text(const std::filesystem::path& path, const std::string& text) {
         result.push_back(candidate.word);
     }
     return result;
+}
+
+[[nodiscard]] bool contains_word(
+    const std::vector<piinput::EnglishCandidate>& candidates,
+    const std::string_view expected) {
+    return std::any_of(candidates.begin(), candidates.end(), [&](const auto& candidate) {
+        return candidate.word == expected;
+    });
+}
+
+[[nodiscard]] std::string ascii_lower(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), [](const char character) {
+        return character >= 'A' && character <= 'Z'
+            ? static_cast<char>(character - 'A' + 'a')
+            : character;
+    });
+    return value;
+}
+
+[[nodiscard]] bool contains_word_ci(
+    const std::vector<piinput::EnglishCandidate>& candidates,
+    const std::string_view expected) {
+    const auto lowercase_expected = ascii_lower(std::string(expected));
+    return std::any_of(candidates.begin(), candidates.end(), [&](const auto& candidate) {
+        return ascii_lower(candidate.word) == lowercase_expected;
+    });
 }
 
 void test_default_disabled_gate_does_not_start_english_composition() {
@@ -235,8 +266,8 @@ void test_english_session_composition_editing_and_choice() {
     check(session.snapshot().input == "Ap" && session.snapshot().caret == 2U,
         "English session preserves typed ASCII case and caret position");
     check(words(session.snapshot().candidates) ==
-            std::vector<std::string>({"Apple", "application"}),
-        "English session refreshes prefix candidates immediately");
+            std::vector<std::string>({"Ap", "Apple"}),
+        "English session keeps the typed prefix first and refreshes completions immediately");
 
     check(session.move_left(), "left moves within an English composition");
     session.insert('X');
@@ -253,18 +284,171 @@ void test_english_session_composition_editing_and_choice() {
 
     session.insert('a');
     session.insert('p');
-    const auto chosen = session.choose(0U);
+    const auto chosen = session.choose(1U);
     check(chosen == std::optional<std::string>("Apple"),
         "Space or digit can choose the indexed English candidate");
     check(session.snapshot().input.empty(), "choosing clears the English composition");
     check(session.raw_input().empty(), "cleared session has no raw input");
 
     session.insert('z');
-    check(session.snapshot().candidates.empty(), "unknown prefixes keep raw input without candidates");
+    check(words(session.snapshot().candidates) == std::vector<std::string>({"z"}),
+        "unknown prefixes remain directly selectable as the first candidate");
     check(session.raw_input() == "z", "Enter can retrieve the original English input");
     session.clear();
     check(session.snapshot().input.empty(), "Escape can clear the English composition");
     std::filesystem::remove_all(directory);
+}
+
+void test_bundled_english_dictionary_has_broad_frequency_coverage() {
+    piinput::EnglishLexicon lexicon;
+    const auto path = std::filesystem::path(PIINPUT_SOURCE_DIR) / "data/english_lexicon.tsv";
+    const auto supplement =
+        std::filesystem::path(PIINPUT_SOURCE_DIR) / "data/english_supplement.tsv";
+    check(lexicon.load_builtin_tsv(path) >= 24000U,
+        "the installed offline English dictionary contains the pinned frequency list");
+    check(lexicon.load_builtin_tsv(supplement) >= 8U,
+        "the bundled technical supplement loads independently");
+    check(lexicon.load_completion_preferences_tsv(
+              std::filesystem::path(PIINPUT_SOURCE_DIR) /
+              "data/english_completion_preferences.tsv") >= 15U,
+        "the curated prefix preferences load independently");
+
+    const auto r = lexicon.query("r", 20U);
+    check(contains_word(r, "right") && contains_word(r, "really"),
+        "single-letter r includes common high-frequency completions");
+    const auto re = lexicon.query("re", 30U);
+    check(contains_word(re, "really") && contains_word(re, "remember"),
+        "re includes common completions");
+    const auto rev = lexicon.query("rev", 30U);
+    check(contains_word(rev, "review") && contains_word(rev, "reverse"),
+        "rev includes review and reverse");
+    const auto reve = lexicon.query("reve", 30U);
+    check(contains_word(reve, "reverse") && contains_word(reve, "revile"),
+        "reve keeps exact prefix words first and adds a bounded near completion");
+    const auto b = lexicon.query("b", 30U);
+    check(contains_word(b, "but") && contains_word(b, "because"),
+        "single-letter b includes common connector words");
+    const auto bo = lexicon.query("bo", 30U);
+    check(contains_word(bo, "both"), "bo includes both");
+    const auto boo = lexicon.query("boo", 30U);
+    check(contains_word(boo, "book") && contains_word(boo, "boom"),
+        "boo includes common completions");
+    const auto book = lexicon.query("book", 30U);
+    check(contains_word(book, "book") && contains_word(book, "books") &&
+            contains_word(book, "booked"),
+        "book includes common inflected forms");
+}
+
+void test_user_provided_market_paragraph_can_complete_every_word() {
+    piinput::EnglishLexicon lexicon;
+    const auto source = std::filesystem::path(PIINPUT_SOURCE_DIR);
+    check(lexicon.load_builtin_tsv(source / "data/english_lexicon.tsv") >= 24000U,
+        "market corpus test loads the frequency dictionary");
+    check(lexicon.load_builtin_tsv(source / "data/english_supplement.tsv") >= 8U,
+        "market corpus test loads technical additions");
+    check(lexicon.load_completion_preferences_tsv(
+              source / "data/english_completion_preferences.tsv") >= 15U,
+        "market corpus test loads prefix preferences");
+
+    std::ifstream input(source / "tests/data/english_completion_corpus.txt", std::ios::binary);
+    std::string corpus((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+    std::set<std::string> unique_words;
+    std::string current;
+    for (const char character : corpus) {
+        const bool letter = (character >= 'A' && character <= 'Z') ||
+            (character >= 'a' && character <= 'z');
+        if (letter) {
+            current.push_back(character);
+        } else if (!current.empty()) {
+            unique_words.insert(ascii_lower(std::move(current)));
+            current.clear();
+        }
+    }
+    if (!current.empty()) {
+        unique_words.insert(ascii_lower(std::move(current)));
+    }
+
+    check(unique_words.size() >= 80U, "market paragraph yields a substantial unique-word set");
+    for (const auto& word : unique_words) {
+        bool completed_before_full_word = word.size() <= 1U;
+        const std::size_t maximum_prefix = word.size() <= 3U ? word.size() : word.size() - 1U;
+        for (std::size_t length = 1U; length <= maximum_prefix; ++length) {
+            if (contains_word_ci(lexicon.query(word.substr(0U, length), 90U), word)) {
+                completed_before_full_word = true;
+                break;
+            }
+        }
+        check(completed_before_full_word,
+            "market paragraph word is reachable (long words before fully typed): " + word);
+    }
+}
+
+void test_requested_progressive_prefix_examples_include_raw_and_many_completions() {
+    piinput::EnglishLexicon lexicon;
+    const auto source = std::filesystem::path(PIINPUT_SOURCE_DIR);
+    check(lexicon.load_builtin_tsv(source / "data/english_lexicon.tsv") >= 24000U,
+        "progressive examples load the full frequency dictionary");
+    check(lexicon.load_builtin_tsv(source / "data/english_supplement.tsv") >= 8U,
+        "progressive examples load the supplement");
+    check(lexicon.load_completion_preferences_tsv(
+              source / "data/english_completion_preferences.tsv") >= 15U,
+        "progressive examples load prefix preferences");
+    piinput::EnglishSession session(lexicon, 90U);
+
+    const auto first_words = [](const std::vector<piinput::EnglishCandidate>& candidates,
+                                const std::size_t count) {
+        std::vector<std::string> result;
+        const std::size_t size = (std::min)(count, candidates.size());
+        result.reserve(size);
+        for (std::size_t index = 0U; index < size; ++index) {
+            result.push_back(ascii_lower(candidates[index].word));
+        }
+        return result;
+    };
+
+    const auto joined = [](const std::vector<std::string>& values) {
+        std::string result;
+        for (const auto& value : values) {
+            if (!result.empty()) {
+                result += ", ";
+            }
+            result += value;
+        }
+        return result;
+    };
+
+    const auto verify = [&](const std::string_view typed,
+                            const std::initializer_list<std::string_view> expected) {
+        session.clear();
+        for (const char character : typed) {
+            check(session.insert(character), "progressive example accepts ASCII input");
+        }
+        const auto& candidates = session.snapshot().candidates;
+        check(!candidates.empty() && candidates.front().word == typed,
+            "raw prefix remains first: " + std::string(typed));
+        check(candidates.size() >= 6U,
+            "progressive prefix produces many candidates: " + std::string(typed));
+        std::vector<std::string> expected_words;
+        expected_words.reserve(expected.size() + 1U);
+        expected_words.push_back(ascii_lower(std::string(typed)));
+        for (const auto word : expected) {
+            expected_words.push_back(ascii_lower(std::string(word)));
+        }
+        const auto actual_words = first_words(candidates, expected_words.size());
+        check(actual_words == expected_words,
+            "progressive prefix top order for " + std::string(typed) +
+                "; expected [" + joined(expected_words) + "] but got [" +
+                joined(actual_words) + "]");
+    };
+
+    verify("r", {"right", "really"});
+    verify("re", {"really", "remember"});
+    verify("rev", {"review", "reverse"});
+    verify("reve", {"revile", "reverse"});
+    verify("b", {"but", "because"});
+    verify("bo", {"both"});
+    verify("boo", {"book", "boom"});
+    verify("book", {"books", "booked"});
 }
 
 void test_english_session_can_disable_learning() {
@@ -274,15 +458,15 @@ void test_english_session_can_disable_learning() {
 
     piinput::EnglishLexicon lexicon;
     check(lexicon.load_builtin_tsv(builtin) == 2U, "no-learning fixture loads");
-    piinput::EnglishSession session(lexicon, 2U, false);
+    piinput::EnglishSession session(lexicon, 3U, false);
     session.insert('a');
     session.insert('l');
-    check(session.choose(1U) == std::optional<std::string>("alpine"),
+    check(session.choose(2U) == std::optional<std::string>("alpine"),
         "candidate choice still works when learning is disabled");
     session.insert('a');
     session.insert('l');
     check(words(session.snapshot().candidates) ==
-            std::vector<std::string>({"alpha", "alpine"}),
+            std::vector<std::string>({"al", "alpha", "alpine"}),
         "disabled learning does not alter in-memory candidate ordering");
     std::filesystem::remove_all(directory);
 }
@@ -486,6 +670,9 @@ int main() {
     test_learning_overflow_and_damaged_rows_are_safe();
     test_independent_lexicons_merge_pending_learning_without_lost_updates();
     test_english_session_composition_editing_and_choice();
+    test_bundled_english_dictionary_has_broad_frequency_coverage();
+    test_user_provided_market_paragraph_can_complete_every_word();
+    test_requested_progressive_prefix_examples_include_raw_and_many_completions();
     test_english_session_can_disable_learning();
     test_english_session_candidate_limit_updates_at_boundary();
     test_composition_caret_mapping_covers_navigation_boundaries();

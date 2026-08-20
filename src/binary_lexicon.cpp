@@ -260,8 +260,23 @@ std::vector<LexiconCandidate> BinaryLexicon::query_exact(
 std::vector<LexiconCandidate> BinaryLexicon::query_prefix(
     const std::string& pinyin_prefix,
     const std::size_t limit,
+    const std::size_t scan_limit,
+    const std::size_t max_syllables) const {
+    return lexicon_.query_prefix(pinyin_prefix, limit, scan_limit, max_syllables);
+}
+
+std::vector<LexiconCandidate> BinaryLexicon::query_word(
+    const std::string_view word,
+    const std::size_t limit) const {
+    return lexicon_.query_word(word, limit);
+}
+
+std::vector<LexiconCandidate> BinaryLexicon::query_simplified(
+    const std::string& key,
+    const std::vector<std::string>& syllable_filter,
+    const std::size_t limit,
     const std::size_t scan_limit) const {
-    return lexicon_.query_prefix(pinyin_prefix, limit, scan_limit);
+    return lexicon_.query_simplified(key, syllable_filter, limit, scan_limit);
 }
 
 std::size_t BinaryLexicon::entry_count() const noexcept {

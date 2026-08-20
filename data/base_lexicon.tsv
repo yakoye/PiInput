@@ -2,6 +2,11 @@
 # This is a small redistributable starter lexicon for development and first-run use.
 # Professional and larger general-purpose dictionaries can be imported separately.
 word	pinyin	weight
+候选框	hou'xuan'kuang	62000
+开悟	kai'wu	48000
+丝滑	si'hua	48000
+卡顿	ka'dun	48000
+补全	bu'quan	48000
 我	wo	50000
 秋	qiu	42000
 闱	wei	8000
@@ -351,3 +356,11 @@ Endpoint	endpoint	43000
 中文标点	zhong'wen'biao'dian	49000
 英文标点	ying'wen'biao'dian	48000
 程序员模式	cheng'xu'yuan'mo'shi	48000
+塃	huang	900
+塮	xie	900
+揾	wen	900
+揾	wu	800
+檵	ji	900
+礳	mo	900
+耲	huai	900
+葓	hong	900

@@ -1,6 +1,8 @@
 # PiInput 版本更新与本地开发工作流
 
-当前开发版本：`v0.3.0-dev`。默认源码包名由根目录 `VERSION` 生成。
+当前 Windows 运行时采用永久稳定 Shim + 版本化 Host。首次安装注册一次 `Runtime\Shim\PiInputTSF.dll`；普通升级只发布 `Runtime\versions\<版本>` 并切换 Host，不得要求用户关闭所有应用。
+
+当前开发版本：`v0.6.1-dev`。默认源码包名由根目录 `VERSION` 生成。
 
 ## 1. 版本包命名
 

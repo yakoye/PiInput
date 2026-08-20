@@ -18,6 +18,9 @@ void print_usage() {
         << "Dictionary query:\n"
         << "  piinput-cli --lexicon <dictionary.tsv|dictionary.lex> --query <input>\n"
         << "               [--schema full|flypy|natural|mspy|abc] [--top N] [--show-decode]\n\n"
+        << "Exact dictionary inspection:\n"
+        << "  piinput-cli --lexicon <dictionary.tsv|dictionary.lex> --lookup-word <text> [--top N]\n"
+        << "  piinput-cli --lexicon <dictionary.tsv|dictionary.lex> --lookup-pinyin <canonical> [--top N]\n\n"
         << "Decode only:\n"
         << "  piinput-cli --decode <input> [--schema ...] [--top N]\n\n"
         << "Symbol search:\n"
@@ -44,6 +47,8 @@ int run(const std::vector<std::string>& arguments) {
     std::string lexicon_path;
     std::string query;
     std::string decode_input;
+    std::string lookup_word;
+    std::string lookup_pinyin;
     std::string schema = "full";
     std::string symbols_path;
     std::string symbol_query;
@@ -65,6 +70,10 @@ int run(const std::vector<std::string>& arguments) {
             query = require_value();
         } else if (argument == "--decode") {
             decode_input = require_value();
+        } else if (argument == "--lookup-word") {
+            lookup_word = require_value();
+        } else if (argument == "--lookup-pinyin") {
+            lookup_pinyin = require_value();
         } else if (argument == "--schema") {
             schema = require_value();
         } else if (argument == "--top") {
@@ -104,6 +113,26 @@ int run(const std::vector<std::string>& arguments) {
                       << results[index].name << '\t' << results[index].category << '\n';
         }
         return results.empty() ? 2 : 0;
+    }
+
+    if (!lookup_word.empty() || !lookup_pinyin.empty()) {
+        if (lexicon_path.empty()) {
+            throw std::runtime_error("--lexicon is required for dictionary inspection");
+        }
+        if (!lookup_word.empty() && !lookup_pinyin.empty()) {
+            throw std::runtime_error("Use only one of --lookup-word and --lookup-pinyin");
+        }
+        engine.load_lexicon(piinput::path_from_utf8(lexicon_path));
+        const auto entries = !lookup_word.empty()
+            ? engine.lookup_word(lookup_word, top)
+            : engine.lookup_pinyin(lookup_pinyin, top);
+        std::cout << "Loaded entries: " << engine.entry_count() << "\n";
+        for (std::size_t index = 0U; index < entries.size(); ++index) {
+            std::cout << index + 1U << ". " << entries[index].word << '\t'
+                      << entries[index].pinyin << '\t' << entries[index].weight
+                      << "\texact=yes\n";
+        }
+        return entries.empty() ? 2 : 0;
     }
 
     const std::string effective_input = !decode_input.empty() ? decode_input : query;

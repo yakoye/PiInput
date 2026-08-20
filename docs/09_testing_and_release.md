@@ -1,5 +1,17 @@
 # 测试与发布规范
 
+真实 Windows 应用的统一验收步骤、计时方法、状态定义和报告模板见：
+
+- `docs/superpowers/specs/2026-08-13-piinput-real-application-acceptance-design.md`。
+
+自动测试通过不能替代真实应用验收。真实测试必须把 `PASS`、`FAIL`、`BLOCKED`、`NOT RUN` 和 `N/A` 分开记录。
+
+## 候选分页和用户学习门禁
+
+发布前必须覆盖：5～9 个每行、首尾不循环、翻行回到列 0、正常词语页先于分段页、分段撤销、TSF 成功确认后才学习、失败确认不学习、一次/两次/三次排序、跨窗口新 generation 可见、旧 generation 不跳变、固定/取消固定/删除左移、旧格式迁移和后台原子保存。
+
+性能门禁至少使用 10,000 条用户词，要求精确用户词查询 P95 不高于 0.2 ms、候选翻行 P95 不高于 0.1 ms、内存学习 P95 不高于 0.2 ms，并确认按键热路径没有磁盘写入。
+
 ## 测试层次
 
 ### 单元测试
@@ -32,6 +44,19 @@
 - `tests/data/core_input_cases.tsv`：常用词、隔音符、长句切分与语义消歧发布门槛；
 - `tests/data/diagnostic_input_cases.tsv`：误触、漏键、模糊音、URL、V/U 模式等未来诊断项；
 - `tests/data/real_world_text_corpus.txt`：照护提醒、政策、沟通、新闻、论述和故事真实长句。
+- `scripts/generate-human-input-scenario.ps1`：从真实文本 1、2、3 随机生成不同长度、多行、中英文、移动、粘贴和删除场景，并保存 seed 供复现。
+- `scripts/test-real-world-corpus.ps1`：同一批中文片段同时检查全拼与小鹤 Top 10，分别记录编码和排名；测试脚本失败与词库命中失败必须分开报告。
+
+随机真实输入不能只输入一个字母，也不能每次固定同一句。每轮至少包含：
+
+- 三组真实文本中随机抽取的 5～31 字片段；
+- 多行、不同长度、中文和英文；
+- 换行、左右/上下移动后继续输入；
+- 粘贴后立即输入；
+- 组合区 Backspace 与正文 Backspace/Delete；
+- Shift 往返切换；
+- `;;f` 与双反引号“``f”；
+- 应用名、进程、新窗口冷启动耗时、首候选耗时、候选位置、结果和 seed。
 - `tests/data/incremental_candidates.tsv`：全拼与小鹤未完成音节候选，例如 `mkt`、`rug`；
 - `tests/data/punctuation_cases.tsv`：中文、英文、程序员三种模式的完整 ASCII 标点映射；
 - `tests/corpus/v0.2.0/`：用户提供的 407 个标准全拼音节与 786 条结构化测试语料。

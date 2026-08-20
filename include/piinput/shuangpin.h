@@ -25,11 +25,13 @@ public:
     [[nodiscard]] std::vector<PinyinSegmentation> decode(
         std::string_view scheme_id,
         std::string_view input,
-        std::size_t limit = 16U) const;
+        std::size_t limit = 16U,
+        bool uv_compatibility = true) const;
 
     [[nodiscard]] std::vector<std::string> syllables_for_code(
         std::string_view scheme_id,
-        std::string_view code) const;
+        std::string_view code,
+        bool uv_compatibility = true) const;
 
 private:
     struct SchemeData {

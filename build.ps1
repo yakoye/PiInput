@@ -2,7 +2,8 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
     [string]$TestDataDir = "",
-    [switch]$Clean
+    [switch]$Clean,
+    [switch]$SkipTests
 )
 
 $ErrorActionPreference = "Stop"
@@ -107,12 +108,14 @@ try {
 
     Invoke-NativeChecked $CMakeExe $configure
     Invoke-NativeChecked $CMakeExe @("--build", $BuildDir, "--config", $Configuration, "--parallel")
-    Invoke-NativeChecked $CTestExe @("--test-dir", $BuildDir, "-C", $Configuration, "--output-on-failure")
+    if (-not $SkipTests) {
+        Invoke-NativeChecked $CTestExe @("--test-dir", $BuildDir, "-C", $Configuration, "--output-on-failure")
+    }
 
     if (Test-Path $InstallDir) { Remove-Item $InstallDir -Recurse -Force }
     Invoke-NativeChecked $CMakeExe @("--install", $BuildDir, "--config", $Configuration, "--prefix", $InstallDir)
 
-    $expected = @("piinput-cli.exe", "piinput-scel-converter.exe", "piinput-lexicon-compiler.exe", "piinput-dictionary-builder.exe", "piinput-benchmark.exe", "piinput-preview.exe", "piinput-profile.exe", "PiInputTSF.dll", "PiInput-Install.exe")
+    $expected = @("piinput-cli.exe", "piinput-scel-converter.exe", "piinput-lexicon-compiler.exe", "piinput-dictionary-builder.exe", "piinput-benchmark.exe", "piinput-preview.exe", "piinput-profile.exe", "piinput-diagnostics.exe", "PiInputHost.exe", "PiInput-Settings.exe", "PiInputTSF.dll", "PiInput-Install.exe", "PiInput-Uninstall.exe")
     foreach ($name in $expected) {
         $path = Join-Path $InstallDir "bin/$name"
         if (-not (Test-Path $path)) { throw "Expected executable was not generated: $path" }
@@ -128,7 +131,8 @@ try {
         throw "Legacy Release artifact remains: $($legacyArtifacts.Name -join ', ')"
     }
 
-    Write-Host "Build, tests, and staging completed." -ForegroundColor Green
+    $summary = if ($SkipTests) { "Build and staging completed (tests intentionally deferred)." } else { "Build, tests, and staging completed." }
+    Write-Host $summary -ForegroundColor Green
     Get-ChildItem (Join-Path $InstallDir "bin") | Where-Object { $_.Extension -in @(".exe", ".dll") } | Select-Object Name, Length, LastWriteTime
     exit 0
 } catch {

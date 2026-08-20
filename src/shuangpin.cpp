@@ -89,9 +89,12 @@ struct SchemeDefinition {
     return {"", syllable};
 }
 
-[[nodiscard]] std::string normalize_final(std::string initial, std::string final) {
+[[nodiscard]] std::string normalize_final(
+    std::string initial,
+    std::string final,
+    const SchemeKind kind) {
     if ((initial == "j" || initial == "q" || initial == "x" || initial == "y") &&
-        !final.empty() && final.front() == 'u') {
+        !final.empty() && final.front() == 'u' && kind != SchemeKind::flypy) {
         final.front() = 'v';
     }
     return final;
@@ -101,7 +104,7 @@ struct SchemeDefinition {
     const SchemeDefinition& definition,
     const std::string& syllable) {
     auto [initial, final] = split_initial(syllable);
-    final = normalize_final(initial, final);
+    final = normalize_final(initial, final, definition.kind);
 
     std::vector<std::string> codes;
     char final_key = '\0';
@@ -221,6 +224,11 @@ struct SchemeDefinition {
     return codes;
 }
 
+[[nodiscard]] bool is_safe_flypy_umlaut_alias(const std::string_view code) {
+    return code.size() == 2U && code[1U] == 'v' &&
+        (code[0U] == 'j' || code[0U] == 'q' || code[0U] == 'x' || code[0U] == 'y');
+}
+
 }  // namespace
 
 ShuangpinDecoder::ShuangpinDecoder() {
@@ -231,6 +239,9 @@ ShuangpinDecoder::ShuangpinDecoder() {
             for (const auto& code : encode_syllable(definition, syllable)) {
                 data.code_to_syllables[code].push_back(syllable);
             }
+        }
+        if (definition.kind == SchemeKind::flypy) {
+            data.code_to_syllables["og"].push_back("eng");
         }
         for (auto& [code, syllables] : data.code_to_syllables) {
             (void)code;
@@ -252,20 +263,28 @@ bool ShuangpinDecoder::has_scheme(const std::string_view scheme_id) const {
 
 std::vector<std::string> ShuangpinDecoder::syllables_for_code(
     const std::string_view scheme_id,
-    const std::string_view code) const {
+    const std::string_view code,
+    const bool uv_compatibility) const {
     const auto scheme_it = schemes_.find(std::string(scheme_id));
     if (scheme_it == schemes_.end()) {
         return {};
     }
     const std::string normalized = normalize_code(code);
-    const auto found = scheme_it->second.code_to_syllables.find(normalized);
+    auto lookup = normalized;
+    auto found = scheme_it->second.code_to_syllables.find(lookup);
+    if (found == scheme_it->second.code_to_syllables.end() && uv_compatibility &&
+        scheme_id == "flypy" && is_safe_flypy_umlaut_alias(lookup)) {
+        lookup[1U] = 'u';
+        found = scheme_it->second.code_to_syllables.find(lookup);
+    }
     return found == scheme_it->second.code_to_syllables.end() ? std::vector<std::string>{} : found->second;
 }
 
 std::vector<PinyinSegmentation> ShuangpinDecoder::decode(
     const std::string_view scheme_id,
     const std::string_view raw_input,
-    const std::size_t limit) const {
+    const std::size_t limit,
+    const bool uv_compatibility) const {
     if (limit == 0U) {
         return {};
     }
@@ -281,7 +300,13 @@ std::vector<PinyinSegmentation> ShuangpinDecoder::decode(
 
     std::vector<PinyinSegmentation> results(1U);
     for (const auto& code : codes) {
-        const auto found = scheme_it->second.code_to_syllables.find(code);
+        auto lookup = code;
+        auto found = scheme_it->second.code_to_syllables.find(lookup);
+        if (found == scheme_it->second.code_to_syllables.end() && uv_compatibility &&
+            scheme_id == "flypy" && is_safe_flypy_umlaut_alias(lookup)) {
+            lookup[1U] = 'u';
+            found = scheme_it->second.code_to_syllables.find(lookup);
+        }
         if (found == scheme_it->second.code_to_syllables.end()) {
             return {};
         }

@@ -42,6 +42,9 @@ function Invoke-NativeRequired {
 }
 
 if (Test-Path -LiteralPath $ProfileTool -PathType Leaf) {
+    Invoke-NativeBestEffort -Description "Current-user keyboard list removal" -Command {
+        & $ProfileTool --disable-user
+    }
     Invoke-NativeBestEffort -Description "Profile deactivation" -Command {
         & $ProfileTool --deactivate
     }

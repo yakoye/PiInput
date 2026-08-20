@@ -108,8 +108,6 @@ set(detection_values
     "compact|${legacy_compact}"
     "hyphen|${legacy_hyphen}"
     "underscore|${legacy_underscore}"
-    "clsid|${legacy_clsid}"
-    "profile|${legacy_profile}"
 )
 foreach(detection_case IN LISTS detection_values)
     string(REPLACE "|" ";" detection_parts "${detection_case}")
@@ -119,6 +117,18 @@ foreach(detection_case IN LISTS detection_values)
     file(MAKE_DIRECTORY "${detection_root}/src")
     file(WRITE "${detection_root}/src/probe.txt" "${detection_value}\n")
     run_gate("detect ${detection_label}" "${detection_root}" "REJECT")
+endforeach()
+
+foreach(stable_identity_case IN ITEMS
+        "clsid|${legacy_clsid}"
+        "profile|${legacy_profile}")
+    string(REPLACE "|" ";" stable_identity_parts "${stable_identity_case}")
+    list(GET stable_identity_parts 0 stable_identity_label)
+    list(GET stable_identity_parts 1 stable_identity_value)
+    set(stable_identity_root "${matrix_root}/stable-${stable_identity_label}")
+    file(MAKE_DIRECTORY "${stable_identity_root}/src")
+    file(WRITE "${stable_identity_root}/src/probe.txt" "${stable_identity_value}\n")
+    run_gate("allow stable ${stable_identity_label}" "${stable_identity_root}" "PASS")
 endforeach()
 
 message(STATUS "Brand gate regression matrix passed")

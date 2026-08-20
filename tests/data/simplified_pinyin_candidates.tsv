@@ -1,0 +1,20 @@
+# 全拼超级简拼。每个音节只打声母，或与全拼混合。
+# schema	input	canonical_prefix	target	max_rank
+# 首字母简拼与声母简拼命中同一个词
+full	zsjs	zhi'shi'jing'shen	指示精神	6
+full	zhshjsh	zhi'shi'jing'shen	指示精神	6
+full	zly	zhang'liang'ying	张靓颖	9
+full	zhly	zhang'liang'ying	张靓颖	9
+full	zsjs	zhuan'shun'ji'shi	转瞬即逝	9
+full	wlj	wang'lao'ji	王老吉	9
+# 简拼与全拼混合
+full	srf	shu'ru'fa	输入法	6
+full	sruf	shu'ru'fa	输入法	6
+full	shrfa	shu'ru'fa	输入法	6
+full	shurf	shu'ru'fa	输入法	6
+# 简拼词组用完之后要有单字兜底。打 mk 只出 24 个词就没了，用户至少应该能先
+# 上屏一个 m 开头的字再接着打，和词组后面接单字是同一件事。
+full	mk	m	吗	40
+full	mk	m	没	40
+full	dddyn	d	大	40
+full	sdsf	s	是	40

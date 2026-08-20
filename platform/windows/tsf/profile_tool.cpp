@@ -1,4 +1,5 @@
 #include "profile_registration.h"
+#include "user_keyboard_registration.h"
 
 #include "piinput/utf.h"
 #include "piinput/windows_compat.h"
@@ -20,6 +21,8 @@ namespace {
 
 using piinput::windows::tsf::activate_profile;
 using piinput::windows::tsf::deactivate_profile;
+using piinput::windows::tsf::disable_user_keyboard;
+using piinput::windows::tsf::enable_user_keyboard;
 using piinput::windows::tsf::get_profile;
 using piinput::windows::tsf::register_profile;
 using piinput::windows::tsf::unregister_profile;
@@ -33,6 +36,24 @@ using piinput::windows::tsf::unregister_profile;
     const std::filesystem::path output(path);
     CoTaskMemFree(path);
     return output;
+}
+
+[[nodiscard]] std::filesystem::path profile_icon_path() {
+    const auto stable = local_app_data() / L"PiInput" / L"Runtime" /
+        L"Shim" / L"piinput_icon.ico";
+    if (std::filesystem::is_regular_file(stable)) {
+        return stable;
+    }
+    std::vector<wchar_t> buffer(32768U);
+    const DWORD length = GetModuleFileNameW(
+        nullptr,
+        buffer.data(),
+        static_cast<DWORD>(buffer.size()));
+    if (length == 0U || length >= buffer.size()) {
+        throw std::runtime_error("GetModuleFileNameW failed");
+    }
+    return std::filesystem::path(std::wstring_view(buffer.data(), length)).parent_path() /
+           L"PiInputTSF.dll";
 }
 
 [[nodiscard]] bool valid_schema(const std::string_view schema) {
@@ -153,9 +174,12 @@ void print_help() {
     std::cout
         << "PiInput profile tool\n"
         << "  --register               Register and enable the PiInput TSF profile\n"
+        << "  --refresh-profile        Refresh cached name/icon metadata without changing identity\n"
         << "  --unregister             Unregister the PiInput TSF profile\n"
         << "  --activate               Enable and activate the PiInput TSF profile\n"
         << "  --deactivate             Deactivate the PiInput TSF profile\n"
+        << "  --enable-user            Add PiInput to the current user keyboard list\n"
+        << "  --disable-user           Remove PiInput from the current user keyboard list\n"
         << "  --status                 Show registered/enabled/active state\n"
         << "  --schema <name>          Set full/flypy/natural/mspy/abc\n"
         << "  --show-schema            Print the configured input schema\n";
@@ -177,11 +201,23 @@ int run(const int argc, wchar_t* argv[]) {
         } else if (argument == L"--show-schema") {
             std::cout << read_schema() << '\n';
         } else if (argument == L"--register") {
-            const HRESULT result = register_profile();
+            const auto icon_path = profile_icon_path();
+            const HRESULT result = register_profile(icon_path.native());
             if (FAILED(result)) {
                 return print_hresult_failure("RegisterProfile", result, 5);
             }
             std::cout << "PiInput profile registered and enabled.\n";
+        } else if (argument == L"--refresh-profile") {
+            const HRESULT removed = unregister_profile();
+            if (FAILED(removed)) {
+                return print_hresult_failure("UnregisterProfile refresh", removed, 10);
+            }
+            const auto icon_path = profile_icon_path();
+            const HRESULT result = register_profile(icon_path.native());
+            if (FAILED(result)) {
+                return print_hresult_failure("RegisterProfile refresh", result, 11);
+            }
+            std::cout << "PiInput profile name and icon metadata refreshed.\n";
         } else if (argument == L"--unregister") {
             const HRESULT result = unregister_profile();
             if (result == S_FALSE) {
@@ -197,6 +233,18 @@ int run(const int argc, wchar_t* argv[]) {
                 return print_hresult_failure("ActivateProfile", result, 2);
             }
             std::cout << "PiInput profile enabled. Use Win+Space to select it if Windows did not switch immediately.\n";
+        } else if (argument == L"--enable-user") {
+            const HRESULT result = enable_user_keyboard();
+            if (FAILED(result)) {
+                return print_hresult_failure("InstallLayoutOrTip", result, 8);
+            }
+            std::cout << "PiInput added to the current user keyboard list.\n";
+        } else if (argument == L"--disable-user") {
+            const HRESULT result = disable_user_keyboard();
+            if (FAILED(result)) {
+                return print_hresult_failure("InstallLayoutOrTip uninstall", result, 9);
+            }
+            std::cout << "PiInput removed from the current user keyboard list.\n";
         } else if (argument == L"--deactivate") {
             const HRESULT result = deactivate_profile();
             if (result == S_FALSE) {

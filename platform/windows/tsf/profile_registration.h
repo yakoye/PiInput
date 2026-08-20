@@ -7,8 +7,11 @@
 
 #include <cstddef>
 #include <iterator>
+#include <string_view>
 
 namespace piinput::windows::tsf {
+
+inline constexpr ULONG kPiInputIconIndex = 0U;
 
 inline HRESULT create_profile_manager(ITfInputProcessorProfileMgr** manager) {
     if (manager == nullptr) {
@@ -54,29 +57,37 @@ inline HRESULT get_profile(TF_INPUTPROCESSORPROFILE* profile) {
     return result;
 }
 
-inline HRESULT register_profile() {
+inline HRESULT accept_existing_profile_registration(const HRESULT registration_result) {
+    if (SUCCEEDED(registration_result)) {
+        return registration_result;
+    }
+    TF_INPUTPROCESSORPROFILE existing{};
+    return SUCCEEDED(get_profile(&existing)) ? S_FALSE : registration_result;
+}
+
+inline HRESULT register_profile(const std::wstring_view icon_file = {}) {
     ITfInputProcessorProfileMgr* manager = nullptr;
     HRESULT result = create_profile_manager(&manager);
     if (FAILED(result)) {
         return result;
     }
 
-    constexpr wchar_t description[] = L"PiInput 中文输入法（开发版）";
+    constexpr wchar_t description[] = L"PiInput 中文输入法";
     result = manager->RegisterProfile(
         CLSID_PiInputTextService,
         kPiInputLanguageId,
         GUID_PiInputProfile,
         description,
         static_cast<ULONG>(std::size(description) - 1U),
-        nullptr,
-        0U,
-        0U,
+        icon_file.empty() ? nullptr : icon_file.data(),
+        static_cast<ULONG>(icon_file.size()),
+        kPiInputIconIndex,
         nullptr,
         0U,
         TRUE,
         0U);
     manager->Release();
-    return result;
+    return accept_existing_profile_registration(result);
 }
 
 inline HRESULT unregister_profile() {

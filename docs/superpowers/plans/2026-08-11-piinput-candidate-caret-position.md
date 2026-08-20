@@ -217,7 +217,7 @@ Expected: 0 failed tests. Report the exact passed/total count.
 
 - [ ] **Step 4: Stage, package, and inspect artifacts**
 
-Run the existing Release install/package workflow. Inspect ZIP contents for stable DLL, Host, installer, uninstaller, demo, query tool, dictionaries, settings, icon and Markdown guide. Verify archive SHA-256 and validate that no old LiteIME name/path appears.
+Run the existing Release install/package workflow. Inspect ZIP contents for stable DLL, Host, installer, uninstaller, demo, query tool, dictionaries, settings, icon and Markdown guide. Verify archive SHA-256 and validate that no retired project name or path appears.
 
 - [ ] **Step 5: Run final integrity checks**
 

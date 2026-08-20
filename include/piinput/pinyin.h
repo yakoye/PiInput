@@ -34,4 +34,29 @@ private:
     std::unordered_set<std::string> prefix_set_;
 };
 
+// The first letter of every syllable, joined. zh/ch/sh reduce to z/c/s simply
+// by being first letters, which is what makes 张靓颖 reachable as both zly and
+// zhly: the query normalises the same way before it looks anything up.
+//
+//     zhi'shi'jing'shen -> zsjs
+//     shu'ru'fa         -> srf
+[[nodiscard]] std::string simplified_pinyin_key(std::string_view canonical_pinyin);
+
+// One reading of an input where each syllable is either spelled out or reduced
+// to its initial. `key` is the per-syllable initials; `syllables` holds the
+// spelled-out ones and an empty string where only the initial was typed.
+struct SimplifiedPinyinReading {
+    std::string key;
+    std::vector<std::string> syllables;
+};
+
+// Every way `input` can be read as simplified pinyin, mixed with full syllables.
+// "srf" yields one reading with three bare initials; "sruf" yields the reading
+// s + ru + f, and "shrfa" yields sh + r + fa. Returns nothing when the input
+// cannot be a simplified spelling at all.
+[[nodiscard]] std::vector<SimplifiedPinyinReading> simplified_pinyin_readings(
+    std::string_view input,
+    const PinyinSegmenter& segmenter,
+    std::size_t limit);
+
 }  // namespace piinput

@@ -1,0 +1,25 @@
+# 已确定词与未完成尾部的拼接候选。覆盖 xie'zai'wan'cheng（卸载完成）逐键序列，
+# 保证每敲完一个音节或半个音节，第一行都能看到对应的整串候选。
+# schema	input	canonical_prefix	target	max_rank
+flypy	xpzdw	xie'zai'wan	卸载完	6
+flypy	xpzdwj	xie'zai'wan	卸载完	6
+flypy	xpzdwji	xie'zai'wan'cheng	卸载完成	6
+flypy	xpzdwjig	xie'zai'wan'cheng	卸载完成	6
+full	xiezaiw	xie'zai'wan	卸载完	6
+full	xiezaiwan	xie'zai'wan	卸载完	6
+full	xiezaiwancheng	xie'zai'wan'cheng	卸载完成	6
+full	beifenyonghu	bei'fen'yong'hu	备份用户	6
+# 全拼：一个音节打完了，但它同时是更长音节的开头（chen 也是 cheng 的开头，
+# za 也是 zai 的开头）。这些中间态每敲一个字母都必须继续给出候选，不能因为
+# 当前字母串刚好构成合法音节就把更长的可能丢掉。
+full	xieza	xie'zai	卸载	6
+full	wanchen	wan'cheng	完成	6
+full	xiezaiwanche	xie'zai'wan'cheng	卸载完成	6
+full	xiezaiwanchen	xie'zai'wan'cheng	卸载完成	6
+full	woxian	wo'xiang	我想	6
+# 中间态里，词库真实整词必须压过机械拼接：woxianza 要给「我现在」，不能被
+# 「我先咋」「我先砸」占满第一行。tia 还要求把已经切成 ti'a 的两个音节重新
+# 读成正在输入的 tian。
+full	woxianza	wo'xian'zai	我现在	6
+full	jintia	jin'tian	今天	6
+full	jintianwansha	jin'tian'wan'shang	今天晚上	6

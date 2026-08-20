@@ -52,6 +52,7 @@ function Invoke-NativeRequired {
 foreach ($required in @(
     (Join-Path $Source "bin/piinput-cli.exe"),
     (Join-Path $Source "bin/piinput-preview.exe"),
+    (Join-Path $Source "bin/PiInput-Settings.exe"),
     (Join-Path $Source "bin/piinput-profile.exe"),
     (Join-Path $Source "bin/PiInputTSF.dll"),
     (Join-Path $Source "data/base_lexicon.tsv"),
@@ -108,7 +109,7 @@ foreach ($line in $settingsLines) {
     if ($line -match '^\s*\[([^\]]+)\]\s*$') {
         if ($inCandidates) {
             if (-not $candidateKeys.items_per_row) { $updatedSettings += "items_per_row=6" }
-            if (-not $candidateKeys.visible_rows) { $updatedSettings += "visible_rows=3" }
+            if (-not $candidateKeys.visible_rows) { $updatedSettings += "visible_rows=5" }
             if (-not $candidateKeys.max_items) { $updatedSettings += "max_items=90" }
         }
         $inCandidates = $Matches[1] -ieq "candidates"
@@ -131,7 +132,7 @@ foreach ($line in $settingsLines) {
 }
 if ($inCandidates) {
     if (-not $candidateKeys.items_per_row) { $updatedSettings += "items_per_row=6" }
-    if (-not $candidateKeys.visible_rows) { $updatedSettings += "visible_rows=3" }
+    if (-not $candidateKeys.visible_rows) { $updatedSettings += "visible_rows=5" }
     if (-not $candidateKeys.max_items) { $updatedSettings += "max_items=90" }
 } elseif (-not $foundCandidates) {
     if ($updatedSettings.Count -gt 0 -and $updatedSettings[-1] -ne "") {
@@ -139,7 +140,7 @@ if ($inCandidates) {
     }
     $updatedSettings += "[candidates]"
     $updatedSettings += "items_per_row=6"
-    $updatedSettings += "visible_rows=3"
+    $updatedSettings += "visible_rows=5"
     $updatedSettings += "max_items=90"
 }
 $updatedSettings | Set-Content $CandidateSettings -Encoding UTF8
@@ -189,7 +190,7 @@ if (-not $SkipTsfRegistration) {
     $CtfMon = Join-Path $env:SystemRoot "System32/ctfmon.exe"
     Start-Process $CtfMon
     Write-Host "PiInput TSF system input method registered." -ForegroundColor Green
-    Write-Host "Close and reopen Settings and Notepad, then press Win+Space and select 'PiInput 中文输入法（开发版）'." -ForegroundColor Cyan
+    Write-Host "Close and reopen Settings and Notepad, then press Win+Space and select 'PiInput 中文输入法'." -ForegroundColor Cyan
 } else {
     Write-Host "TSF registration was skipped; only the preview and tools were installed." -ForegroundColor Yellow
 }

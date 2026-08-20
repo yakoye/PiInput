@@ -18,6 +18,21 @@ public:
         return {std::filesystem::last_write_time(path), std::filesystem::file_size(path)};
     }
 
+    [[nodiscard]] std::optional<SettingsFileMetadata> try_metadata(
+        const std::filesystem::path& path) override {
+        // One cached directory_entry refresh answers both questions with a
+        // single file system query and reports a missing file through an error
+        // code instead of an exception.
+        std::error_code error;
+        const std::filesystem::directory_entry entry(path, error);
+        if (error) return std::nullopt;
+        const auto written = entry.last_write_time(error);
+        if (error) return std::nullopt;
+        const auto size = entry.file_size(error);
+        if (error) return std::nullopt;
+        return SettingsFileMetadata{written, size};
+    }
+
     [[nodiscard]] std::string read(
         const std::filesystem::path& path,
         const std::uintmax_t expected_size) override {
@@ -118,7 +133,14 @@ void SettingsManager::poll() noexcept {
 
         bool new_round = false;
         try {
-            const auto before = file_reader_->metadata(path_);
+            const auto probed = file_reader_->try_metadata(path_);
+            if (!probed.has_value()) {
+                pending_.reset();
+                set_errors(
+                    {"line 0 [document] key '<file>': unable to read settings file"}, false);
+                return;
+            }
+            const SettingsFileMetadata before = *probed;
             const auto already_succeeded =
                 last_successful_metadata_ && *last_successful_metadata_ == before;
             const auto already_failed_deterministically =

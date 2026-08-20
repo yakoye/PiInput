@@ -337,18 +337,26 @@ void test_engine_integration_and_shuangpin_isolation() {
         "variant merging keeps the best original score without accumulation or offset");
 
     piinput::PinyinSettings enabled;
-    piinput::PinyinSettings shuangpin_disabled = enabled;
-    shuangpin_disabled.uv_compatibility = false;
-    shuangpin_disabled.accept_u_colon = false;
+    piinput::PinyinSettings unrelated_full_pinyin_option = enabled;
+    unrelated_full_pinyin_option.accept_u_colon = false;
     const auto flypy_before = engine.decode("qq", "flypy", 16U, enabled);
-    const auto flypy_after = engine.decode("qq", "flypy", 16U, shuangpin_disabled);
+    const auto flypy_after = engine.decode("qq", "flypy", 16U, unrelated_full_pinyin_option);
     check(same_segmentations(flypy_before, flypy_after),
-        "full-pinyin spelling settings never alter Xiaohe decoding");
+        "unrelated full-pinyin spelling settings never alter Xiaohe decoding");
     const auto flypy_candidates_before = engine.query("qq", "flypy", 10U, enabled);
-    const auto flypy_candidates_after = engine.query("qq", "flypy", 10U, shuangpin_disabled);
+    const auto flypy_candidates_after = engine.query("qq", "flypy", 10U, unrelated_full_pinyin_option);
     check(!flypy_candidates_before.empty() && flypy_candidates_before.front().word == "秋" &&
             same_candidates(flypy_candidates_before, flypy_candidates_after),
-        "full-pinyin spelling settings never alter Xiaohe candidate queries");
+        "unrelated full-pinyin spelling settings never alter Xiaohe candidate queries");
+
+    piinput::PinyinSettings strict_xiaohe = enabled;
+    strict_xiaohe.uv_compatibility = false;
+    check(contains_canonical(engine.decode("yuwh", "flypy", 16U, strict_xiaohe), "yu'wang"),
+        "strict Xiaohe keeps canonical yu spelling");
+    check(engine.decode("yvwh", "flypy", 16U, strict_xiaohe).empty(),
+        "strict Xiaohe rejects the optional yv compatibility spelling");
+    check(contains_canonical(engine.decode("yvwh", "flypy", 16U, enabled), "yu'wang"),
+        "default Xiaohe accepts the optional yv compatibility spelling");
 }
 
 }  // namespace

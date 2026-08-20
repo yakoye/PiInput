@@ -2,28 +2,10 @@
   "schemaVersion": 1,
   "sources": [
     {
-      "id": "pinyin-data",
-      "repository": "https://github.com/mozillazg/pinyin-data.git",
-      "license": "MIT",
-      "purpose": "单字常用读音"
-    },
-    {
-      "id": "phrase-pinyin-data",
-      "repository": "https://github.com/mozillazg/phrase-pinyin-data.git",
-      "license": "MIT",
-      "purpose": "词语读音与多音词校正"
-    },
-    {
-      "id": "rime-pinyin-simp",
-      "repository": "https://github.com/rime/rime-pinyin-simp.git",
-      "license": "Apache-2.0",
-      "purpose": "通用简体拼音输入词库"
-    },
-    {
-      "id": "THUOCL",
-      "repository": "https://github.com/thunlp/THUOCL.git",
-      "license": "MIT",
-      "purpose": "可选领域词表，默认不混入通用候选"
+      "id": "rime-ice-full",
+      "repository": "https://github.com/iDvel/rime-ice.git",
+      "license": "GPL-3.0",
+      "purpose": "PiInput 发布用中文候选的唯一公共词库来源"
     },
     {
       "id": "wordfreq-en-25000",
@@ -34,7 +16,7 @@
       "sha256": "51cc5521d1ff8cf4353f72199fd4d3ce3cbff9ca9e61858414b94314c9df35a6",
       "license": "CC-BY-SA-4.0",
       "optional": true,
-      "purpose": "可选英文候选词频源，仅下载到外部 dicts/sources，不直接打包"
+      "purpose": "英文候选基础词频源；固定版本的转换结果随 Windows 测试包分发"
     }
   ]
 }

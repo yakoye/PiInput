@@ -1,5 +1,6 @@
 #pragma once
 
+#include "piinput/candidate_evidence.h"
 #include "piinput/lexicon.h"
 
 #include <cstddef>
@@ -35,6 +36,7 @@ struct IncrementalCandidate {
     std::int64_t score{};
     std::size_t consumed_syllables{};
     std::size_t word_count{};
+    CandidateEvidence evidence;
 };
 
 struct IncrementalDecodeStats {

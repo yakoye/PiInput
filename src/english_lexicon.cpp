@@ -7,6 +7,7 @@
 #include <charconv>
 #include <chrono>
 #include <fstream>
+#include <iterator>
 #include <limits>
 #include <mutex>
 #include <system_error>
@@ -86,6 +87,23 @@ private:
         }
     }
     return result;
+}
+
+[[nodiscard]] bool is_bounded_subsequence_completion(
+    const std::string_view typed,
+    const std::string_view word) noexcept {
+    constexpr std::size_t maximum_insertions = 3U;
+    if (typed.size() < 3U || word.size() <= typed.size() ||
+        word.size() - typed.size() > maximum_insertions || typed.front() != word.front()) {
+        return false;
+    }
+    std::size_t typed_index = 0U;
+    for (const char character : word) {
+        if (typed_index < typed.size() && character == typed[typed_index]) {
+            ++typed_index;
+        }
+    }
+    return typed_index == typed.size();
 }
 
 [[nodiscard]] bool parse_positive_integer(
@@ -264,12 +282,31 @@ std::vector<EnglishCandidate> EnglishLexicon::query(
         }
         result.push_back(entry.candidate);
     }
-    std::sort(result.begin(), result.end(), [&](const EnglishCandidate& left, const EnglishCandidate& right) {
+    const auto preference_for = [&](const EnglishCandidate& candidate) {
+        const auto prefix_preferences = completion_preferences_.find(lowercase_prefix);
+        if (prefix_preferences == completion_preferences_.end()) {
+            return std::uint64_t{0U};
+        }
+        const auto found = prefix_preferences->second.find(ascii_lower(candidate.word));
+        return found == prefix_preferences->second.end() ? std::uint64_t{0U} : found->second;
+    };
+    const auto ranked_before = [&](const EnglishCandidate& left, const EnglishCandidate& right) {
         if (left.user_entry != right.user_entry) {
             return left.user_entry;
         }
         if (left.learning_count != right.learning_count) {
             return left.learning_count > right.learning_count;
+        }
+        const auto left_preference = preference_for(left);
+        const auto right_preference = preference_for(right);
+        if (left_preference != right_preference) {
+            return left_preference > right_preference;
+        }
+        const auto fuzzy_flag = static_cast<std::uint32_t>(EnglishCandidateFlag::fuzzy);
+        const bool left_fuzzy = (left.flags & fuzzy_flag) != 0U;
+        const bool right_fuzzy = (right.flags & fuzzy_flag) != 0U;
+        if (left_fuzzy != right_fuzzy) {
+            return !left_fuzzy;
         }
         if (left.base_weight != right.base_weight) {
             return left.base_weight > right.base_weight;
@@ -283,11 +320,61 @@ std::vector<EnglishCandidate> EnglishLexicon::query(
             return left.id < right.id;
         }
         return left.word < right.word;
-    });
+    };
+    if (lowercase_prefix.size() >= 3U) {
+        for (const std::size_t index : prefix_index_) {
+            const auto& entry = entries_[index];
+            if (entry.lowercase_word.starts_with(lowercase_prefix) ||
+                !is_bounded_subsequence_completion(lowercase_prefix, entry.lowercase_word)) {
+                continue;
+            }
+            auto candidate = entry.candidate;
+            candidate.flags |= static_cast<std::uint32_t>(EnglishCandidateFlag::fuzzy);
+            result.push_back(std::move(candidate));
+        }
+    }
+    std::sort(result.begin(), result.end(), ranked_before);
     if (result.size() > limit) {
         result.resize(limit);
     }
     return result;
+}
+
+std::size_t EnglishLexicon::load_completion_preferences_tsv(
+    const std::filesystem::path& path) {
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        return 0U;
+    }
+
+    std::size_t accepted = 0U;
+    std::string line;
+    while (std::getline(input, line)) {
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
+        if (line.empty() || line.size() > kMaximumLineLength || line.front() == '#') {
+            continue;
+        }
+        const auto first = line.find('\t');
+        const auto second = first == std::string::npos ? std::string::npos : line.find('\t', first + 1U);
+        if (first == std::string::npos || second == std::string::npos ||
+            line.find('\t', second + 1U) != std::string::npos) {
+            continue;
+        }
+        const std::string_view prefix(line.data(), first);
+        const std::string_view word(line.data() + first + 1U, second - first - 1U);
+        const std::string_view priority_text(line.data() + second + 1U, line.size() - second - 1U);
+        std::uint64_t priority = 0U;
+        if (!is_ascii_word(prefix) || !is_ascii_word(word) ||
+            !parse_positive_integer(priority_text, priority)) {
+            continue;
+        }
+        auto& stored = completion_preferences_[ascii_lower(prefix)][ascii_lower(word)];
+        stored = (std::max)(stored, priority);
+        ++accepted;
+    }
+    return accepted;
 }
 
 bool EnglishLexicon::record_selection(const std::string_view word) noexcept {

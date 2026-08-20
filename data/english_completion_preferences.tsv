@@ -1,0 +1,16 @@
+# prefix<TAB>word<TAB>priority; higher values rank first for that exact typed prefix
+r	right	200
+r	really	190
+re	really	200
+re	remember	190
+rev	review	200
+rev	reverse	190
+reve	revile	200
+reve	reverse	190
+b	but	200
+b	because	190
+bo	both	200
+boo	book	200
+boo	boom	190
+book	books	200
+book	booked	190

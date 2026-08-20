@@ -7,6 +7,8 @@
 #include "piinput/english_key_policy.h"
 #include "piinput/english_session.h"
 #include "piinput/input_mode.h"
+#include "piinput/key_event_gate.h"
+#include "piinput/lazy_load_gate.h"
 #include "piinput/punctuation.h"
 #include "piinput/session.h"
 #include "piinput/settings_manager.h"
@@ -56,7 +58,10 @@ private:
     ~TextService();
 
     bool should_eat_key(WPARAM wparam) const;
-    void handle_key(ITfContext* context, WPARAM wparam);
+    void handle_key(
+        ITfContext* context,
+        WPARAM wparam,
+        const KeyEventDecision& event_decision);
     void handle_english_key(
         ITfContext* context,
         WPARAM wparam,
@@ -67,11 +72,15 @@ private:
     bool request_commit(ITfContext* context, const std::string& text);
     bool request_cancel(ITfContext* context);
     bool choose_candidate(ITfContext* context, std::size_t index);
+    bool navigate_chinese_rows(ITfContext* context, int delta);
+    [[nodiscard]] std::string chinese_composition_text() const;
     void commit_raw_input(ITfContext* context);
     void move_row(int delta);
     void move_page(int delta);
     void apply_settings_at_composition_boundary();
     void toggle_input_mode(ITfContext* context);
+    bool ensure_engine_loaded_for_key(WPARAM wparam) noexcept;
+    void load_runtime_configuration();
     void load_engine();
     void save_user_model() noexcept;
     void save_english_learning() noexcept;
@@ -79,7 +88,6 @@ private:
     [[nodiscard]] bool english_composing() const noexcept;
     [[nodiscard]] CandidateSettings active_candidate_settings() const noexcept;
     std::string load_schema() const;
-    std::wstring schema_display_name() const;
 
     std::atomic<ULONG> ref_count_{1U};
     HINSTANCE module_{};
@@ -95,12 +103,15 @@ private:
     PunctuationTransformer punctuation_;
 
     Engine engine_;
+    LazyLoadGate engine_load_gate_;
     SymbolIndex symbols_;
     std::unique_ptr<ImeSession> session_;
     std::unique_ptr<EnglishLexicon> english_lexicon_;
     std::unique_ptr<EnglishSession> english_session_;
     std::filesystem::path user_model_path_;
     std::filesystem::path english_builtin_path_;
+    std::filesystem::path english_supplement_path_;
+    std::filesystem::path english_completion_preferences_path_;
     std::filesystem::path english_downloaded_path_;
     std::filesystem::path english_user_path_;
     std::filesystem::path english_learning_path_;

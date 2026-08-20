@@ -1,5 +1,6 @@
 file(READ "${SOURCE_DIR}/scripts/update-dictionaries.ps1" update_script)
 file(READ "${SOURCE_DIR}/scripts/build-dictionaries.ps1" build_script)
+file(READ "${SOURCE_DIR}/build.ps1" main_build_script)
 file(READ "${SOURCE_DIR}/update-dictionaries.cmd" command_script)
 file(READ "${SOURCE_DIR}/dictionary_sources.json" source_manifest)
 file(READ "${SOURCE_DIR}/docs/TSF_DEVELOPER_TEST.md" english_runtime_doc)
@@ -12,6 +13,48 @@ foreach(required_text
     string(FIND "${update_script}${build_script}" "${required_text}" position)
     if(position EQUAL -1)
         message(FATAL_ERROR "Dictionary update safety marker is missing: ${required_text}")
+    endif()
+endforeach()
+
+foreach(required_bootstrap_text
+    "[switch]$SkipTests"
+    "if (-not $SkipTests)"
+    "-SkipTests"
+    "piinput-character-coverage-tests.exe")
+    string(FIND "${main_build_script}${build_script}" "${required_bootstrap_text}" bootstrap_position)
+    if(bootstrap_position EQUAL -1)
+        message(FATAL_ERROR "Dictionary bootstrap/test-order marker is missing: ${required_bootstrap_text}")
+    endif()
+endforeach()
+
+foreach(required_rime_text
+    "[string]$RimeIceRoot"
+    "[switch]$SkipInstall"
+    "rime-ice-default-v1"
+    "rime_ice.dict.yaml"
+    "cn_dicts/8105.dict.yaml"
+    "cn_dicts/base.dict.yaml"
+    "cn_dicts/ext.dict.yaml"
+    "cn_dicts/tencent.dict.yaml"
+    "cn_dicts/others.dict.yaml"
+    "$arguments.Add(\"--rime-dictionary\")"
+    "$arguments.Add(\"--rime-report\")"
+    "if (-not $SkipInstall)")
+    string(FIND "${build_script}" "${required_rime_text}" rime_position)
+    if(rime_position EQUAL -1)
+        message(FATAL_ERROR "Rime Ice dictionary marker is missing: ${required_rime_text}")
+    endif()
+endforeach()
+
+foreach(forbidden_release_source
+    "$arguments.Add(\"--source\")"
+    "data/base_lexicon.tsv"
+    "rime-pinyin-simp/pinyin_simp.dict.yaml"
+    "THUOCL_poem.txt"
+    "phrase-pinyin-data/large_pinyin.txt")
+    string(FIND "${build_script}" "${forbidden_release_source}" forbidden_position)
+    if(NOT forbidden_position EQUAL -1)
+        message(FATAL_ERROR "Old Chinese candidate source remains in release build: ${forbidden_release_source}")
     endif()
 endforeach()
 

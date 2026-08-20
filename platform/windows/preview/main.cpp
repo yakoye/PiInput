@@ -1,4 +1,5 @@
 #include "piinput/engine.h"
+#include "piinput/english_session.h"
 #include "piinput/symbols.h"
 #include "piinput/utf.h"
 #include "piinput/windows_compat.h"
@@ -10,6 +11,7 @@
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -24,6 +26,7 @@ constexpr int id_schema = 1002;
 constexpr int id_candidates = 1003;
 constexpr int id_status = 1004;
 constexpr int id_clear = 1005;
+constexpr int id_mode = 1006;
 
 struct CandidateValue {
     std::string text;
@@ -32,11 +35,16 @@ struct CandidateValue {
 
 struct AppState {
     piinput::Engine engine;
+    piinput::EnglishLexicon english_lexicon;
+    std::unique_ptr<piinput::EnglishSession> english_session;
     piinput::SymbolIndex symbols;
     std::filesystem::path lexicon_path;
     std::filesystem::path user_model_path;
+    std::filesystem::path english_learning_path;
+    std::size_t english_entry_count{};
     HWND output{};
     HWND input{};
+    HWND mode{};
     HWND schema{};
     HWND candidates{};
     HWND status{};
@@ -84,6 +92,19 @@ struct AppState {
     return result;
 }
 
+[[nodiscard]] std::filesystem::path find_packaged_data_file(
+    const std::filesystem::path& filename) {
+    const auto installed = module_directory().parent_path() / L"data" / filename;
+    if (std::filesystem::exists(installed)) {
+        return installed;
+    }
+    const auto package_root = module_directory() / L"data" / filename;
+    if (std::filesystem::exists(package_root)) {
+        return package_root;
+    }
+    return {};
+}
+
 [[nodiscard]] std::filesystem::path find_lexicon() {
     const auto explicit_path = command_line_lexicon();
     if (!explicit_path.empty()) {
@@ -100,11 +121,11 @@ struct AppState {
         return base_compiled;
     }
 
-    const auto installed_data = module_directory().parent_path() / L"data" / L"base_lexicon.tsv";
+    const auto installed_data = find_packaged_data_file(L"piinput-base.lex");
     if (std::filesystem::exists(installed_data)) {
         return installed_data;
     }
-    const auto sample = module_directory().parent_path() / L"data" / L"sample_lexicon.tsv";
+    const auto sample = find_packaged_data_file(L"sample_lexicon.tsv");
     if (std::filesystem::exists(sample)) {
         return sample;
     }
@@ -134,17 +155,80 @@ void set_font(const HWND window, const HFONT font) {
     }
 }
 
+[[nodiscard]] bool is_english_mode(const AppState& state) {
+    return SendMessageW(state.mode, CB_GETCURSEL, 0U, 0U) == 1;
+}
+
+[[nodiscard]] std::size_t load_english_resources(AppState& state) {
+    std::size_t loaded = 0U;
+    const auto load_builtin = [&](const wchar_t* const filename) {
+        const auto path = find_packaged_data_file(filename);
+        if (!path.empty() && std::filesystem::exists(path)) {
+            loaded += state.english_lexicon.load_builtin_tsv(path);
+        }
+    };
+    load_builtin(L"english_lexicon.tsv");
+    load_builtin(L"english_supplement.tsv");
+
+    const auto preferences = find_packaged_data_file(L"english_completion_preferences.tsv");
+    if (!preferences.empty() && std::filesystem::exists(preferences)) {
+        (void)state.english_lexicon.load_completion_preferences_tsv(preferences);
+    }
+
+    const auto user_data = local_app_data() / L"PiInput" / L"UserData";
+    const auto downloaded = user_data / L"english_downloaded.tsv";
+    const auto user = user_data / L"english_user.tsv";
+    state.english_learning_path = user_data / L"english_learning.tsv";
+    if (std::filesystem::exists(downloaded)) {
+        loaded += state.english_lexicon.load_builtin_tsv(downloaded);
+    }
+    if (std::filesystem::exists(user)) {
+        loaded += state.english_lexicon.load_user_tsv(user);
+    }
+    if (std::filesystem::exists(state.english_learning_path)) {
+        (void)state.english_lexicon.load_learning_tsv(state.english_learning_path);
+    }
+    state.english_session = std::make_unique<piinput::EnglishSession>(
+        state.english_lexicon, 20U, true);
+    return loaded;
+}
+
 void update_candidates(AppState& state) {
     SendMessageW(state.candidates, LB_RESETCONTENT, 0U, 0U);
     state.values.clear();
     const std::wstring wide_input = get_window_text(state.input);
     const std::string input = piinput::wide_to_utf8(wide_input.c_str());
     if (input.empty()) {
-        SetWindowTextW(state.status, L"输入拼音后按空格、Enter 或数字键上屏；以分号开头可搜索符号，例如 ;sheshidu");
+        if (is_english_mode(state)) {
+            const std::wstring status = L"英文候选：输入一个字母即可补全；空格、Enter、数字键或双击上屏。已加载 " +
+                std::to_wstring(state.english_entry_count) + L" 条本地英文词条。";
+            SetWindowTextW(state.status, status.c_str());
+        } else {
+            SetWindowTextW(state.status, L"中文候选：输入拼音后按空格、Enter 或数字键上屏；以分号开头可搜索符号，例如 ;sheshidu");
+        }
         return;
     }
 
-    if (input.front() == ';') {
+    if (is_english_mode(state)) {
+        state.english_session->clear();
+        const bool valid = std::all_of(input.begin(), input.end(), [&](const char character) {
+            return state.english_session->insert(character);
+        });
+        if (!valid) {
+            state.english_session->clear();
+            SetWindowTextW(state.status, L"英文候选测试只接收 A-Z 字母；其他内容可直接输入下方测试文本区。");
+            return;
+        }
+        const auto& snapshot = state.english_session->snapshot();
+        for (std::size_t index = 0; index < snapshot.candidates.size(); ++index) {
+            const auto& candidate = snapshot.candidates[index];
+            state.values.push_back({candidate.word, {}});
+            const std::wstring line = piinput::utf8_to_wide(
+                std::to_string(index + 1U) + ". " + candidate.word);
+            SendMessageW(state.candidates, LB_ADDSTRING, 0U,
+                reinterpret_cast<LPARAM>(line.c_str()));
+        }
+    } else if (input.front() == ';') {
         const auto results = state.symbols.search(input.substr(1U), 20U);
         for (std::size_t index = 0; index < results.size(); ++index) {
             const auto& result = results[index];
@@ -167,7 +251,10 @@ void update_candidates(AppState& state) {
 
     if (!state.values.empty()) {
         SendMessageW(state.candidates, LB_SETCURSEL, 0U, 0U);
-        const std::wstring status = L"词库：" + state.lexicon_path.wstring() + L"    空格/Enter 选择第一项，1~9 选择对应项";
+        const std::wstring status = is_english_mode(state)
+            ? L"英文候选：空格/Enter 选择第一项，1~9 选择对应项，上下键移动"
+            : L"中文词库：" + state.lexicon_path.wstring() +
+                L"    空格/Enter 选择第一项，1~9 选择对应项";
         SetWindowTextW(state.status, status.c_str());
     } else {
         SetWindowTextW(state.status,
@@ -175,9 +262,7 @@ void update_candidates(AppState& state) {
     }
 }
 
-void append_output(const HWND output, const std::wstring& value) {
-    const int length = GetWindowTextLengthW(output);
-    SendMessageW(output, EM_SETSEL, static_cast<WPARAM>(length), static_cast<LPARAM>(length));
+void insert_test_text(const HWND output, const std::wstring& value) {
     SendMessageW(output, EM_REPLACESEL, TRUE, reinterpret_cast<LPARAM>(value.c_str()));
 }
 
@@ -186,15 +271,25 @@ bool commit_index(AppState& state, const std::size_t index) {
         return false;
     }
     const CandidateValue selected = state.values[index];
-    const std::wstring value = piinput::utf8_to_wide(selected.text);
-    append_output(state.output, value);
-    if (!selected.pinyin.empty()) {
+    std::string committed = selected.text;
+    if (is_english_mode(state)) {
+        if (const auto chosen = state.english_session->choose(index); chosen.has_value()) {
+            committed = *chosen;
+        }
+        (void)state.english_lexicon.save_learning_tsv(state.english_learning_path);
+    }
+    std::wstring value = piinput::utf8_to_wide(committed);
+    if (is_english_mode(state)) {
+        value.push_back(L' ');
+    }
+    insert_test_text(state.output, value);
+    if (!is_english_mode(state) && !selected.pinyin.empty()) {
         state.engine.record_selection(selected.pinyin, selected.text);
         state.engine.save_user_model(state.user_model_path);
     }
     SetWindowTextW(state.input, L"");
     SetFocus(state.input);
-    SetWindowTextW(state.status, (L"已上屏：" + value).c_str());
+    SetWindowTextW(state.status, (L"已写入测试文本：" + piinput::utf8_to_wide(committed)).c_str());
     return true;
 }
 
@@ -258,34 +353,43 @@ LRESULT CALLBACK window_proc(const HWND window, const UINT message, const WPARAM
             OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
             DEFAULT_PITCH | FF_DONTCARE, L"Segoe UI");
 
-        HWND output_label = CreateWindowExW(0, L"STATIC", L"上屏：", WS_CHILD | WS_VISIBLE,
-            16, 14, 56, 28, window, nullptr, nullptr, nullptr);
+        HWND output_label = CreateWindowExW(0, L"STATIC", L"测试文本：", WS_CHILD | WS_VISIBLE,
+            16, 14, 96, 28, window, nullptr, nullptr, nullptr);
         state->output = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
-            WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL,
-            72, 10, 556, 72, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_output)), nullptr, nullptr);
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_MULTILINE | ES_AUTOVSCROLL |
+                ES_WANTRETURN | WS_VSCROLL,
+            112, 10, 516, 116, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_output)), nullptr, nullptr);
         state->clear_button = CreateWindowExW(0, L"BUTTON", L"清空", WS_CHILD | WS_VISIBLE | WS_TABSTOP,
             642, 10, 70, 32, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_clear)), nullptr, nullptr);
 
         HWND input_label = CreateWindowExW(0, L"STATIC", L"输入：", WS_CHILD | WS_VISIBLE,
-            16, 96, 56, 28, window, nullptr, nullptr, nullptr);
+            16, 144, 56, 28, window, nullptr, nullptr, nullptr);
         state->input = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", L"",
             WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL,
-            72, 92, 470, 32, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_input)), nullptr, nullptr);
+            72, 140, 304, 32, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_input)), nullptr, nullptr);
+        state->mode = CreateWindowExW(0, WC_COMBOBOXW, L"",
+            WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST,
+            392, 140, 120, 160, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_mode)), nullptr, nullptr);
         state->schema = CreateWindowExW(0, WC_COMBOBOXW, L"",
             WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST,
-            552, 92, 160, 200, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_schema)), nullptr, nullptr);
+            522, 140, 190, 200, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_schema)), nullptr, nullptr);
         state->candidates = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
             WS_CHILD | WS_VISIBLE | WS_TABSTOP | LBS_NOTIFY | WS_VSCROLL,
-            16, 136, 696, 280, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_candidates)), nullptr, nullptr);
+            16, 184, 696, 280, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_candidates)), nullptr, nullptr);
         state->status = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT,
             16, 428, 696, 46, window, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id_status)), nullptr, nullptr);
 
+        for (const wchar_t* name : {L"中文候选", L"英文候选"}) {
+            SendMessageW(state->mode, CB_ADDSTRING, 0U, reinterpret_cast<LPARAM>(name));
+        }
+        SendMessageW(state->mode, CB_SETCURSEL, 0U, 0U);
         for (const wchar_t* name : {L"全拼", L"小鹤双拼", L"自然码双拼", L"微软双拼", L"智能 ABC 双拼"}) {
             SendMessageW(state->schema, CB_ADDSTRING, 0U, reinterpret_cast<LPARAM>(name));
         }
         SendMessageW(state->schema, CB_SETCURSEL, 0U, 0U);
         for (const HWND control : {output_label, state->output, state->clear_button, input_label,
-                                   state->input, state->schema, state->candidates, state->status}) {
+                                   state->input, state->mode, state->schema,
+                                   state->candidates, state->status}) {
             set_font(control, state->font);
         }
         state->original_input_proc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(
@@ -299,8 +403,15 @@ LRESULT CALLBACK window_proc(const HWND window, const UINT message, const WPARAM
             const int control_id = LOWORD(wparam);
             const int notification = HIWORD(wparam);
             if ((control_id == id_input && notification == EN_CHANGE) ||
-                (control_id == id_schema && notification == CBN_SELCHANGE)) {
+                (control_id == id_schema && notification == CBN_SELCHANGE) ||
+                (control_id == id_mode && notification == CBN_SELCHANGE)) {
                 try {
+                    if (control_id == id_mode) {
+                        SetWindowTextW(state->input, L"");
+                        state->english_session->clear();
+                        EnableWindow(state->schema, !is_english_mode(*state));
+                        SetFocus(state->input);
+                    }
                     update_candidates(*state);
                 } catch (const std::exception& error) {
                     SetWindowTextW(state->status, piinput::utf8_to_wide(error.what()).c_str());
@@ -317,11 +428,12 @@ LRESULT CALLBACK window_proc(const HWND window, const UINT message, const WPARAM
         if (state != nullptr) {
             const int width = LOWORD(lparam);
             const int height = HIWORD(lparam);
-            MoveWindow(state->output, 72, 10, (std::max)(120, width - 204), 72, TRUE);
+            MoveWindow(state->output, 112, 10, (std::max)(120, width - 244), 116, TRUE);
             MoveWindow(state->clear_button, width - 102, 10, 86, 32, TRUE);
-            MoveWindow(state->input, 72, 92, (std::max)(100, width - 258), 32, TRUE);
-            MoveWindow(state->schema, width - 176, 92, 160, 200, TRUE);
-            MoveWindow(state->candidates, 16, 136, width - 32, (std::max)(100, height - 196), TRUE);
+            MoveWindow(state->input, 72, 140, (std::max)(100, width - 456), 32, TRUE);
+            MoveWindow(state->mode, width - 368, 140, 120, 160, TRUE);
+            MoveWindow(state->schema, width - 238, 140, 222, 200, TRUE);
+            MoveWindow(state->candidates, 16, 184, width - 32, (std::max)(100, height - 244), TRUE);
             MoveWindow(state->status, 16, height - 52, width - 32, 42, TRUE);
         }
         return 0;
@@ -350,7 +462,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
         state.user_model_path = local_app_data() / L"PiInput" / L"UserData" / L"user_model.tsv";
         state.engine.load_lexicon(state.lexicon_path);
         state.engine.load_user_model(state.user_model_path);
-        state.symbols.load_tsv(module_directory().parent_path() / L"data" / L"symbols.tsv");
+        state.symbols.load_tsv(find_packaged_data_file(L"symbols.tsv"));
+        state.english_entry_count = load_english_resources(state);
 
         WNDCLASSEXW window_class{};
         window_class.cbSize = sizeof(window_class);
@@ -364,9 +477,9 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
             throw std::runtime_error("RegisterClassExW failed");
         }
 
-        const std::wstring title = L"PiInput 输入核心预览 v" + piinput::utf8_to_wide(PIINPUT_VERSION);
+        const std::wstring title = L"PiInput 输入测试台 v" + piinput::utf8_to_wide(PIINPUT_VERSION);
         HWND window = CreateWindowExW(0, window_class_name, title.c_str(),
-            WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 760, 560,
+            WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 900, 680,
             nullptr, nullptr, instance, &state);
         if (window == nullptr) {
             throw std::runtime_error("CreateWindowExW failed");

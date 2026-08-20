@@ -140,6 +140,19 @@ std::vector<SymbolCandidate> SymbolIndex::search(
     return results;
 }
 
+std::vector<SymbolCandidate> SymbolIndex::browse(const std::size_t limit) const {
+    if (limit == 0U) return {};
+    std::vector<SymbolCandidate> results;
+    const std::size_t count = (std::min)(limit, entries_.size());
+    results.reserve(count);
+    for (std::size_t index = 0U; index < count; ++index) {
+        SymbolCandidate candidate = entries_[index];
+        candidate.score = 1;
+        results.push_back(std::move(candidate));
+    }
+    return results;
+}
+
 std::size_t SymbolIndex::entry_count() const noexcept {
     return entries_.size();
 }

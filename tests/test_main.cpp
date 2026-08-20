@@ -191,6 +191,34 @@ void test_shuangpin() {
     const auto flypy_input_method = decoder.decode("flypy", "uurufa", 8U);
     check(contains_canonical(flypy_input_method, "shu'ru'fa"), "Flypy decodes 输入法 pinyin");
 
+    check(contains_canonical(decoder.decode("flypy", "yuwh", 8U), "yu'wang"),
+        "Flypy accepts u as a safe umlaut-key alias in yuwh");
+    check(contains_canonical(decoder.decode("flypy", "yvwh", 8U), "yu'wang"),
+        "Flypy retains canonical v-key spelling for yvwh");
+    for (const auto* alias : {"ju", "qu", "xu", "yu"}) {
+        check(!decoder.decode("flypy", alias, 8U).empty(),
+            std::string("Flypy safe u/v alias decodes: ") + alias);
+    }
+    check(!contains_canonical(decoder.decode("flypy", "lu", 8U), "lv") &&
+            !contains_canonical(decoder.decode("flypy", "nu", 8U), "nv"),
+        "Flypy u/v compatibility never merges ambiguous lu/lv or nu/nv syllables");
+    check(contains_canonical(decoder.decode("flypy", "og", 8U), "eng"),
+        "Flypy accepts the user-verified og compatibility spelling for eng");
+
+    std::unordered_set<std::string> user_verified_codes;
+    for (const auto& row : read_test_table("xiaohe_legal_codes.tsv")) {
+        check(row.size() == 1U, "Xiaohe legal-code row has one column");
+        if (row.size() != 1U) {
+            continue;
+        }
+        check(user_verified_codes.insert(row[0]).second,
+            "Xiaohe legal-code inventory contains no duplicate: " + row[0]);
+        check(!decoder.syllables_for_code("flypy", row[0], false).empty(),
+            "Xiaohe user-verified code is decodable: " + row[0]);
+    }
+    check(user_verified_codes.size() == 406U,
+        "Xiaohe user-verified inventory contains exactly 406 unique codes");
+
     const auto natural = decoder.decode("natural", "jisrji", 8U);
     check(contains_canonical(natural, "ji'suan'ji"), "Natural code path works");
 
@@ -257,8 +285,10 @@ void test_dictionary_builder() {
     std::filesystem::remove(output);
 }
 
-void verify_incremental_candidates(piinput::Engine& engine) {
-    for (const auto& row : read_test_table("incremental_candidates.tsv")) {
+void verify_incremental_candidates(
+    piinput::Engine& engine,
+    const std::string& table = "incremental_candidates.tsv") {
+    for (const auto& row : read_test_table(table)) {
         check(row.size() == 5U, "incremental candidate row has five columns");
         if (row.size() != 5U) {
             continue;
@@ -287,6 +317,18 @@ void verify_core_input_cases(piinput::Engine& engine) {
         const auto decoded = engine.decode(row[2], row[1], 32U);
         check(contains_canonical(decoded, row[3]), row[1] + " decodes required case " + row[2]);
         const auto candidates = engine.query(row[2], row[1], max_rank);
+        if (row[6].ends_with("sentence") || row[6] == "disambiguation") {
+            check(!candidates.empty(), row[1] + " long input keeps lexical candidates available");
+            // Joining real words is allowed; chaining single characters is not.
+            check(std::all_of(candidates.begin(), candidates.end(), [](const auto& candidate) {
+                    return candidate.evidence.kind != piinput::CandidateKind::decoded_sentence ||
+                        (candidate.evidence.single_character_tokens == 0U &&
+                            candidate.evidence.word_count >= 2U &&
+                            candidate.evidence.covers_all_input);
+                }),
+                row[1] + " long input only joins real words that cover the whole input");
+            continue;
+        }
         const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const auto& candidate) {
             return candidate.word == row[4];
         });
@@ -323,11 +365,59 @@ void test_shift_toggle_state() {
     state.on_shift_down();
     check(state.on_shift_up(), "Standalone Shift toggles input mode");
     state.on_shift_down();
-    state.on_other_key_down();
+    (void)state.on_other_key_down();
     check(!state.on_shift_up(), "Shift used as a modifier does not toggle input mode");
     check(!state.on_shift_up(), "Unmatched Shift release does not toggle input mode");
     state.on_shift_down(true);
     check(!state.on_shift_up(), "Shift pressed after Ctrl Alt or Win does not toggle input mode");
+
+    state.on_shift_down();
+    check(state.on_other_key_down(false),
+        "missing Shift KeyUp is recovered before the next unshifted key");
+    check(!state.on_shift_up(),
+        "a delayed Shift KeyUp cannot toggle twice after recovery");
+
+    state.on_shift_down();
+    check(!state.on_other_key_down(true),
+        "a following key while Shift remains physically down marks modifier use");
+    check(!state.on_shift_up(),
+        "Shift used as a physical modifier does not toggle on release");
+
+    piinput::ShiftToggleState missing_down;
+    check(missing_down.on_shift_up(),
+        "a standalone Shift release recovers when the host omitted KeyDown");
+    check(!missing_down.on_shift_up(),
+        "the recovered Shift release cannot toggle twice");
+
+    piinput::ShiftToggleState missing_down_modifier;
+    check(!missing_down_modifier.on_other_key_down(true),
+        "a modified key can arrive even when the host omitted Shift KeyDown");
+    check(!missing_down_modifier.on_shift_up(),
+        "the matching Shift release after modifier use cannot toggle input mode");
+
+    // Ctrl+Shift is how Windows switches input methods. The switch lands between
+    // the Shift press and its release, so the method being switched into sees a
+    // release with no press of its own -- indistinguishable from a bare tap
+    // except that Ctrl is still held.
+    piinput::ShiftToggleState switched_into;
+    check(!switched_into.on_shift_up(true),
+        "a Shift release with Ctrl still held is a chord, not an input mode toggle");
+
+    // The same, arriving after this method was activated mid-chord.
+    piinput::ShiftToggleState activated_midchord;
+    activated_midchord.reset();
+    check(!activated_midchord.on_shift_up(),
+        "the first Shift release after activation cannot toggle input mode");
+    activated_midchord.on_shift_down();
+    check(activated_midchord.on_shift_up(),
+        "a real Shift tap after that still toggles");
+
+    // Ctrl held down through a complete Shift press and release.
+    piinput::ShiftToggleState full_chord;
+    full_chord.on_shift_down(true);
+    check(!full_chord.on_shift_up(true), "a complete Ctrl+Shift chord never toggles");
+    full_chord.on_shift_down();
+    check(full_chord.on_shift_up(), "a plain Shift tap after a chord still toggles");
 }
 
 void test_engine() {
@@ -347,10 +437,20 @@ void test_engine() {
         return candidate.word == "西安";
     }), "Engine queries alternate pinyin segmentation");
 
+    // 我想 and 学习协议 are both real entries, so the whole input is covered by
+    // joining them rather than by offering only the first two syllables.
     const auto sentence = engine.query("woxiangxuexixieyi", "full", 10U);
+    check(!sentence.empty() && sentence.front().word == "我想学习协议",
+        "Long input is covered by joining the real words it contains");
     check(std::any_of(sentence.begin(), sentence.end(), [](const auto& candidate) {
-        return candidate.word == "我想学习协议";
-    }), "Sentence decoder combines multiple lexicon entries");
+        return candidate.word == "我想";
+    }), "The shorter real prefix word stays available below the join");
+    check(std::all_of(sentence.begin(), sentence.end(), [](const auto& candidate) {
+        return candidate.evidence.kind != piinput::CandidateKind::decoded_sentence ||
+            (candidate.evidence.single_character_tokens == 0U &&
+                candidate.evidence.word_count >= 2U &&
+                candidate.evidence.covers_all_input);
+    }), "Joins use only real multi-character words and always cover the input");
 
     std::filesystem::remove(path);
 }
@@ -386,7 +486,15 @@ void test_external_dictionary(const std::filesystem::path& path) {
     verify_candidate_table(engine, "xiaohe_candidates.tsv", "flypy");
     verify_candidate_table(engine, "full_pinyin_candidates.tsv", "full");
     verify_incremental_candidates(engine);
+    verify_incremental_candidates(engine, "incremental_join_cases.tsv");
+    verify_incremental_candidates(engine, "simplified_pinyin_candidates.tsv");
     verify_core_input_cases(engine);
+
+    for (const auto* input : {"yuwh", "yvwh"}) {
+        const auto candidates = engine.query(input, "flypy", 10U);
+        check(!candidates.empty() && candidates.front().word == "欲望",
+            std::string("External dictionary resolves ") + input + " to 欲望");
+    }
 }
 
 void test_candidate_order_is_deterministic() {
@@ -401,7 +509,8 @@ void test_candidate_order_is_deterministic() {
     piinput::Engine engine;
     engine.load_lexicon(path);
     const auto baseline = engine.query("xian", "full", 10U);
-    check(baseline.size() == 3U, "Stable ranking fixture returns all candidates");
+    check(baseline.size() == 2U,
+        "Stable ranking deduplicates identical display text across pronunciations");
     for (int iteration = 0; iteration < 100; ++iteration) {
         const auto repeated = engine.query("xian", "full", 10U);
         check(repeated.size() == baseline.size(), "Repeated candidate count is stable");
@@ -485,6 +594,12 @@ void test_punctuation() {
     check(transformer.transform('\'', piinput::PunctuationMode::chinese, true) == "”", "Closing double quote");
     check(transformer.transform('\'', piinput::PunctuationMode::chinese, false) == "‘", "Opening single quote");
     check(transformer.transform('\'', piinput::PunctuationMode::chinese, false) == "’", "Closing single quote");
+    check(transformer.transform('[', piinput::PunctuationMode::chinese, true,
+              piinput::PunctuationBracketStyle::sogou) == "{",
+        "Sogou shifted left bracket stays ASCII brace");
+    check(transformer.transform(']', piinput::PunctuationMode::chinese, true,
+              piinput::PunctuationBracketStyle::wechat) == "」",
+        "WeChat shifted right bracket uses a corner quote");
 }
 
 
@@ -500,8 +615,19 @@ void test_user_model() {
     loaded.load(path);
     check(loaded.entry_count() == 1U, "User model persistence");
     check(loaded.score_adjustment("ji'suan'ji", "计蒜机") > 0, "Loaded user model adjustment");
+    loaded.pin("hou'xuan'kuang", "候选框");
+    check(loaded.is_pinned("hou'xuan'kuang", "候选框"), "Pinned candidate state");
+    check(loaded.score_adjustment("hou'xuan'kuang", "候选框") >= 1'000'000'000,
+        "Pinned candidate has deterministic first-place adjustment");
+    loaded.suppress("hou'xuan'kuang", "候选矿");
+    check(loaded.is_suppressed("hou'xuan'kuang", "候选矿"), "Suppressed candidate state");
+    loaded.save(path);
+    piinput::UserModel roundtrip;
+    roundtrip.load(path);
+    check(roundtrip.is_pinned("hou'xuan'kuang", "候选框"), "Pinned state persists");
+    check(roundtrip.is_suppressed("hou'xuan'kuang", "候选矿"), "Suppressed state persists");
     loaded.remove("ji'suan'ji", "计蒜机");
-    check(loaded.entry_count() == 0U, "User model remove");
+    check(loaded.entry_count() == 2U, "User model remove preserves unrelated controls");
     std::filesystem::remove(path);
 }
 
@@ -520,14 +646,21 @@ void test_session() {
     check(session.snapshot().generation == first_generation, "Unchanged input keeps candidate generation stable");
 
     session.move_left();
+    const auto before_failed_edit = session.snapshot();
     session.backspace();
     check(session.snapshot().generation > first_generation, "Middle edit creates a new snapshot generation");
-    check(!session.choose(first_id).has_value(), "Stale candidate ID is rejected");
+    check(!session.choose(first_id).accepted, "Stale candidate ID is rejected");
+    session.restore(before_failed_edit);
+    check(session.snapshot().input == before_failed_edit.input &&
+            session.snapshot().caret == before_failed_edit.caret &&
+            session.snapshot().generation == before_failed_edit.generation,
+        "A failed host edit can restore the exact Chinese composition snapshot");
 
     session.set_input("jisuanji");
     const auto valid_id = session.snapshot().candidates.front().id;
     const auto selected = session.choose(valid_id);
-    check(selected.has_value() && *selected == "计算机", "Current candidate ID selects expected word");
+    check(selected.accepted && selected.commit_text == std::optional<std::string>("计算机"),
+        "Current candidate ID selects expected word");
     check(session.snapshot().input.empty(), "Choosing a candidate clears composition");
     std::filesystem::remove(path);
 

@@ -1,7 +1,7 @@
 Set-StrictMode -Version Latest
 
 function Get-PiInputRegisteredDllPath {
-    $clsid = "{D73AABA7-BE3E-4E53-8DE2-652D352743F3}"
+    $clsid = "{13EB305F-2DA3-4CF7-8C45-16B016B801B5}"
     foreach ($keyPath in @(
         "HKCU:\Software\Classes\CLSID\$clsid\InprocServer32",
         "HKLM:\Software\Classes\CLSID\$clsid\InprocServer32"
@@ -9,25 +9,28 @@ function Get-PiInputRegisteredDllPath {
         $key = Get-Item -LiteralPath $keyPath -ErrorAction SilentlyContinue
         if ($key) {
             $value = [string]$key.GetValue("")
-            if (-not [string]::IsNullOrWhiteSpace($value)) {
-                return $value
-            }
+            if (-not [string]::IsNullOrWhiteSpace($value)) { return $value }
         }
     }
     return $null
 }
 
+function Get-PiInputCurrentHostPath {
+    $key = Get-Item -LiteralPath "HKCU:\Software\PiInput\Runtime" -ErrorAction SilentlyContinue
+    if (-not $key) { return $null }
+    $value = [string]$key.GetValue("CurrentHostPath")
+    if ([string]::IsNullOrWhiteSpace($value)) { return $null }
+    return $value
+}
+
 function Get-PiInputPathComparison {
-    if ([IO.Path]::DirectorySeparatorChar -eq '\') {
-        return [StringComparison]::OrdinalIgnoreCase
-    }
+    if ([IO.Path]::DirectorySeparatorChar -eq '\') { return [StringComparison]::OrdinalIgnoreCase }
     return [StringComparison]::Ordinal
 }
 
 function Test-PiInputVersionName {
     param([Parameter(Mandatory = $true)][string]$VersionName)
-    return $VersionName -ne "." -and
-        $VersionName -ne ".." -and
+    return $VersionName -ne "." -and $VersionName -ne ".." -and
         $VersionName -match '^[A-Za-z0-9._-]+$'
 }
 
@@ -42,135 +45,111 @@ function Assert-PiInputNotReparsePoint {
     }
 }
 
-function Resolve-PiInputVersionLayout {
+function Resolve-PiInputRuntimeVersion {
     param(
         [Parameter(Mandatory = $true)][string]$PiInputRoot,
-        [Parameter(Mandatory = $true)][string]$DeveloperRoot,
+        [Parameter(Mandatory = $true)][string]$RuntimeRoot,
         [Parameter(Mandatory = $true)][string]$VersionsRoot,
         [Parameter(Mandatory = $true)][string]$VersionName,
-        [Parameter(Mandatory = $true)][string]$Source
+        [Parameter(Mandatory = $true)][string]$Source,
+        [string]$RegisteredDll = ""
     )
     if (-not (Test-PiInputVersionName -VersionName $VersionName)) {
         throw "PiInput version marker is not a single safe directory name."
     }
-
-    $activeVersionRoot = [IO.Path]::GetFullPath((Join-Path $VersionsRoot $VersionName))
-    $bin = Join-Path $activeVersionRoot "bin"
-    $dll = Join-Path $bin "PiInputTSF.dll"
+    $active = [IO.Path]::GetFullPath((Join-Path $VersionsRoot $VersionName))
+    $bin = Join-Path $active "bin"
+    $hostPath = Join-Path $bin "PiInputHost.exe"
     $profile = Join-Path $bin "piinput-profile.exe"
-    if (-not (Test-Path -LiteralPath $PiInputRoot -PathType Container) -or
-        -not (Test-Path -LiteralPath $DeveloperRoot -PathType Container) -or
-        -not (Test-Path -LiteralPath $VersionsRoot -PathType Container) -or
-        -not (Test-Path -LiteralPath $activeVersionRoot -PathType Container) -or
-        -not (Test-Path -LiteralPath $bin -PathType Container) -or
-        -not (Test-Path -LiteralPath $dll -PathType Leaf) -or
-        -not (Test-Path -LiteralPath $profile -PathType Leaf)) {
-        throw "The PiInput version layout is missing or incomplete: $VersionName"
+    $cli = Join-Path $bin "piinput-cli.exe"
+    $shim = Join-Path $RuntimeRoot "Shim/PiInputTSF.dll"
+    foreach ($required in @($PiInputRoot, $RuntimeRoot, $VersionsRoot, $active, $bin)) {
+        if (-not (Test-Path -LiteralPath $required -PathType Container)) {
+            throw "The PiInput runtime layout is incomplete: $required"
+        }
+        Assert-PiInputNotReparsePoint -Path $required -Label "PiInput runtime directory"
     }
-
-    Assert-PiInputNotReparsePoint -Path $PiInputRoot -Label "PiInput root directory"
-    Assert-PiInputNotReparsePoint -Path $DeveloperRoot -Label "PiInput developer directory"
-    Assert-PiInputNotReparsePoint -Path $VersionsRoot -Label "PiInput versions directory"
-    Assert-PiInputNotReparsePoint -Path $activeVersionRoot -Label "PiInput version directory"
-    Assert-PiInputNotReparsePoint -Path $bin -Label "PiInput version bin directory"
-    Assert-PiInputNotReparsePoint -Path $dll -Label "PiInput TSF DLL"
-    Assert-PiInputNotReparsePoint -Path $profile -Label "PiInput profile tool"
-
+    foreach ($required in @($hostPath, $profile, $cli, $shim)) {
+        if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+            throw "The PiInput runtime file is missing: $required"
+        }
+        Assert-PiInputNotReparsePoint -Path $required -Label "PiInput runtime file"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($RegisteredDll)) {
+        $resolvedRegistered = [IO.Path]::GetFullPath($RegisteredDll)
+        if (-not $resolvedRegistered.Equals(
+                [IO.Path]::GetFullPath($shim), (Get-PiInputPathComparison))) {
+            throw "The registered PiInput DLL is not the permanent stable Shim."
+        }
+    }
     [pscustomobject]@{
-        DeveloperRoot = $DeveloperRoot
+        RuntimeRoot = $RuntimeRoot
+        DeveloperRoot = $RuntimeRoot
         VersionsRoot = $VersionsRoot
-        ActiveVersionRoot = $activeVersionRoot
+        ActiveVersionRoot = $active
         Bin = $bin
-        Dll = $dll
+        Dll = $shim
+        Host = $hostPath
         Profile = $profile
+        Cli = $cli
         Source = $Source
     }
-}
-
-function Resolve-PiInputRegisteredLayout {
-    param(
-        [Parameter(Mandatory = $true)][string]$PiInputRoot,
-        [Parameter(Mandatory = $true)][string]$DeveloperRoot,
-        [Parameter(Mandatory = $true)][string]$VersionsRoot,
-        [Parameter(Mandatory = $true)][string]$RegisteredDll
-    )
-    if (-not [IO.Path]::IsPathRooted($RegisteredDll)) {
-        throw "The registered PiInput TSF path is not absolute."
-    }
-    $registeredDll = [IO.Path]::GetFullPath($RegisteredDll)
-    $versionsPrefix = $VersionsRoot.TrimEnd(
-        [IO.Path]::DirectorySeparatorChar,
-        [IO.Path]::AltDirectorySeparatorChar
-    ) + [IO.Path]::DirectorySeparatorChar
-    if (-not $registeredDll.StartsWith($versionsPrefix, (Get-PiInputPathComparison))) {
-        throw "The registered PiInput TSF DLL is outside the versions directory."
-    }
-
-    $relativeDll = $registeredDll.Substring($versionsPrefix.Length)
-    $segments = @($relativeDll -split '[\\/]')
-    if ($segments.Count -ne 3 -or
-        -not (Test-PiInputVersionName -VersionName $segments[0]) -or
-        $segments[1] -ne "bin" -or
-        $segments[2] -ne "PiInputTSF.dll") {
-        throw "The registered PiInput TSF DLL does not match the required version/bin layout."
-    }
-
-    $layout = Resolve-PiInputVersionLayout `
-        -PiInputRoot $PiInputRoot `
-        -DeveloperRoot $DeveloperRoot `
-        -VersionsRoot $VersionsRoot `
-        -VersionName $segments[0] `
-        -Source "COM"
-    if (-not $layout.Dll.Equals($registeredDll, (Get-PiInputPathComparison))) {
-        throw "The registered PiInput TSF DLL does not match the resolved version layout."
-    }
-    return $layout
 }
 
 function Resolve-PiInputInstalledDev {
     param(
         [string]$LocalAppDataRoot = $env:LOCALAPPDATA,
-        [scriptblock]$RegisteredDllPathProvider = { Get-PiInputRegisteredDllPath }
+        [scriptblock]$RegisteredDllPathProvider = { Get-PiInputRegisteredDllPath },
+        [scriptblock]$CurrentHostPathProvider = { Get-PiInputCurrentHostPath }
     )
-    if ([string]::IsNullOrWhiteSpace($LocalAppDataRoot)) {
-        throw "LOCALAPPDATA is not available."
-    }
-
-    $piInputRoot = [IO.Path]::GetFullPath((Join-Path $LocalAppDataRoot "PiInput"))
-    $developerRoot = [IO.Path]::GetFullPath((Join-Path $piInputRoot "Dev"))
-    $versionsRoot = [IO.Path]::GetFullPath((Join-Path $developerRoot "versions"))
-    $currentMarker = Join-Path $developerRoot "current.txt"
+    if ([string]::IsNullOrWhiteSpace($LocalAppDataRoot)) { throw "LOCALAPPDATA is not available." }
+    $root = [IO.Path]::GetFullPath((Join-Path $LocalAppDataRoot "PiInput"))
+    $runtime = [IO.Path]::GetFullPath((Join-Path $root "Runtime"))
+    $versions = [IO.Path]::GetFullPath((Join-Path $runtime "versions"))
+    $markerPath = Join-Path $runtime "current.json"
+    $registered = [string](& $RegisteredDllPathProvider)
     $markerFailure = $null
 
-    if (Test-Path -LiteralPath $currentMarker -PathType Leaf) {
+    if (Test-Path -LiteralPath $markerPath -PathType Leaf) {
         try {
-            $markerValue = (Get-Content -LiteralPath $currentMarker -Raw).Trim()
-            return Resolve-PiInputVersionLayout `
-                -PiInputRoot $piInputRoot `
-                -DeveloperRoot $developerRoot `
-                -VersionsRoot $versionsRoot `
-                -VersionName $markerValue `
-                -Source "current.txt"
+            $marker = Get-Content -LiteralPath $markerPath -Raw | ConvertFrom-Json
+            $protocolVersion = [int]$marker.protocol_version
+            if ($null -eq $marker.version_id -or $protocolVersion -notin @(1, 2)) {
+                throw "current.json has an unsupported protocol or missing version_id."
+            }
+            return Resolve-PiInputRuntimeVersion -PiInputRoot $root -RuntimeRoot $runtime `
+                -VersionsRoot $versions -VersionName ([string]$marker.version_id) `
+                -Source "current.json" -RegisteredDll $registered
         } catch {
             $markerFailure = $_.Exception.Message
         }
     }
 
     try {
-        $registeredDll = [string](& $RegisteredDllPathProvider)
-        if ([string]::IsNullOrWhiteSpace($registeredDll)) {
-            throw "No registered TSF DLL was found."
+        $currentHostPath = [string](& $CurrentHostPathProvider)
+        if ([string]::IsNullOrWhiteSpace($currentHostPath) -or
+            -not [IO.Path]::IsPathRooted($currentHostPath)) {
+            throw "No absolute CurrentHostPath was found."
         }
-        return Resolve-PiInputRegisteredLayout `
-            -PiInputRoot $piInputRoot `
-            -DeveloperRoot $developerRoot `
-            -VersionsRoot $versionsRoot `
-            -RegisteredDll $registeredDll
+        $resolvedHost = [IO.Path]::GetFullPath($currentHostPath)
+        $prefix = $versions.TrimEnd([IO.Path]::DirectorySeparatorChar,
+            [IO.Path]::AltDirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+        if (-not $resolvedHost.StartsWith($prefix, (Get-PiInputPathComparison))) {
+            throw "CurrentHostPath is outside the versions directory."
+        }
+        $segments = @(($resolvedHost.Substring($prefix.Length)) -split '[\\/]')
+        if ($segments.Count -ne 3 -or $segments[1] -ne "bin" -or
+            $segments[2] -ne "PiInputHost.exe") {
+            throw "CurrentHostPath does not match <version>/bin/PiInputHost.exe."
+        }
+        return Resolve-PiInputRuntimeVersion -PiInputRoot $root -RuntimeRoot $runtime `
+            -VersionsRoot $versions -VersionName $segments[0] -Source "registry" `
+            -RegisteredDll $registered
     } catch {
-        $comFailure = $_.Exception.Message
+        $fallbackFailure = $_.Exception.Message
         if ($markerFailure) {
-            throw "PiInput current.txt is invalid ($markerFailure) and COM fallback failed ($comFailure)."
+            throw "PiInput current.json is invalid ($markerFailure) and registry fallback failed ($fallbackFailure)."
         }
-        throw "PiInput current.txt is missing and COM fallback failed ($comFailure)."
+        throw "PiInput current.json is missing and registry fallback failed ($fallbackFailure)."
     }
 }

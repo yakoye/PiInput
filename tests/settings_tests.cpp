@@ -88,15 +88,20 @@ void test_defaults_and_round_trip() {
     const auto defaults = piinput::default_settings();
     check(defaults.generation == 0U, "default generation");
     check(defaults.general.schema == piinput::InputSchema::flypy, "default schema");
+    check(defaults.general.default_language == piinput::DefaultInputLanguage::chinese,
+        "default input language is Chinese");
     check(defaults.general.hot_reload, "default hot reload");
     check(defaults.pinyin.uv_compatibility, "default uv compatibility");
     check(defaults.pinyin.accept_u_colon, "default u colon");
     check(defaults.pinyin.incomplete_candidates, "default incomplete candidates");
+    check(defaults.pinyin.user_learning, "default Chinese user learning");
     check(defaults.pinyin.prefix_beam_width == 32U, "default prefix beam width");
     check(defaults.pinyin.prefix_scan_limit == 4096U, "default prefix scan limit");
     check(defaults.candidates.items_per_row == 6U, "default candidate items per row");
-    check(defaults.candidates.visible_rows == 3U, "default candidate visible rows");
+    check(defaults.candidates.visible_rows == 5U, "default candidate visible rows");
     check(defaults.candidates.max_items == 90U, "default candidate max items");
+    check(defaults.candidates.font_size == 16U, "default candidate font size");
+    check(defaults.candidates.window_height == 40U, "default candidate window height");
     check(defaults.candidates.horizontal, "default candidate direction");
     check(defaults.candidates.equal_key == piinput::RowNavigationAction::next_row, "default equal key");
     check(defaults.candidates.minus_key == piinput::RowNavigationAction::previous_row, "default minus key");
@@ -107,7 +112,14 @@ void test_defaults_and_round_trip() {
     check(defaults.english.user_dictionary, "default user English dictionary");
     check(defaults.english.user_learning, "default English learning");
     check(defaults.english.items_per_row == 6U, "default English items per row");
+    check(defaults.commands.enabled, "default command menu enabled");
+    check(defaults.commands.hotkey == piinput::CommandHotkey::ctrl_alt_grave,
+        "default command hotkey avoids the VS Code terminal shortcut");
+    check(!defaults.commands.middle_dot_alias,
+        "middle-dot command aliases are opt-in");
     check(defaults.punctuation == piinput::PunctuationMode::chinese, "default punctuation mode");
+    check(defaults.punctuation_bracket_style == piinput::PunctuationBracketStyle::sogou,
+        "default Chinese bracket style follows Sogou");
 
     const auto text = piinput::serialize_default_settings();
     check(text.rfind("\xEF\xBB\xBF", 0) != 0U, "serialized defaults have no BOM");
@@ -125,17 +137,21 @@ void test_valid_values_and_boundaries() {
     const auto parsed = piinput::parse_settings_text(
         "[general]\n"
         "schema=natural\n"
+        "default_language=english\n"
         "hot_reload=false\n"
         "[pinyin]\n"
         "uv_compatibility=false\n"
         "accept_u_colon=false\n"
         "incomplete_candidates=false\n"
+        "user_learning=false\n"
         "prefix_beam_width=8\n"
         "prefix_scan_limit=16384\n"
         "[candidates]\n"
         "items_per_row=9\n"
-        "visible_rows=5\n"
-        "max_items=45\n"
+        "visible_rows=6\n"
+        "max_items=54\n"
+        "font_size=28\n"
+        "window_height=72\n"
         "horizontal=false\n"
         "equal_key=previous_row\n"
         "minus_key=next_row\n"
@@ -147,20 +163,30 @@ void test_valid_values_and_boundaries() {
         "user_dictionary=false\n"
         "user_learning=false\n"
         "items_per_row=5\n"
+        "[commands]\n"
+        "enabled=false\n"
+        "hotkey=ctrl_grave\n"
+        "middle_dot_alias=true\n"
         "[punctuation]\n"
-        "mode=programmer\n",
+        "mode=programmer\n"
+        "bracket_style=wechat\n",
         previous);
     check(parsed.errors.empty(), "valid boundary settings parse");
     check(parsed.settings.general.schema == piinput::InputSchema::natural, "natural schema");
+    check(parsed.settings.general.default_language == piinput::DefaultInputLanguage::english,
+        "English can be selected as the default input language");
     check(!parsed.settings.general.hot_reload, "false hot reload");
     check(!parsed.settings.pinyin.uv_compatibility, "false uv compatibility");
     check(!parsed.settings.pinyin.accept_u_colon, "false u colon compatibility");
     check(!parsed.settings.pinyin.incomplete_candidates, "false incomplete candidates");
+    check(!parsed.settings.pinyin.user_learning, "Chinese user learning can be disabled");
     check(parsed.settings.pinyin.prefix_beam_width == 8U, "minimum beam width");
     check(parsed.settings.pinyin.prefix_scan_limit == 16384U, "maximum scan limit");
     check(parsed.settings.candidates.items_per_row == 9U, "maximum candidate row size");
-    check(parsed.settings.candidates.visible_rows == 5U, "maximum visible rows");
-    check(parsed.settings.candidates.max_items == 45U, "one-screen max items accepted");
+    check(parsed.settings.candidates.visible_rows == 6U, "maximum visible rows");
+    check(parsed.settings.candidates.max_items == 54U, "one-screen max items accepted");
+    check(parsed.settings.candidates.font_size == 28U, "maximum candidate font size");
+    check(parsed.settings.candidates.window_height == 72U, "maximum candidate window height");
     check(!parsed.settings.candidates.horizontal, "vertical candidate layout");
     check(parsed.settings.candidates.equal_key == piinput::RowNavigationAction::previous_row,
         "equal key navigation");
@@ -175,7 +201,57 @@ void test_valid_values_and_boundaries() {
     check(!parsed.settings.english.user_dictionary, "user English dictionary disabled");
     check(!parsed.settings.english.user_learning, "English learning disabled");
     check(parsed.settings.english.items_per_row == 5U, "minimum English row size");
+    check(!parsed.settings.commands.enabled, "command menu can be disabled");
+    check(parsed.settings.commands.hotkey == piinput::CommandHotkey::ctrl_grave,
+        "configured command hotkey parses");
+    check(parsed.settings.commands.middle_dot_alias,
+        "middle-dot aliases can be explicitly enabled");
     check(parsed.settings.punctuation == piinput::PunctuationMode::programmer, "programmer punctuation");
+    check(parsed.settings.punctuation_bracket_style == piinput::PunctuationBracketStyle::wechat,
+        "WeChat Chinese bracket style parses");
+
+    const auto minimum_visuals = piinput::parse_settings_text(
+        "[candidates]\nfont_size=10\nwindow_height=20\n", previous);
+    check(minimum_visuals.errors.empty(), "minimum candidate visual settings parse");
+    check(minimum_visuals.settings.candidates.font_size == 10U,
+        "minimum candidate font size");
+    check(minimum_visuals.settings.candidates.window_height == 20U,
+        "minimum candidate window height");
+
+    auto chinese_default = previous;
+    chinese_default.general.default_language = piinput::DefaultInputLanguage::chinese;
+    const auto invalid_default_language = piinput::parse_settings_text(
+        "[general]\ndefault_language=secret-invalid-language\n", chinese_default);
+    check(invalid_default_language.errors.size() == 1U,
+        "invalid default language reports one error");
+    check(invalid_default_language.settings.general.default_language ==
+            piinput::DefaultInputLanguage::chinese,
+        "invalid default language preserves the previous value");
+
+    auto sogou_brackets = previous;
+    sogou_brackets.punctuation_bracket_style = piinput::PunctuationBracketStyle::sogou;
+    const auto invalid_brackets = piinput::parse_settings_text(
+        "[punctuation]\nbracket_style=secret-invalid-value\n", sogou_brackets);
+    check(invalid_brackets.errors.size() == 1U,
+        "invalid bracket style reports one error");
+    check(invalid_brackets.settings.punctuation_bracket_style ==
+            piinput::PunctuationBracketStyle::sogou,
+        "invalid bracket style preserves the previous value");
+
+    for (const auto hotkey : {"ctrl_alt_grave", "ctrl_grave", "disabled"}) {
+        const auto result = piinput::parse_settings_text(
+            std::string("[commands]\nhotkey=") + hotkey + "\n", previous);
+        check(result.errors.empty(), std::string("command hotkey accepted: ") + hotkey);
+    }
+
+    auto configured = previous;
+    configured.commands.hotkey = piinput::CommandHotkey::ctrl_grave;
+    const auto invalid_hotkey = piinput::parse_settings_text(
+        "[commands]\nhotkey=secret-invalid-value\n", configured);
+    check(invalid_hotkey.errors.size() == 1U,
+        "invalid command hotkey reports one error");
+    check(invalid_hotkey.settings.commands.hotkey == piinput::CommandHotkey::ctrl_grave,
+        "invalid command hotkey preserves the previous value");
 
     for (const auto schema : {"full", "flypy", "mspy", "abc"}) {
         const auto result = piinput::parse_settings_text(
@@ -227,15 +303,18 @@ void test_invalid_candidate_screen_size_falls_back_independently_of_key_order() 
 }
 
 void test_candidate_screen_size_uses_fixed_dimension_fallback_priority() {
+    // The grid must satisfy max_items >= items_per_row * visible_rows. These
+    // numbers are sized against the shipped defaults (6 columns, 5 rows) so the
+    // rollback has somewhere to land: 30 fits 6x5 but neither 9x6 nor 9x5.
     auto previous = piinput::default_settings();
-    previous.candidates.max_items = 30U;
+    previous.candidates.max_items = 45U;
     const std::array<std::array<std::string, 3U>, 6U> permutations{{
-        {{"max_items=20\n", "items_per_row=9\n", "visible_rows=5\n"}},
-        {{"max_items=20\n", "visible_rows=5\n", "items_per_row=9\n"}},
-        {{"items_per_row=9\n", "max_items=20\n", "visible_rows=5\n"}},
-        {{"items_per_row=9\n", "visible_rows=5\n", "max_items=20\n"}},
-        {{"visible_rows=5\n", "max_items=20\n", "items_per_row=9\n"}},
-        {{"visible_rows=5\n", "items_per_row=9\n", "max_items=20\n"}},
+        {{"max_items=30\n", "items_per_row=9\n", "visible_rows=6\n"}},
+        {{"max_items=30\n", "visible_rows=6\n", "items_per_row=9\n"}},
+        {{"items_per_row=9\n", "max_items=30\n", "visible_rows=6\n"}},
+        {{"items_per_row=9\n", "visible_rows=6\n", "max_items=30\n"}},
+        {{"visible_rows=6\n", "max_items=30\n", "items_per_row=9\n"}},
+        {{"visible_rows=6\n", "items_per_row=9\n", "max_items=30\n"}},
     }};
 
     for (std::size_t index = 0U; index < permutations.size(); ++index) {
@@ -243,9 +322,9 @@ void test_candidate_screen_size_uses_fixed_dimension_fallback_priority() {
         const auto parsed = piinput::parse_settings_text(
             "[candidates]\n" + permutation[0] + permutation[1] + permutation[2], previous);
         const auto label = "candidate fallback permutation " + std::to_string(index);
-        check(parsed.settings.candidates.max_items == 20U, label + " keeps max items");
+        check(parsed.settings.candidates.max_items == 30U, label + " keeps max items");
         check(parsed.settings.candidates.items_per_row == 6U, label + " rolls back row size");
-        check(parsed.settings.candidates.visible_rows == 3U, label + " rolls back visible rows");
+        check(parsed.settings.candidates.visible_rows == 5U, label + " rolls back visible rows");
         check(parsed.errors.size() == 2U, label + " reports each rolled-back field once");
         check(parsed.errors.size() >= 2U &&
                 parsed.errors[0].find("key 'visible_rows'") != std::string::npos &&
@@ -259,6 +338,8 @@ void test_invalid_values_fallback_and_errors() {
     previous.pinyin.prefix_beam_width = 64U;
     previous.pinyin.prefix_scan_limit = 8192U;
     previous.candidates.max_items = 60U;
+    previous.candidates.font_size = 20U;
+    previous.candidates.window_height = 54U;
     previous.english.items_per_row = 7U;
 
     const auto parsed = piinput::parse_settings_text(
@@ -272,6 +353,8 @@ void test_invalid_values_fallback_and_errors() {
         "items_per_row=10\n"
         "visible_rows=0\n"
         "max_items=9\n"
+        "font_size=9\n"
+        "window_height=73\n"
         "horizontal=yes\n"
         "equal_key=sideways-secret\n"
         "[english]\n"
@@ -279,7 +362,7 @@ void test_invalid_values_fallback_and_errors() {
         "[punctuation]\n"
         "mode=secret-punctuation-value\n",
         previous);
-    check(parsed.errors.size() == 11U, "all invalid known fields report errors");
+    check(parsed.errors.size() == 13U, "all invalid known fields report errors");
     check(!parsed.document_fatal, "known field errors are not document-fatal");
     check(parsed.settings == previous, "invalid known values preserve previous fields");
     for (const auto& error : parsed.errors) {
@@ -634,7 +717,7 @@ void test_manager_candidate_grid_settings_apply_only_at_boundary() {
 
     const auto before_boundary = manager.current();
     check(before_boundary->candidates.items_per_row == 6U &&
-            before_boundary->candidates.visible_rows == 3U &&
+            before_boundary->candidates.visible_rows == 5U &&
             before_boundary->candidates.max_items == 90U,
         "candidate grid settings stay pending before the composition boundary");
 

@@ -22,6 +22,7 @@ public:
     [[nodiscard]] std::vector<SymbolCandidate> search(
         const std::string& query,
         std::size_t limit = 20U) const;
+    [[nodiscard]] std::vector<SymbolCandidate> browse(std::size_t limit = 20U) const;
 
     [[nodiscard]] std::size_t entry_count() const noexcept;
 

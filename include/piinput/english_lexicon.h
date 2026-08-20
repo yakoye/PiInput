@@ -16,6 +16,8 @@ enum class EnglishCandidateFlag : std::uint32_t {
     downloaded = 1U << 1U,
     user = 1U << 2U,
     proper = 1U << 3U,
+    typed = 1U << 4U,
+    fuzzy = 1U << 5U,
 };
 
 struct EnglishCandidate {
@@ -34,6 +36,8 @@ public:
     [[nodiscard]] std::size_t load_builtin_tsv(const std::filesystem::path& path);
     [[nodiscard]] std::size_t load_user_tsv(const std::filesystem::path& path);
     [[nodiscard]] std::size_t load_learning_tsv(const std::filesystem::path& path);
+    [[nodiscard]] std::size_t load_completion_preferences_tsv(
+        const std::filesystem::path& path);
 
     [[nodiscard]] std::vector<EnglishCandidate> query(
         std::string_view prefix,
@@ -55,6 +59,8 @@ private:
     std::vector<Entry> entries_;
     std::vector<std::size_t> prefix_index_;
     std::unordered_map<std::string, std::size_t> entry_by_word_;
+    std::unordered_map<std::string, std::unordered_map<std::string, std::uint64_t>>
+        completion_preferences_;
     std::unordered_map<std::string, std::uint64_t> pending_learning_;
     std::uint64_t next_id_{1U};
 };

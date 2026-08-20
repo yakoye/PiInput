@@ -22,6 +22,9 @@ struct Options {
     std::size_t iterations{10000U};
     std::size_t warmup{1000U};
     std::size_t rounds{1U};
+    // The resident Host asks for a full candidate page, so the default here
+    // matches CandidateSettings::max_items rather than a short preview list.
+    std::size_t limit{90U};
     std::size_t min_entries{};
     bool skip_if_missing{};
     bool require_results{};
@@ -60,6 +63,8 @@ struct Options {
             options.warmup = parse_size(require_value("--warmup"), "--warmup");
         } else if (argument == "--rounds") {
             options.rounds = parse_size(require_value("--rounds"), "--rounds");
+        } else if (argument == "--limit") {
+            options.limit = parse_size(require_value("--limit"), "--limit");
         } else if (argument == "--skip-if-missing") {
             options.skip_if_missing = true;
         } else if (argument == "--min-entries") {
@@ -79,6 +84,7 @@ struct Options {
                 << "  --iterations <count>\n"
                 << "  --warmup <count>\n"
                 << "  --rounds <count>\n"
+                << "  --limit <candidates>           default 90, the Host page size\n"
                 << "  --skip-if-missing\n"
                 << "  --min-entries <count>\n"
                 << "  --require-results\n"
@@ -132,13 +138,13 @@ int run(const std::vector<std::string>& arguments) {
     double maximum = 0.0;
     for (std::size_t round = 0U; round < options.rounds; ++round) {
         for (std::size_t index = 0U; index < options.warmup; ++index) {
-            result_guard += engine.query(options.query, options.schema, 10U).size();
+            result_guard += engine.query(options.query, options.schema, options.limit).size();
         }
         std::vector<double> microseconds;
         microseconds.reserve(options.iterations);
         for (std::size_t index = 0U; index < options.iterations; ++index) {
             const auto start = std::chrono::steady_clock::now();
-            const auto candidates = engine.query(options.query, options.schema, 10U);
+            const auto candidates = engine.query(options.query, options.schema, options.limit);
             const auto end = std::chrono::steady_clock::now();
             result_guard += candidates.size();
             const double elapsed =
@@ -179,6 +185,7 @@ int run(const std::vector<std::string>& arguments) {
               << "load_ms=" << load_ms << '\n'
               << "rounds=" << options.rounds << '\n'
               << "iterations=" << options.iterations << '\n'
+              << "limit=" << options.limit << '\n'
               << "average_us=" << average << '\n'
               << "median_p50_us=" << p50 << '\n'
               << "median_p95_us=" << p95 << '\n'

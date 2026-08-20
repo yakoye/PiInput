@@ -1,9 +1,11 @@
 #pragma once
 
+#include "piinput/candidate_evidence.h"
 #include "piinput/binary_lexicon.h"
 #include "piinput/lexicon.h"
 #include "piinput/pinyin.h"
 #include "piinput/settings.h"
+#include "piinput/segment_selection.h"
 #include "piinput/shuangpin.h"
 #include "piinput/user_model.h"
 
@@ -12,6 +14,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -27,6 +30,7 @@ struct EngineCandidate {
     std::int64_t score{};
     std::size_t consumed_syllables{};
     std::size_t word_count{};
+    CandidateEvidence evidence;
 };
 
 class Engine final {
@@ -41,6 +45,11 @@ public:
     void load_user_model(const std::filesystem::path& path);
     void save_user_model(const std::filesystem::path& path) const;
     void record_selection(const std::string& pinyin, const std::string& word);
+    void record_composed_phrase(const std::string& pinyin, const std::string& word);
+    void pin_candidate(const std::string& pinyin, const std::string& word);
+    void unpin_candidate(const std::string& pinyin, const std::string& word);
+    void remove_candidate_learning(const std::string& pinyin, const std::string& word);
+    void suppress_candidate(const std::string& pinyin, const std::string& word);
 
     // Invalid or disabled full-pinyin spellings return an empty result; input
     // errors do not escape this Engine hot path. Direct PinyinSegmenter calls
@@ -75,6 +84,24 @@ public:
         std::size_t limit,
         const SettingsSnapshot& settings) const;
 
+    [[nodiscard]] std::vector<LexiconCandidate> lookup_word(
+        std::string_view word,
+        std::size_t limit = 10U) const;
+
+    [[nodiscard]] std::vector<LexiconCandidate> lookup_pinyin(
+        std::string_view pinyin,
+        std::size_t limit = 10U) const;
+
+    [[nodiscard]] std::vector<EngineCandidate> query_segment(
+        const ParsedComposition& composition,
+        std::size_t syllable_offset,
+        std::size_t limit = 30U) const;
+
+    [[nodiscard]] std::optional<ParsedComposition> parse_composition(
+        const std::string& input,
+        const std::string& schema,
+        const PinyinSettings& settings = {}) const;
+
     [[nodiscard]] std::size_t entry_count() const noexcept;
     [[nodiscard]] const ShuangpinDecoder& shuangpin() const noexcept;
 
@@ -91,6 +118,33 @@ private:
         std::size_t limit) const;
     [[nodiscard]] std::vector<LexiconCandidate> query_prefix_unlocked(
         const std::string& pinyin_prefix,
+        std::size_t limit,
+        std::size_t scan_limit,
+        std::size_t max_syllables) const;
+    // Candidates that cover everything typed so far by joining real dictionary
+    // words. A real multi-character word must anchor the join, so this can
+    // extend a word but cannot assemble a sentence out of characters. Passing a
+    // trailing prefix lets the last link finish the syllable still being typed,
+    // which is how a half-typed phrase keeps showing the whole thing.
+    [[nodiscard]] std::vector<EngineCandidate> compose_full_coverage_unlocked(
+        const std::vector<std::string>& syllables,
+        std::size_t limit,
+        const std::string& trailing_prefix = {},
+        const std::string& canonical_prefix = {},
+        std::size_t scan_limit = 0U) const;
+    // Entries whose per-syllable initials match a simplified spelling of the
+    // input, with any syllable the user spelled out matching exactly.
+    [[nodiscard]] std::vector<LexiconCandidate> query_simplified_unlocked(
+        const std::string& key,
+        const std::vector<std::string>& syllable_filter,
+        std::size_t limit,
+        std::size_t scan_limit) const;
+    // Entries that finish the one unfinished syllable at the end of the input,
+    // and nothing beyond it.
+    [[nodiscard]] std::vector<LexiconCandidate> query_completions_unlocked(
+        const std::vector<std::string>& complete_syllables,
+        const std::string& trailing_prefix,
+        const std::string& canonical_prefix,
         std::size_t limit,
         std::size_t scan_limit) const;
 

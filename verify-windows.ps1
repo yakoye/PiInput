@@ -78,7 +78,7 @@ Write-Host "Registered TSF DLL matches the current Release build." -ForegroundCo
 Write-Host "Automated Windows verification passed." -ForegroundColor Green
 Write-Host "Manual TSF check:" -ForegroundColor Cyan
 Write-Host "  1. Close and reopen Notepad."
-Write-Host "  2. Press Win+Space and select PiInput 中文输入法（开发版）."
+Write-Host "  2. Press Win+Space and select PiInput 中文输入法."
 Write-Host "  3. Type jisrji (default developer schema is Flypy)."
 Write-Host "  4. Press Space; 计算机 should be committed."
 exit 0

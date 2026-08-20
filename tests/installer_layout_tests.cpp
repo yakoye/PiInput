@@ -5,6 +5,18 @@
 #include <iostream>
 
 int main() {
+    const auto registration = piinput::windows::installer::profile_install_commands();
+    if (registration.size() != 3U ||
+        registration[0].arguments != L"--refresh-profile" ||
+        registration[0].max_attempts != 1U ||
+        registration[1].arguments != L"--enable-user" ||
+        registration[1].max_attempts != 1U ||
+        registration[2].arguments != L"--status" ||
+        registration[2].max_attempts < 2U ||
+        registration[2].retry_delay_ms == 0U) {
+        std::cerr << "Installer must refresh cached profile metadata, add PiInput, and verify it\n";
+        return 1;
+    }
     const std::filesystem::path root = L"C:\\Users\\tester\\AppData\\Local\\PiInput\\Dev";
     const auto version = piinput::windows::installer::version_directory(
         root, L"0.2.0", L"20260719-003412-42");

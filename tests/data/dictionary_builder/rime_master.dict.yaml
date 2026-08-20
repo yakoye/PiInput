@@ -1,0 +1,13 @@
+# Rime dictionary
+# encoding: utf-8
+
+---
+name: rime_master_fixture
+version: "1"
+import_tables:
+  - rime_base
+  # - ignored_table
+  - rime_ext  # inline comments are allowed
+...
+
+A	A
