@@ -367,8 +367,6 @@ platform/windows/tsf/shim_ui_control.h
 platform/windows/tsf/stable_text_service.cpp
 platform/windows/tsf/stable_text_service.h
 platform/windows/tsf/text_caret_geometry.h
-platform/windows/tsf/text_service.cpp
-platform/windows/tsf/text_service.h
 platform/windows/tsf/user_keyboard_registration.cpp
 platform/windows/tsf/user_keyboard_registration.h
 platform/windows/uninstaller/main.cpp
