@@ -60,6 +60,7 @@ add_library(piinput_core STATIC
     src/pinyin_prefix.cpp
     src/shuangpin.cpp
     src/engine.cpp
+    src/datetime_candidates.cpp
     src/symbols.cpp
     src/punctuation.cpp
     src/settings.cpp

@@ -89,6 +89,10 @@ bool HostRuntime::load(const HostRuntimePaths& paths, std::string& error) noexce
             (void)english_.load_learning_tsv(paths.user_data / L"english_learning.tsv");
         }
         symbols_.load_tsv(paths.package_data / L"symbols.tsv");
+        // Typing a symbol name as pinyin offers the symbol among the ordinary
+        // candidates: pai gives π, qiuhe gives ∑. Built from the same table the
+        // symbol search uses, so there is one place to add a symbol.
+        engine_.set_symbol_shortcuts(symbols_.shortcuts_by_alias());
 
         // Build the bounded one-letter prefix cache before the health endpoint is
         // published. This keeps the first key in a newly focused application on

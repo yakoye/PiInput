@@ -55,6 +55,9 @@ private:
 
     HWND window_{nullptr};
     HFONT font_{nullptr};
+    // Set when font_ is a stock object, which the system owns and which must
+    // never be passed to DeleteObject.
+    bool stock_font_{false};
     UINT font_dpi_{0U};
     InputModeMark mark_{InputModeMark::chinese};
     RECT last_caret_{};

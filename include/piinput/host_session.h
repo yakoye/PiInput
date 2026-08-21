@@ -165,6 +165,11 @@ private:
     // retained word rows, so entering segment selection and staging one
     // character both land on the syllable that still needs resolving.
     void select_first_segment_candidate();
+    // Replaces the candidate list with the formats behind a datetime_group
+    // entry. False when there are none, which leaves the entry acting as an
+    // ordinary candidate.
+    [[nodiscard]] bool open_datetime_menu(const std::string& reading);
+    void close_datetime_menu() noexcept;
     [[nodiscard]] const std::string& current_raw() const noexcept;
     [[nodiscard]] std::size_t selected_candidate_index() const noexcept;
     [[nodiscard]] std::uint64_t candidate_id_at(std::size_t index) const noexcept;
@@ -172,6 +177,13 @@ private:
     SettingsSnapshot settings_;
     std::string schema_;
     ImeSession chinese_;
+    // Kept so the date and time formats can be regenerated when the list is
+    // opened, rather than carrying strings that were current a keystroke ago.
+    Engine* engine_{};
+    // Non-empty while the candidate list is the date or time formats rather
+    // than the dictionary. The reading says which set it is.
+    std::vector<std::string> datetime_menu_;
+    std::string datetime_reading_;
     EnglishLexicon* english_lexicon_{};
     SymbolIndex* symbol_index_{};
     std::unique_ptr<EnglishSession> english_;

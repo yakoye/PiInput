@@ -23,7 +23,13 @@ public:
 
     void record_success() noexcept { retry_after_ms_ = 0U; }
 
-    static constexpr std::uint32_t cold_start_wait_ms = 750U;
+    // Measured cold start is about 650 ms warm and over 3 s with a large
+    // dictionary on a cold disk, so 750 ms was under the real figure even in
+    // the good case: the keys typed during it fell through as Latin letters.
+    // The Host is normally warmed at activation now, so this budget only
+    // covers the case where it died and has to be restarted mid-sentence --
+    // waiting there is far better than emitting the wrong characters.
+    static constexpr std::uint32_t cold_start_wait_ms = 2500U;
     static constexpr std::uint32_t retry_cooldown_ms = 1750U;
 
 private:

@@ -121,15 +121,35 @@ constexpr UINT kMenuHelp = 6U;
 // Always-on, tiny, and only written while a text service starts up or while
 // the shell interrogates a button. It answers the one question that matters
 // when nothing appears: did registration fail, or did Windows never ask?
+// Opt-in language bar tracing, off unless a marker file named
+// piinput-langbar-trace.on exists in the temp directory -- the same gate the
+// caret and key traces use, and for the same reason: the Shim runs inside
+// other applications and inherits their environment, not the tester ones.
+//
+// This was left on unconditionally, opening and closing the file for every
+// line. GetInfo alone is called by the shell on each redraw, so every
+// application hosting the Shim was doing file I/O on its UI thread, into a
+// log nothing ever truncated.
+std::FILE* bar_trace() {
+    static std::FILE* file = [] () -> std::FILE* {
+        char temp[MAX_PATH]{};
+        if (GetTempPathA(MAX_PATH, temp) == 0U) return nullptr;
+        const std::string marker = std::string(temp) + "piinput-langbar-trace.on";
+        if (GetFileAttributesA(marker.c_str()) == INVALID_FILE_ATTRIBUTES) {
+            return nullptr;
+        }
+        const std::string path = std::string(temp) + "piinput-langbar.log";
+        return _fsopen(path.c_str(), "a", _SH_DENYWR);
+    }();
+    return file;
+}
+
 void trace_bar(const char* const stage, const long detail) noexcept {
-    char temp[MAX_PATH]{};
-    if (GetTempPathA(MAX_PATH, temp) == 0U) return;
-    const std::string path = std::string(temp) + "piinput-langbar.log";
-    std::FILE* const file = _fsopen(path.c_str(), "a", _SH_DENYWR);
+    std::FILE* const file = bar_trace();
     if (file == nullptr) return;
     (void)std::fprintf(file, "%lu pid=%lu %s=%ld\n",
         GetTickCount(), GetCurrentProcessId(), stage, detail);
-    (void)std::fclose(file);
+    (void)std::fflush(file);
 }
 
 }  // namespace
@@ -138,10 +158,14 @@ LangBarButton::LangBarButton(
     const GUID& item_guid,
     std::wstring description,
     const bool show_menu,
-    Handler handler)
+    Handler handler,
+    const HICON fixed_icon,
+    const ULONG sort_order)
     : guid_(item_guid),
       description_(std::move(description)),
       show_menu_(show_menu),
+      fixed_icon_(fixed_icon),
+      sort_order_(sort_order),
       handler_(std::move(handler)) {}
 
 STDMETHODIMP LangBarButton::QueryInterface(REFIID iid, void** const object) {
@@ -170,7 +194,7 @@ STDMETHODIMP_(ULONG) LangBarButton::Release() {
 }
 
 STDMETHODIMP LangBarButton::GetInfo(TF_LANGBARITEMINFO* const info) {
-    trace_bar(show_menu_ ? "GetInfo.product" : "GetInfo.language", 1);
+    trace_bar(fixed_icon_ != nullptr ? "GetInfo.product" : "GetInfo.mode", 1);
     if (info == nullptr) return E_POINTER;
     *info = {};
     // Windows shows an item only while the text service that owns it is
@@ -182,7 +206,7 @@ STDMETHODIMP LangBarButton::GetInfo(TF_LANGBARITEMINFO* const info) {
     // opens the menu. This is the same combination the other input methods use.
     info->dwStyle = TF_LBI_STYLE_BTN_BUTTON | TF_LBI_STYLE_BTN_MENU |
         TF_LBI_STYLE_SHOWNINTRAY;
-    info->ulSort = 0U;
+    info->ulSort = sort_order_;
     const auto length = (std::min<std::size_t>)(
         description_.size(), std::size(info->szDescription) - 1U);
     std::copy_n(description_.begin(), length, info->szDescription);
@@ -191,7 +215,7 @@ STDMETHODIMP LangBarButton::GetInfo(TF_LANGBARITEMINFO* const info) {
 }
 
 STDMETHODIMP LangBarButton::GetStatus(DWORD* const status) {
-    trace_bar(show_menu_ ? "GetStatus.product" : "GetStatus.language", 1);
+    trace_bar(fixed_icon_ != nullptr ? "GetStatus.product" : "GetStatus.mode", 1);
     if (status == nullptr) return E_POINTER;
     *status = 0U;
     return S_OK;
@@ -298,6 +322,12 @@ STDMETHODIMP LangBarButton::OnMenuSelect(const UINT id) {
 
 STDMETHODIMP LangBarButton::GetIcon(HICON* const icon) {
     if (icon == nullptr) return E_POINTER;
+    if (fixed_icon_ != nullptr) {
+        // Windows takes ownership of what it receives here, so it gets a copy
+        // rather than the handle the text service keeps.
+        *icon = CopyIcon(fixed_icon_);
+        return *icon == nullptr ? E_FAIL : S_OK;
+    }
     const bool dark = system_uses_dark_theme();
     if (icon_ == nullptr || icon_dark_ != dark) {
         if (icon_ != nullptr) DestroyIcon(icon_);
@@ -373,12 +403,16 @@ bool LangBar::create(
     if (FAILED(query) || manager_ == nullptr) return false;
     (void)client_id;
 
-    // One item, carrying both the 中/英 mark and the menu. The product logo
-    // beside it is drawn by Windows from the language profile's IconFile, so a
-    // second item would only duplicate it.
-    (void)icon;
+    // Two items, the way Microsoft Pinyin shows 中 next to 拼.
+    //
+    // An earlier version registered only the 中/英 one, on the assumption that
+    // Windows would draw the product logo beside it from the language profile
+    // IconFile. It does not: the Windows 11 taskbar draws the language
+    // abbreviation there instead -- the button reading 简体 -- and the profile
+    // icon appears only in the Win+Space switcher and in Settings. The logo
+    // reaches the taskbar only as an item of our own.
     language_ = new (std::nothrow) LangBarButton(
-        GUID_LBI_INPUTMODE, L"PiInput 输入模式", true, std::move(handler));
+        GUID_LBI_INPUTMODE, L"PiInput 输入模式", true, handler);
     if (language_ == nullptr) {
         destroy();
         return false;
@@ -389,12 +423,35 @@ bool LangBar::create(
         destroy();
         return false;
     }
+
+    // Sorted after the mode mark so the pair reads 中 then the logo. A missing
+    // icon is not worth failing over: the mode mark is the one that carries
+    // state, and dropping it because the logo could not load would be trading
+    // the useful half for the decorative one.
+    if (icon != nullptr) {
+        product_ = new (std::nothrow) LangBarButton(
+            GUID_PiInputProductButton, L"PiInput 中文输入法", true,
+            std::move(handler), icon, 1U);
+        if (product_ != nullptr) {
+            const HRESULT product_added = manager_->AddItem(product_);
+            trace_bar("AddItem.product", static_cast<long>(product_added));
+            if (FAILED(product_added)) {
+                product_->Release();
+                product_ = nullptr;
+            }
+        }
+    }
     return true;
 }
 
 void LangBar::destroy() noexcept {
     if (manager_ != nullptr) {
+        // Both come out before the manager goes. GUID_LBI_INPUTMODE is one
+        // shared slot for the whole thread: leaving an item behind kept it
+        // occupied after this service was deactivated, and the next input
+        // method could not register its own.
         if (language_ != nullptr) (void)manager_->RemoveItem(language_);
+        if (product_ != nullptr) (void)manager_->RemoveItem(product_);
         manager_->Release();
         manager_ = nullptr;
     }
@@ -402,12 +459,21 @@ void LangBar::destroy() noexcept {
         language_->Release();
         language_ = nullptr;
     }
+    if (product_ != nullptr) {
+        product_->Release();
+        product_ = nullptr;
+    }
 }
 
 void LangBar::set_state(const bool chinese_input, const std::wstring& schema_label) {
-    if (language_ == nullptr) return;
-    language_->set_chinese(chinese_input);
-    language_->set_menu_state(chinese_input ? L"中文" : L"英文", schema_label);
+    const std::wstring language = chinese_input ? L"中文" : L"英文";
+    if (language_ != nullptr) {
+        language_->set_chinese(chinese_input);
+        language_->set_menu_state(language, schema_label);
+    }
+    // The logo never changes, but its menu shows the same state, so a right
+    // click on either mark reads the same.
+    if (product_ != nullptr) product_->set_menu_state(language, schema_label);
 }
 
 }  // namespace piinput::windows

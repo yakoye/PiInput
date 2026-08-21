@@ -170,7 +170,20 @@ bool ImeSession::enter_segment_selection(const std::size_t retained_normal_candi
     snapshot_.segment_selection.begin(*parsed);
     snapshot_.view_mode = CandidateViewMode::segment_selection;
     refresh_segment();
-    if (!snapshot_.candidates.empty()) return true;
+    // Whether there is anything to choose between, not whether the list is
+    // non-empty. refresh_segment keeps the ordinary candidates the user was
+    // already looking at and appends the per-syllable ones after them, so the
+    // list is never empty and this always reported success -- even when the
+    // syllable step contributed nothing. The caller then reset the view and
+    // showed the same candidates from the top, which reads as the list looping
+    // back to the start instead of ending.
+    if (snapshot_.candidates.size() > snapshot_.segment_candidate_offset) return true;
+
+    // Undo the whole attempt, view mode included: it was set before it was
+    // known whether there would be anything to show, and leaving it behind made
+    // the session report segment selection while publishing ordinary
+    // candidates.
+    snapshot_.view_mode = CandidateViewMode::normal;
     snapshot_.segment_selection.clear();
     retained_normal_candidates_ = 0U;
     ++snapshot_.generation;

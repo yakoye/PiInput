@@ -40,11 +40,18 @@ constexpr BYTE kOpacity = 250U;
 
 // The module this code lives in, so the window class belongs to the shim rather
 // than to whichever application happens to have loaded it.
+//
+// Pinned, not merely referenced. Windows does not unregister a window class
+// when the module that registered it is unloaded, and this module can be:
+// DllCanUnloadNow reports S_OK once the last text service is gone. The class
+// would outlive the code, leaving its window procedure pointing into freed
+// memory, and the next load would find the class already registered and reuse
+// that dangling pointer. Pinning costs one module that was staying resident
+// anyway -- the Shim is loaded into every application that takes input.
 [[nodiscard]] HINSTANCE owning_module() noexcept {
     HMODULE module = nullptr;
     if (GetModuleHandleExW(
-            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
             reinterpret_cast<LPCWSTR>(&kIndicatorClass), &module) == FALSE) {
         return nullptr;
     }
@@ -174,7 +181,7 @@ void ModeIndicator::place(const std::optional<RECT>& caret) noexcept {
     SetWindowPos(window_, HWND_TOPMOST, x, y, box, box, SWP_NOACTIVATE | SWP_SHOWWINDOW);
 
     if (font_ == nullptr || font_dpi_ != dpi) {
-        if (font_ != nullptr) DeleteObject(font_);
+        if (font_ != nullptr && !stock_font_) DeleteObject(font_);
         font_ = CreateFontW(
             -scaled(kFontDip, dpi), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
             // Greyscale, not ClearType: subpixel rendering on a layered window
@@ -182,6 +189,15 @@ void ModeIndicator::place(const std::optional<RECT>& caret) noexcept {
             // opaque background it does not have here.
             DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, ANTIALIASED_QUALITY,
             DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
+        // A null font would leave the device context on whatever it had, which
+        // for a fresh popup is the system default at its own size -- the mark
+        // would come out too small to read. A stock font is at least a font.
+        if (font_ == nullptr) {
+            font_ = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+            stock_font_ = true;
+        } else {
+            stock_font_ = false;
+        }
         font_dpi_ = dpi;
     }
 }
@@ -234,8 +250,9 @@ void ModeIndicator::destroy() noexcept {
         window_ = nullptr;
     }
     if (font_ != nullptr) {
-        DeleteObject(font_);
+        if (!stock_font_) DeleteObject(font_);
         font_ = nullptr;
+        stock_font_ = false;
     }
     font_dpi_ = 0U;
 }

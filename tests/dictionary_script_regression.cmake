@@ -1,7 +1,7 @@
 file(READ "${SOURCE_DIR}/scripts/update-dictionaries.ps1" update_script)
 file(READ "${SOURCE_DIR}/scripts/build-dictionaries.ps1" build_script)
 file(READ "${SOURCE_DIR}/build.ps1" main_build_script)
-file(READ "${SOURCE_DIR}/update-dictionaries.cmd" command_script)
+file(READ "${SOURCE_DIR}/scripts/dev/update-dictionaries.cmd" command_script)
 file(READ "${SOURCE_DIR}/dictionary_sources.json" source_manifest)
 file(READ "${SOURCE_DIR}/docs/TSF_DEVELOPER_TEST.md" english_runtime_doc)
 file(READ "${SOURCE_DIR}/docs/词库更新说明.md" dictionary_doc)
@@ -30,13 +30,17 @@ endforeach()
 foreach(required_rime_text
     "[string]$RimeIceRoot"
     "[switch]$SkipInstall"
-    "rime-ice-default-v1"
+    "rime-ice-with-large-character-table-v2"
     "rime_ice.dict.yaml"
     "cn_dicts/8105.dict.yaml"
     "cn_dicts/base.dict.yaml"
     "cn_dicts/ext.dict.yaml"
     "cn_dicts/tencent.dict.yaml"
     "cn_dicts/others.dict.yaml"
+    # The large character table is what makes anything past the 8105 standard
+    # set typable at all. Rime ships it commented out of the master import
+    # list, so it is loaded as its own source and has to stay listed here.
+    "cn_dicts/41448.dict.yaml"
     "$arguments.Add(\"--rime-dictionary\")"
     "$arguments.Add(\"--rime-report\")"
     "if (-not $SkipInstall)")
@@ -46,8 +50,15 @@ foreach(required_rime_text
     endif()
 endforeach()
 
+# The release dictionary comes from Rime Ice and nothing else. Naming the old
+# sources individually rather than banning --source outright: a Rime character
+# table loaded through --source has the same provenance as the ones the master
+# file imports, and blocking it blocked the rare characters with it.
 foreach(forbidden_release_source
-    "$arguments.Add(\"--source\")"
+    "$arguments.Add(\"tsv\")"
+    "$arguments.Add(\"pinyin-data\")"
+    "$arguments.Add(\"phrase-pinyin-data\")"
+    "$arguments.Add(\"thuocl\")"
     "data/base_lexicon.tsv"
     "rime-pinyin-simp/pinyin_simp.dict.yaml"
     "THUOCL_poem.txt"

@@ -1,7 +1,9 @@
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$Root = $PSScriptRoot
+# Two levels up: this script moved from the repository root into
+# scripts/dev, and $Root still means the repository root.
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 . (Join-Path $Root "scripts/windows/resolve-installed-dev.ps1")
 $Installed = Resolve-PiInputInstalledDev
 $Dev = $Installed.DeveloperRoot

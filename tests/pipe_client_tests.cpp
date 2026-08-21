@@ -184,8 +184,17 @@ void test_disconnected_host_waits_once_then_fails_fast_during_cooldown() {
 
     const auto first = policy.plan_after_exchange_failure(100U);
     check(first.launch_host, "first unavailable request launches the resident Host");
-    check(first.wait_budget_ms == 750U,
-        "one cold Host start has a bounded sub-second readiness budget");
+    // The budget has to outlast a real cold start, or the keys typed during it
+    // fall through as Latin letters and the input method looks broken for the
+    // first seconds after a sign-in. Measured cold start is about 650 ms warm
+    // and over 3 s with a large dictionary on a cold disk. It still has to be
+    // bounded, so a Host that never comes back cannot hang typing outright.
+    check(first.wait_budget_ms >= 1500U,
+        "one cold Host start is given long enough to actually finish");
+    check(first.wait_budget_ms <= 4000U,
+        "a Host that never answers still cannot stall typing indefinitely");
+    check(first.wait_budget_ms == piinput::windows::ShimConnectionPolicy::cold_start_wait_ms,
+        "the planned budget is the one the policy publishes");
 
     const auto queued = policy.plan_after_exchange_failure(850U);
     check(!queued.launch_host && queued.wait_budget_ms == 0U,
@@ -196,12 +205,12 @@ void test_disconnected_host_waits_once_then_fails_fast_during_cooldown() {
         "the reconnect cooldown keeps a failed Host from stalling every key");
 
     const auto retry = policy.plan_after_exchange_failure(1850U);
-    check(retry.launch_host && retry.wait_budget_ms == 750U,
+    check(retry.launch_host && retry.wait_budget_ms == piinput::windows::ShimConnectionPolicy::cold_start_wait_ms,
         "one bounded relaunch is allowed after the cooldown expires");
 
     policy.record_success();
     const auto new_outage = policy.plan_after_exchange_failure(1900U);
-    check(new_outage.launch_host && new_outage.wait_budget_ms == 750U,
+    check(new_outage.launch_host && new_outage.wait_budget_ms == piinput::windows::ShimConnectionPolicy::cold_start_wait_ms,
         "a successful connection resets the circuit for a later independent outage");
 }
 

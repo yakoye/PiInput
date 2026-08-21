@@ -1,78 +1,129 @@
+<div align="center">
+
+<img src="docs/images/piinput-icon.png" width="120" alt="PiInput" />
+
 # PiInput
 
-当前发布版本：`v0.7.11`
+**轻量 · 快速 · 纯离线的中文输入法**
 
-PiInput 是一个轻量、快速、纯离线的中文输入法项目，优先完善全拼和小鹤双拼。项目不包含 AI、语音、广告、资讯或云端实时联想。
+当前发布版本：`v0.7.11` · C++20 · Windows TSF
 
-## Windows 用户
+</div>
 
-发布包完整解压后，双击最外层的：
+---
+
+## 项目介绍
+
+PiInput 是一个从零实现的中文输入法，优先把全拼和小鹤双拼做扎实。
+
+它的取舍很直接：**输入准确、顺序稳定、按键跟手，排在功能数量前面**。项目不含 AI、语音、广告、资讯和云端联想；你的词库、设置和学习数据只留在本机，随时可以自己删。
+
+架构上分成两部分：一个**常驻不变的轻量 TSF 入口**（`PiInputTSF.dll`，加载进每个接受输入的程序），和一个**独立可重启的引擎进程**（`PiInputHost.exe`，管词库、候选和候选窗）。升级时只换后者，不需要关掉 Chrome、VS Code 或聊天软件。
 
 ```text
-PiInput-Install.exe
+你的程序 ──> PiInputTSF.dll ──命名管道──> PiInputHost.exe
+             (常驻不变)                    (可独立升级/重启)
 ```
 
-安装器首次注册永久稳定的 TSF 入口，之后普通升级只切换独立 `PiInputHost.exe`，不再要求关闭 ChatGPT、Chrome、VS Code 等应用。它同时完成旧用户数据迁移、失败回滚和原生卸载注册。详细操作见 [安装与使用指南](docs/安装与使用指南.md) 与 [稳定入口与无重启升级说明](docs/稳定入口与无重启升级说明.md)。
+## 支持系统
 
-默认小鹤双拼示例：
+| 项目 | 要求 |
+| --- | --- |
+| 操作系统 | Windows 10 / 11，x64 |
+| 输入框架 | TSF（Text Services Framework） |
+| 运行依赖 | 无。不联网，不需要 .NET 或额外运行库 |
+| 开发环境 | Visual Studio 2022/2026、MSVC x64、Windows SDK、CMake 3.24+ |
+
+## 快速开始
+
+发布包完整解压后，双击最外层的 `PiInput-Install.exe`。
+
+安装器首次注册永久稳定的 TSF 入口，之后普通升级只切换独立的 `PiInputHost.exe`，**不再要求关闭正在使用的程序**。它同时完成旧用户数据迁移、失败回滚和原生卸载注册。详见 [安装与使用指南](docs/安装与使用指南.md) 与 [稳定入口与无重启升级说明](docs/稳定入口与无重启升级说明.md)。
+
+默认小鹤双拼：
 
 ```text
-gjjt  → 感觉
-jpiu  → 接触
-cihv  → 词汇
-mkt   → 明天（未完成编码候选）
-rug   → 如果（未完成编码候选）
+gjjt  → 感觉        cihv  → 词汇
+jpiu  → 接触        mkt   → 明天（未完成编码也给候选）
 ```
 
 主要按键：
 
-- 单独按 `Shift`：切换中文/英文；
-- `Space`：上屏当前候选；
-- `1`～`9`：选择当前行候选；
-- `=` / `↓`：下一行；
-- `-` / `↑`：上一行；
-- `PageUp` / `PageDown`：翻页；
-- `Enter`：上屏原始输入；
-- `Esc`：取消。
+| 按键 | 作用 |
+| --- | --- |
+| `Shift` | 切换中文 / 英文 |
+| `Space` | 上屏当前候选 |
+| `1`～`9` | 选择当前行候选 |
+| `=` / `↓` | 下一行，翻到最后一行后停住 |
+| `-` / `↑` | 上一行，翻到第一行后收回成单行并停住 |
+| `PageUp` / `PageDown` | 翻页 |
+| `Enter` | 没动过选择时上屏原始输入，移动过选择后上屏选中的候选 |
+| `Esc` | 取消 |
 
-## 当前能力
-
-- C++20 跨平台输入核心；
-- Windows TSF 永久轻量入口 + 可重启的独立 Host；
-- 全拼与多双拼框架，小鹤双拼优先；
-- `u/v` 兼容、隔音符、零声母和未完成音节候选；
-- 全拼超级简拼：声母简拼、首字母简拼与简拼全拼混合（`srf`/`sruf`/`shrfa` 都是「输入法」）；
-- 任务栏输入指示器里的 中/英 与 PiInput 两个按钮，右键菜单切换方案、打开设置与符号工具；
-- 候选可以鼠标左键点选、右键固定或删除；
-- 设置窗口覆盖引擎读取的全部选项，分五页；
-- 任意长度增量解码与确定性候选排序；
-- 精确长词、成语和诗词优先于逐字拼接候选；
-- 普通候选耗尽后可用 `=` / `↓` 进入可撤销的分段取字，最后统一上屏；
-- 用户分段组成或选择的词只在 TSF 确认上屏成功后学习；一次进入第一行、二至三次逐步前移；
-- 候选右键可固定首位、取消固定或删除该词，删除后后续候选立即左移补位；
-- `query-dictionary.cmd` 可按中文词条或标准拼音查询当前离线词库；
-- 横向候选窗默认是无标题的 40-DIP 紧凑单行；按 `=`/`↓` 或 `-`/`↑` 后才展开为配置的多行；固定宽度还有空间时会按原排序从后续候选继续填满第一行；
-- 候选窗优先锚定当前应用的 TSF 文本插入光标；极少数应用不提供文本几何位置时才退回鼠标附近；
-- 中文、英文和程序员标点模式；
-- 141 项内置符号搜索；
-- SCEL 转换、自有二进制词库和本地用户学习；
-- 可选离线英文候选，内置 24,323 词频词库、原始输入首选、前缀偏好排序和有界近似补全，默认关闭；
-- 版本并存 Host、原子升级/回滚、旧数据迁移、原生安装器和原生卸载器；
-- JSON 诊断工具显示实际永久 Shim、Host、协议和 Profile 状态。
+候选显示期间 `=` 和 `-` 只用于翻页，不会把字符本身打进正文。
 
 ## 设置
-
-设置文件位于：
 
 ```text
 %LOCALAPPDATA%\PiInput\UserData\settings.ini
 ```
 
-保存后在下一次开始输入时应用。完整字段与示例见 [安装与使用指南](docs/安装与使用指南.md)。
+保存后在下一次开始输入时应用。也可以从任务栏图标右键打开设置窗口，它覆盖引擎读取的全部选项，分五页。完整字段与示例见 [安装与使用指南](docs/安装与使用指南.md)。
+
+## 当前能力
+
+**输入核心**
+
+- C++20 跨平台内核，任意长度增量解码与确定性候选排序；
+- 全拼与多双拼框架，小鹤双拼优先；`u/v` 兼容、隔音符、零声母和未完成音节候选；
+- 全拼超级简拼：声母简拼、首字母简拼与混合拼写（`srf`/`sruf`/`shrfa` 都是「输入法」）；
+- 单字覆盖 **40,596** 个，含通用规范汉字表之外的生僻字，生僻字排在常用字之后；
+- 精确长词、成语和诗词优先于逐字拼接；专业词库不会无条件压过日常高频词；
+- 候选不足时自动补上以该读音开头的词，不会让人觉得「没词了」。
+
+**候选与交互**
+
+- 横向候选窗默认是无标题的 40-DIP 紧凑单行，按 `=`/`-` 才展开；
+- 候选窗优先锚定当前应用的文本插入光标，极少数应用不提供时才退回鼠标附近；
+- 候选可鼠标左键点选、右键固定首位或删除，删除后立即左移补位；
+- 普通候选耗尽且分段确实有可选项时，`=` 进入可撤销的分段取字，最后统一上屏；
+- 用户选择的词只在确认上屏成功后学习；一次进入第一行，二至三次逐步前移。
+
+**符号、日期与时间**
+
+- **162** 项内置符号，既能用 `;` 搜索，也能直接打名字取用：
+
+  ```text
+  pai → π        qiuhe → ∑      shang → ↑      duihao → √
+  wendu → ℃ ℉    xuhao → ①②③   sanjiao → △▲▼  xingzuo → ♈♉♊
+  ```
+
+  符号排在词典首选之后，不抢第一位；双拼同样可用（匹配的是解码后的读音）。
+
+- `shijian` / `riqi` 给出当前时间与日期。候选第二位是 🕗时间 / 📅日期，选中后展开竖排列表：
+
+  ```text
+  11:30:34                    2026年8月21日
+  2026年8月21日 11:30:34       2026-08-21
+  2026-08-21 11:30:34         2026.08.21
+  20260821_113034             二〇二六年八月二十一日
+                              丙午[马]年七月初九
+  ```
+
+  农历用 1900–2100 年的月长与闰月表换算，超出范围不给农历而不是猜一个。
+
+**系统集成**
+
+- 任务栏输入指示器里的 中/英 与 π 两个按钮，右键菜单切换方案、打开设置与符号工具；
+- 切换中英或按 CapsLock 时，光标旁浮出 中 / a / A 提示，2 秒后消失；
+- 中文、英文和程序员标点模式；
+- 可选离线英文候选，内置 24,323 词频词库，默认关闭；
+- 版本并存 Host、原子升级 / 回滚、旧数据迁移、原生安装器与卸载器；
+- JSON 诊断工具显示实际的 Shim、Host、协议和 Profile 状态。
 
 ## 开发构建
 
-需要 Visual Studio 2022/2026、MSVC x64、Windows SDK 和 CMake。仓库根目录运行：
+仓库根目录运行：
 
 ```powershell
 .\build.cmd -Clean
@@ -87,51 +138,60 @@ rug   → 如果（未完成编码候选）
 更新本地开源词库：
 
 ```powershell
-.\update-dictionaries.cmd
+.\scripts\dev\update-dictionaries.cmd
 ```
 
 大型词库固定放在仓库同级的 `dicts` 目录，不随源码更新删除。
 
-生成 Windows 交付包：
+### 仓库结构
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\windows\package-release.ps1
-```
+工具和脚本按用途分开放，根目录只留最常用的入口：
+
+| 位置 | 内容 |
+| --- | --- |
+| `src/` `include/` | 跨平台输入内核 |
+| `platform/windows/` | 随包发布的 Windows 组件：TSF 入口、Host、设置窗、安装器、卸载器、诊断、测试台 |
+| `tools/` | 跨平台命令行工具与演示：词库编译、SCEL 转换、CLI 查询、性能基准、光标定位演示 |
+| `scripts/` | 构建、打包与发布流程脚本 |
+| `scripts/dev/` | 开发与维护脚本：安装/卸载开发版、修复注册、切换方案、更新词库等 |
+| `tests/` | 自动测试与回归脚本 |
+| `docs/` | 文档与历版发布记录 |
+
+根目录保留 5 个最常用的入口：`build.cmd`、`build.ps1`、`setup-dev.cmd`、`run-ime-tests.cmd`、`query-dictionary.cmd`。
 
 ## 主要产物
 
-```text
-PiInput-Install.exe
-PiInput-Uninstall.exe
-PiInputTSF.dll
-PiInputHost.exe
-piinput-diagnostics.exe
-piinput-profile.exe
-piinput-preview.exe
-piinput-cli.exe
-piinput-dictionary-builder.exe
-piinput-lexicon-compiler.exe
-piinput-scel-converter.exe
-piinput-benchmark.exe
-```
+| 程序 | 作用 |
+| --- | --- |
+| `PiInput-Install.exe` / `PiInput-Uninstall.exe` | 原生安装器与卸载器 |
+| `PiInputTSF.dll` | 常驻不变的 TSF 入口 |
+| `PiInputHost.exe` | 独立引擎进程，管词库、候选与候选窗 |
+| `PiInput-Settings.exe` | 设置窗口 |
+| `PiInput-Test.exe` | 不加载 TSF DLL 的独立测试台，含可自由输入与粘贴的多行文本区 |
+| `piinput-diagnostics.exe` / `piinput-profile.exe` | 状态诊断与配置管理 |
+| `piinput-cli.exe` | 命令行词库查询与解码 |
+| `piinput-dictionary-builder.exe` / `piinput-lexicon-compiler.exe` / `piinput-scel-converter.exe` | 词库构建工具链 |
+| `piinput-benchmark.exe` | 性能基准 |
 
-`PiInput-Test.exe` 是不加载 TSF DLL 的独立测试台。它同时提供中文候选、英文候选和可自由输入、粘贴、换行的多行测试文本区，日常验证不必打开记事本或占用系统输入法 DLL。
+`query-dictionary.cmd` 可按中文词条或标准拼音查询当前离线词库。
 
 ## 测试
 
-自动测试覆盖：
+自动测试共 **61 项**，覆盖：
 
-- 407 个标准全拼音节；
-- 小鹤双拼键位、零声母、常用字词和非法编码；
-- `接触`、`词汇`、`感觉`、`现在`、`中国`等常用词；
-- 长句切分、专业词汇、歧义、纠错和候选稳定性；
-- 所有内置符号与完整键盘标点映射；
-- 候选网格、配置热加载和 Shift 状态机；
-- 英文候选、事务词库更新和多进程学习合并；
-- 安装布局、迁移、回滚、品牌和文件完整性；
-- 真实 SCEL 与大型外部词库性能门禁。
+- 407 个标准全拼音节，小鹤双拼键位、零声母、常用字词与非法编码；
+- 长句切分、专业词汇、歧义、纠错与候选稳定性；
+- 所有内置符号、日期时间格式与完整键盘标点映射；
+- 候选网格、翻页边界、配置热加载与 Shift 状态机；
+- 英文候选、事务词库更新与多进程学习合并；
+- 安装布局、迁移、回滚、品牌与文件完整性；
+- 真实 SCEL 与大型外部词库的性能门禁。
 
 用户提供的真实长句和 `786` 条结构化语料位于 `tests/corpus/v0.2.0`。
+
+```powershell
+.\build.cmd          # 构建并运行全部测试
+```
 
 ## 项目原则
 
@@ -144,20 +204,15 @@ piinput-benchmark.exe
 
 ## 文档
 
+**入门与使用**
+
 - [安装与使用指南](docs/安装与使用指南.md)
-- [v0.4.5 安装、使用与测试](docs/v0.4.5安装、使用与测试.md)
-- [v0.4.6 安装、使用与测试](docs/v0.4.6安装、使用与测试.md)
-- [v0.5.2 安装、使用与测试](docs/v0.5.2安装、使用与测试.md)
-- [v0.5.3 安装、使用与测试](docs/v0.5.3安装、使用与测试.md)
-- [v0.5.4 安装、使用与测试](docs/v0.5.4安装、使用与测试.md)
-- [v0.5.5 安装、使用与测试](docs/v0.5.5安装、使用与测试.md)
-- [v0.5.6 安装、使用与测试](docs/v0.5.6安装、使用与测试.md)
-- [v0.5.8 安装、使用与测试](docs/v0.5.8安装、使用与测试.md)
-- [v0.5.9 安装、使用与测试](docs/v0.5.9安装、使用与测试.md)
-- [v0.7.2 安装、使用与测试](docs/v0.7.2安装、使用与测试.md)
-- [v0.6.2 安装、使用与测试](docs/v0.6.2安装、使用与测试.md)
-- [v0.6.1 安装、使用与测试](docs/v0.6.1安装、使用与测试.md)
-- [v0.6.0 安装、使用与测试](docs/v0.6.0安装、使用与测试.md)
+- [稳定入口与无重启升级说明](docs/稳定入口与无重启升级说明.md)
+- [词库更新说明](docs/词库更新说明.md)
+- [词库查询与分段取字](docs/词库查询与分段取字.md)
+
+**设计与开发**
+
 - [项目上下文](PROJECT_CONTEXT.md)
 - [产品定义](docs/01_product_definition.md)
 - [总体架构](docs/02_architecture.md)
@@ -166,48 +221,15 @@ piinput-benchmark.exe
 - [词库与 SCEL](docs/06_dictionary_and_scel.md)
 - [标点与符号](docs/07_symbols_and_punctuation.md)
 - [测试与发布](docs/09_testing_and_release.md)
-- [词库更新说明](docs/词库更新说明.md)
-- [词库查询与分段取字](docs/词库查询与分段取字.md)
-- [稳定入口与无重启升级说明](docs/稳定入口与无重启升级说明.md)
-- [v0.3.3-dev 版本说明](docs/release_notes_v0.3.3-dev.md)
-- [v0.3.3-dev 验证记录](docs/VERIFICATION_v0.3.3-dev.md)
-- [v0.3.5-dev 版本说明](docs/release_notes_v0.3.5-dev.md)
-- [v0.3.5-dev 验证记录](docs/VERIFICATION_v0.3.5-dev.md)
-- [v0.4.1-dev 版本说明](docs/release_notes_v0.4.1-dev.md)
-- [v0.4.1-dev 验证记录](docs/VERIFICATION_v0.4.1-dev.md)
-- [v0.4.5-dev 版本说明](docs/release_notes_v0.4.5-dev.md)
-- [v0.4.5-dev 验证记录](docs/VERIFICATION_v0.4.5-dev.md)
-- [v0.4.6-dev 版本说明](docs/release_notes_v0.4.6-dev.md)
-- [v0.4.6-dev 验证记录](docs/VERIFICATION_v0.4.6-dev.md)
-- [v0.5.2-dev 版本说明](docs/release_notes_v0.5.2-dev.md)
-- [v0.5.2-dev 验证记录](docs/VERIFICATION_v0.5.2-dev.md)
-- [v0.5.3-dev 版本说明](docs/release_notes_v0.5.3-dev.md)
-- [v0.5.3-dev 验证记录](docs/VERIFICATION_v0.5.3-dev.md)
-- [v0.5.4-dev 版本说明](docs/release_notes_v0.5.4-dev.md)
-- [v0.5.4-dev 验证记录](docs/VERIFICATION_v0.5.4-dev.md)
-- [v0.5.5-dev 版本说明](docs/release_notes_v0.5.5-dev.md)
-- [v0.5.5-dev 验证记录](docs/VERIFICATION_v0.5.5-dev.md)
-- [v0.5.6-dev 版本说明](docs/release_notes_v0.5.6-dev.md)
-- [v0.5.6-dev 验证记录](docs/VERIFICATION_v0.5.6-dev.md)
-- [v0.5.8-dev 版本说明](docs/release_notes_v0.5.8-dev.md)
-- [v0.5.8-dev 验证记录](docs/VERIFICATION_v0.5.8-dev.md)
-- [v0.5.9-dev 版本说明](docs/release_notes_v0.5.9-dev.md)
-- [v0.5.9-dev 验证记录](docs/VERIFICATION_v0.5.9-dev.md)
+
+**当前版本**
+
 - [v0.7.11 版本说明](docs/release_notes_v0.7.11.md)
-- [v0.7.10 版本说明](docs/release_notes_v0.7.10.md)
-- [v0.7.9 版本说明](docs/release_notes_v0.7.9.md)
-- [v0.7.8 版本说明](docs/release_notes_v0.7.8.md)
-- [v0.7.7 版本说明](docs/release_notes_v0.7.7.md)
-- [v0.7.6 版本说明](docs/release_notes_v0.7.6.md)
-- [v0.7.5 版本说明](docs/release_notes_v0.7.5.md)
-- [v0.7.4 版本说明](docs/release_notes_v0.7.4.md)
-- [v0.7.3 版本说明](docs/release_notes_v0.7.3.md)
-- [v0.7.2 版本说明](docs/release_notes_v0.7.2.md)
-- [v0.7.2 验证记录](docs/VERIFICATION_v0.7.2.md)
-- [v0.6.2-dev 版本说明](docs/release_notes_v0.6.2-dev.md)
-- [v0.6.2-dev 验证记录](docs/VERIFICATION_v0.6.2-dev.md)
-- [v0.6.1-dev 版本说明](docs/release_notes_v0.6.1-dev.md)
-- [v0.6.1-dev 验证记录](docs/VERIFICATION_v0.6.1-dev.md)
-- [v0.6.0-dev 版本说明](docs/release_notes_v0.6.0-dev.md)
-- [v0.6.0-dev 验证记录](docs/VERIFICATION_v0.6.0-dev.md)
-- [搜狗与 PiInput 候选对照](docs/搜狗与PiInput候选对照_2026-08-15.md)
+- [v0.7.11 验证记录](docs/VERIFICATION_v0.7.11.md)
+- [v0.7.11 安装、使用与测试](docs/v0.7.11安装、使用与测试.md)
+
+历版的版本说明、验证记录与安装测试文档都保留在 [`docs/`](docs/) 目录里，按 `release_notes_vX.Y.Z.md`、`VERIFICATION_vX.Y.Z.md`、`vX.Y.Z安装、使用与测试.md` 命名。
+
+## 许可与来源
+
+词库与第三方数据的来源和许可见 [LICENSE_NOTICE.md](LICENSE_NOTICE.md)。

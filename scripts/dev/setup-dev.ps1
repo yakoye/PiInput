@@ -11,7 +11,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-$Root = $PSScriptRoot
+# Two levels up: this script moved from the repository root into
+# scripts/dev, and $Root still means the repository root.
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $ResolvedDictionaryDir = $DictionaryDir
 if ([string]::IsNullOrWhiteSpace($ResolvedDictionaryDir)) {
@@ -50,7 +52,7 @@ if (-not $SkipDictionaryImport) {
     if (Test-Path $ResolvedDictionaryDir) {
         $ImportParameters["DictionaryDir"] = $ResolvedDictionaryDir
     }
-    & (Join-Path $Root "import-dicts.ps1") @ImportParameters
+    & (Join-Path $PSScriptRoot "import-dicts.ps1") @ImportParameters
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
@@ -67,7 +69,7 @@ $VerifyParameters = @{}
 if ($SkipTsfRegistration) {
     $VerifyParameters["SkipRegistryCheck"] = $true
 }
-& (Join-Path $Root "verify-windows.ps1") @VerifyParameters
+& (Join-Path $PSScriptRoot "verify-windows.ps1") @VerifyParameters
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

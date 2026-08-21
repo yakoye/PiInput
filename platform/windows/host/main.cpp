@@ -13,6 +13,7 @@
 #include <shellapi.h>
 
 #include <array>
+#include <chrono>
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -133,6 +134,11 @@ int main(const int argc, char** const argv) {
     }
     if (command != "--serve") return piinput::windows::host_exit_failure;
 
+    // Measured by the Host so a startup regression can be seen without timing
+    // it from another process, where creating that process is most of the
+    // reading whenever the machine is busy.
+    const auto startup_began = std::chrono::steady_clock::now();
+
     // Candidate UI lives in this process. Match TSF screen coordinates exactly on
     // mixed-DPI desktops instead of letting Windows bitmap-scale the popup.
     (void)SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
@@ -236,6 +242,9 @@ int main(const int argc, char** const argv) {
     // attempt produced.
 
     piinput::windows::PipeServer server(PIINPUT_VERSION, &sessions, &presenter);
+    server.set_startup_duration(static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - startup_began).count()));
     server.set_composition_boundary_handler([&] {
         runtime.poll_settings_at_composition_boundary();
         sessions.update_settings(runtime.settings(), runtime.schema());

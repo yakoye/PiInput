@@ -84,6 +84,7 @@ HostSession::HostSession(
     : settings_(std::move(settings)),
       schema_(std::move(schema)),
       chinese_(engine, schema_, settings_),
+      engine_(&engine),
       english_lexicon_(english_lexicon),
       symbol_index_(symbol_index),
       candidate_grid_(settings_.candidates, 0U) {
@@ -200,19 +201,31 @@ HostReply HostSession::apply(const HostKeyEvent& event) {
             // per-syllable choices are appended underneath it.
             const std::size_t visible_normal_candidates =
                 (candidate_grid_.active_row() + 1U) * candidate_grid_.items_per_row();
-            if (chinese_.enter_segment_selection(visible_normal_candidates)) {
+            // Accepting the request is not the same as having something to show.
+            // It could report success and leave the view in normal mode, and the
+            // generation change that followed reset the grid -- folding the rows
+            // and jumping back to the top with the same candidates underneath.
+            // Held down, that read as the list looping round and round instead
+            // of reaching an end.
+            if (chinese_.enter_segment_selection(visible_normal_candidates) &&
+                chinese_.snapshot().view_mode == CandidateViewMode::segment_selection) {
                 advance_generation(true);
                 select_first_segment_candidate();
                 return reply(true, HostAction::update);
             }
             normal_return_index_ = 0U;
-            return reply(false, HostAction::none);
+            // The bottom, and it stays there. The key is still consumed --
+            // letting it through typed an equals sign into the middle of a
+            // composition, which is never what paging meant.
+            return reply(true, HostAction::none);
         }
         const auto before = candidate_grid_.active_row();
         candidate_grid_.move_row(1);
         const bool changed = before != candidate_grid_.active_row();
         if (changed) advance_generation(false);
-        return reply(changed, changed ? HostAction::update : HostAction::none);
+        // Consumed either way. Reaching the last row is not a request to type
+        // an equals sign into the middle of a composition.
+        return reply(true, changed ? HostAction::update : HostAction::none);
     }
     if (event.kind == HostKeyKind::previous_row) {
         if (current_candidate_count() != 0U) {
@@ -234,14 +247,19 @@ HostReply HostSession::apply(const HostKeyEvent& event) {
                 return reply(true, HostAction::update);
             }
         }
-        // Nothing to page. A dash then means the user wants the character
-        // itself, so it commits the current candidate and inserts the dash
-        // exactly like every other punctuation key. Arrow-up carries no
-        // character and stays a pure navigation key.
-        if (event.character == '-') {
-            HostKeyEvent as_punctuation = event;
-            as_punctuation.kind = HostKeyKind::punctuation;
-            return apply(as_punctuation);
+        // At the top of an expanded list, so fold it back to the single row it
+        // started as, and stop there with that row still on screen.
+        if (current_candidate_count() != 0U) {
+            const bool folded = candidate_grid_.expanded();
+            if (folded) {
+                candidate_grid_.collapse();
+                advance_generation(false);
+            }
+            // Consumed either way. Paging up used to end by committing the
+            // selected word and inserting a literal dash, which took the
+            // candidates off the screen at the exact moment the user was still
+            // looking through them.
+            return reply(true, folded ? HostAction::update : HostAction::none);
         }
         return reply(false, HostAction::none);
     }
@@ -265,12 +283,30 @@ HostReply HostSession::apply(const HostKeyEvent& event) {
         return reply(false, HostAction::none);
     }
     if (event.kind == HostKeyKind::enter) {
+        // The format list is a menu: there is no raw text worth committing
+        // there, so Enter takes whatever is highlighted.
+        //
+        // Among ordinary candidates Enter still commits the letters as typed,
+        // which is what it is for -- but only while the selection is untouched.
+        // Once the user has moved it, they have picked something, and Enter
+        // takes that instead of throwing the choice away.
+        const std::size_t selected = selected_candidate_index();
+        if ((!datetime_menu_.empty() || selected != 0U) &&
+            selected < current_candidate_count()) {
+            return choose(snapshot().candidates[selected].id);
+        }
         if (current_raw().empty()) return reply(false, HostAction::pass_through);
         const std::string raw = current_raw();
         if (mode_ == HostInputMode::english && english_ != nullptr) english_->clear();
         else chinese_.clear();
         advance_generation(true);
         return reply(true, HostAction::commit, raw);
+    }
+    if (event.kind == HostKeyKind::escape && !datetime_menu_.empty()) {
+        // Back to the words, not out of the composition entirely.
+        close_datetime_menu();
+        advance_generation(false);
+        return reply(true, HostAction::update);
     }
     if (event.kind == HostKeyKind::escape) {
         const bool composing = !current_raw().empty();
@@ -319,6 +355,22 @@ HostSnapshot HostSession::snapshot() const {
     }
 
     const auto& source = chinese_.snapshot();
+    if (!datetime_menu_.empty()) {
+        result.raw = source.input;
+        result.composition_text = source.input;
+        result.caret = source.caret;
+        result.view.mode = HostCandidateMode::normal;
+        result.candidates.reserve(datetime_menu_.size());
+        for (std::size_t index = 0; index < datetime_menu_.size(); ++index) {
+            result.candidates.push_back({
+                (generation_ << 32U) | static_cast<std::uint64_t>(index + 1U),
+                datetime_menu_[index],
+                {},
+                0,
+            });
+        }
+        return result;
+    }
     result.raw = source.input;
     result.composition_text = source.view_mode == CandidateViewMode::segment_selection
         ? source.staged_text + source.remaining_pinyin
@@ -473,6 +525,14 @@ HostReply HostSession::choose(const std::uint64_t candidate_id) {
     }
     const std::size_t index = static_cast<std::size_t>(ordinal - 1U);
     std::optional<std::string> chosen;
+    if (!datetime_menu_.empty()) {
+        if (index >= datetime_menu_.size()) return reply(false, HostAction::none);
+        const std::string text = datetime_menu_[index];
+        close_datetime_menu();
+        chinese_.clear();
+        advance_generation(true);
+        return reply(true, HostAction::commit, text);
+    }
     if (mode_ == HostInputMode::english && english_ != nullptr) {
         chosen = english_->choose(index);
     } else if (symbol_index_ != nullptr &&
@@ -484,6 +544,17 @@ HostReply HostSession::choose(const std::uint64_t candidate_id) {
             chinese_.clear();
         }
     } else {
+        // The entry that stands for the date or time formats opens them instead
+        // of committing. Its text is the shortest format, so the row reads
+        // sensibly before it is opened.
+        const auto& listed = chinese_.snapshot().candidates;
+        if (index < listed.size() &&
+            listed[index].candidate.evidence.kind == CandidateKind::datetime_group &&
+            open_datetime_menu(listed[index].candidate.pinyin)) {
+            advance_generation(false);
+            candidate_grid_.select_index(0U);
+            return reply(true, HostAction::update);
+        }
         const auto staged = chinese_.snapshot().view_mode ==
                 CandidateViewMode::segment_selection
             ? chinese_.stage_candidate(chinese_.snapshot().candidates[index].id)
@@ -568,6 +639,9 @@ void HostSession::advance_generation(const bool collapse_view) {
 }
 
 void HostSession::rebuild_candidate_grid(const bool collapse_view) {
+    // Any new composition state replaces the format list, so it cannot outlive
+    // the candidates it was opened from.
+    if (collapse_view) close_datetime_menu();
     // Only the leading configured columns can change the layout, and the
     // candidate count is the single other value the grid needs. Building the
     // full presentation list here used to copy up to 90 words per key.
@@ -584,7 +658,18 @@ void HostSession::rebuild_candidate_grid(const bool collapse_view) {
             leading.emplace_back(text_of(items[index]));
         }
     };
-    if (mode_ == HostInputMode::english && english_ != nullptr) {
+    if (!datetime_menu_.empty()) {
+        take_leading(datetime_menu_,
+            [](const std::string& text) -> const std::string& { return text; });
+        // A list, not a row. These are whole timestamps rather than words:
+        // side by side they neither fit nor compare, and a column is how a
+        // set of formats is read.
+        candidate_grid_.set_items_per_row(1U);
+        candidate_grid_.set_visible_rows(datetime_menu_.size());
+        candidate_grid_.set_candidate_count(datetime_menu_.size());
+        candidate_grid_.expand();
+        return;
+    } else if (mode_ == HostInputMode::english && english_ != nullptr) {
         take_leading(english_->snapshot().candidates,
             [](const auto& candidate) -> const std::string& { return candidate.word; });
     } else if (symbol_index_ != nullptr &&
@@ -610,6 +695,22 @@ std::size_t HostSession::current_candidate_count() const noexcept {
     // every generation change, so the grid is always authoritative. Recomputing
     // it here would re-run the symbol search on the keystroke hot path.
     return candidate_grid_.candidate_count();
+}
+
+bool HostSession::open_datetime_menu(const std::string& reading) {
+    if (engine_ == nullptr) return false;
+    auto formats = engine_->datetime_formats(reading);
+    if (formats.empty()) return false;
+    datetime_menu_ = std::move(formats);
+    datetime_reading_ = reading;
+    // The grid is rebuilt from this list by the generation change the caller
+    // makes next, which is also what renumbers the candidate ids.
+    return true;
+}
+
+void HostSession::close_datetime_menu() noexcept {
+    datetime_menu_.clear();
+    datetime_reading_.clear();
 }
 
 void HostSession::select_first_segment_candidate() {

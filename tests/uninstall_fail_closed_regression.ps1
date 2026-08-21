@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$uninstaller = Join-Path $PSScriptRoot "../uninstall-dev.ps1"
+$uninstaller = Join-Path $PSScriptRoot "../scripts/dev/uninstall-dev.ps1"
 $windowsPowerShell = (Get-Command powershell.exe -ErrorAction Stop).Source
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ("piinput-uninstall-" + [Guid]::NewGuid().ToString("N"))
 New-Item $fixtureRoot -ItemType Directory -Force | Out-Null

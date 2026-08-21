@@ -284,6 +284,10 @@ PipeServer::PipeServer(
     CandidatePresenter* const presenter)
     : build_id_(std::move(build_id)), sessions_(sessions), presenter_(presenter) {}
 
+void PipeServer::set_startup_duration(const std::uint64_t milliseconds) noexcept {
+    startup_ms_ = milliseconds;
+}
+
 void PipeServer::set_composition_boundary_handler(std::function<void()> handler) {
     composition_boundary_handler_ = std::move(handler);
 }
@@ -334,8 +338,11 @@ int PipeServer::run() noexcept {
             if (request.has_value() &&
                 (request->type == HostMessageType::health || request->type == HostMessageType::drain)) {
                 if (request->type == HostMessageType::drain) draining = true;
-                const std::string response_text = request->type == HostMessageType::health
+const std::string response_text = request->type == HostMessageType::health
+                    // build_id stays last: --health compares it against the
+                    // end of the response to confirm the exact running build.
                     ? "protocol=" + std::to_string(host_protocol_current) +
+                        "\nstartup_ms=" + std::to_string(startup_ms_) +
                         "\nbuild_id=" + build_id_
                     : "draining=yes";
                 HostEnvelope response{

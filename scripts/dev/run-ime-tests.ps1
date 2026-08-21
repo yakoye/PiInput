@@ -2,7 +2,9 @@ param([string]$DictionaryRoot = "")
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-$Root = $PSScriptRoot
+# Two levels up: this script moved from the repository root into
+# scripts/dev, and $Root still means the repository root.
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 if ([string]::IsNullOrWhiteSpace($DictionaryRoot)) {
     $DictionaryRoot = Join-Path (Split-Path -Parent $Root) "dicts"
 }

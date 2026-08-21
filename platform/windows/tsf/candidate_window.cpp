@@ -254,12 +254,21 @@ int CandidateWindow::scaled(const int value) const noexcept {
 
 void CandidateWindow::update_dpi(const UINT dpi) {
     dpi_ = (std::max)(dpi, 96U);
-    if (font_ != nullptr) DeleteObject(font_);
+    if (font_ != nullptr && !stock_font_) DeleteObject(font_);
     font_ = CreateFontW(
         -scaled(static_cast<int>(visual_.font_size)), 0, 0, 0,
         FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
         DEFAULT_PITCH | FF_DONTCARE, L"Microsoft YaHei UI");
+    if (font_ == nullptr) {
+        // Selecting a null font leaves whatever the device context already had,
+        // so the row is measured with one font and drawn with another. A stock
+        // font is the wrong size but at least consistent between the two.
+        font_ = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+        stock_font_ = true;
+    } else {
+        stock_font_ = false;
+    }
 }
 
 void CandidateWindow::destroy() {
@@ -268,8 +277,9 @@ void CandidateWindow::destroy() {
         window_ = nullptr;
     }
     if (font_ != nullptr) {
-        DeleteObject(font_);
+        if (!stock_font_) DeleteObject(font_);
         font_ = nullptr;
+        stock_font_ = false;
     }
 }
 

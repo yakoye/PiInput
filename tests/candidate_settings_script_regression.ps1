@@ -39,7 +39,7 @@ enabled=false
 label=候选布局
 "@ | Set-Content $SettingsPath -Encoding UTF8
 
-    & (Join-Path $RepositoryRoot "set-candidate-page-size.ps1") `
+    & (Join-Path $RepositoryRoot "scripts/dev/set-candidate-page-size.ps1") `
         -ItemsPerRow 9 -VisibleRows 5 -MaxItems 45
 
     $Content = Get-Content $SettingsPath -Raw
@@ -65,7 +65,7 @@ label=候选布局
 
     $Rejected = $false
     try {
-        & (Join-Path $RepositoryRoot "set-candidate-page-size.ps1") `
+        & (Join-Path $RepositoryRoot "scripts/dev/set-candidate-page-size.ps1") `
             -ItemsPerRow 9 -VisibleRows 5 -MaxItems 44
     } catch {
         $Rejected = $true

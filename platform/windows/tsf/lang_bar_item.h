@@ -32,11 +32,16 @@ class LangBarButton final : public ITfLangBarItemButton, public ITfSource {
 public:
     using Handler = std::function<void(LangBarCommand)>;
 
+    // `fixed_icon` is the product logo. When null the button paints the 中/英
+    // mark itself and repaints it when the system theme flips. The button does
+    // not own a fixed icon; the caller outlives it.
     LangBarButton(
         const GUID& item_guid,
         std::wstring description,
         bool show_menu,
-        Handler handler);
+        Handler handler,
+        HICON fixed_icon = nullptr,
+        ULONG sort_order = 0U);
 
     STDMETHODIMP QueryInterface(REFIID iid, void** object) override;
     STDMETHODIMP_(ULONG) AddRef() override;
@@ -78,6 +83,8 @@ private:
     std::wstring schema_label_;
     bool show_menu_{};
     HICON icon_{nullptr};
+    HICON fixed_icon_{nullptr};
+    ULONG sort_order_{};
     bool icon_dark_{};
     Handler handler_;
     ITfLangBarItemSink* sink_{nullptr};

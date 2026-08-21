@@ -137,6 +137,9 @@ private:
 
     HWND window_{};
     HFONT font_{};
+    // Set when font_ is a stock object, which belongs to the system and must
+    // never be passed to DeleteObject.
+    bool stock_font_{};
     UINT dpi_{96U};
     std::wstring composition_;
     std::vector<std::wstring> candidates_;

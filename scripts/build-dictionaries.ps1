@@ -26,7 +26,15 @@ $RimeIceTables = @(
     (Join-Path $RimeIceRoot "cn_dicts/ext.dict.yaml")
     (Join-Path $RimeIceRoot "cn_dicts/tencent.dict.yaml")
     (Join-Path $RimeIceRoot "cn_dicts/others.dict.yaml")
+    # The large character table, last on purpose. Rime ships it separately from
+    # 8105 and says to load it after the small one so that the characters people
+    # actually type keep their ranking and the rare ones fall in behind them.
+    # Leaving it out entirely is why anything past the 8105 standard set -- names,
+    # place names, classical text -- could not be typed at all.
 )
+# Loaded on its own below rather than through the master import list.
+$LargeCharacterTable = Join-Path $RimeIceRoot "cn_dicts/41448.dict.yaml"
+$RimeIceTables += $LargeCharacterTable
 foreach ($rimeFile in $RimeIceTables) {
     if (-not (Test-Path -LiteralPath $rimeFile -PathType Leaf)) {
         throw "Required Rime Ice dictionary file is missing: $rimeFile"
@@ -62,7 +70,7 @@ function Install-ValidatedLexicon {
     Write-Host "Installed dictionary ready: $installed" -ForegroundColor Green
 }
 $sourceState = [ordered]@{}
-$sourceState["profile"] = "rime-ice-default-v1"
+$sourceState["profile"] = "rime-ice-with-large-character-table-v2"
 $sourceState["builder"] = [ordered]@{
     executable = (Get-FileHash $Builder -Algorithm SHA256).Hash
     script = (Get-FileHash $PSCommandPath -Algorithm SHA256).Hash
@@ -89,6 +97,15 @@ try {
     $arguments.Add("--output"); $arguments.Add((Join-Path $staging "combined.tsv"))
     $arguments.Add("--rime-dictionary"); $arguments.Add($RimeIceMaster); $arguments.Add("1")
     $arguments.Add("--rime-report"); $arguments.Add((Join-Path $staging "rime-ice-import-report.tsv"))
+    # The large character table, added as its own source rather than through the
+    # master file, where Rime ships it commented out as opt-in. Editing the
+    # upstream master would be undone the next time the data is refreshed.
+    #
+    # Weight 1 puts these behind everything the ordinary tables carry, which is
+    # what Rime advises for it: a rare character should be reachable, never
+    # ahead of the character somebody meant.
+    $arguments.Add("--source"); $arguments.Add("rime")
+    $arguments.Add($LargeCharacterTable); $arguments.Add("1")
     & $Builder @arguments
     if ($LASTEXITCODE -ne 0) { throw "Dictionary normalization failed." }
     $stagedTsv = Join-Path $staging "combined.tsv"

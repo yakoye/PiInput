@@ -24,8 +24,29 @@ void CandidateGrid::reset(const std::size_t candidate_count) noexcept {
     clamp_view();
 }
 
+void CandidateGrid::collapse() noexcept {
+    active_row_ = 0U;
+    active_column_ = 0U;
+    first_visible_row_ = 0U;
+    expanded_ = false;
+    clamp_view();
+}
+
+bool CandidateGrid::expanded() const noexcept { return expanded_; }
+
 void CandidateGrid::set_items_per_row(const std::uint32_t items_per_row) noexcept {
     settings_.items_per_row = (std::max)(items_per_row, 1U);
+    clamp_view();
+}
+
+void CandidateGrid::set_visible_rows(const std::size_t visible_rows) noexcept {
+    settings_.visible_rows = static_cast<std::uint32_t>(
+        (std::max<std::size_t>)(1U, visible_rows));
+    clamp_view();
+}
+
+void CandidateGrid::expand() noexcept {
+    expanded_ = true;
     clamp_view();
 }
 

@@ -8,7 +8,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-$Root = $PSScriptRoot
+# Two levels up: this script moved from the repository root into
+# scripts/dev, and $Root still means the repository root.
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Source = Join-Path $Root "dist/windows-x64"
 $Destination = Join-Path $env:LOCALAPPDATA "PiInput/Dev"
 $Preview = Join-Path $Destination "bin/piinput-preview.exe"
@@ -154,7 +156,7 @@ if ($ImportScel) {
     if (-not [string]::IsNullOrWhiteSpace($DictionaryDir)) {
         $ImportParameters.DictionaryDir = $DictionaryDir
     }
-    & (Join-Path $Root "import-dicts.ps1") @ImportParameters
+    & (Join-Path $PSScriptRoot "import-dicts.ps1") @ImportParameters
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }

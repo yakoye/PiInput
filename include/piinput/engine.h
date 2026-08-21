@@ -1,6 +1,7 @@
 #pragma once
 
 #include "piinput/candidate_evidence.h"
+#include "piinput/datetime_candidates.h"
 #include "piinput/binary_lexicon.h"
 #include "piinput/lexicon.h"
 #include "piinput/pinyin.h"
@@ -13,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <shared_mutex>
@@ -42,6 +44,17 @@ public:
     Engine& operator=(Engine&& other) noexcept = default;
 
     void load_lexicon(const std::filesystem::path& path);
+    // Symbols reachable by typing their name as ordinary pinyin: pai gives π,
+    // qiuhe gives ∑. Keyed by the reading, so double pinyin needs no separate
+    // table -- the keys are decoded to syllables first and the syllables are
+    // what is looked up here.
+    void set_symbol_shortcuts(
+        std::unordered_map<std::string, std::vector<std::string>> shortcuts);
+
+    // What "now" means when riqi and shijian are typed. Defaults to the system
+    // clock; tests pin it so the expected strings can be written down.
+    using Clock = std::function<std::tm()>;
+    void set_clock(Clock clock);
     void load_user_model(const std::filesystem::path& path);
     void save_user_model(const std::filesystem::path& path) const;
     void record_selection(const std::string& pinyin, const std::string& word);
@@ -106,6 +119,42 @@ public:
     [[nodiscard]] const ShuangpinDecoder& shuangpin() const noexcept;
 
 private:
+    // Placed just after the top candidate rather than first: someone typing
+    // "pai" usually wants 拍 or 派, and a symbol that displaced them would be
+    // in the way far more often than it helped.
+    static constexpr std::size_t symbol_shortcut_position = 1U;
+    // A candidate longer than this shares a row badly. The candidate window
+    // aligns columns across rows and shrinks them all proportionally when the
+    // total will not fit, so one twenty-character timestamp squeezes every
+    // short word on its row down to nothing -- which is how a full list of 96
+    // candidates rendered as two items and a stretch of blank. Long ones go to
+    // the end instead, where they get rows of their own.
+    static constexpr std::size_t inline_candidate_codepoints = 12U;
+    // Below this many candidates the row looks like the dictionary gave up, and
+    // words merely starting with the input are worth appending. Above it there
+    // is already more than a screen of real matches, and running the extra
+    // prefix scan on every keystroke cost enough to show up in the p95.
+    static constexpr std::size_t prefix_fill_threshold = 12U;
+    // riqi and shijian spell out the current date and time in every format
+    // anyone asks for. Generated per keystroke rather than stored, so they
+    // cannot go stale the way a cached string would.
+    [[nodiscard]] std::vector<std::string> generated_candidates_for(
+        const std::string& key) const;
+
+public:
+    // The formats behind a datetime_group candidate, regenerated at the moment
+    // the user opens the list so the clock is current rather than whatever it
+    // read when the candidates were first built.
+    [[nodiscard]] std::vector<std::string> datetime_formats(
+        const std::string& reading) const;
+
+private:
+    void splice_symbol_shortcuts(
+        std::vector<EngineCandidate>& results,
+        const std::string& input,
+        const std::vector<std::string>& syllables,
+        std::size_t result_limit) const;
+
     struct PrefixQueryCache {
         std::shared_mutex state_mutex;
         std::shared_mutex entries_mutex;
@@ -153,6 +202,8 @@ private:
     PinyinSegmenter pinyin_;
     ShuangpinDecoder shuangpin_;
     UserModel user_model_;
+    std::unordered_map<std::string, std::vector<std::string>> symbol_shortcuts_;
+    Clock clock_;
 };
 
 }  // namespace piinput

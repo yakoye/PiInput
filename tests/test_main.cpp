@@ -1,6 +1,7 @@
 #include "piinput/binary_lexicon.h"
 #include "piinput/candidate_paging.h"
 #include "piinput/dictionary_builder.h"
+#include "piinput/datetime_candidates.h"
 #include "piinput/engine.h"
 #include "piinput/input_mode.h"
 #include "piinput/lexicon.h"
@@ -360,6 +361,251 @@ void test_candidate_paging() {
     std::filesystem::remove(settings_path);
 }
 
+// Typing a symbol name as pinyin offers the symbol among the ordinary
+// candidates. The lookup is on the decoded reading, not the raw keys, which is
+// what makes it work in every double-pinyin schema without a second table.
+// riqi and shijian spell out the current date and time. The clock is pinned so
+// the expected strings can be written down; without that the test could only
+// check shapes, which is exactly where a wrong format would hide.
+// A finished syllable used to match only words whose whole reading was that
+// syllable, so ri offered two characters and the row looked like the dictionary
+// had run out. Words that start with it are appended to fill the gap.
+// A copied engine has to keep answering the same way. Symbol and date shortcuts
+// are configuration rather than cache, and leaving them out of the copy loses
+// the features silently -- the copy still returns candidates, just without them.
+// query() promises at most `limit` candidates. The shortcuts used to be spliced
+// in after the list had already been trimmed to that limit, so the caller got
+// more than it asked for -- a request for 89 came back with 96.
+void test_query_never_exceeds_the_requested_limit() {
+    const auto path = std::filesystem::temp_directory_path() / "piinput-limit.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n";
+        for (int index = 0; index < 30; ++index) {
+            output << "词" << index << "\tri\t" << (9000 - index) << "\n";
+        }
+        output << "日期\tri'qi\t9000\n";
+    }
+    std::tm fixed{};
+    fixed.tm_year = 2026 - 1900;
+    fixed.tm_mon = 8 - 1;
+    fixed.tm_mday = 21;
+
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+    engine.set_clock([fixed] { return fixed; });
+    engine.set_symbol_shortcuts({{"ri", {"日", "☀"}}});
+
+    // Including limits smaller than the number of generated candidates, where
+    // the generated ones themselves have to be cut.
+    for (const std::size_t limit : {std::size_t{1}, std::size_t{2}, std::size_t{3},
+             std::size_t{5}, std::size_t{8}, std::size_t{20}, std::size_t{40}}) {
+        for (const char* const text : {"riqi", "ri"}) {
+            const auto got = engine.query(text, "full", limit);
+            check(got.size() <= limit, "候选数不得超过调用方要求的上限");
+        }
+    }
+
+    // The top dictionary word keeps its place even when room has to be made.
+    const auto tight = engine.query("riqi", "full", 3U);
+    check(!tight.empty() && tight.front().word == "日期",
+        "腾位时不应挤掉词典首选");
+    std::filesystem::remove(path);
+}
+
+void test_engine_copy_keeps_its_configuration() {
+    const auto path = std::filesystem::temp_directory_path() / "piinput-engine-copy.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n派\tpai\t9000\n";
+    }
+    std::tm fixed{};
+    fixed.tm_year = 2026 - 1900;
+    fixed.tm_mon = 8 - 1;
+    fixed.tm_mday = 21;
+
+    piinput::Engine original;
+    original.load_lexicon(path);
+    original.set_symbol_shortcuts({{"pai", {"π"}}});
+    original.set_clock([fixed] { return fixed; });
+
+    const piinput::Engine copied(original);
+    const auto from_copy = copied.query("pai", "full", 6U);
+    check(from_copy.size() >= 2U && from_copy[1U].word == "π",
+        "拷贝出的引擎应保留符号捷径");
+    const auto dated = copied.query("riqi", "full", 6U);
+    check(!dated.empty() && dated.front().word == piinput::datetime_group_label(true),
+        "拷贝出的引擎应保留时钟设置");
+
+    piinput::Engine assigned;
+    assigned = original;
+    const auto from_assigned = assigned.query("pai", "full", 6U);
+    check(from_assigned.size() >= 2U && from_assigned[1U].word == "π",
+        "赋值出的引擎同样应保留符号捷径");
+
+    std::filesystem::remove(path);
+}
+
+void test_short_readings_are_filled_with_prefix_words() {
+    const auto path = std::filesystem::temp_directory_path() / "piinput-prefix-fill.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n";
+        output << "日\tri\t9000\n驲\tri\t10\n";
+        output << "日期\tri'qi\t8000\n日本\tri'ben\t7000\n";
+        output << "日子\tri'zi\t6000\n";
+    }
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+
+    const auto filled = engine.query("ri", "full", 10U);
+    check(filled.size() > 2U, "候选不足时应补上以该音开头的词");
+    check(filled.front().word == "日", "补齐不应改变原有首选");
+    const auto has = [&](const std::string& word) {
+        return std::any_of(filled.begin(), filled.end(),
+            [&](const piinput::EngineCandidate& one) { return one.word == word; });
+    };
+    check(has("日期") && has("日本") && has("日子"), "以该音开头的词都应出现");
+
+    // Deleting a candidate has to survive this path too. It bypasses the ranking
+    // step that filters suppressed words, so it has to ask on its own.
+    engine.suppress_candidate("ri'qi", "日期");
+    const auto after_delete = engine.query("ri", "full", 10U);
+    check(std::none_of(after_delete.begin(), after_delete.end(),
+              [](const piinput::EngineCandidate& one) { return one.word == "日期"; }),
+        "被删除的候选不应从前缀补齐里回来");
+    check(std::any_of(after_delete.begin(), after_delete.end(),
+              [](const piinput::EngineCandidate& one) { return one.word == "日本"; }),
+        "删除一个不应影响其他补齐结果");
+
+    std::filesystem::remove(path);
+}
+
+void test_date_and_time_candidates() {
+    std::tm fixed{};
+    fixed.tm_year = 2026 - 1900;
+    fixed.tm_mon = 8 - 1;
+    fixed.tm_mday = 21;
+    fixed.tm_hour = 11;
+    fixed.tm_min = 30;
+    fixed.tm_sec = 34;
+
+    const auto dates = piinput::date_candidates(fixed);
+    const std::vector<std::string> expected_dates{
+        "2026年8月21日", "2026-08-21", "2026.08.21", "2026/08/21", "20260821",
+        "二〇二六年八月二十一日", "丙午[马]年七月初九"};
+    check(dates == expected_dates, "日期候选应覆盖全部格式且顺序固定");
+
+    const auto times = piinput::time_candidates(fixed);
+    const std::vector<std::string> expected_times{
+        "11:30:34", "2026年8月21日 11:30:34", "2026-08-21 11:30:34",
+        "2026.08.21 11:30:34", "20260821113034", "20260821_113034"};
+    check(times == expected_times, "时间候选应覆盖全部格式且顺序固定");
+
+    // The lunar calendar has no formula, only a table, so the conversion is
+    // checked against dates whose answer is independently known -- including a
+    // leap month, which is where a table-driven conversion goes wrong.
+    struct LunarCase { int year; int month; int day; const char* expected; };
+    const LunarCase lunar_cases[]{
+        {2026, 8, 21, "丙午[马]年七月初九"},
+        {2024, 2, 10, "甲辰[龙]年正月初一"},
+        {2025, 1, 29, "乙巳[蛇]年正月初一"},
+        {2023, 3, 22, "癸卯[兔]年闰二月初一"},
+        {2000, 1, 1, "己卯[兔]年冬月廿五"},
+    };
+    for (const auto& one : lunar_cases) {
+        piinput::LunarDate lunar{};
+        check(piinput::gregorian_to_lunar(one.year, one.month, one.day, lunar),
+            "表覆盖范围内的日期都应能换算");
+        check(piinput::format_lunar_date(lunar) == one.expected, "农历换算结果应正确");
+    }
+
+    // Outside the table the lunar line is left out rather than guessed at.
+    piinput::LunarDate out_of_range{};
+    check(!piinput::gregorian_to_lunar(1899, 12, 31, out_of_range),
+        "表范围之外不应给出农历");
+    check(!piinput::gregorian_to_lunar(2101, 1, 1, out_of_range),
+        "表范围之外不应给出农历");
+
+    // Through the engine, where they have to land after the dictionary word and
+    // reach every schema by the decoded reading.
+    const auto path = std::filesystem::temp_directory_path() / "piinput-datetime.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n";
+        output << "日期\tri\'qi\t9000\n时间\tshi\'jian\t9000\n";
+    }
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+    engine.set_clock([fixed] { return fixed; });
+
+    const auto full = engine.query("riqi", "full", 8U);
+    check(!full.empty() && full.front().word == "日期", "词典首选不应被日期顶掉");
+    // The entry is labelled rather than showing a format: it opens the list, so
+    // it must not look like one of the answers.
+    check(full.size() >= 2U && full[1U].word == piinput::datetime_group_label(true),
+        "第二位应是日期入口");
+
+    const auto timed = engine.query("shijian", "full", 8U);
+    check(!timed.empty() && timed.front().word == "时间", "词典首选不应被时间顶掉");
+    check(timed.size() >= 2U && timed[1U].word == piinput::datetime_group_label(false),
+        "第二位应是时间入口");
+
+    // 小鹤双拼: shi is ui, jian is jm. Nothing in the date code knows that.
+    const auto shuangpin = engine.query("uijm", "flypy", 8U);
+    check(!shuangpin.empty() && shuangpin.front().word == "时间",
+        "双拼下也应先给词典结果");
+    check(shuangpin.size() >= 2U &&
+            shuangpin[1U].word == piinput::datetime_group_label(false),
+        "双拼下时间入口同样排第二");
+
+    std::filesystem::remove(path);
+}
+
+void test_symbol_shortcuts_reach_candidates_in_every_schema() {
+    const auto path = std::filesystem::temp_directory_path() / "piinput-symbol-shortcut.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n";
+        output << "派\tpai\t9000\n排\tpai\t8000\n拍\tpai\t7000\n";
+        output << "上\tshang\t9000\n伤\tshang\t8000\n";
+    }
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+    engine.set_symbol_shortcuts({
+        {"pai", {"π"}},
+        {"pi", {"π"}},
+        {"shang", {"↑"}},
+        {"up", {"↑"}},
+    });
+
+    const auto full = engine.query("pai", "full", 6U);
+    check(full.size() >= 2U, "全拼 pai 应有候选");
+    check(full.front().word == "派", "词典首选不应被符号顶掉");
+    check(full[1U].word == "π", "符号应排在第二位");
+
+    // The same symbol, reached through a schema where the keys spell nothing
+    // like the reading. Nothing in the shortcut table knows about 双拼.
+    const auto shuangpin = engine.query("pl", "mspy", 6U);
+    check(shuangpin.size() >= 2U, "双拼 pl 应解出 pai 的候选");
+    check(shuangpin.front().word == "派", "双拼下词典首选同样不被顶掉");
+    check(shuangpin[1U].word == "π", "双拼下符号同样排第二");
+
+    // An English name is not pinyin and never appears as a syllable, so it can
+    // only be matched against the raw input.
+    const auto english_name = engine.query("up", "full", 6U);
+    check(!english_name.empty() && english_name.front().word == "↑",
+        "英文名 up 无拼音候选时符号排第一");
+
+    // A reading with no shortcut is left exactly as the dictionary ranked it.
+    const auto untouched = engine.query("shang", "full", 6U);
+    check(untouched.size() >= 2U && untouched.front().word == "上",
+        "有捷径时首选仍是词典结果");
+    check(untouched[1U].word == "↑", "shang 的符号也排第二");
+
+    std::filesystem::remove(path);
+}
+
 void test_shift_toggle_state() {
     piinput::ShiftToggleState state;
     state.on_shift_down();
@@ -714,7 +960,12 @@ int run(const std::vector<std::string>& arguments) {
         test_binary_lexicon();
         test_dictionary_builder();
         test_candidate_paging();
-        test_shift_toggle_state();
+        test_query_never_exceeds_the_requested_limit();
+    test_engine_copy_keeps_its_configuration();
+    test_short_readings_are_filled_with_prefix_words();
+    test_date_and_time_candidates();
+    test_symbol_shortcuts_reach_candidates_in_every_schema();
+    test_shift_toggle_state();
         test_pinyin();
         test_shuangpin();
         test_engine();

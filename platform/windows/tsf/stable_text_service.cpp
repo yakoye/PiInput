@@ -18,6 +18,8 @@
 #include <filesystem>
 #include <shellapi.h>
 #include <shlobj.h>
+#include <mutex>
+#include <unordered_map>
 #include <string>
 #include <utility>
 
@@ -185,11 +187,29 @@ void trace_key(const char* const stage, const char* const detail) noexcept {
     }
 }
 
+// Whether a modifier is held that makes this keystroke somebody else's
+// shortcut rather than text for us.
+//
+// A modifier counts only when the queue state and the physical state agree.
+// GetKeyState answers for the message being processed, which is the right
+// question -- until another process runs AttachThreadInput against this
+// thread and drives it with SendInput, as the symbol picker does to paste.
+// If the synthetic Ctrl release is lost on the way out, the queue keeps
+// reporting Ctrl as held forever. Every later key then looks like a shortcut,
+// nothing is eaten, and every letter reaches the application as Latin text
+// while the indicator still reads 中 -- the input method appears to have
+// stopped converting, with no way back short of restarting the application.
+//
+// GetAsyncKeyState reports the physical key and is unaffected by that, so
+// requiring both recovers on the next keystroke. A genuine Ctrl+C still has
+// both set and still passes through.
+[[nodiscard]] bool modifier_is_held(const int key) noexcept {
+    return (GetKeyState(key) & 0x8000) != 0 && (GetAsyncKeyState(key) & 0x8000) != 0;
+}
+
 [[nodiscard]] bool has_disallowed_modifier() noexcept {
-    return (GetKeyState(VK_CONTROL) & 0x8000) != 0 ||
-           (GetKeyState(VK_MENU) & 0x8000) != 0 ||
-           (GetKeyState(VK_LWIN) & 0x8000) != 0 ||
-           (GetKeyState(VK_RWIN) & 0x8000) != 0;
+    return modifier_is_held(VK_CONTROL) || modifier_is_held(VK_MENU) ||
+           modifier_is_held(VK_LWIN) || modifier_is_held(VK_RWIN);
 }
 
 [[nodiscard]] bool is_shift_key(const WPARAM key) noexcept {
@@ -417,6 +437,10 @@ STDMETHODIMP TextService::Activate(
     }
 
     transport_ = std::make_unique<ShimPipeTransport>(module_);
+    // Start the Host now rather than on the first key. Activation happens when
+    // the user switches to this input method, seconds before they type, and the
+    // dictionary takes most of a second to read even warm.
+    transport_->warm_up();
     pipe_client_ = std::make_unique<PipeClient>(
         [this](const HostEnvelope& request) -> std::optional<HostEnvelope> {
             const auto reply = transport_->request(request);
@@ -554,7 +578,7 @@ STDMETHODIMP TextService::OnKeyDown(
     // character on the same synchronous path a plain keyboard would take. Any
     // request still in flight falls back to the ordered path so a letter cannot
     // overtake a pending punctuation commit.
-    if (english_direct_ && is_ascii_letter(wparam) && context != nullptr &&
+    if (english_direct_ && english_mode_ && is_ascii_letter(wparam) && context != nullptr &&
         pending_contexts_.empty() && !final_edit_keys_.should_queue(true)) {
         const std::string character(1U, letter_for_key(wparam, true));
         if (request_edit(context, character, character.size(), true, false) !=
@@ -1196,12 +1220,21 @@ namespace {
     return result;
 }
 
-// Reads one key out of settings.ini. The text service does not link the
-// settings parser -- it only needs two values, and pulling the whole engine
-// library into every host application to read them would be a poor trade.
-[[nodiscard]] std::string settings_value(const std::string& key) {
-    std::ifstream input(user_settings_path(), std::ios::binary);
-    if (!input) return {};
+// Every key in settings.ini, reparsed only when the file changes.
+//
+// These are read on the UI path: binding an input context asks for the default
+// language, and refreshing the mark asks for the schema. Doing it uncached
+// meant a shell folder lookup plus a full parse of the file for each of those,
+// on every focus change, inside every application hosting the Shim.
+//
+// The last-write time is what invalidates it, so the settings window writing
+// the file still takes effect without a restart -- which is the whole point of
+// hot_reload.
+[[nodiscard]] std::unordered_map<std::string, std::string> parse_settings(
+    const std::filesystem::path& path) {
+    std::unordered_map<std::string, std::string> values;
+    std::ifstream input(path, std::ios::binary);
+    if (!input) return values;
     std::string line;
     while (std::getline(input, line)) {
         while (!line.empty() && (line.back() == '\r' || line.back() == ' ')) line.pop_back();
@@ -1212,13 +1245,40 @@ namespace {
         if (equals == std::string::npos) continue;
         std::string found = line.substr(start, equals - start);
         while (!found.empty() && found.back() == ' ') found.pop_back();
-        if (found != key) continue;
         std::string value = line.substr(equals + 1U);
         std::size_t value_start = 0U;
         while (value_start < value.size() && value[value_start] == ' ') ++value_start;
-        return value.substr(value_start);
+        // First wins, matching the previous behaviour of returning the first
+        // line that named the key.
+        (void)values.emplace(std::move(found), value.substr(value_start));
     }
-    return {};
+    return values;
+}
+
+[[nodiscard]] std::string settings_value(const std::string& key) {
+    // One resolution of the folder for the life of the process; it cannot move
+    // while the application runs.
+    static const std::filesystem::path path = user_settings_path();
+    static std::mutex guard;
+    static std::unordered_map<std::string, std::string> cached;
+    static FILETIME cached_write{};
+    static bool loaded = false;
+
+    WIN32_FILE_ATTRIBUTE_DATA attributes{};
+    const bool readable = !path.empty() && GetFileAttributesExW(
+        path.c_str(), GetFileExInfoStandard, &attributes) != FALSE;
+
+    const std::lock_guard lock(guard);
+    const bool changed = !loaded || !readable ||
+        attributes.ftLastWriteTime.dwLowDateTime != cached_write.dwLowDateTime ||
+        attributes.ftLastWriteTime.dwHighDateTime != cached_write.dwHighDateTime;
+    if (changed) {
+        cached = parse_settings(path);
+        cached_write = readable ? attributes.ftLastWriteTime : FILETIME{};
+        loaded = true;
+    }
+    const auto found = cached.find(key);
+    return found == cached.end() ? std::string{} : found->second;
 }
 
 [[nodiscard]] std::filesystem::path sibling_program(

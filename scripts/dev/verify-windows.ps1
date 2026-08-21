@@ -2,7 +2,9 @@ param([switch]$SkipRegistryCheck)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-$Root = $PSScriptRoot
+# Two levels up: this script moved from the repository root into
+# scripts/dev, and $Root still means the repository root.
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Bin = Join-Path $Root "dist/windows-x64/bin"
 $Data = Join-Path $Root "data/base_lexicon.tsv"
 $Cli = Join-Path $Bin "piinput-cli.exe"

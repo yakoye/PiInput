@@ -100,9 +100,16 @@ int run(const std::vector<std::string>& arguments) {
         return 0;
     }
 
-    if (!symbols_path.empty() || !symbol_query.empty()) {
+    // With --query, --symbols instead wires the typed-name shortcuts into the
+    // engine, so a dictionary query can be checked for them the same way the
+    // Host serves them.
+    if (!symbols_path.empty() && symbol_query.empty()) {
+        piinput::SymbolIndex symbols;
+        symbols.load_tsv(piinput::path_from_utf8(symbols_path));
+        engine.set_symbol_shortcuts(symbols.shortcuts_by_alias());
+    } else if (!symbols_path.empty() || !symbol_query.empty()) {
         if (symbols_path.empty() || symbol_query.empty()) {
-            throw std::runtime_error("Both --symbols and --symbol-query are required");
+            throw std::runtime_error("--symbol-query needs --symbols");
         }
         piinput::SymbolIndex symbols;
         symbols.load_tsv(piinput::path_from_utf8(symbols_path));

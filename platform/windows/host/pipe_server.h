@@ -31,6 +31,7 @@ public:
         SessionManager* sessions,
         CandidatePresenter* presenter = nullptr);
     void set_composition_boundary_handler(std::function<void()> handler);
+    void set_startup_duration(std::uint64_t milliseconds) noexcept;
     // Asked between requests. Lets the tray's "exit" entry end the host without
     // reaching into the pipe loop.
     void set_stop_requested_handler(std::function<bool()> handler);
@@ -38,6 +39,11 @@ public:
 
 private:
     std::string build_id_;
+    // How long this Host took to become ready, measured by the Host itself.
+    // Reported through --health so a startup regression can be caught without
+    // timing it from outside, where process creation dominates the reading on a
+    // loaded machine and the number says more about the machine than about us.
+    std::uint64_t startup_ms_{};
     SessionManager* sessions_{};
     CandidatePresenter* presenter_{};
     std::function<void()> composition_boundary_handler_;

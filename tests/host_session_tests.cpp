@@ -1,5 +1,6 @@
 #include "piinput/engine.h"
 #include "piinput/english_lexicon.h"
+#include "piinput/datetime_candidates.h"
 #include "piinput/host_session.h"
 #include "piinput/settings.h"
 #include "piinput/symbols.h"
@@ -379,7 +380,7 @@ void test_mktm_keeps_all_words_before_ming_character_selection() {
 // Reported case: kady shows a full row of real words but only the first is a
 // trusted dictionary hit. Pressing '=' used to replace that row with the
 // per-syllable choices, so the words the user could still pick vanished.
-void test_dash_that_cannot_page_becomes_an_ordinary_dash() {
+void test_dash_at_the_top_keeps_the_candidate_row_on_screen() {
     piinput::Engine engine;
     const auto lexicon_path = write_chinese_lexicon();
     engine.load_lexicon(lexicon_path);
@@ -398,13 +399,232 @@ void test_dash_that_cannot_page_becomes_an_ordinary_dash() {
     check(!session.snapshot().candidates.empty(), "wo produces candidates");
     const std::string expected_word = session.snapshot().candidates.front().text;
 
+    // Paging up with nowhere to go leaves the row exactly where it is. It used
+    // to commit the selected word and insert a literal dash, which cleared the
+    // candidates off the screen while the user was still reading them.
     const auto dash = session.apply(
         {.kind = piinput::HostKeyKind::previous_row, .character = '-'});
-    check(dash.accepted && dash.action == piinput::HostAction::commit,
-        "a dash with no row to page commits instead of dying silently");
-    check(dash.text == expected_word + "-",
-        "the dash commits the current candidate and appends the dash itself");
-    check(session.snapshot().raw.empty(), "the composition is cleared after the dash");
+    check(dash.accepted, "- 应被吃掉，不能落进正文");
+    check(dash.action != piinput::HostAction::commit, "- 不应上屏");
+    check(dash.text.empty(), "- 不应产生任何文字");
+    check(session.snapshot().raw == "wo", "候选和输入内容都应保留");
+    check(session.snapshot().candidates.front().text == expected_word,
+        "那一排候选仍在原处");
+    (void)expected_word;
+}
+
+// Choosing the date or time entry opens the formats as a list instead of
+// committing. They cannot all sit in the candidate row -- six or seven entries,
+// several twenty characters wide -- so one labelled entry stands for them.
+// Enter commits the letters as typed while the selection is untouched -- that
+// is what it is for. Once the user has moved the selection they have chosen
+// something, and Enter takes that rather than discarding it. Inside the date
+// and time list there is no raw text worth committing, so it always does.
+void test_enter_commits_the_selection_once_it_has_been_moved() {
+    piinput::Engine engine;
+    const auto lexicon_path = write_chinese_lexicon();
+    engine.load_lexicon(lexicon_path);
+    auto settings = piinput::default_settings();
+    settings.candidates.items_per_row = 6U;
+    piinput::HostSession session(engine, nullptr, settings, "full");
+
+    type(session, "wo");
+    const auto untouched = session.apply({.kind = piinput::HostKeyKind::enter});
+    check(untouched.accepted && untouched.action == piinput::HostAction::commit,
+        "未移动选择时回车仍上屏");
+    check(untouched.text == "wo", "未移动选择时回车上屏的是字母本身");
+
+    type(session, "wo");
+    const auto listed = session.snapshot();
+    check(listed.candidates.size() >= 2U, "wo 应有多个候选");
+    const std::string second = listed.candidates[1].text;
+    (void)session.apply({.kind = piinput::HostKeyKind::next_candidate});
+    const auto moved = session.apply({.kind = piinput::HostKeyKind::enter});
+    check(moved.accepted && moved.action == piinput::HostAction::commit,
+        "移动过选择后回车应上屏");
+    check(moved.text == second, "上屏的应是选中的那个候选，而不是字母");
+
+    std::filesystem::remove(lexicon_path);
+}
+
+void test_datetime_entry_opens_a_second_level_list() {
+    piinput::Engine engine;
+    const auto lexicon_path = std::filesystem::temp_directory_path() /
+        "piinput-datetime-menu.tsv";
+    {
+        std::ofstream output(lexicon_path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n日期\tri'qi\t9000\n日前\tri'qian\t100\n";
+    }
+    engine.load_lexicon(lexicon_path);
+    std::tm fixed{};
+    fixed.tm_year = 2026 - 1900;
+    fixed.tm_mon = 8 - 1;
+    fixed.tm_mday = 21;
+    engine.set_clock([fixed] { return fixed; });
+
+    auto settings = piinput::default_settings();
+    settings.candidates.items_per_row = 6U;
+    piinput::HostSession session(engine, nullptr, settings, "full");
+    type(session, "riqi");
+
+    const auto before = session.snapshot();
+    check(before.candidates.size() >= 2U, "riqi 应有词典结果和日期入口");
+    check(before.candidates[0].text == "日期", "词典首选仍排第一");
+    // Labelled, not showing a format: a bare date there reads as the answer and
+    // gives no sign that more spellings are behind it.
+    check(before.candidates[1].text == piinput::datetime_group_label(true),
+        "第二位应是带标记的入口，而不是某一种格式");
+
+    const auto opened = session.apply({
+        .kind = piinput::HostKeyKind::select_candidate,
+        .candidate_id = before.candidates[1].id});
+    check(opened.accepted && opened.action == piinput::HostAction::update,
+        "选中入口应展开列表而不是上屏");
+    check(opened.text.empty(), "展开列表不应提交任何文字");
+
+    const auto listed = session.snapshot();
+    const std::vector<std::string> expected{
+        "2026年8月21日", "2026-08-21", "2026.08.21", "2026/08/21", "20260821",
+        "二〇二六年八月二十一日", "丙午[马]年七月初九"};
+    check(listed.candidates.size() == expected.size(), "列表应含全部日期格式");
+    // Read down the screen, not across. Whole timestamps side by side neither
+    // fit in a row nor compare against each other.
+    check(listed.view.items_per_row == 1U, "展开的列表应是竖排的一列");
+    check(listed.view.expanded, "展开的列表应直接可见，不必再翻页");
+    check(listed.view.visible_rows >= expected.size(),
+        "所有格式应一次显示完，不需要滚动");
+    for (std::size_t index = 0; index < expected.size() && index < listed.candidates.size();
+         ++index) {
+        check(listed.candidates[index].text == expected[index], "格式顺序应固定");
+    }
+
+    const auto committed = session.apply({
+        .kind = piinput::HostKeyKind::select_candidate,
+        .candidate_id = listed.candidates[5].id});
+    check(committed.accepted && committed.action == piinput::HostAction::commit,
+        "从列表中选一项应上屏");
+    check(committed.text == "二〇二六年八月二十一日", "上屏的应是选中的那一项");
+    check(session.snapshot().raw.empty(), "上屏之后输入应清空");
+
+    // Enter inside the list takes what is highlighted, first entry included.
+    type(session, "riqi");
+    const auto entry = session.snapshot();
+    (void)session.apply({
+        .kind = piinput::HostKeyKind::select_candidate,
+        .candidate_id = entry.candidates[1].id});
+    const auto first_of_list = session.snapshot().candidates.front().text;
+    const auto entered = session.apply({.kind = piinput::HostKeyKind::enter});
+    check(entered.accepted && entered.action == piinput::HostAction::commit,
+        "列表中回车应上屏");
+    check(entered.text == first_of_list,
+        "列表第一项也应能用回车上屏，而不是上屏拼音字母");
+
+    // Escape backs out of the list to the words, keeping the composition.
+    type(session, "riqi");
+    const auto reopened = session.snapshot();
+    (void)session.apply({
+        .kind = piinput::HostKeyKind::select_candidate,
+        .candidate_id = reopened.candidates[1].id});
+    const auto escaped = session.apply({.kind = piinput::HostKeyKind::escape});
+    check(escaped.accepted, "列表中按 Esc 应被接受");
+    check(session.snapshot().raw == "riqi", "Esc 只退出列表，不取消输入");
+    check(session.snapshot().candidates.front().text == "日期",
+        "退出列表后回到词典候选");
+
+    std::filesystem::remove(lexicon_path);
+}
+
+// Holding = must reach the bottom and stay there. It used to appear to loop:
+// at the last row the per-syllable view was entered, that entry reported success
+// on a list made only of the ordinary candidates it had kept, and the generation
+// change that followed folded the rows and jumped back to the top -- with the
+// same candidates underneath, so the whole list looked like it started over.
+void test_equals_reaches_the_bottom_and_stays_there() {
+    // Built so the per-syllable step has nothing of its own to offer: every
+    // character it could suggest is already among the ordinary candidates, so
+    // deduplication leaves it empty. That is the shape that made entering the
+    // view report success on a list of nothing but the candidates it kept.
+    const auto lexicon_path = std::filesystem::temp_directory_path() /
+        "piinput-equals-bottom.tsv";
+    {
+        std::ofstream output(lexicon_path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n";
+        output << "你好\tni'hao\t9000\n";
+        output << "你\tni\t8000\n拟\tni\t700\n泥\tni\t600\n";
+        output << "好\thao\t8000\n号\thao\t700\n毫\thao\t600\n";
+    }
+    piinput::Engine engine;
+    engine.load_lexicon(lexicon_path);
+    auto settings = piinput::default_settings();
+    settings.candidates.items_per_row = 2U;
+    // More than one visible row, or the snapshot can never report the view as
+    // expanded and the assertion below would pass on a technicality.
+    settings.candidates.visible_rows = 3U;
+    settings.candidates.max_items = 40U;
+    piinput::HostSession session(engine, nullptr, settings, "full");
+
+    type(session, "nihao");
+    check(session.snapshot().candidates.size() > 2U, "nihao 应有不止一行候选");
+
+    // Page down until it stops moving, then keep pressing.
+    std::size_t settled = 0U;
+    for (int step = 0; step < 60; ++step) {
+        const auto down = session.apply({.kind = piinput::HostKeyKind::expand_next_row});
+        check(down.accepted, "= 应始终被吃掉");
+        check(down.text.empty(), "翻页不应上屏任何文字");
+        settled = session.snapshot().view.active_row;
+    }
+    const std::size_t bottom = settled;
+    check(bottom != 0U, "应该真的翻下去过，而不是停在第一行");
+
+    for (int step = 0; step < 20; ++step) {
+        (void)session.apply({.kind = piinput::HostKeyKind::expand_next_row});
+        check(session.snapshot().view.active_row == bottom,
+            "到底之后再按 = 必须原地不动，不能回到开头");
+        check(session.snapshot().view.expanded,
+            "到底之后候选不应被收起");
+    }
+    check(session.snapshot().raw == "nihao", "一路按到底之后输入内容仍在");
+
+    std::filesystem::remove(lexicon_path);
+}
+
+// Paging keys browse candidates and are never typed. Going down stops at the
+// last row; going up folds the rows back to the single one they started as.
+// Before this, either end let the key through and a literal = or - landed in
+// the middle of the composition.
+void test_paging_keys_stop_at_the_ends_without_typing_themselves() {
+    piinput::Engine engine;
+    const auto lexicon_path = write_chinese_lexicon();
+    engine.load_lexicon(lexicon_path);
+    auto settings = piinput::default_settings();
+    settings.candidates.items_per_row = 2U;
+    settings.candidates.visible_rows = 1U;
+    settings.candidates.max_items = 40U;
+    piinput::HostSession session(engine, nullptr, settings, "full");
+
+    type(session, "kadun");
+    check(session.snapshot().candidates.size() > 2U, "kadun 应有不止一行候选");
+    check(!session.snapshot().view.expanded, "初始应是收起的一行");
+
+    // Down as far as it goes.
+    for (int step = 0; step < 40; ++step) {
+        const auto down = session.apply({.kind = piinput::HostKeyKind::expand_next_row});
+        check(down.accepted, "= 应始终被吃掉，不能打进正文");
+        check(down.text.empty(), "翻页不应上屏任何文字");
+    }
+    check(session.snapshot().raw == "kadun", "一路向下之后输入内容仍在");
+
+    // Up as far as it goes, ending folded back to one row.
+    for (int step = 0; step < 40; ++step) {
+        const auto up = session.apply(
+            {.kind = piinput::HostKeyKind::previous_row, .character = '-'});
+        if (!up.accepted) break;
+        check(up.text.empty() || up.action == piinput::HostAction::commit,
+            "向上翻页本身不应上屏");
+        if (up.action == piinput::HostAction::commit) break;
+    }
+    check(!session.snapshot().view.expanded, "一路向上之后应收回成一行");
 }
 
 void test_dash_still_pages_the_candidate_rows_when_a_row_exists() {
@@ -1071,7 +1291,12 @@ int main() {
     test_repeated_equals_enters_segment_selection_and_stages_until_final_commit();
     test_real_words_fill_multiple_rows_before_single_characters();
     test_mktm_keeps_all_words_before_ming_character_selection();
-    test_dash_that_cannot_page_becomes_an_ordinary_dash();
+    test_dash_at_the_top_keeps_the_candidate_row_on_screen();
+    test_enter_commits_the_selection_once_it_has_been_moved();
+    test_datetime_entry_opens_a_second_level_list();
+    test_datetime_entry_opens_a_second_level_list();
+    test_equals_reaches_the_bottom_and_stays_there();
+    test_paging_keys_stop_at_the_ends_without_typing_themselves();
     test_dash_still_pages_the_candidate_rows_when_a_row_exists();
     test_kadun_word_then_character_fallback_stages_normally();
     test_staging_a_character_advances_to_the_next_syllable();

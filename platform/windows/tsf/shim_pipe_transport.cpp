@@ -129,6 +129,14 @@ std::optional<HostEnvelope> ShimPipeTransport::request(
     return std::nullopt;
 }
 
+void ShimPipeTransport::warm_up() const noexcept {
+    // A Host already serving answers this immediately; the point is only to
+    // find out whether one exists. Nothing is sent and nothing is waited for.
+    const auto name = pipe_name();
+    if (WaitNamedPipeW(name.c_str(), 1U) != FALSE) return;
+    (void)start_host();
+}
+
 bool ShimPipeTransport::start_host() const noexcept {
     const auto host_path = resolve_host_path();
     std::error_code error;

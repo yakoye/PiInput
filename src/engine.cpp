@@ -1,4 +1,6 @@
 #include "piinput/engine.h"
+
+#include <ctime>
 #include "piinput/full_pinyin_variants.h"
 #include "piinput/incremental_decoder.h"
 #include "piinput/pinyin_prefix.h"
@@ -109,6 +111,8 @@ Engine::Engine(const Engine& other)
     : prefix_query_cache_(std::make_shared<PrefixQueryCache>()) {
     if (!other.prefix_query_cache_) {
         user_model_ = other.user_model_;
+        symbol_shortcuts_ = other.symbol_shortcuts_;
+        clock_ = other.clock_;
         return;
     }
     std::shared_lock lock(other.prefix_query_cache_->state_mutex);
@@ -116,6 +120,12 @@ Engine::Engine(const Engine& other)
     pinyin_ = other.pinyin_;
     shuangpin_ = other.shuangpin_;
     user_model_ = other.user_model_;
+    // These are configuration, not cache. Leaving them out of the copy made a
+    // copied engine quietly lose every symbol and date shortcut -- it still
+    // answered, just without the features, which is the kind of difference
+    // nothing would report.
+    symbol_shortcuts_ = other.symbol_shortcuts_;
+    clock_ = other.clock_;
     prefix_query_cache_->lexicon_entry_count.store(
         other.prefix_query_cache_->lexicon_entry_count.load());
 }
@@ -560,6 +570,141 @@ std::vector<LexiconCandidate> Engine::query_completions_unlocked(
     }
     prefix_query_cache_->entries.try_emplace(cache_key, result);
     return result;
+}
+
+void Engine::set_clock(Clock clock) { clock_ = std::move(clock); }
+
+std::vector<std::string> Engine::datetime_formats(const std::string& reading) const {
+    return generated_candidates_for(reading);
+}
+
+std::vector<std::string> Engine::generated_candidates_for(const std::string& key) const {
+    const bool wants_date = key == "riqi" || key == "date";
+    const bool wants_time = key == "shijian" || key == "time";
+    if (!wants_date && !wants_time) return {};
+
+    std::tm local{};
+    if (clock_) {
+        local = clock_();
+    } else {
+        const std::time_t now = std::time(nullptr);
+#if defined(_WIN32)
+        if (localtime_s(&local, &now) != 0) return {};
+#else
+        if (localtime_r(&now, &local) == nullptr) return {};
+#endif
+    }
+    return wants_date ? date_candidates(local) : time_candidates(local);
+}
+
+void Engine::set_symbol_shortcuts(
+    std::unordered_map<std::string, std::vector<std::string>> shortcuts) {
+    symbol_shortcuts_ = std::move(shortcuts);
+}
+
+// Two ways in. The reading covers every schema at once: double pinyin keys are
+// decoded to syllables before they get here, so "pk" in 小鹤 arrives as pai just
+// like the full-pinyin spelling does. The raw input covers the English names --
+// up, down, left -- which are not pinyin and so never appear as syllables.
+void Engine::splice_symbol_shortcuts(
+    std::vector<EngineCandidate>& results,
+    const std::string& input,
+    const std::vector<std::string>& syllables,
+    const std::size_t result_limit) const {
+
+
+    std::string reading;
+    for (const auto& syllable : syllables) reading.append(syllable);
+
+    std::vector<std::string> wanted;
+    // The date and time formats do not go into the row. There are six or seven
+    // of them and several are twenty characters wide, so putting them inline
+    // either fills the first row with timestamps or, once they are moved out of
+    // the way, leaves only one reachable. One entry opens the rest as a list,
+    // which is what every other input method does with them.
+    std::string datetime_reading;
+    std::string datetime_label;
+    const auto collect = [&](const std::string& key) {
+        if (key.empty()) return;
+        if (datetime_label.empty() && !generated_candidates_for(key).empty()) {
+            datetime_reading = key;
+            datetime_label = datetime_group_label(key == "riqi" || key == "date");
+        }
+        const auto found = symbol_shortcuts_.find(key);
+        if (found == symbol_shortcuts_.end()) return;
+        for (const auto& symbol : found->second) {
+            if (std::find(wanted.begin(), wanted.end(), symbol) == wanted.end()) {
+                wanted.push_back(symbol);
+            }
+        }
+    };
+    collect(reading);
+    if (input != reading) collect(input);
+    if (wanted.empty() && datetime_label.empty()) return;
+
+    // A symbol the dictionary already offered stays where the ranking put it.
+    std::erase_if(wanted, [&](const std::string& symbol) {
+        return std::any_of(results.begin(), results.end(),
+            [&](const EngineCandidate& candidate) { return candidate.word == symbol; });
+    });
+
+    const auto make = [&](const std::string& text) {
+        EngineCandidate candidate{};
+        candidate.word = text;
+        candidate.pinyin = reading.empty() ? input : reading;
+        candidate.consumed_syllables = syllables.empty() ? 1U : syllables.size();
+        candidate.word_count = 1U;
+        candidate.evidence = CandidateEvidence{
+            CandidateKind::symbol, candidate.consumed_syllables, 1U, 0U, true};
+        return candidate;
+    };
+
+    // Short ones go next to the top word, where they are one keypress away.
+    // Long ones go to the end rather than into the first row, which they would
+    // otherwise take over -- both by filling it and by squeezing whatever else
+    // is on it down to an unreadable width.
+    std::vector<EngineCandidate> inline_candidates;
+    std::vector<EngineCandidate> trailing;
+    if (!datetime_label.empty()) {
+        // Labelled rather than showing one of the formats, so the row says
+        // there is a list to open instead of looking like the answer itself.
+        EngineCandidate group = make(datetime_label);
+        group.pinyin = datetime_reading;
+        group.evidence.kind = CandidateKind::datetime_group;
+        inline_candidates.push_back(std::move(group));
+    }
+    for (const auto& text : wanted) {
+        if (utf8_codepoint_count(text) <= inline_candidate_codepoints) {
+            inline_candidates.push_back(make(text));
+        } else {
+            trailing.push_back(make(text));
+        }
+    }
+    // The caller asked for at most result_limit candidates, and that has to hold
+    // afterwards. Room is made by dropping dictionary matches from the end --
+    // the far side of the list nobody scrolls to -- while keeping the top word
+    // ahead of the shortcuts. If even that is not enough the shortcuts
+    // themselves are truncated, inline ones first because they are the useful
+    // ones; a small limit simply cannot hold seven date formats.
+    const std::size_t ahead = (std::min)(results.size(), symbol_shortcut_position);
+    const std::size_t budget = result_limit > ahead ? result_limit - ahead : 0U;
+    const std::size_t take_inline = (std::min)(inline_candidates.size(), budget);
+    const std::size_t take_trailing =
+        (std::min)(trailing.size(), budget - take_inline);
+    inline_candidates.resize(take_inline);
+    trailing.resize(take_trailing);
+    const std::size_t added = take_inline + take_trailing;
+    if (added == 0U) return;
+    const std::size_t keep_ordinary = result_limit - added;
+    if (results.size() > keep_ordinary) results.resize(keep_ordinary);
+
+    const std::size_t at = (std::min)(symbol_shortcut_position, results.size());
+    results.insert(results.begin() + static_cast<std::ptrdiff_t>(at),
+        std::make_move_iterator(inline_candidates.begin()),
+        std::make_move_iterator(inline_candidates.end()));
+    results.insert(results.end(),
+        std::make_move_iterator(trailing.begin()),
+        std::make_move_iterator(trailing.end()));
 }
 
 std::vector<EngineCandidate> Engine::query(
@@ -1172,6 +1317,51 @@ std::vector<EngineCandidate> Engine::query(
     for (auto& candidate : ranked) {
         results.push_back(std::move(candidate.candidate));
     }
+    // A finished syllable only matches words whose whole reading is that
+    // syllable, so an input like ri or nv ran out after two or three
+    // characters and the row looked like the dictionary had nothing left.
+    // Words that merely start with it -- 日本 for ri, 女孩 for nv -- are what
+    // every other input method shows there. They are appended rather than
+    // ranked in, and only when the exact matches did not already fill the
+    // limit, so nothing that was on the first row moves.
+    if (primary_parse != nullptr && primary_parse->trailing_prefix.empty() &&
+        !primary_parse->canonical_prefix.empty() &&
+        results.size() < (std::min)(result_limit, prefix_fill_threshold)) {
+        std::unordered_set<std::string> already;
+        already.reserve(results.size());
+        for (const auto& candidate : results) already.insert(candidate.word);
+        const std::size_t room = result_limit - results.size();
+        constexpr std::size_t max_prefix_syllables = 4U;
+        for (const auto& word : query_prefix_unlocked(
+                 primary_parse->canonical_prefix, room,
+                 static_cast<std::size_t>(settings.pinyin.prefix_scan_limit),
+                 max_prefix_syllables)) {
+            if (results.size() >= result_limit) break;
+            if (!already.insert(word.word).second) continue;
+            // A candidate the user deleted must stay deleted. The ordinary path
+            // filters these in submit(); this one bypasses that ranking step and
+            // so has to ask as well.
+            if (user_model_.is_suppressed(word.pinyin, word.word)) continue;
+            const std::size_t spanned = pinyin_syllable_count(word.pinyin);
+            EngineCandidate candidate{};
+            candidate.word = word.word;
+            candidate.pinyin = word.pinyin;
+            candidate.base_weight = word.weight;
+            candidate.score = static_cast<std::int64_t>(word.weight);
+            candidate.consumed_syllables = spanned;
+            candidate.word_count = 1U;
+            candidate.evidence = CandidateEvidence{
+                CandidateKind::prefix_lexicon, spanned, 1U, 0U, false};
+            results.push_back(std::move(candidate));
+        }
+    }
+
+    // After the limit, so a symbol is never the thing that pushed a real word
+    // off the end of the row.
+    splice_symbol_shortcuts(results, input,
+        primary_parse != nullptr ? primary_parse->complete_syllables
+                                 : std::vector<std::string>{},
+        result_limit);
     return results;
 }
 

@@ -286,7 +286,51 @@ void test_a_real_entry_outranks_a_join_over_the_same_syllables() {
 
 }  // namespace
 
+// Entering the per-syllable view keeps the ordinary candidates the user was
+// already looking at and appends the syllable choices after them, so the
+// candidate list is never empty. Success therefore cannot be judged by that
+// list being non-empty -- it always is. It used to be, and the result was a
+// successful entry with no choices in it: the caller reset the view and showed
+// the same candidates from the top, which reads as paging looping back to the
+// start instead of reaching an end.
+void test_entering_segment_selection_reports_only_real_choices() {
+    const auto path = std::filesystem::temp_directory_path() /
+        "piinput-segment-empty.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n"
+               << "你好\tni'hao\t1800\n"
+               << "你\tni\t900\n"
+               << "好\thao\t900\n";
+    }
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+
+    for (const char* const input : {"nihao", "ni", "hao", "nihaoni"}) {
+        for (const std::size_t retained : {std::size_t{0}, std::size_t{6}, std::size_t{30}}) {
+            piinput::ImeSession session(engine, "full", 30U);
+            session.set_input(input);
+            const bool entered = session.enter_segment_selection(retained);
+            const auto& snapshot = session.snapshot();
+            if (entered) {
+                check(snapshot.view_mode == piinput::CandidateViewMode::segment_selection,
+                    "报告成功时视图必须真的处于分段模式");
+                check(snapshot.candidates.size() > snapshot.segment_candidate_offset,
+                    "报告成功时必须真的有分段选项，而不只是保留下来的普通候选");
+            } else {
+                // The attempt has to leave no trace. Reporting failure while the
+                // view still claims segment selection sent every later key down
+                // the wrong branch.
+                check(snapshot.view_mode == piinput::CandidateViewMode::normal,
+                    "报告失败时视图模式必须还原成普通模式");
+            }
+        }
+    }
+    std::filesystem::remove(path);
+}
+
 int main() {
+    test_entering_segment_selection_reports_only_real_choices();
     test_staging_undo_and_single_final_text();
     test_engine_segment_query_never_fabricates_the_remaining_sentence();
     test_session_stages_segments_and_commits_only_when_complete();

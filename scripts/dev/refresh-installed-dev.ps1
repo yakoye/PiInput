@@ -2,7 +2,9 @@ param([switch]$SkipBuild)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-$Root = $PSScriptRoot
+# Two levels up: this script moved from the repository root into
+# scripts/dev, and $Root still means the repository root.
+$Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Source = Join-Path $Root "dist/windows-x64"
 $SourceDll = Join-Path $Source "bin/PiInputTSF.dll"
 $Installer = Join-Path $Source "bin/PiInput-Install.exe"

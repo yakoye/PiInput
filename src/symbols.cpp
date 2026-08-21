@@ -157,4 +157,27 @@ std::size_t SymbolIndex::entry_count() const noexcept {
     return entries_.size();
 }
 
+std::unordered_map<std::string, std::vector<std::string>>
+SymbolIndex::shortcuts_by_alias() const {
+    std::unordered_map<std::string, std::vector<std::string>> shortcuts;
+    for (const auto& entry : entries_) {
+        for (const auto& alias : entry.aliases) {
+            // Spelled-out names only. An alias with any byte outside plain
+            // lowercase ASCII is the Chinese name, which is not what anyone
+            // types to reach the symbol.
+            const bool typeable = !alias.empty() &&
+                std::all_of(alias.begin(), alias.end(), [](const char letter) {
+                    return letter >= 0x61 && letter <= 0x7A;
+                });
+            if (!typeable) continue;
+            auto& bucket = shortcuts[alias];
+            if (bucket.size() >= max_shortcuts_per_key) continue;
+            if (std::find(bucket.begin(), bucket.end(), entry.symbol) == bucket.end()) {
+                bucket.push_back(entry.symbol);
+            }
+        }
+    }
+    return shortcuts;
+}
+
 }  // namespace piinput
