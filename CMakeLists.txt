@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(PiInput VERSION 0.7.11 LANGUAGES CXX)
+project(PiInput VERSION 0.7.12 LANGUAGES CXX)
 
 option(PIINPUT_BUILD_TESTS "Build PiInput tests" ON)
 option(PIINPUT_STATIC_MSVC_RUNTIME "Use the static MSVC runtime" ON)
