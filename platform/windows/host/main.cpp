@@ -111,6 +111,10 @@ void open_help(const std::filesystem::path& program_directory) {
 int main(const int argc, char** const argv) {
     const std::string_view command = argc >= 2 ? argv[1] : "--serve";
     if (command == "--build-id") {
+        std::cout << PIINPUT_BUILD_ID << '\n';
+        return 0;
+    }
+    if (command == "--version") {
         std::cout << PIINPUT_VERSION << '\n';
         return 0;
     }
@@ -241,7 +245,7 @@ int main(const int argc, char** const argv) {
     // on top of those would be the third icon, which is what the earlier
     // attempt produced.
 
-    piinput::windows::PipeServer server(PIINPUT_VERSION, &sessions, &presenter);
+    piinput::windows::PipeServer server(PIINPUT_BUILD_ID, &sessions, &presenter);
     server.set_startup_duration(static_cast<std::uint64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - startup_began).count()));

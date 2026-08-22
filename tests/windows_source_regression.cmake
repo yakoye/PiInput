@@ -66,6 +66,7 @@ if(NOT EXISTS "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.cp
 endif()
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.cpp" stable_text_service_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.h" stable_text_service_header_text)
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/input_scope_policy.h" input_scope_policy_text)
 if(NOT EXISTS "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/shim_ui_control.h")
     message(FATAL_ERROR "Stable TSF Host-to-Shim UI control channel is missing")
 endif()
@@ -92,7 +93,7 @@ foreach(required_focus_token IN ITEMS
     endif()
 endforeach()
 string(FIND "${stable_text_service_text}"
-    "if (!mirror_.connected())" focus_resume_only_when_disconnected)
+    "!mirror_.connected()" focus_resume_only_when_disconnected)
 string(FIND "${stable_text_service_text}"
     "mirror_.discard_composition()" external_termination_discard)
 if(focus_resume_only_when_disconnected LESS 0 OR external_termination_discard LESS 0)
@@ -448,11 +449,34 @@ if(NOT host_pipe_server_text MATCHES "presenter_->remember_caret")
         "Host must remember a caret update the staged snapshot rejects, so the pre-key probe anchors the next word")
 endif()
 
-string(FIND "${stable_text_service_text}" "TF_ES_SYNC | TF_ES_READ," readonly_caret_session)
-if(NOT readonly_caret_session LESS 0)
+string(FIND "${stable_text_service_text}" "void TextService::capture_composition_caret" caret_capture_start)
+string(FIND "${stable_text_service_text}" "bool TextService::is_current_update" caret_capture_end)
+if(caret_capture_start LESS 0 OR caret_capture_end LESS_EQUAL caret_capture_start)
+    message(FATAL_ERROR "Could not isolate stable TSF caret capture")
+endif()
+math(EXPR caret_capture_length "${caret_capture_end} - ${caret_capture_start}")
+string(SUBSTRING "${stable_text_service_text}" ${caret_capture_start}
+    ${caret_capture_length} caret_capture_text)
+if(caret_capture_text MATCHES "RequestEditSession" OR
+   caret_capture_text MATCHES "TF_ES_SYNC[ ]*\\|[ ]*TF_ES_READ")
     message(FATAL_ERROR
         "Stable TSF Shim must capture the caret inside the successful composition edit session, never from a separate read-only session on the key path")
 endif()
+
+foreach(sensitive_scope_token IN ITEMS
+        "GUID_PROP_INPUTSCOPE"
+        "IS_PASSWORD"
+        "IS_PRIVATE"
+        "IS_NUMERIC_PASSWORD"
+        "IS_NUMERIC_PIN"
+        "IS_ALPHANUMERIC_PIN")
+    string(FIND "${stable_text_service_text}${input_scope_policy_text}"
+        "${sensitive_scope_token}" sensitive_scope_position)
+    if(sensitive_scope_position LESS 0)
+        message(FATAL_ERROR
+            "Stable TSF Shim must bypass Host/candidate/learning paths for ${sensitive_scope_token}")
+    endif()
+endforeach()
 math(EXPR activate_length "${deactivate_start} - ${activate_start}")
 string(SUBSTRING "${text_service_text}" ${activate_start} ${activate_length} activate_text)
 

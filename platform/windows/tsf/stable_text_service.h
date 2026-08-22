@@ -101,6 +101,7 @@ private:
     void handle_reply(HostEnvelope envelope) noexcept;
     void release_pending_contexts() noexcept;
     [[nodiscard]] ITfContext* focused_context() const noexcept;
+    [[nodiscard]] bool context_has_sensitive_input_scope(ITfContext* context) const noexcept;
     [[nodiscard]] bool bind_context(ITfContext* context);
     void release_active_context() noexcept;
     [[nodiscard]] bool request_resume(ITfContext* context, const HostResumeState& state);
@@ -171,6 +172,9 @@ private:
     TfClientId client_id_{TF_CLIENTID_NULL};
     bool key_sink_advised_{};
     bool foreground_{true};
+    // Password, private and PIN scopes bypass PiInput completely: no Host
+    // request, candidate UI, composition mirror or learning confirmation.
+    bool sensitive_context_{};
     bool english_mode_{};
     LangBar lang_bar_;
     ModeIndicator mode_indicator_;

@@ -329,7 +329,7 @@ void activate_versioned_host(
         throw std::runtime_error("Cannot start the versioned PiInput Host");
     }
     const std::wstring expected_health =
-        L"--health " + std::wstring(PIINPUT_INSTALLER_VERSION);
+        L"--health " + std::wstring(PIINPUT_INSTALLER_BUILD_ID);
     for (unsigned int attempt = 0U; attempt < 40U; ++attempt) {
         if (run_hidden(host, expected_health) == 0U) return;
         Sleep(50U);

@@ -338,11 +338,12 @@ int PipeServer::run() noexcept {
             if (request.has_value() &&
                 (request->type == HostMessageType::health || request->type == HostMessageType::drain)) {
                 if (request->type == HostMessageType::drain) draining = true;
-const std::string response_text = request->type == HostMessageType::health
+                const std::string response_text = request->type == HostMessageType::health
                     // build_id stays last: --health compares it against the
                     // end of the response to confirm the exact running build.
                     ? "protocol=" + std::to_string(host_protocol_current) +
                         "\nstartup_ms=" + std::to_string(startup_ms_) +
+                        "\nversion=" + std::string(PIINPUT_VERSION) +
                         "\nbuild_id=" + build_id_
                     : "draining=yes";
                 HostEnvelope response{

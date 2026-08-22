@@ -88,8 +88,13 @@ namespace {
             std::array<UCHAR, 65536U> buffer{};
             DWORD read = 0U;
             bool ok = true;
-            while (ReadFile(file, buffer.data(), static_cast<DWORD>(buffer.size()), &read, nullptr) &&
-                   read != 0U) {
+            while (true) {
+                if (ReadFile(file, buffer.data(), static_cast<DWORD>(buffer.size()),
+                        &read, nullptr) == FALSE) {
+                    ok = false;
+                    break;
+                }
+                if (read == 0U) break;
                 if (BCryptHashData(hash, buffer.data(), read, 0U) < 0) { ok = false; break; }
             }
             if (ok && BCryptFinishHash(hash, digest.data(), digest_bytes, 0U) >= 0) {
@@ -172,6 +177,10 @@ int wmain() {
     const bool active = registered && (profile.dwFlags & TF_IPP_FLAG_ACTIVE) != 0U;
     const bool shim_exists = !shim.empty() && std::filesystem::is_regular_file(shim);
     const bool host_exists = !host.empty() && std::filesystem::is_regular_file(host);
+    const std::filesystem::path lexicon = host_exists
+        ? std::filesystem::path(host).parent_path().parent_path() / L"data" / L"piinput-base.lex"
+        : std::filesystem::path{};
+    const bool lexicon_exists = !lexicon.empty() && std::filesystem::is_regular_file(lexicon);
     const std::string health = host_health();
 
     std::cout << "{\n"
@@ -184,6 +193,11 @@ int wmain() {
               << "  \"shim_sha256\": \"" << (shim_exists ? sha256_file(shim) : "") << "\",\n"
               << "  \"host_path\": \"" << json_escape(utf8(host)) << "\",\n"
               << "  \"host_exists\": " << (host_exists ? "true" : "false") << ",\n"
+              << "  \"host_sha256\": \"" << (host_exists ? sha256_file(host) : "") << "\",\n"
+              << "  \"lexicon_path\": \"" << json_escape(utf8(lexicon.wstring())) << "\",\n"
+              << "  \"lexicon_exists\": " << (lexicon_exists ? "true" : "false") << ",\n"
+              << "  \"lexicon_sha256\": \""
+              << (lexicon_exists ? sha256_file(lexicon) : "") << "\",\n"
               << "  \"host_connected\": " << (!health.empty() ? "true" : "false") << ",\n"
               << "  \"host_health\": \"" << json_escape(health) << "\",\n"
               << "  \"legacy_module_scan\": \"not_performed\"\n"

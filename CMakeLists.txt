@@ -5,6 +5,39 @@ project(PiInput VERSION 0.7.12 LANGUAGES CXX)
 option(PIINPUT_BUILD_TESTS "Build PiInput tests" ON)
 option(PIINPUT_STATIC_MSVC_RUNTIME "Use the static MSVC runtime" ON)
 set(PIINPUT_TESTDATA_DIR "" CACHE PATH "Directory containing the two SCEL regression files")
+set(PIINPUT_BUILD_REVISION "" CACHE STRING
+    "Exact source revision embedded in runtime diagnostics; auto-detected when empty")
+if(NOT PIINPUT_BUILD_REVISION)
+    find_package(Git QUIET)
+    if(GIT_FOUND)
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_SOURCE_DIR}"
+                rev-parse --short=12 HEAD
+            OUTPUT_VARIABLE PIINPUT_DETECTED_REVISION
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+            RESULT_VARIABLE PIINPUT_REVISION_RESULT
+        )
+        if(PIINPUT_REVISION_RESULT EQUAL 0 AND PIINPUT_DETECTED_REVISION)
+            set(PIINPUT_BUILD_REVISION "${PIINPUT_DETECTED_REVISION}")
+            execute_process(
+                COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_SOURCE_DIR}"
+                    status --porcelain
+                OUTPUT_VARIABLE PIINPUT_GIT_STATUS
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+                ERROR_QUIET
+            )
+            if(PIINPUT_GIT_STATUS)
+                string(APPEND PIINPUT_BUILD_REVISION "-dirty")
+            endif()
+        endif()
+    endif()
+endif()
+if(NOT PIINPUT_BUILD_REVISION)
+    set(PIINPUT_BUILD_REVISION "source")
+endif()
+set(PIINPUT_BUILD_ID "${PROJECT_VERSION}+${PIINPUT_BUILD_REVISION}")
+message(STATUS "PiInput exact build id: ${PIINPUT_BUILD_ID}")
 
 set(PIINPUT_BUNDLED_LEXICON "")
 if(PIINPUT_TESTDATA_DIR AND EXISTS "${PIINPUT_TESTDATA_DIR}/cache/piinput-base.lex")
@@ -148,6 +181,8 @@ if(WIN32)
         platform/windows/host platform/windows/settings platform/windows/tsf)
     target_link_libraries(PiInputHost PRIVATE
         piinput_core advapi32 user32 gdi32 shell32 comctl32)
+    target_compile_definitions(PiInputHost PRIVATE
+        PIINPUT_BUILD_ID="${PIINPUT_BUILD_ID}")
     piinput_enable_warnings(PiInputHost)
 
     add_executable(piinput-host-client-fixture
@@ -244,7 +279,9 @@ if(WIN32)
         platform/windows/installer
         platform/windows/tsf
     )
-    target_compile_definitions(PiInput-Install PRIVATE PIINPUT_INSTALLER_VERSION=L"${PROJECT_VERSION}")
+    target_compile_definitions(PiInput-Install PRIVATE
+        PIINPUT_INSTALLER_VERSION=L"${PROJECT_VERSION}"
+        PIINPUT_INSTALLER_BUILD_ID=L"${PIINPUT_BUILD_ID}")
     target_link_libraries(PiInput-Install PRIVATE piinput_core ole32 shell32 advapi32 user32)
     if(MSVC)
         target_link_options(PiInput-Install PRIVATE
@@ -358,6 +395,17 @@ if(PIINPUT_BUILD_TESTS)
     target_link_libraries(piinput-key-event-gate-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-key-event-gate-tests)
 
+    if(WIN32)
+        add_executable(piinput-input-scope-policy-tests
+            tests/input_scope_policy_tests.cpp
+        )
+        target_include_directories(piinput-input-scope-policy-tests PRIVATE
+            platform/windows/tsf
+        )
+        target_link_libraries(piinput-input-scope-policy-tests PRIVATE ole32)
+        piinput_enable_warnings(piinput-input-scope-policy-tests)
+    endif()
+
     add_executable(piinput-host-protocol-tests
         tests/host_protocol_tests.cpp
     )
@@ -441,6 +489,12 @@ if(PIINPUT_BUILD_TESTS)
     )
     target_link_libraries(piinput-paragraph-input-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-paragraph-input-tests)
+
+    add_executable(piinput-corpus-candidate-tests
+        tests/corpus_candidate_runner.cpp
+    )
+    target_link_libraries(piinput-corpus-candidate-tests PRIVATE piinput_core)
+    piinput_enable_warnings(piinput-corpus-candidate-tests)
 
     add_executable(piinput-keystroke-latency-tests
         tests/keystroke_latency_tests.cpp
@@ -607,6 +661,9 @@ if(PIINPUT_BUILD_TESTS)
     add_test(NAME piinput-user-model-persistence COMMAND piinput-user-model-persistence-tests)
     add_test(NAME piinput-user-phrase-performance COMMAND piinput-user-phrase-performance-tests)
     add_test(NAME piinput-key-event-gate COMMAND piinput-key-event-gate-tests)
+    if(WIN32)
+        add_test(NAME piinput-input-scope-policy COMMAND piinput-input-scope-policy-tests)
+    endif()
     add_test(NAME piinput-host-protocol COMMAND piinput-host-protocol-tests)
     add_test(NAME piinput-host-session COMMAND piinput-host-session-tests)
     add_test(NAME piinput-host-messages COMMAND piinput-host-messages-tests)
@@ -918,6 +975,16 @@ if(PIINPUT_BUILD_TESTS)
                 COMMAND piinput-paragraph-input-tests
                     "${EXTERNAL_LEXICON}"
                     "${CMAKE_SOURCE_DIR}/tests/data/paragraph_input_cases.tsv"
+            )
+            add_test(
+                NAME piinput-structured-corpus-regression
+                COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
+                    -NoProfile
+                    -File ${CMAKE_SOURCE_DIR}/tests/structured_corpus_regression.ps1
+                    -Runner $<TARGET_FILE:piinput-corpus-candidate-tests>
+                    -Lexicon "${EXTERNAL_LEXICON}"
+                    -SourceDir ${CMAKE_SOURCE_DIR}
+                    -TempRoot ${CMAKE_BINARY_DIR}/structured-corpus-temp
             )
             # Per-key budget for the reported "我，他们。我们明天，……" sentence,
             # including the first letter after every punctuation mark.

@@ -53,10 +53,17 @@ try {
     }
     $coldTimer.Stop()
     if ($LASTEXITCODE -ne 0 -or ($health -join "`n") -notmatch "protocol=3" -or
+        ($health -join "`n") -notmatch "startup_ms=[0-9]+" -or
+        ($health -join "`n") -notmatch "version=[0-9]+\.[0-9]+\.[0-9]+" -or
         ($health -join "`n") -notmatch "build_id=") {
         throw "Host health handshake failed: $($health -join ' ')"
     }
     $buildId = (& $HostExe --build-id 2>&1 | Select-Object -First 1).ToString().Trim()
+    $version = (& $HostExe --version 2>&1 | Select-Object -First 1).ToString().Trim()
+    if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$' -or
+        $buildId -notmatch "^$([regex]::Escape($version))\+.+") {
+        throw "Host did not separate semantic version from exact build ID: version=$version build=$buildId"
+    }
     $matchingHealth = & $HostExe --health $buildId 2>&1
     if ($LASTEXITCODE -ne 0 -or ($matchingHealth -join "`n") -notmatch
         "build_id=$([regex]::Escape($buildId))") {

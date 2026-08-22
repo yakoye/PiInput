@@ -2,6 +2,7 @@
 #include "composition_edit_policy.h"
 #include "shim_ui_control.h"
 #include "client_identity.h"
+#include "input_scope_policy.h"
 #include "text_caret_geometry.h"
 
 #include "piinput/host_messages.h"
@@ -25,12 +26,97 @@
 
 namespace piinput::windows {
 
+// inputscope.h declares GUID_PROP_INPUTSCOPE via DEFINE_GUID, but the MinGW and
+// MSVC link surfaces are not consistent about supplying its storage. Keep the
+// documented property value local so the TSF DLL has no extra GUID dependency.
+constexpr GUID kInputScopePropertyGuid{
+    0x1713dd5a, 0x68e7, 0x4a5b, {0x9a, 0xf6, 0x59, 0x2a, 0x59, 0x5c, 0x77, 0x8d}};
+
 std::atomic<long> g_object_count{0};
 HINSTANCE g_module_instance = nullptr;
 
 namespace {
 
 std::atomic<std::uint64_t> next_session_id{1U};
+
+class InputScopeQuerySession final : public ITfEditSession {
+public:
+    explicit InputScopeQuerySession(ITfContext* const context) : context_(context) {
+        context_->AddRef();
+    }
+
+    STDMETHODIMP QueryInterface(REFIID iid, void** object) override {
+        if (object == nullptr) return E_POINTER;
+        *object = nullptr;
+        if (!IsEqualIID(iid, IID_IUnknown) && !IsEqualIID(iid, IID_ITfEditSession)) {
+            return E_NOINTERFACE;
+        }
+        *object = static_cast<ITfEditSession*>(this);
+        AddRef();
+        return S_OK;
+    }
+    STDMETHODIMP_(ULONG) AddRef() override { return ++ref_count_; }
+    STDMETHODIMP_(ULONG) Release() override {
+        const ULONG value = --ref_count_;
+        if (value == 0U) delete this;
+        return value;
+    }
+
+    STDMETHODIMP DoEditSession(const TfEditCookie cookie) override {
+        resolved_ = true;
+        TF_SELECTION selection{};
+        ULONG fetched = 0U;
+        if (FAILED(context_->GetSelection(
+                cookie, TF_DEFAULT_SELECTION, 1U, &selection, &fetched)) ||
+            fetched == 0U || selection.range == nullptr) {
+            if (selection.range != nullptr) selection.range->Release();
+            return S_OK;
+        }
+
+        ITfReadOnlyProperty* property = nullptr;
+        const HRESULT property_result = context_->GetAppProperty(
+            kInputScopePropertyGuid, &property);
+        if (SUCCEEDED(property_result) && property != nullptr) {
+            VARIANT value;
+            VariantInit(&value);
+            if (SUCCEEDED(property->GetValue(cookie, selection.range, &value)) &&
+                value.vt == VT_UNKNOWN && value.punkVal != nullptr) {
+                ITfInputScope* input_scope = nullptr;
+                if (SUCCEEDED(value.punkVal->QueryInterface(IID_PPV_ARGS(&input_scope))) &&
+                    input_scope != nullptr) {
+                    InputScope* scopes = nullptr;
+                    UINT count = 0U;
+                    if (SUCCEEDED(input_scope->GetInputScopes(&scopes, &count)) &&
+                        scopes != nullptr) {
+                        for (UINT index = 0U; index < count; ++index) {
+                            if (sensitive_input_scope(scopes[index])) {
+                                sensitive_ = true;
+                                break;
+                            }
+                        }
+                        CoTaskMemFree(scopes);
+                    }
+                    input_scope->Release();
+                }
+            }
+            (void)VariantClear(&value);
+            property->Release();
+        }
+        selection.range->Release();
+        return S_OK;
+    }
+
+    [[nodiscard]] bool resolved() const noexcept { return resolved_; }
+    [[nodiscard]] bool sensitive() const noexcept { return sensitive_; }
+
+private:
+    ~InputScopeQuerySession() { context_->Release(); }
+
+    std::atomic<ULONG> ref_count_{1U};
+    ITfContext* context_{};
+    bool resolved_{};
+    bool sensitive_{};
+};
 
 // The mode the user last chose, kept across activations. Switching away to
 // another input method and back should come back to what was left, not to the
@@ -504,6 +590,7 @@ STDMETHODIMP TextService::Deactivate() {
     }
     client_id_ = TF_CLIENTID_NULL;
     english_mode_ = false;
+    sensitive_context_ = false;
     english_direct_ = false;
     last_passthrough_was_digit_ = false;
     shift_toggle_.reset();
@@ -519,16 +606,18 @@ STDMETHODIMP TextService::OnSetFocus(const BOOL foreground) {
         (void)pipe_client_->send_focus(request, false);
         return S_OK;
     }
-    const auto focus_request = mirror_.begin_request();
-    (void)pipe_client_->send_focus(focus_request, true);
     ITfContext* const context = focused_context();
     if (context != nullptr) {
-        if (same_com_identity(active_context_, context)) {
-            if (!mirror_.connected()) {
+        const std::uint64_t previous_session = session_id_;
+        (void)bind_context(context);
+        if (!sensitive_context_ && same_com_identity(active_context_, context)) {
+            // bind_context already resumes a new context or a privacy-scope
+            // transition. Only reconnect an unchanged session here.
+            if (session_id_ == previous_session && !mirror_.connected()) {
                 (void)request_resume(context, mirror_.resume_state());
             }
-        } else {
-            (void)bind_context(context);
+            const auto focus_request = mirror_.begin_request();
+            (void)pipe_client_->send_focus(focus_request, true);
         }
         context->Release();
     }
@@ -536,16 +625,23 @@ STDMETHODIMP TextService::OnSetFocus(const BOOL foreground) {
 }
 
 STDMETHODIMP TextService::OnTestKeyDown(
-    ITfContext*, const WPARAM wparam, LPARAM, BOOL* const eaten) {
+    ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
-    *eaten = should_eat_key(wparam) ? TRUE : FALSE;
+    // Refresh the bound scope here, not only in OnKeyDown: when a browser
+    // reuses one TSF context for an ordinary field and a password field,
+    // returning FALSE means OnKeyDown will not be called. bind_context also
+    // clears any ordinary-field composition/candidate state on that boundary.
+    if (context != nullptr) (void)bind_context(context);
+    const bool sensitive = context != nullptr && sensitive_context_ &&
+        same_com_identity(active_context_, context);
+    *eaten = sensitive ? FALSE : (should_eat_key(wparam) ? TRUE : FALSE);
     return S_OK;
 }
 
 STDMETHODIMP TextService::OnKeyDown(
     ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
-    if (context != nullptr && !same_com_identity(active_context_, context)) {
+    if (context != nullptr) {
         // Binding here is a lazy attach to whatever the user is already typing
         // into, not a document switch, so it must not forget that the previous
         // keystroke was a digit. Losing it turned the first "3." of a session
@@ -553,6 +649,13 @@ STDMETHODIMP TextService::OnKeyDown(
         const bool digit_run = last_passthrough_was_digit_;
         (void)bind_context(context);
         last_passthrough_was_digit_ = digit_run;
+    }
+    if (sensitive_context_ && same_com_identity(active_context_, context)) {
+        *eaten = FALSE;
+        last_eaten_key_ = 0U;
+        last_passthrough_was_digit_ = false;
+        shift_toggle_.reset();
+        return S_OK;
     }
     if (!is_shift_key(wparam) &&
         shift_toggle_.on_other_key_down(shift_is_down())) {
@@ -594,15 +697,23 @@ STDMETHODIMP TextService::OnKeyDown(
 }
 
 STDMETHODIMP TextService::OnTestKeyUp(
-    ITfContext*, const WPARAM wparam, LPARAM, BOOL* const eaten) {
+    ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
-    *eaten = (is_shift_key(wparam) || wparam == last_eaten_key_) ? TRUE : FALSE;
+    *eaten = context_has_sensitive_input_scope(context)
+        ? FALSE
+        : ((is_shift_key(wparam) || wparam == last_eaten_key_) ? TRUE : FALSE);
     return S_OK;
 }
 
 STDMETHODIMP TextService::OnKeyUp(
     ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
+    if (context_has_sensitive_input_scope(context)) {
+        *eaten = FALSE;
+        last_eaten_key_ = 0U;
+        shift_toggle_.reset();
+        return S_OK;
+    }
     *eaten = (is_shift_key(wparam) || wparam == last_eaten_key_) ? TRUE : FALSE;
     if (is_shift_key(wparam) && shift_toggle_.on_shift_up(has_disallowed_modifier())) {
         toggle_input_mode(context);
@@ -619,6 +730,10 @@ void TextService::toggle_input_mode(ITfContext* const context) {
     if (target == nullptr) target = focused_context();
     if (target == nullptr) return;
     if (!same_com_identity(active_context_, target)) (void)bind_context(target);
+    if (sensitive_context_) {
+        target->Release();
+        return;
+    }
     set_english_mode(!english_mode_);
     show_mode_popup();
     HostKeyEvent event;
@@ -791,7 +906,8 @@ bool TextService::dispatch_now(
     ITfContext* const context,
     HostKeyEvent event,
     const bool replayed_key) {
-    if (pipe_client_ == nullptr || context == nullptr) return false;
+    if (pipe_client_ == nullptr || context == nullptr ||
+        (sensitive_context_ && same_com_identity(active_context_, context))) return false;
     event.resume = mirror_.resume_state();
     const auto request = mirror_.begin_request();
     context->AddRef();
@@ -940,9 +1056,25 @@ ITfContext* TextService::focused_context() const noexcept {
     return SUCCEEDED(result) ? context : nullptr;
 }
 
+bool TextService::context_has_sensitive_input_scope(
+    ITfContext* const context) const noexcept {
+    if (context == nullptr || client_id_ == TF_CLIENTID_NULL) return false;
+    auto* session = new (std::nothrow) InputScopeQuerySession(context);
+    if (session == nullptr) return false;
+    HRESULT session_result = E_FAIL;
+    const HRESULT request_result = context->RequestEditSession(
+        client_id_, session, TF_ES_SYNC | TF_ES_READ, &session_result);
+    const bool sensitive = SUCCEEDED(request_result) && SUCCEEDED(session_result) &&
+        session->resolved() && session->sensitive();
+    session->Release();
+    return sensitive;
+}
+
 bool TextService::bind_context(ITfContext* const context) {
-    if (context == nullptr || same_com_identity(active_context_, context)) {
-        return context != nullptr;
+    if (context == nullptr) return false;
+    const bool sensitive = context_has_sensitive_input_scope(context);
+    if (same_com_identity(active_context_, context) && sensitive == sensitive_context_) {
+        return true;
     }
 
     // A TSF service instance can be shared by several tabs/documents in one
@@ -959,6 +1091,10 @@ bool TextService::bind_context(ITfContext* const context) {
             composition_written_.clear();
         }
     }
+    if (active_context_ != nullptr && pipe_client_ != nullptr) {
+        const auto focus_request = mirror_.begin_request();
+        (void)pipe_client_->send_focus(focus_request, false);
+    }
     release_pending_contexts();
     clear_deferred_updates();
     final_edit_keys_.clear();
@@ -968,11 +1104,13 @@ bool TextService::bind_context(ITfContext* const context) {
     active_context_->AddRef();
     session_id_ = next_session_id.fetch_add(1U);
     mirror_.reset_session(session_id_);
+    sensitive_context_ = sensitive;
     set_english_mode(starting_english_mode());
     english_direct_ = false;
     last_passthrough_was_digit_ = false;
     shift_toggle_.reset();
     last_eaten_key_ = 0U;
+    if (sensitive_context_) return true;
     return request_resume(context, {});
 }
 
@@ -980,12 +1118,14 @@ void TextService::release_active_context() noexcept {
     if (active_context_ == nullptr) return;
     active_context_->Release();
     active_context_ = nullptr;
+    sensitive_context_ = false;
 }
 
 bool TextService::request_resume(
     ITfContext* const context,
     const HostResumeState& state) {
-    if (pipe_client_ == nullptr || context == nullptr) return false;
+    if (pipe_client_ == nullptr || context == nullptr ||
+        (sensitive_context_ && same_com_identity(active_context_, context))) return false;
     const auto request = mirror_.begin_request();
     context->AddRef();
     pending_contexts_.emplace(request.sequence, PendingContext{request.session_id, context});

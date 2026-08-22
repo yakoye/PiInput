@@ -209,6 +209,7 @@ docs/260820_2047_v0.7.10打字测试.md
 docs/260820_2106_v0.7.10安装测试.md
 docs/260820_2129_v0.7.10验证记录.md
 docs/260821_0032_GitHub发布审计.md
+docs/260823_v0.7.12后续工程加固验证.md
 docs/安装与使用指南.md
 docs/词库查询与分段取字.md
 docs/词库更新说明.md
@@ -347,6 +348,7 @@ platform/windows/tsf/composition_mirror.h
 platform/windows/tsf/deferred_update_queue.h
 platform/windows/tsf/dllmain.cpp
 platform/windows/tsf/final_edit_key_queue.h
+platform/windows/tsf/input_scope_policy.h
 platform/windows/tsf/lang_bar_item.cpp
 platform/windows/tsf/lang_bar_item.h
 platform/windows/tsf/mode_indicator.cpp
@@ -454,6 +456,7 @@ tests/candidate_presenter_tests.cpp
 tests/candidate_settings_script_regression.ps1
 tests/character_coverage_tests.cpp
 tests/composition_mirror_tests.cpp
+tests/corpus_candidate_runner.cpp
 tests/corpus_regression.cmake
 tests/corpus/v0.2.0/corpus/ambiguity.json
 tests/corpus/v0.2.0/corpus/common_words.json
@@ -523,6 +526,7 @@ tests/data/english_completion_corpus.txt
 tests/data/full_pinyin_candidates.tsv
 tests/data/incremental_candidates.tsv
 tests/data/incremental_join_cases.tsv
+tests/data/known_missing_professional_targets.json
 tests/data/paragraph_input_cases.tsv
 tests/data/prefix_sentences.tsv
 tests/data/punctuation_cases.tsv
@@ -554,6 +558,7 @@ tests/host_runtime_tests.cpp
 tests/host_session_tests.cpp
 tests/human_input_scenario_regression.ps1
 tests/incremental_decoder_tests.cpp
+tests/input_scope_policy_tests.cpp
 tests/installed_dev_resolver_regression.ps1
 tests/installer_layout_tests.cpp
 tests/key_event_gate_tests.cpp
@@ -576,6 +581,7 @@ tests/settings_tests.cpp
 tests/settings_window_regression.ps1
 tests/sha256_regression.cmake
 tests/stable_runtime_tests.cpp
+tests/structured_corpus_regression.ps1
 tests/test_main.cpp
 tests/typing_latency_tests.ps1
 tests/uninstall_fail_closed_regression.ps1
