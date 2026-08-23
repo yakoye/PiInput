@@ -245,7 +245,10 @@ int main(const int argc, char** const argv) {
     // on top of those would be the third icon, which is what the earlier
     // attempt produced.
 
-    piinput::windows::PipeServer server(PIINPUT_BUILD_ID, &sessions, &presenter);
+    piinput::windows::PipeServer server(
+        PIINPUT_BUILD_ID, &sessions, &presenter,
+        runtime.engine().lexicon_memory_mapped(),
+        runtime.engine().lexicon_mapped_bytes());
     server.set_startup_duration(static_cast<std::uint64_t>(
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now() - startup_began).count()));

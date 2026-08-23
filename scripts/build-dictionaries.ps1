@@ -19,6 +19,7 @@ if ([string]::IsNullOrWhiteSpace($RimeIceRoot)) {
     $RimeIceRoot = if (Test-Path $localRimeIce) { $localRimeIce } else { $downloadedRimeIce }
 }
 $RimeIceMaster = Join-Path $RimeIceRoot "rime_ice.dict.yaml"
+$ProfessionalLexicon = Join-Path $RepoRoot "data/professional_lexicon.tsv"
 $RimeIceTables = @(
     $RimeIceMaster
     (Join-Path $RimeIceRoot "cn_dicts/8105.dict.yaml")
@@ -39,6 +40,9 @@ foreach ($rimeFile in $RimeIceTables) {
     if (-not (Test-Path -LiteralPath $rimeFile -PathType Leaf)) {
         throw "Required Rime Ice dictionary file is missing: $rimeFile"
     }
+}
+if (-not (Test-Path -LiteralPath $ProfessionalLexicon -PathType Leaf)) {
+    throw "Required PiInput professional lexicon is missing: $ProfessionalLexicon"
 }
 $Bin = Join-Path $RepoRoot "dist/windows-x64/bin"
 $Builder = Join-Path $Bin "piinput-dictionary-builder.exe"
@@ -78,6 +82,10 @@ $sourceState["builder"] = [ordered]@{
 $sourceState["rime_ice"] = @($RimeIceTables | ForEach-Object {
     [ordered]@{ path = $_.Substring($RimeIceRoot.Length); sha256 = (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash }
 })
+$sourceState["piinput_professional"] = [ordered]@{
+    path = "data/professional_lexicon.tsv"
+    sha256 = (Get-FileHash -LiteralPath $ProfessionalLexicon -Algorithm SHA256).Hash
+}
 $stateJson = $sourceState | ConvertTo-Json -Depth 5 -Compress
 $FinalLex = Join-Path $Cache "piinput-base.lex"
 if (-not $Force -and (Test-Path $Manifest) -and (Test-Path $FinalLex)) {
@@ -106,6 +114,12 @@ try {
     # ahead of the character somebody meant.
     $arguments.Add("--source"); $arguments.Add("rime")
     $arguments.Add($LargeCharacterTable); $arguments.Add("1")
+    # Project-owned terminology closes explicit corpus gaps without modifying
+    # or forking upstream Rime Ice files. Exact phrase readings only affect the
+    # matching full spelling; their moderate weight does not globally promote
+    # a professional domain over everyday words.
+    $arguments.Add("--source"); $arguments.Add("tsv")
+    $arguments.Add($ProfessionalLexicon); $arguments.Add("1")
     & $Builder @arguments
     if ($LASTEXITCODE -ne 0) { throw "Dictionary normalization failed." }
     $stagedTsv = Join-Path $staging "combined.tsv"
@@ -130,7 +144,20 @@ try {
         @("full", "biankuang", "边框"),
         @("full", "houxuankuang", "候选框"),
         @("full", "huangheruhailiu", "黄河入海流"),
-        @("flypy", "hlheruhdlq", "黄河入海流")
+        @("flypy", "hlheruhdlq", "黄河入海流"),
+        @("full", "shiwuceng", "事务层"),
+        @("full", "shiwucengshujubao", "事务层数据包"),
+        @("full", "peizhiduqingqiu", "配置读请求"),
+        @("full", "peizhixieqingqiu", "配置写请求"),
+        @("full", "neicunduqingqiu", "内存读请求"),
+        @("full", "neicunxieqingqiu", "内存写请求"),
+        @("full", "wanchengbaowen", "完成报文"),
+        @("full", "wanchengchaoshi", "完成超时"),
+        @("full", "ketiaozhengjidizhijicunqi", "可调整基地址寄存器"),
+        @("full", "shurushuchuneicunguanlidanyuan", "输入输出内存管理单元"),
+        @("full", "jinchengdizhikongjianbiaozhifu", "进程地址空间标识符"),
+        @("full", "dangenshurushuchuxunihua", "单根输入输出虚拟化"),
+        @("full", "lianjieqi", "链接器")
     )
     foreach ($case in $cases) {
         $output = (& $Cli --lexicon $stagedLex --schema $case[0] --query $case[1] --top 10 2>&1) | Out-String

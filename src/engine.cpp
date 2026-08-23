@@ -1295,13 +1295,19 @@ std::vector<EngineCandidate> Engine::query(
     for (std::size_t parse_index = 0U; parse_index < parses.size(); ++parse_index) {
         if (parse_index == primary_parse_index ||
             !parses[parse_index].trailing_prefix.empty() ||
-            parses[parse_index].complete_syllables.empty() ||
-            parses[parse_index].complete_syllables.size() > 8U) {
+            parses[parse_index].complete_syllables.empty()) {
             continue;
         }
         const auto& parse = parses[parse_index];
+        // Long professional terms are exactly where pinyin boundary scoring is
+        // least reliable: shu-ru-shu-chu-nei... can score below
+        // shu-ru-shu-chun-ei.... An exact dictionary entry is bounded evidence
+        // for the whole input, so consult alternate long parses too. Short
+        // alternate readings retain the lower group that prevents xi-e words
+        // from displacing the common xie characters.
+        const bool long_exact = parse.complete_syllables.size() > 8U;
         add_exact(PinyinSegmenter::join(parse.complete_syllables),
-            parse.complete_syllables.size(), true, parse_index, true);
+            parse.complete_syllables.size(), true, parse_index, !long_exact);
     }
 
     std::vector<RankedCandidate> ranked;
@@ -1370,6 +1376,16 @@ std::size_t Engine::entry_count() const noexcept {
         return 0U;
     }
     return prefix_query_cache_->lexicon_entry_count.load();
+}
+
+bool Engine::lexicon_memory_mapped() const noexcept {
+    const auto* const binary = std::get_if<BinaryLexicon>(&lexicon_);
+    return binary != nullptr && binary->memory_mapped();
+}
+
+std::size_t Engine::lexicon_mapped_bytes() const noexcept {
+    const auto* const binary = std::get_if<BinaryLexicon>(&lexicon_);
+    return binary != nullptr ? binary->mapped_bytes() : 0U;
 }
 
 const ShuangpinDecoder& Engine::shuangpin() const noexcept {

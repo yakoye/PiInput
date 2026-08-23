@@ -62,7 +62,7 @@ if(GIT_EXECUTABLE AND EXISTS "${SOURCE_DIR}/.git")
         execute_process(
             COMMAND "${GIT_EXECUTABLE}" -c core.quotePath=false ls-files
                 --cached --others --exclude-standard -- .
-                ":(exclude)build/**" ":(exclude)dist/**"
+                ":(exclude)build/**" ":(exclude)build-*/**" ":(exclude)dist/**"
                 ":(exclude)artifacts/**" ":(exclude).git/**"
             WORKING_DIRECTORY "${SOURCE_DIR}"
             RESULT_VARIABLE paths_result
@@ -75,6 +75,17 @@ if(GIT_EXECUTABLE AND EXISTS "${SOURCE_DIR}/.git")
         string(REPLACE "\r\n" "\n" listed_paths "${listed_paths}")
         string(REPLACE "\n" ";" source_files "${listed_paths}")
         list(FILTER source_files EXCLUDE REGEX "^$")
+        # An intentional tracked deletion still appears in `git ls-files`
+        # until the release commit is created. It has no contents to scan and
+        # must not cause every following path to be concatenated into one
+        # unresolved semicolon list in a legitimate dirty release workspace.
+        set(existing_source_files)
+        foreach(source_file IN LISTS source_files)
+            if(EXISTS "${SOURCE_DIR}/${source_file}")
+                list(APPEND existing_source_files "${source_file}")
+            endif()
+        endforeach()
+        set(source_files "${existing_source_files}")
         resolve_glob_paths(safe_source_files "${SOURCE_DIR}" source_files)
         set(source_files "${safe_source_files}")
     endif()
@@ -90,7 +101,7 @@ if(NOT is_repository)
     resolve_glob_paths(safe_root_entries "${SOURCE_DIR}" root_entries)
     foreach(root_entry IN LISTS safe_root_entries)
         string(REPLACE "\\" "/" normalized_root_entry "${root_entry}")
-        if(normalized_root_entry MATCHES "^(build|dist|artifacts|\\.git)(/|$)")
+        if(normalized_root_entry MATCHES "^(build($|[-/])|dist($|/)|artifacts($|/)|\\.git($|/))")
             continue()
         endif()
         set(root_path "${SOURCE_DIR}/${root_entry}")

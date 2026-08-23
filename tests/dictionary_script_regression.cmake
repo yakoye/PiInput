@@ -50,12 +50,66 @@ foreach(required_rime_text
     endif()
 endforeach()
 
-# The release dictionary comes from Rime Ice and nothing else. Naming the old
-# sources individually rather than banning --source outright: a Rime character
-# table loaded through --source has the same provenance as the ones the master
-# file imports, and blocking it blocked the rare characters with it.
+foreach(required_professional_text
+    "data/professional_lexicon.tsv"
+    "piinput_professional"
+    "$arguments.Add(\"--source\"); $arguments.Add(\"tsv\")"
+    "事务层数据包"
+    "链接器")
+    string(FIND "${build_script}" "${required_professional_text}" professional_position)
+    if(professional_position EQUAL -1)
+        message(FATAL_ERROR "PiInput professional lexicon build marker is missing: ${required_professional_text}")
+    endif()
+endforeach()
+
+file(STRINGS "${SOURCE_DIR}/data/professional_lexicon.tsv"
+    professional_lexicon_lines ENCODING UTF-8)
+list(FILTER professional_lexicon_lines EXCLUDE REGEX "^#")
+list(FILTER professional_lexicon_lines EXCLUDE REGEX "^[	 ]*$")
+list(FILTER professional_lexicon_lines EXCLUDE REGEX "^word[	]pinyin[	]weight$")
+list(LENGTH professional_lexicon_lines professional_lexicon_count)
+if(NOT professional_lexicon_count EQUAL 13)
+    message(FATAL_ERROR
+        "PiInput professional terminology patch must contain exactly 13 entries, found ${professional_lexicon_count}")
+endif()
+file(READ
+    "${SOURCE_DIR}/tests/corpus/v0.2.0/tests/professional_vocabulary_test_cases.json"
+    professional_corpus_text)
+foreach(required_professional_term IN ITEMS
+        "事务层"
+        "事务层数据包"
+        "配置读请求"
+        "配置写请求"
+        "内存读请求"
+        "内存写请求"
+        "完成报文"
+        "完成超时"
+        "可调整基地址寄存器"
+        "输入输出内存管理单元"
+        "进程地址空间标识符"
+        "单根输入输出虚拟化"
+        "链接器")
+    string(REGEX MATCH
+        "(^|;)${required_professional_term}[	][^;]+[	]20000($|;)"
+        professional_lexicon_match "${professional_lexicon_lines}")
+    if(NOT professional_lexicon_match)
+        message(FATAL_ERROR
+            "Required professional term is missing or malformed: ${required_professional_term}")
+    endif()
+    string(FIND "${professional_corpus_text}"
+        "\"target_text\": \"${required_professional_term}\""
+        professional_corpus_position)
+    if(professional_corpus_position LESS 0)
+        message(FATAL_ERROR
+            "Required professional term has no structured corpus case: ${required_professional_term}")
+    endif()
+endforeach()
+
+# The release dictionary comes from Rime Ice plus the small project-owned
+# professional terminology table. Keep banning the superseded bulk sources;
+# naming them individually lets the intentional TSV and rare-character sources
+# remain explicit and provenance-auditable.
 foreach(forbidden_release_source
-    "$arguments.Add(\"tsv\")"
     "$arguments.Add(\"pinyin-data\")"
     "$arguments.Add(\"phrase-pinyin-data\")"
     "$arguments.Add(\"thuocl\")"

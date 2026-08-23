@@ -2,6 +2,7 @@ param(
     [ValidateSet("Debug", "Release")]
     [string]$Configuration = "Release",
     [string]$TestDataDir = "",
+    [string]$TestReportPath = "",
     [switch]$Clean,
     [switch]$SkipTests
 )
@@ -109,7 +110,16 @@ try {
     Invoke-NativeChecked $CMakeExe $configure
     Invoke-NativeChecked $CMakeExe @("--build", $BuildDir, "--config", $Configuration, "--parallel")
     if (-not $SkipTests) {
-        Invoke-NativeChecked $CTestExe @("--test-dir", $BuildDir, "-C", $Configuration, "--output-on-failure")
+        $ctestArguments = @("--test-dir", $BuildDir, "-C", $Configuration, "--output-on-failure")
+        if (-not [string]::IsNullOrWhiteSpace($TestReportPath)) {
+            $resolvedTestReport = [IO.Path]::GetFullPath($TestReportPath)
+            $testReportParent = Split-Path -Parent $resolvedTestReport
+            if (-not [string]::IsNullOrWhiteSpace($testReportParent)) {
+                New-Item -ItemType Directory -Force -Path $testReportParent | Out-Null
+            }
+            $ctestArguments += @("--output-junit", $resolvedTestReport)
+        }
+        Invoke-NativeChecked $CTestExe $ctestArguments
     }
 
     if (Test-Path $InstallDir) { Remove-Item $InstallDir -Recurse -Force }

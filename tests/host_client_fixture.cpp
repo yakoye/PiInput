@@ -1,4 +1,5 @@
 #include "pipe_server.h"
+#include "client_identity.h"
 
 #include "piinput/host_messages.h"
 
@@ -95,7 +96,7 @@ int main(const int argc, char** const argv) {
     if (expand_mode) {
         const std::string input = argv[2];
         const int presses = std::stoi(argv[3]);
-        const std::uint64_t client_id = static_cast<std::uint64_t>(GetCurrentProcessId());
+        const std::uint64_t client_id = piinput::windows::process_client_id();
         std::uint64_t sequence = 1U;
         std::uint64_t generation = 0U;
         std::optional<piinput::HostReply> reply;
@@ -150,7 +151,7 @@ int main(const int argc, char** const argv) {
     if (english_burst_mode) {
         const int count = std::stoi(argv[2]);
         if (count < 8 || count > 4000) return 28;
-        const std::uint64_t client_id = static_cast<std::uint64_t>(GetCurrentProcessId());
+        const std::uint64_t client_id = piinput::windows::process_client_id();
         constexpr std::uint64_t session_id = 1U;
         std::uint64_t sequence = 1U;
         std::uint64_t generation = 0U;
@@ -224,7 +225,7 @@ int main(const int argc, char** const argv) {
             std::cerr << "type script is empty: " << argv[2] << '\n';
             return 24;
         }
-        const std::uint64_t client_id = static_cast<std::uint64_t>(GetCurrentProcessId());
+        const std::uint64_t client_id = piinput::windows::process_client_id();
         constexpr std::uint64_t session_id = 1U;
         std::uint64_t sequence = 1U;
         std::uint64_t generation = 0U;
@@ -435,7 +436,7 @@ int main(const int argc, char** const argv) {
     const bool punctuation_chain_mode = argc == 2 &&
         std::string_view(argv[1]) == "--punctuation-chain";
     if (punctuation_chain_mode) {
-        const std::uint64_t client_id = static_cast<std::uint64_t>(GetCurrentProcessId());
+        const std::uint64_t client_id = piinput::windows::process_client_id();
         constexpr std::uint64_t session_id = 1U;
         std::uint64_t sequence = 1U;
         std::uint64_t generation = 0U;
@@ -554,7 +555,7 @@ int main(const int argc, char** const argv) {
         first_key = false;
         const piinput::HostEnvelope request{
             .version = piinput::host_protocol_v1,
-            .client_id = static_cast<std::uint64_t>(GetCurrentProcessId()),
+            .client_id = piinput::windows::process_client_id(),
             .session_id = 1U,
             .sequence = sequence++,
             .generation = last.snapshot.generation,
@@ -597,7 +598,7 @@ int main(const int argc, char** const argv) {
         const auto response = piinput::windows::request_host(
             piinput::HostMessageType::caret,
             payload,
-            static_cast<std::uint64_t>(GetCurrentProcessId()),
+            piinput::windows::process_client_id(),
             1U,
             sequence++,
             update.generation);
@@ -667,7 +668,7 @@ int main(const int argc, char** const argv) {
         const auto probe_response = piinput::windows::request_host(
             piinput::HostMessageType::key_event,
             probe_payload,
-            static_cast<std::uint64_t>(GetCurrentProcessId()),
+            piinput::windows::process_client_id(),
             1U,
             sequence++,
             last.snapshot.generation);

@@ -144,6 +144,7 @@ void check(const bool condition, const std::string& message) {
            << "在\tzai\t2400\n"
            << "刹\tcha\t1800\n"
            << "刹那间\tcha'na'jian\t257\n"
+           << "输入输出内存管理单元\tshu'ru'shu'chu'nei'cun'guan'li'dan'yuan\t20000\n"
            << "那\tna\t2000\n"
            << "间\tjian\t1900\n"
            << "产\tchan\t2100\n"
@@ -958,6 +959,11 @@ void test_lexical_evidence_beats_ambiguous_full_pinyin_boundaries(
         "when no real phrase starts at the input boundary, the first syllable is offered");
     check(!contains_word(instant, "在刹那间"),
         "a real suffix phrase is not joined to a leading character for display");
+
+    const auto iommu = engine.query(
+        "shurushuchuneicunguanlidanyuan", "full", 20U);
+    check(contains_word(iommu, "输入输出内存管理单元"),
+        "an exact long professional term resolves through a non-primary pinyin boundary");
 }
 
 void test_cross_start_prefix_and_complete_input(piinput::Engine& engine) {

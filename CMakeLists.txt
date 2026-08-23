@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(PiInput VERSION 0.7.12 LANGUAGES CXX)
+project(PiInput VERSION 0.7.13 LANGUAGES CXX)
 
 option(PIINPUT_BUILD_TESTS "Build PiInput tests" ON)
 option(PIINPUT_STATIC_MSVC_RUNTIME "Use the static MSVC runtime" ON)
+option(PIINPUT_ENABLE_INTERACTIVE_TESTS
+    "Register focus-changing SendInput/TSF tests; use only on an isolated desktop" OFF)
+set(PIINPUT_TEST_REGISTERED_TSF "" CACHE FILEPATH
+    "Registered PiInputTSF.dll expected by the optional real-profile smoke test")
 set(PIINPUT_TESTDATA_DIR "" CACHE PATH "Directory containing the two SCEL regression files")
 set(PIINPUT_BUILD_REVISION "" CACHE STRING
     "Exact source revision embedded in runtime diagnostics; auto-detected when empty")
@@ -96,6 +100,7 @@ add_library(piinput_core STATIC
     src/datetime_candidates.cpp
     src/symbols.cpp
     src/punctuation.cpp
+    src/smart_punctuation.cpp
     src/settings.cpp
     src/settings_manager.cpp
     src/session.cpp
@@ -193,6 +198,7 @@ if(WIN32)
         platform/windows/host/pipe_server.cpp
         platform/windows/host/session_manager.cpp
         platform/windows/tsf/candidate_window.cpp
+        platform/windows/tsf/client_identity.cpp
     )
     target_include_directories(piinput-host-client-fixture PRIVATE platform/windows/host platform/windows/tsf)
     target_link_libraries(piinput-host-client-fixture PRIVATE piinput_core advapi32 user32 gdi32)
@@ -227,6 +233,7 @@ if(WIN32)
         platform/windows/tsf/mode_indicator.cpp
         platform/windows/tsf/client_identity.cpp
         platform/windows/tsf/stable_text_service.cpp
+        src/smart_punctuation.cpp
         platform/windows/tsf/composition_mirror.cpp
         platform/windows/tsf/pipe_client.cpp
         platform/windows/tsf/shim_pipe_transport.cpp
@@ -404,6 +411,24 @@ if(PIINPUT_BUILD_TESTS)
         )
         target_link_libraries(piinput-input-scope-policy-tests PRIVATE ole32)
         piinput_enable_warnings(piinput-input-scope-policy-tests)
+
+        add_executable(piinput-controlled-tsf-host
+            tests/controlled_tsf_host.cpp
+        )
+        target_link_libraries(piinput-controlled-tsf-host PRIVATE user32)
+        piinput_enable_warnings(piinput-controlled-tsf-host)
+
+        add_executable(piinput-controlled-tsf-controller
+            tests/controlled_tsf_controller.cpp
+        )
+        target_include_directories(piinput-controlled-tsf-controller PRIVATE
+            platform/windows/tsf
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+        )
+        target_link_libraries(piinput-controlled-tsf-controller PRIVATE
+            user32 ole32 uuid
+        )
+        piinput_enable_warnings(piinput-controlled-tsf-controller)
     endif()
 
     add_executable(piinput-host-protocol-tests
@@ -676,6 +701,47 @@ if(PIINPUT_BUILD_TESTS)
     add_test(NAME piinput-segment-selection COMMAND piinput-segment-selection-tests)
 
     if(WIN32)
+        add_test(
+            NAME piinput-controlled-tsf-host-self-test
+            COMMAND piinput-controlled-tsf-host --self-test
+        )
+        if(PIINPUT_ENABLE_INTERACTIVE_TESTS)
+            add_test(
+                NAME piinput-controlled-tsf-physical-input
+                COMMAND piinput-controlled-tsf-controller
+            )
+            set_tests_properties(piinput-controlled-tsf-physical-input PROPERTIES
+                LABELS "interactive;controlled-tsf"
+                RUN_SERIAL TRUE
+            )
+            if(PIINPUT_TEST_REGISTERED_TSF)
+                add_test(
+                    NAME piinput-controlled-tsf-piinput-smoke
+                    COMMAND piinput-controlled-tsf-controller
+                        --piinput-smoke
+                        --expected-tsf "${PIINPUT_TEST_REGISTERED_TSF}"
+                )
+                set_tests_properties(piinput-controlled-tsf-piinput-smoke PROPERTIES
+                    LABELS "interactive;controlled-tsf;piinput-profile"
+                    RUN_SERIAL TRUE
+                )
+                add_test(
+                    NAME piinput-controlled-tsf-soak-smoke
+                    COMMAND pwsh -NoProfile -ExecutionPolicy Bypass
+                        -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/tsf_app_soak_tests.ps1"
+                        -ControllerExe "$<TARGET_FILE:piinput-controlled-tsf-controller>"
+                        -ExpectedTsf "${PIINPUT_TEST_REGISTERED_TSF}"
+                        -DurationHours 0.003
+                        -SampleSeconds 1
+                        -OutputDirectory "${CMAKE_CURRENT_BINARY_DIR}/tsf-app-soak-smoke"
+                )
+                set_tests_properties(piinput-controlled-tsf-soak-smoke PROPERTIES
+                    LABELS "interactive;controlled-tsf;piinput-profile;soak-smoke"
+                    RUN_SERIAL TRUE
+                    TIMEOUT 120
+                )
+            endif()
+        endif()
         add_test(NAME piinput-pipe-client COMMAND piinput-pipe-client-tests)
         add_test(NAME piinput-composition-mirror COMMAND piinput-composition-mirror-tests)
         add_test(NAME piinput-session-manager COMMAND piinput-session-manager-tests)

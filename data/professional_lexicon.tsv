@@ -1,0 +1,16 @@
+# PiInput project-authored professional terminology.
+# word<TAB>canonical pinyin<TAB>weight
+word	pinyin	weight
+事务层	shi'wu'ceng	20000
+事务层数据包	shi'wu'ceng'shu'ju'bao	20000
+配置读请求	pei'zhi'du'qing'qiu	20000
+配置写请求	pei'zhi'xie'qing'qiu	20000
+内存读请求	nei'cun'du'qing'qiu	20000
+内存写请求	nei'cun'xie'qing'qiu	20000
+完成报文	wan'cheng'bao'wen	20000
+完成超时	wan'cheng'chao'shi	20000
+可调整基地址寄存器	ke'tiao'zheng'ji'di'zhi'ji'cun'qi	20000
+输入输出内存管理单元	shu'ru'shu'chu'nei'cun'guan'li'dan'yuan	20000
+进程地址空间标识符	jin'cheng'di'zhi'kong'jian'biao'zhi'fu	20000
+单根输入输出虚拟化	dan'gen'shu'ru'shu'chu'xu'ni'hua	20000
+链接器	lian'jie'qi	20000

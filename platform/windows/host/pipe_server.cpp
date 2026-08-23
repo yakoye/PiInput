@@ -281,8 +281,14 @@ std::optional<HostEnvelope> request_host(
 PipeServer::PipeServer(
     std::string build_id,
     SessionManager* const sessions,
-    CandidatePresenter* const presenter)
-    : build_id_(std::move(build_id)), sessions_(sessions), presenter_(presenter) {}
+    CandidatePresenter* const presenter,
+    const bool lexicon_memory_mapped,
+    const std::size_t lexicon_mapped_bytes)
+    : build_id_(std::move(build_id)),
+      lexicon_memory_mapped_(lexicon_memory_mapped),
+      lexicon_mapped_bytes_(lexicon_mapped_bytes),
+      sessions_(sessions),
+      presenter_(presenter) {}
 
 void PipeServer::set_startup_duration(const std::uint64_t milliseconds) noexcept {
     startup_ms_ = milliseconds;
@@ -344,6 +350,11 @@ int PipeServer::run() noexcept {
                     ? "protocol=" + std::to_string(host_protocol_current) +
                         "\nstartup_ms=" + std::to_string(startup_ms_) +
                         "\nversion=" + std::string(PIINPUT_VERSION) +
+                        "\nlexicon_storage=" +
+                            (lexicon_memory_mapped_ ? "mmap" : "heap") +
+                        "\nlexicon_mapped_bytes=" +
+                            std::to_string(lexicon_mapped_bytes_) +
+                        "\nhost_pid=" + std::to_string(GetCurrentProcessId()) +
                         "\nbuild_id=" + build_id_
                     : "draining=yes";
                 HostEnvelope response{

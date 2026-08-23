@@ -5,7 +5,7 @@ param(
 # 重建 FILE_LIST.txt 和 SHA256SUMS.txt。
 #
 # 收录范围就是 git 认的源码：已跟踪 + 未跟踪且未被忽略。.gitignore 已经排除了
-# build/、dist/、artifacts/、外部 dicts/ 和编译产物，所以这里不再重复维护一份
+# build/、build-*/、dist/、artifacts/、外部 dicts/ 和编译产物，所以这里不再重复维护一份
 # 排除名单，避免两处规则漂移。
 #
 # SHA256SUMS.txt 不能收录自己，否则永远算不出稳定的哈希；FILE_LIST.txt 要收录
@@ -34,7 +34,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "git ls-files 失败，退出码 $LASTEXITCODE。" }
 
     $paths = @($tracked |
-        Where-Object { $_ -ne "" -and $_ -ne "SHA256SUMS.txt" } |
+        Where-Object {
+            $_ -ne "" -and $_ -ne "SHA256SUMS.txt" -and
+            (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf)
+        } |
         Sort-Object)
     if ($paths.Count -eq 0) { throw "枚举到 0 个源码文件，拒绝写出空清单。" }
 

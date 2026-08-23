@@ -78,14 +78,13 @@ int run(const std::filesystem::path& lexicon_path, const std::filesystem::path& 
 
     std::size_t failures = 0U;
     std::size_t rank_cases = 0U;
-    std::size_t known_missing_cases = 0U;
     std::size_t result_cases = 0U;
     std::size_t smoke_cases = 0U;
     std::uint64_t slowest_us = 0U;
     std::string slowest_id;
     for (const auto& item : cases) {
         try {
-            const std::size_t limit = item.mode == "rank" || item.mode == "known_missing"
+            const std::size_t limit = item.mode == "rank"
                 ? (std::max)(item.max_rank, std::size_t{1U})
                 : std::size_t{90U};
             const auto began = std::chrono::steady_clock::now();
@@ -98,7 +97,7 @@ int run(const std::filesystem::path& lexicon_path, const std::filesystem::path& 
                 slowest_id = item.id;
             }
 
-            if (item.mode == "rank" || item.mode == "known_missing") {
+            if (item.mode == "rank") {
                 const auto found = std::find_if(
                     candidates.begin(), candidates.end(), [&](const auto& candidate) {
                         return candidate.word == item.target;
@@ -106,20 +105,11 @@ int run(const std::filesystem::path& lexicon_path, const std::filesystem::path& 
                 const std::size_t rank = found == candidates.end()
                     ? 0U
                     : static_cast<std::size_t>(found - candidates.begin()) + 1U;
-                if (item.mode == "rank") {
-                    ++rank_cases;
-                } else {
-                    ++known_missing_cases;
-                }
-                if (item.mode == "rank" && (rank == 0U || rank > item.max_rank)) {
+                ++rank_cases;
+                if (rank == 0U || rank > item.max_rank) {
                     ++failures;
                     std::cerr << item.id << ": target '" << item.target
                               << "' rank=" << rank << " expected<= " << item.max_rank << '\n';
-                } else if (item.mode == "known_missing" &&
-                           rank != 0U && rank <= item.max_rank) {
-                    ++failures;
-                    std::cerr << item.id << ": known gap resolved at rank=" << rank
-                              << "; remove it from the baseline\n";
                 }
             } else if (item.mode == "results") {
                 ++result_cases;
@@ -141,7 +131,6 @@ int run(const std::filesystem::path& lexicon_path, const std::filesystem::path& 
 
     std::cout << "Structured corpus executed=" << cases.size()
               << " rank=" << rank_cases
-              << " known_missing=" << known_missing_cases
               << " results=" << result_cases
               << " smoke=" << smoke_cases
               << " entries=" << engine.entry_count()

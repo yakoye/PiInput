@@ -1,0 +1,281 @@
+name: Windows build and release closure
+
+permissions:
+  contents: write
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  windows-x64:
+    runs-on: windows-2022
+    timeout-minutes: 90
+    env:
+      DICTIONARY_ROOT: ${{ github.workspace }}\..\dicts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag, version and clean source identity
+        shell: pwsh
+        run: |
+          $version = (Get-Content ./VERSION -Raw).Trim()
+          if ('${{ github.ref_type }}' -eq 'tag' -and '${{ github.ref_name }}' -ne "v$version") {
+            throw "Tag ${{ github.ref_name }} does not match VERSION v$version."
+          }
+          if (git status --porcelain) {
+            throw 'The checked-out source is unexpectedly dirty before the build.'
+          }
+
+      - name: Require completed release evidence for version tags
+        id: release_evidence
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $version = (Get-Content ./VERSION -Raw).Trim()
+          ./scripts/windows/verify-release-evidence.ps1 -Version $version -ReportPath ./release-evidence.json
+
+      - name: Restore Rime Ice source cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DICTIONARY_ROOT }}\sources
+          key: rime-ice-${{ hashFiles('dictionary_sources.json', 'data/professional_lexicon.tsv') }}
+
+      - name: Build release tools
+        shell: pwsh
+        run: ./build.ps1 -Configuration Release -SkipTests
+
+      - name: Build pinned large lexicon
+        shell: pwsh
+        run: ./scripts/update-dictionaries.ps1 -DictionaryRoot $env:DICTIONARY_ROOT -Force
+
+      - name: Full Windows build and CTest
+        id: build_test
+        shell: pwsh
+        run: ./build.ps1 -Configuration Release -TestDataDir $env:DICTIONARY_ROOT -TestReportPath ./artifacts/test-results/ctest.xml
+
+      - name: Apply isolated Authenticode signing policy
+        id: signing
+        shell: pwsh
+        env:
+          SIGNING_PFX_BASE64: ${{ secrets.PIINPUT_SIGNING_PFX_BASE64 }}
+          SIGNING_PFX_PASSWORD: ${{ secrets.PIINPUT_SIGNING_PFX_PASSWORD }}
+        run: |
+          $hasPfx = -not [string]::IsNullOrWhiteSpace($env:SIGNING_PFX_BASE64)
+          $hasPassword = -not [string]::IsNullOrWhiteSpace($env:SIGNING_PFX_PASSWORD)
+          if ($hasPfx -ne $hasPassword) {
+            throw 'Signing PFX and password secrets must either both exist or both be absent.'
+          }
+          $signed = $hasPfx -and $hasPassword
+          "signed=$($signed.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
+          if ('${{ github.ref_type }}' -eq 'tag' -and -not $signed) {
+            throw 'Tagged releases require PIINPUT_SIGNING_PFX_BASE64 and PIINPUT_SIGNING_PFX_PASSWORD.'
+          }
+          if (-not $signed) {
+            Write-Host 'Unsigned branch/PR build: formal signing gate is not requested.'
+            exit 0
+          }
+          $temporaryPfx = Join-Path $env:RUNNER_TEMP 'piinput-signing.pfx'
+          try {
+            [IO.File]::WriteAllBytes($temporaryPfx, [Convert]::FromBase64String($env:SIGNING_PFX_BASE64))
+            ./scripts/windows/sign-binaries.ps1 -InputRoot ./build/windows-x64/Release -PfxPath $temporaryPfx -PfxPassword $env:SIGNING_PFX_PASSWORD -ReportPath ./artifacts/signing/signatures.json
+            cmake --install ./build/windows-x64 --config Release --prefix ./dist/windows-x64
+          } finally {
+            Remove-Item -LiteralPath $temporaryPfx -Force -ErrorAction SilentlyContinue
+          }
+
+      - name: Download previous verified package for upgrade smoke
+        id: previous_release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $currentTag = '${{ github.ref_name }}'
+          $releases = gh release list --limit 50 --json tagName,isDraft,isPrerelease | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { throw 'Could not list previous releases.' }
+          $previous = $releases | Where-Object {
+            -not $_.isDraft -and -not $_.isPrerelease -and $_.tagName -ne $currentTag
+          } | Select-Object -First 1
+          if ($null -eq $previous) {
+            'zip=' >> $env:GITHUB_OUTPUT
+            'tag=' >> $env:GITHUB_OUTPUT
+            Write-Host 'No previous final release exists; upgrade smoke is explicitly not requested.'
+            exit 0
+          }
+          $directory = Join-Path $env:RUNNER_TEMP 'piinput-previous-release'
+          New-Item -ItemType Directory -Force -Path $directory | Out-Null
+          gh release download $previous.tagName --dir $directory --pattern 'PiInput-v*-windows-x64.zip*'
+          if ($LASTEXITCODE -ne 0) { throw "Could not download previous release $($previous.tagName)." }
+          $zips = @(Get-ChildItem -LiteralPath $directory -Filter '*.zip' -File)
+          if ($zips.Count -ne 1 -or -not (Test-Path -LiteralPath "$($zips[0].FullName).sha256.txt")) {
+            throw "Previous release $($previous.tagName) does not contain one ZIP and its SHA-256 sidecar."
+          }
+          "zip=$($zips[0].FullName)" >> $env:GITHUB_OUTPUT
+          "tag=$($previous.tagName)" >> $env:GITHUB_OUTPUT
+
+      - name: Package release
+        id: package
+        shell: pwsh
+        run: |
+          $signed = '${{ steps.signing.outputs.signed }}' -eq 'true'
+          ./scripts/windows/package-release.ps1 -Configuration Release -RequireSigned:$signed
+          $version = (Get-Content ./VERSION -Raw).Trim()
+          $revision = (git rev-parse --short=12 HEAD).Trim()
+          $closure = @{
+            PackageZip = "./artifacts/PiInput-v$version-windows-x64.zip"
+            ExpectedVersion = $version
+            ExpectedBuildId = "$version+$revision"
+            RequireSigned = $signed
+            InstallSmoke = $true
+            ControlledTsfController = './build/windows-x64/Release/piinput-controlled-tsf-controller.exe'
+            ReportDirectory = './artifacts/package-closure'
+          }
+          $previousZip = '${{ steps.previous_release.outputs.zip }}'
+          if (-not [string]::IsNullOrWhiteSpace($previousZip)) {
+            $closure.PreviousPackageZip = $previousZip
+          }
+          ./scripts/windows/verify-package-closure.ps1 @closure
+
+      - name: Compose unified machine result
+        if: always()
+        shell: pwsh
+        run: |
+          $resultRoot = './artifacts/unified-result'
+          New-Item -ItemType Directory -Force -Path $resultRoot | Out-Null
+          function Convert-Outcome([string]$Outcome) {
+            switch ($Outcome) {
+              'success' { 'PASS' }
+              'failure' { 'FAIL' }
+              'cancelled' { 'FAIL' }
+              default { 'NOT_RUN' }
+            }
+          }
+          function New-Case(
+            [string]$Id,
+            [string]$Status,
+            [string]$FailureClass,
+            [string[]]$Evidence
+          ) {
+            [ordered]@{
+              case_id = $Id
+              status = $Status
+              duration_ms = 0
+              failure_class = if ($Status -eq 'FAIL') { $FailureClass } else { '' }
+              evidence = @($Evidence)
+            }
+          }
+
+          $buildStatus = Convert-Outcome '${{ steps.build_test.outcome }}'
+          $packageStatus = Convert-Outcome '${{ steps.package.outcome }}'
+          $isTag = '${{ github.ref_type }}' -eq 'tag'
+          $releaseEvidenceStatus = if ($isTag) {
+            Convert-Outcome '${{ steps.release_evidence.outcome }}'
+          } else { 'N/A' }
+          $signed = '${{ steps.signing.outputs.signed }}' -eq 'true'
+          $signingStatus = if (-not $isTag -and -not $signed -and
+            '${{ steps.signing.outcome }}' -eq 'success') {
+            'N/A'
+          } else {
+            Convert-Outcome '${{ steps.signing.outcome }}'
+          }
+          $cases = @(
+            New-Case 'BUILD-001' $buildStatus 'BUILD_OR_CTEST' @('./artifacts/test-results/ctest.xml')
+            New-Case 'BUILD-008' $releaseEvidenceStatus 'RELEASE_EVIDENCE' @('./release-evidence.json')
+            New-Case 'IME-SIGN-001' $signingStatus 'AUTHENTICODE' @('./artifacts/signing/signatures.json')
+            New-Case 'IME-PKG-001' $packageStatus 'PACKAGE_CLOSURE' @('./artifacts/package-closure/summary.json')
+          )
+          $casePath = Join-Path $resultRoot 'cases.json'
+          @{ cases = $cases } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $casePath -Encoding UTF8
+          $artifacts = @(
+            './artifacts/test-results/ctest.xml',
+            './release-evidence.json',
+            './artifacts/signing/signatures.json',
+            './artifacts/package-closure/summary.json',
+            './build/windows-x64/Testing/Temporary/LastTest.log',
+            './artifacts/PiInput-v' + (Get-Content ./VERSION -Raw).Trim() + '-windows-x64.zip',
+            './artifacts/PiInput-v' + (Get-Content ./VERSION -Raw).Trim() + '-windows-x64.zip.sha256.txt'
+          ) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
+          $version = (Get-Content ./VERSION -Raw).Trim()
+          $revision = (git rev-parse --short=12 HEAD).Trim()
+          $compose = @{
+            CaseResultPath = $casePath
+            Version = $version
+            BuildId = "$version+$revision"
+            Commit = '${{ github.sha }}'
+            RunId = '${{ github.run_id }}-${{ github.run_attempt }}'
+            ArtifactPath = @($artifacts)
+            OutputPath = Join-Path $resultRoot 'result.json'
+            ManifestPath = Join-Path $resultRoot 'artifact-manifest.json'
+          }
+          ./scripts/windows/compose-test-result.ps1 @compose
+
+      - name: Upload Windows diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PiInput-windows-evidence-${{ github.sha }}
+          if-no-files-found: warn
+          path: |
+            release-evidence.json
+            artifacts/test-results/**
+            artifacts/signing/**
+            artifacts/package-closure/**
+            artifacts/unified-result/**
+            build/windows-x64/Testing/Temporary/LastTest.log
+
+      - name: Upload verified Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: PiInput-windows-x64-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            artifacts/PiInput-v*-windows-x64.zip
+            artifacts/PiInput-v*-windows-x64.zip.sha256.txt
+            release-evidence.json
+            artifacts/test-results/**
+            artifacts/signing/**
+            artifacts/package-closure/**
+            artifacts/unified-result/**
+
+      - name: Publish verified tag assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content ./VERSION -Raw).Trim()
+          $assets = @(
+            "./artifacts/PiInput-v$version-windows-x64.zip",
+            "./artifacts/PiInput-v$version-windows-x64.zip.sha256.txt",
+            "./artifacts/package-closure/summary.json",
+            "./artifacts/signing/signatures.json",
+            "./artifacts/unified-result/result.json",
+            "./artifacts/unified-result/artifact-manifest.json",
+            "./docs/VERIFICATION_v$version.md"
+          )
+          gh release view "v$version" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "v$version" @assets --clobber
+            if ($LASTEXITCODE -ne 0) { throw 'Could not refresh the release assets.' }
+            gh release edit "v$version" --title "PiInput v$version" --notes-file "./docs/release_notes_v$version.md"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not refresh the release notes.' }
+          } else {
+            gh release create "v$version" @assets --verify-tag --title "PiInput v$version" --notes-file "./docs/release_notes_v$version.md"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not create the release.' }
+          }
+          $download = Join-Path $env:RUNNER_TEMP "piinput-release-download"
+          New-Item -ItemType Directory -Force -Path $download | Out-Null
+          gh release download "v$version" --dir $download --pattern "PiInput-v$version-windows-x64.zip*"
+          $published = Join-Path $download "PiInput-v$version-windows-x64.zip"
+          $publishedSidecar = "$published.sha256.txt"
+          $expected = ((Get-Content -LiteralPath $publishedSidecar -Raw).Trim() -split '\s+')[0]
+          $actual = (Get-FileHash -LiteralPath $published -Algorithm SHA256).Hash
+          $local = (Get-FileHash -LiteralPath "./artifacts/PiInput-v$version-windows-x64.zip" -Algorithm SHA256).Hash
+          if (-not $actual.Equals($expected, [StringComparison]::OrdinalIgnoreCase) -or
+              -not $actual.Equals($local, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Published release asset SHA-256 mismatch: sidecar=$expected local=$local published=$actual"
+          }

@@ -3,6 +3,7 @@ if(NOT DEFINED PIINPUT_SOURCE_DIR)
 endif()
 
 file(READ "${PIINPUT_SOURCE_DIR}/CMakeLists.txt" cmake_text)
+file(READ "${PIINPUT_SOURCE_DIR}/build.ps1" build_script_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/profile_tool.cpp" profile_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/profile_registration.h" registration_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/piinput_tsf_guids.h" guid_text)
@@ -10,6 +11,11 @@ file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/installer/main.cpp" installer_
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/installer/stable_runtime.cpp" stable_runtime_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/preview/main.cpp" preview_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/windows/package-release.ps1" package_text)
+file(READ "${PIINPUT_SOURCE_DIR}/scripts/windows/sign-binaries.ps1" signing_text)
+file(READ "${PIINPUT_SOURCE_DIR}/scripts/windows/verify-package-closure.ps1" package_closure_text)
+file(READ "${PIINPUT_SOURCE_DIR}/scripts/windows/verify-release-evidence.ps1" release_evidence_text)
+file(READ "${PIINPUT_SOURCE_DIR}/scripts/windows/compose-test-result.ps1" result_composer_text)
+file(READ "${PIINPUT_SOURCE_DIR}/.github/workflows/windows-release.yml" windows_release_workflow_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/dllmain.cpp" dllmain_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/dev/repair-registration.ps1" repair_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/dev/refresh-installed-dev.ps1" refresh_text)
@@ -66,6 +72,23 @@ if(NOT EXISTS "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.cp
 endif()
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.cpp" stable_text_service_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.h" stable_text_service_header_text)
+file(READ "${PIINPUT_SOURCE_DIR}/src/smart_punctuation.cpp" smart_punctuation_text)
+file(READ "${PIINPUT_SOURCE_DIR}/tests/controlled_tsf_host.cpp" controlled_tsf_host_text)
+file(READ "${PIINPUT_SOURCE_DIR}/tests/controlled_tsf_controller.cpp" controlled_tsf_controller_text)
+file(READ "${PIINPUT_SOURCE_DIR}/tests/tsf_app_soak_tests.ps1" tsf_app_soak_text)
+foreach(required_token_exit_oracle IN ITEMS
+        "token_exit_url"
+        "token_exit_email"
+        "token_exit_path"
+        "token_exit_code"
+        "percent_then_chinese")
+    string(FIND "${controlled_tsf_controller_text}" "${required_token_exit_oracle}"
+        token_exit_oracle_position)
+    if(token_exit_oracle_position LESS 0)
+        message(FATAL_ERROR
+            "Controlled TSF smoke must verify token exit and unit punctuation: ${required_token_exit_oracle}")
+    endif()
+endforeach()
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/input_scope_policy.h" input_scope_policy_text)
 if(NOT EXISTS "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/shim_ui_control.h")
     message(FATAL_ERROR "Stable TSF Host-to-Shim UI control channel is missing")
@@ -339,6 +362,184 @@ if(NOT package_text MATCHES "PiInputHost.exe" OR
    NOT package_text MATCHES "稳定入口与无重启升级说明.md")
     message(FATAL_ERROR "Release package must include the Host, Settings, diagnostics, protocol metadata, and stable-upgrade guide")
 endif()
+if(NOT signing_text MATCHES "TimeStamperCertificate" OR
+   NOT signing_text MATCHES "SignerThumbprint" OR
+   NOT signing_text MATCHES "TimestampThumbprint" OR
+   NOT package_text MATCHES "Release timestamp gate failed")
+    message(FATAL_ERROR
+        "Release signing must require RFC 3161 timestamp evidence and record signer/timestamp identity")
+endif()
+foreach(required_closure_token IN ITEMS
+        "ControlledTsfController"
+        "PreviousPackageZip"
+        "ExpectedBuildId"
+        "User data preservation sentinel was lost"
+        "upgrade_from_version"
+        "upgrade_smoke"
+        "--piinput-smoke"
+        "--expected-tsf"
+        "Get-RegisteredTsfPath"
+        "Get-RuntimeHostPath"
+        "Registered TSF path mismatch"
+        "Registered Host path mismatch"
+        "Installed PE hash mismatch"
+        "Get-ExecutableFromCommandLine"
+        "status = \"failed\""
+        "stage = $closureStage"
+        "build_id"
+        "controlled_tsf_smoke")
+    string(FIND "${package_closure_text}" "${required_closure_token}" closure_token_position)
+    if(closure_token_position LESS 0)
+        message(FATAL_ERROR
+            "Package closure must verify installed identity and controlled physical input; missing ${required_closure_token}")
+    endif()
+endforeach()
+foreach(required_ci_token IN ITEMS
+        "Verify tag, version and clean source identity"
+        "if: always()"
+        "Apply isolated Authenticode signing policy"
+        "Require completed release evidence for version tags"
+        "finally"
+        "signed=$($signed.ToString().ToLowerInvariant())"
+        "ControlledTsfController"
+        "Download previous verified package for upgrade smoke"
+        "git rev-parse --short=12 HEAD"
+        "Compose unified machine result"
+        "compose-test-result.ps1"
+        "artifacts/unified-result"
+        "gh release download"
+        "Published release asset SHA-256 mismatch")
+    string(FIND "${windows_release_workflow_text}" "${required_ci_token}" ci_token_position)
+    if(ci_token_position LESS 0)
+        message(FATAL_ERROR
+            "Windows CI must preserve failure evidence and verify published assets; missing ${required_ci_token}")
+    endif()
+endforeach()
+foreach(required_release_gate IN ITEMS
+        "host_soak_8h"
+        "tsf_app_soak_8h"
+        "p0_real_host_matrix"
+        "Value -ne \"PASS\"")
+    string(FIND "${release_evidence_text}" "${required_release_gate}"
+        release_gate_position)
+    if(release_gate_position LESS 0)
+        message(FATAL_ERROR
+            "Version tags must fail closed on incomplete external evidence; missing ${required_release_gate}")
+    endif()
+endforeach()
+execute_process(
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File "${PIINPUT_SOURCE_DIR}/scripts/windows/verify-release-evidence.ps1"
+        -Version 9.9.9
+        -VerificationDocument "${PIINPUT_SOURCE_DIR}/tests/data/release_verification_pass.md"
+    RESULT_VARIABLE release_evidence_fixture_result
+    OUTPUT_QUIET
+    ERROR_QUIET)
+if(NOT release_evidence_fixture_result EQUAL 0)
+    message(FATAL_ERROR
+        "Release evidence verifier rejected the all-PASS regression fixture")
+endif()
+foreach(required_result_token IN ITEMS
+        "schema_version = 1"
+        "Duplicate case_id"
+        "unsupported status"
+        "pass_rate"
+        "gate_status"
+        "Security.Cryptography.SHA256")
+    string(FIND "${result_composer_text}" "${required_result_token}"
+        result_token_position)
+    if(result_token_position LESS 0)
+        message(FATAL_ERROR
+            "Unified result composer is missing fail-closed behavior: ${required_result_token}")
+    endif()
+endforeach()
+set(result_fixture_dir "${CMAKE_CURRENT_BINARY_DIR}/result-report-fixture")
+file(REMOVE_RECURSE "${result_fixture_dir}")
+file(MAKE_DIRECTORY "${result_fixture_dir}")
+execute_process(
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File "${PIINPUT_SOURCE_DIR}/scripts/windows/compose-test-result.ps1"
+        -CaseResultPath "${PIINPUT_SOURCE_DIR}/tests/data/result_cases_fixture.json"
+        -Version 9.9.9
+        -BuildId "9.9.9+fixture"
+        -Commit "0123456789abcdef"
+        -RunId "fixture-run"
+        -OutputPath "${result_fixture_dir}/result.json"
+        -ManifestPath "${result_fixture_dir}/artifact-manifest.json"
+    RESULT_VARIABLE result_fixture_result
+    OUTPUT_VARIABLE result_fixture_output
+    ERROR_VARIABLE result_fixture_error)
+if(NOT result_fixture_result EQUAL 0)
+    message(FATAL_ERROR
+        "Unified result composer rejected the valid regression fixture: "
+        "${result_fixture_output}${result_fixture_error}")
+endif()
+file(READ "${result_fixture_dir}/result.json" result_fixture_text)
+foreach(required_fixture_value IN ITEMS
+        "\"pass\":  1"
+        "\"fail\":  0"
+        "\"blocked\":  1"
+        "\"not_run\":  1"
+        "\"na\":  1"
+        "\"gate_status\":  \"BLOCKED\"")
+    string(FIND "${result_fixture_text}" "${required_fixture_value}"
+        fixture_value_position)
+    if(fixture_value_position LESS 0)
+        message(FATAL_ERROR
+            "Unified result fixture has an incorrect summary: ${required_fixture_value}")
+    endif()
+endforeach()
+execute_process(
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File "${PIINPUT_SOURCE_DIR}/scripts/windows/compose-test-result.ps1"
+        -CaseResultPath "${PIINPUT_SOURCE_DIR}/tests/data/result_cases_invalid_status.json"
+        -Version 9.9.9
+        -BuildId "9.9.9+fixture"
+        -Commit "0123456789abcdef"
+        -OutputPath "${result_fixture_dir}/invalid.json"
+    RESULT_VARIABLE invalid_status_result
+    OUTPUT_QUIET
+    ERROR_QUIET)
+if(invalid_status_result EQUAL 0)
+    message(FATAL_ERROR "Unified result composer accepted an unsupported status")
+endif()
+execute_process(
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File "${PIINPUT_SOURCE_DIR}/scripts/windows/compose-test-result.ps1"
+        -CaseResultPath "${PIINPUT_SOURCE_DIR}/tests/data/result_cases_duplicate.json"
+        -Version 9.9.9
+        -BuildId "9.9.9+fixture"
+        -Commit "0123456789abcdef"
+        -OutputPath "${result_fixture_dir}/duplicate.json"
+    RESULT_VARIABLE duplicate_case_result
+    OUTPUT_QUIET
+    ERROR_QUIET)
+if(duplicate_case_result EQUAL 0)
+    message(FATAL_ERROR "Unified result composer accepted duplicate case IDs")
+endif()
+set(missing_artifact_result_path "${result_fixture_dir}/missing-artifact.json")
+execute_process(
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File "${PIINPUT_SOURCE_DIR}/scripts/windows/compose-test-result.ps1"
+        -CaseResultPath "${PIINPUT_SOURCE_DIR}/tests/data/result_cases_fixture.json"
+        -Version 9.9.9
+        -BuildId "9.9.9+fixture"
+        -Commit "0123456789abcdef"
+        -ArtifactPath "${result_fixture_dir}/does-not-exist.bin"
+        -OutputPath "${missing_artifact_result_path}"
+    RESULT_VARIABLE missing_artifact_result
+    OUTPUT_QUIET
+    ERROR_QUIET)
+if(missing_artifact_result EQUAL 0 OR EXISTS "${missing_artifact_result_path}")
+    message(FATAL_ERROR
+        "Unified result composer must fail before writing a result when evidence is missing")
+endif()
+if(NOT build_script_text MATCHES "TestReportPath" OR
+   NOT build_script_text MATCHES "--output-junit" OR
+   NOT windows_release_workflow_text MATCHES "artifacts/test-results")
+    message(FATAL_ERROR
+        "Windows CI must produce and preserve a machine-readable CTest JUnit report")
+endif()
 if(NOT stable_text_service_text MATCHES "event.resume = mirror_.resume_state\(\)" OR
    NOT stable_text_service_text MATCHES "HostKeyKind::select_digit" OR
    NOT stable_text_service_text MATCHES "HostKeyKind::space")
@@ -508,7 +709,6 @@ foreach(forbidden_probe_call IN ITEMS
             "OnTestKeyDown must be side-effect free; found ${forbidden_probe_call}")
     endif()
 endforeach()
-
 if(activate_text MATCHES "load_engine\\(" OR focus_text MATCHES "load_engine\\(")
     message(FATAL_ERROR "TSF activation and focus must never synchronously materialize the full dictionary")
 endif()
@@ -792,6 +992,167 @@ if(NOT stable_text_service_text MATCHES "wparam == VK_OEM_3" OR
     message(FATAL_ERROR
         "Stable TSF shim must forward the grave command prefix to the resident Host")
 endif()
+if(stable_text_service_text MATCHES "last_passthrough_was_digit_")
+    message(FATAL_ERROR
+        "Numeric punctuation must come from document context, not an app-dependent passthrough callback")
+endif()
+foreach(numeric_context_token IN ITEMS
+        "SurroundingTextQuerySession"
+        "ShiftStart(cookie, -64L"
+        "ShiftEnd(cookie, 64L"
+        "query_surrounding_text(context, left, right)"
+        "query_scintilla_surrounding_text(left, right)"
+        "_wcsicmp(class_name.data(), L\"Scintilla\")"
+        "sci_get_current_pos = 2008U"
+        "host_query_client_identity_message"
+        "requested == process_client_id()"
+        "provisional_punctuation_ = std::move(provisional)"
+        "provisional_punctuation_->accumulated_text.push_back"
+        "PUNC-PENDING-BACKSPACE"
+        "complete_smart_punctuation_edit"
+        "smart_punctuation_replay_tag")
+    string(FIND "${stable_text_service_text}" "${numeric_context_token}"
+        numeric_context_position)
+    if(numeric_context_position LESS 0)
+        message(FATAL_ERROR
+            "Smart punctuation must use a text snapshot and a provisional TSF edit: missing ${numeric_context_token}")
+    endif()
+endforeach()
+foreach(smart_rule_token IN ITEMS
+        "SmartPunctuationAction::provisional"
+        "PUNC-SLASH-ASCII"
+        "PUNC-DECIMAL-LIST"
+        "PUNC-NUMERIC-PENDING"
+        "PUNC-COMMA-GROUP-PENDING"
+        "PUNC-PENDING-GROUP-DIGIT"
+        "PUNC-PENDING-GROUP-COMPLETE"
+        "PUNC-DOT-IPV4"
+        "PUNC-DOT-VERSION"
+        "PUNC-DOT-DECIMAL"
+        "PUNC-COLON-TIME"
+        "PUNC-COLON-RATIO"
+        "PUNC-COMMA-THOUSANDS"
+        "PUNC-URL"
+        "PUNC-EMAIL"
+        "PUNC-PATH"
+        "PUNC-FILENAME"
+        "PUNC-TECHNICAL-INFIX"
+        "PUNC-TECHNICAL-BOUNDARY"
+        "PUNC-TECHNICAL-PREFIX"
+        "PUNC-TECHNICAL-QUOTE")
+    string(FIND "${smart_punctuation_text}" "${smart_rule_token}"
+        smart_rule_position)
+    if(smart_rule_position LESS 0)
+        message(FATAL_ERROR
+            "Smart punctuation semantic engine is missing ${smart_rule_token}")
+    endif()
+endforeach()
+if(NOT smart_punctuation_text MATCHES "numeric_provisional_symbol" OR
+   NOT smart_punctuation_text MATCHES "right\.empty\(\)" OR
+   NOT smart_punctuation_text MATCHES "has_technical_marker")
+    message(FATAL_ERROR
+        "Numeric provisional and command-prefix rules must not steal ordinary Chinese punctuation")
+endif()
+foreach(controlled_tsf_token IN ITEMS
+        "piinput-controlled-tsf-host-self-test"
+        "PIINPUT_ENABLE_INTERACTIVE_TESTS"
+        "PIINPUT_TEST_REGISTERED_TSF"
+        "piinput-controlled-tsf-physical-input"
+        "piinput-controlled-tsf-piinput-smoke"
+        "piinput-controlled-tsf-soak-smoke")
+    string(FIND "${cmake_text}" "${controlled_tsf_token}" controlled_tsf_cmake_position)
+    if(controlled_tsf_cmake_position LESS 0)
+        message(FATAL_ERROR
+            "Controlled TSF host registration is missing ${controlled_tsf_token}")
+    endif()
+endforeach()
+foreach(tsf_app_soak_token IN ITEMS
+        "AppPrivateBytes"
+        "AppWorkingSetBytes"
+        "AppHandles"
+        "AppGdiObjects"
+        "AppUserObjects"
+        "HostPrivateBytes"
+        "private_slope_bytes_per_hour"
+        "handle_slope_per_hour"
+        "GetGuiResources"
+        "FixtureMode"
+        "MinIterationsPerHour"
+        "minimumContextRecreates"
+        "MaxHostPrivateGrowthBytes"
+        "host_private_slope_bytes_per_hour"
+        "HostThreads")
+    string(FIND "${tsf_app_soak_text}" "${tsf_app_soak_token}"
+        tsf_app_soak_position)
+    if(tsf_app_soak_position LESS 0)
+        message(FATAL_ERROR
+            "TSF/App soak harness is missing ${tsf_app_soak_token}")
+    endif()
+endforeach()
+string(FIND "${tsf_app_soak_text}" "host_pid=([1-9][0-9]*)"
+    exact_host_pid_health_token)
+string(FIND "${tsf_app_soak_text}" "Get-Process -Id $serverPid"
+    exact_host_pid_process_token)
+if(NOT host_pipe_server_text MATCHES "host_pid=" OR
+   exact_host_pid_health_token LESS 0 OR
+   exact_host_pid_process_token LESS 0)
+    message(FATAL_ERROR
+        "TSF/App resource sampling must resolve the exact Host PID returned by the default health pipe")
+endif()
+foreach(controlled_tsf_host_token IN ITEMS
+        "edit_a_id"
+        "password_id"
+        "pin_id"
+        "SetInputScope"
+        "IS_PASSWORD"
+        "IS_NUMERIC_PIN"
+        "recreate_edit_b_message"
+        "EM_GETSEL")
+    string(FIND "${controlled_tsf_host_text}" "${controlled_tsf_host_token}"
+        controlled_tsf_host_position)
+    if(controlled_tsf_host_position LESS 0)
+        message(FATAL_ERROR
+            "Controlled TSF host is missing ${controlled_tsf_host_token}")
+    endif()
+endforeach()
+foreach(controlled_tsf_controller_token IN ITEMS
+        "SendInput"
+        "KEYEVENTF_SCANCODE"
+        "WM_INPUTLANGCHANGEREQUEST"
+        "focus_control"
+        "context_recreate"
+        "context_recreates"
+        "--piinput-smoke"
+        "--expected-tsf"
+        "--soak-seconds"
+        "--status-file"
+        "soak_iterations"
+        "write_soak_status"
+        "activate_piinput"
+        "ensure_chinese_mode"
+        "loaded_tsf_module"
+        "module_identity"
+        "version_sentence"
+        "incomplete_group"
+        "grouped_backspace"
+        "grouped_escape"
+        "invalid_group"
+        "chinese_question"
+        "technical_symbols"
+        "technical_bang"
+        "technical_open_quote"
+        "technical_close_quote"
+        "cross_context"
+        "context_destroy"
+        "password_bypass"
+        "pin_bypass")
+    string(FIND "${controlled_tsf_controller_text}" "${controlled_tsf_controller_token}"
+        controlled_tsf_controller_position)
+    if(controlled_tsf_controller_position LESS 0)
+        message(FATAL_ERROR
+            "Controlled TSF controller is missing ${controlled_tsf_controller_token}")
+    endif()
+endforeach()
 
 if(NOT cmake_text MATCHES "add_executable\\(PiInput-Install")
     message(FATAL_ERROR "CMake must build PiInput-Install.exe")

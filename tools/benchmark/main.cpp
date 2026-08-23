@@ -182,6 +182,8 @@ int run(const std::vector<std::string>& arguments) {
     std::cout << std::fixed << std::setprecision(3)
               << "PiInput benchmark\n"
               << "lexicon_entries=" << engine.entry_count() << '\n'
+              << "lexicon_storage=" << (engine.lexicon_memory_mapped() ? "mmap" : "heap") << '\n'
+              << "lexicon_mapped_bytes=" << engine.lexicon_mapped_bytes() << '\n'
               << "load_ms=" << load_ms << '\n'
               << "rounds=" << options.rounds << '\n'
               << "iterations=" << options.iterations << '\n'

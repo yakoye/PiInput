@@ -1,6 +1,8 @@
 /build/
+/build-*/
 /dist/
 /artifacts/
+/docs/*.docx
 /.vs/
 /.idea/
 *.user

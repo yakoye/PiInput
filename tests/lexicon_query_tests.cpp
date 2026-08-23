@@ -36,6 +36,9 @@ int main() {
         piinput::compile_tsv_to_binary(fixture, binary_path);
         piinput::BinaryLexicon binary;
         binary.load(binary_path);
+        check(binary.memory_mapped(), "binary lexicon is backed by a read-only mapping");
+        check(binary.mapped_bytes() == std::filesystem::file_size(binary_path),
+            "binary lexicon reports its mapped size");
         const auto binary_word = binary.query_word("黄河入海流", 10U);
         check(binary_word.size() == tsv_word.size(), "binary and TSV lookup sizes match");
         check(binary_word[0].pinyin == tsv_word[0].pinyin,
@@ -43,6 +46,9 @@ int main() {
 
         piinput::Engine engine;
         engine.load_lexicon(binary_path);
+        check(engine.lexicon_memory_mapped(), "engine preserves binary mapping storage");
+        check(engine.lexicon_mapped_bytes() == std::filesystem::file_size(binary_path),
+            "engine exposes mapped bytes for health diagnostics");
         const auto engine_word = engine.lookup_word("黄河入海流", 10U);
         check(engine_word.size() == 1U, "engine exposes indexed word lookup");
         check(engine_word[0].word == "黄河入海流", "engine lookup preserves word");

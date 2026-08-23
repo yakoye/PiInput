@@ -17,7 +17,7 @@ void check(const bool condition, const char* const message) {
 
 void test_layout_keeps_shim_stable_and_host_versioned() {
     const auto layout = piinput::windows::installer::make_stable_runtime_layout(
-        L"C:\Users\test\AppData\Local\PiInput", L"0.4.0-build-1");
+        LR"(C:\Users\test\AppData\Local\PiInput)", L"0.4.0-build-1");
     check(layout.has_value(), "safe runtime layout is accepted");
     // Everything installs into one fixed directory. A per-version path is what
     // let a registration captured by a packaged application outlive the version

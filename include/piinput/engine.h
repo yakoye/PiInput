@@ -116,6 +116,8 @@ public:
         const PinyinSettings& settings = {}) const;
 
     [[nodiscard]] std::size_t entry_count() const noexcept;
+    [[nodiscard]] bool lexicon_memory_mapped() const noexcept;
+    [[nodiscard]] std::size_t lexicon_mapped_bytes() const noexcept;
     [[nodiscard]] const ShuangpinDecoder& shuangpin() const noexcept;
 
 private:

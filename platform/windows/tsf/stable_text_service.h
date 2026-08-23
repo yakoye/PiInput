@@ -7,6 +7,7 @@
 #include "shim_pipe_transport.h"
 
 #include "piinput/input_mode.h"
+#include "piinput/smart_punctuation.h"
 #include "lang_bar_item.h"
 #include "mode_indicator.h"
 
@@ -17,6 +18,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -80,6 +82,15 @@ public:
         bool cancel,
         const MirrorRequest* request,
         const HostCaretUpdate* anchor) noexcept;
+    void complete_smart_punctuation_edit(
+        ITfContext* context,
+        HRESULT result,
+        bool commit,
+        bool cancel,
+        std::uint64_t smart_session_id) noexcept;
+    [[nodiscard]] bool is_current_smart_punctuation(
+        ITfContext* context,
+        std::uint64_t smart_session_id) const noexcept;
 
 private:
     struct PendingContext final {
@@ -87,10 +98,24 @@ private:
         ITfContext* context{};
         bool replayed_key{};
     };
+    struct ProvisionalPunctuation final {
+        char ascii{};
+        std::string chinese;
+        std::string rule_id;
+        std::string accumulated_text;
+    };
     ~TextService();
 
     [[nodiscard]] bool should_eat_key(WPARAM wparam) const noexcept;
     [[nodiscard]] HostKeyEvent map_key(WPARAM wparam) const noexcept;
+    [[nodiscard]] bool handle_smart_punctuation_key(
+        ITfContext* context,
+        WPARAM wparam);
+    [[nodiscard]] bool resolve_smart_punctuation_key(
+        ITfContext* context,
+        WPARAM wparam);
+    void clear_smart_punctuation() noexcept;
+    void replay_virtual_key(WPARAM wparam) noexcept;
     void toggle_input_mode(ITfContext* context);
     [[nodiscard]] bool dispatch(ITfContext* context, HostKeyEvent event);
     [[nodiscard]] bool dispatch_now(
@@ -102,6 +127,10 @@ private:
     void release_pending_contexts() noexcept;
     [[nodiscard]] ITfContext* focused_context() const noexcept;
     [[nodiscard]] bool context_has_sensitive_input_scope(ITfContext* context) const noexcept;
+    [[nodiscard]] bool query_surrounding_text(
+        ITfContext* context,
+        std::string& left,
+        std::string& right) const noexcept;
     [[nodiscard]] bool bind_context(ITfContext* context);
     void release_active_context() noexcept;
     [[nodiscard]] bool request_resume(ITfContext* context, const HostResumeState& state);
@@ -122,7 +151,8 @@ private:
         bool cancel,
         HostCaretUpdate* anchor = nullptr,
         bool allow_async = true,
-        const MirrorRequest* request = nullptr);
+        const MirrorRequest* request = nullptr,
+        bool smart_punctuation_completion = false);
     void send_candidate_anchor(
         const MirrorRequest& request,
         const HostCaretUpdate& update) noexcept;
@@ -185,7 +215,6 @@ private:
     // making a cross-process round trip and an asynchronous hop back through
     // the application message loop for every keystroke.
     bool english_direct_{};
-    bool last_passthrough_was_digit_{};
     ShiftToggleState shift_toggle_;
     WPARAM last_eaten_key_{};
     HWND callback_window_{};
@@ -193,6 +222,10 @@ private:
     CompositionMirror mirror_;
     DeferredUpdateQueue deferred_updates_;
     FinalEditKeyQueue final_edit_keys_;
+    SmartPunctuationEngine smart_punctuation_engine_;
+    std::optional<ProvisionalPunctuation> provisional_punctuation_;
+    std::optional<HostKeyEvent> smart_replay_event_;
+    WPARAM smart_replay_virtual_key_{};
     std::optional<DeferredCompositionUpdate> scheduled_update_;
     std::unique_ptr<ShimPipeTransport> transport_;
     std::unique_ptr<PipeClient> pipe_client_;

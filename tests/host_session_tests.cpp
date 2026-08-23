@@ -162,6 +162,23 @@ void test_punctuation_is_transformed_and_committed_by_host() {
             numeric_dot.text == ".",
         "a decimal/list dot after a direct digit remains ASCII in Chinese mode");
 
+    const auto fraction_slash = session.apply({
+        .kind = piinput::HostKeyKind::literal_punctuation,
+        .character = '/',
+    });
+    check(fraction_slash.accepted && fraction_slash.action == piinput::HostAction::commit &&
+            fraction_slash.text == "/",
+        "the physical slash key remains ASCII in Chinese mode for fractions");
+
+    const auto enumeration_comma = session.apply({
+        .kind = piinput::HostKeyKind::punctuation,
+        .character = '\\',
+    });
+    check(enumeration_comma.accepted &&
+            enumeration_comma.action == piinput::HostAction::commit &&
+            enumeration_comma.text == "、",
+        "the physical backslash key remains the Chinese enumeration comma");
+
     type(session, "wo");
     const auto composed = session.apply({
         .kind = piinput::HostKeyKind::punctuation,

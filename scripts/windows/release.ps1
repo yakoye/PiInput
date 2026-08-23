@@ -68,17 +68,15 @@ function Set-CMakeProjectVersion([string]$NewVersion) {
 function Get-BuiltVersion {
     $hostExe = Join-Path $Root "build/windows-x64/$Configuration/PiInputHost.exe"
     if (-not (Test-Path -LiteralPath $hostExe -PathType Leaf)) { return "" }
-    $output = & $hostExe --build-id 2>&1
+    $output = & $hostExe --version 2>&1
     if ($LASTEXITCODE -ne 0) { return "" }
     return (($output | Select-Object -First 1) -as [string]).Trim()
 }
 
 function Get-VersionedDocuments([string]$Ver) {
-    $base = $Ver -replace '-dev$', ''
     return [ordered]@{
         "版本说明" = Join-Path $Root "docs/release_notes_v$Ver.md"
         "验证记录" = Join-Path $Root "docs/VERIFICATION_v$Ver.md"
-        "安装使用与测试" = Join-Path $Root "docs/v${base}安装、使用与测试.md"
         "长文本打字测试" = Join-Path $Root "docs/三个长文本打字测试_v$Ver.md"
     }
 }

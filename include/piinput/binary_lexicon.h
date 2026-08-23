@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -34,9 +35,16 @@ public:
         std::size_t scan_limit = 512U) const;
 
     [[nodiscard]] std::size_t entry_count() const noexcept;
+    [[nodiscard]] bool memory_mapped() const noexcept;
+    [[nodiscard]] std::size_t mapped_bytes() const noexcept;
 
 private:
-    DevLexicon lexicon_;
+    struct Storage;
+    struct ReverseWordIndex;
+    struct SimplifiedIndex;
+    std::shared_ptr<const Storage> storage_;
+    mutable std::shared_ptr<ReverseWordIndex> reverse_word_index_;
+    mutable std::shared_ptr<SimplifiedIndex> simplified_index_;
 };
 
 void compile_tsv_to_binary(

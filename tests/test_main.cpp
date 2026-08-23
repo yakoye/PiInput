@@ -7,6 +7,7 @@
 #include "piinput/lexicon.h"
 #include "piinput/pinyin.h"
 #include "piinput/punctuation.h"
+#include "piinput/smart_punctuation.h"
 #include "piinput/scel_parser.h"
 #include "piinput/session.h"
 #include "piinput/shuangpin.h"
@@ -144,6 +145,9 @@ void test_binary_lexicon() {
     piinput::BinaryLexicon binary;
     binary.load(lex);
     check(binary.entry_count() == 12U, "Binary lexicon entry count");
+    check(binary.memory_mapped(), "Binary lexicon uses a read-only file mapping");
+    check(binary.mapped_bytes() == std::filesystem::file_size(lex),
+        "Binary lexicon reports the complete mapped byte count");
     const auto results = binary.query_exact("shu'ru'fa", 5U);
     check(results.size() == 1U && results.front().word == "输入法", "Binary lexicon query");
     const auto deduplicated = binary.query_exact("ji'suan'ji", 5U);
@@ -848,6 +852,154 @@ void test_punctuation() {
         "WeChat shifted right bracket uses a corner quote");
 }
 
+void test_smart_punctuation() {
+    const piinput::SmartPunctuationEngine engine;
+    const auto decide = [&](const char symbol, const std::string_view left,
+                             const std::string_view right = {},
+                             const bool composing = false) {
+        return engine.decide({symbol, left, right, composing});
+    };
+
+    const auto expect = [&](const char symbol,
+                            const std::string_view left,
+                            const std::string_view right,
+                            const piinput::SmartPunctuationAction action,
+                            const std::string_view rule,
+                            const std::string_view context,
+                            const std::string& message) {
+        const auto decision = decide(symbol, left, right);
+        check(decision.action == action && decision.rule_id == rule &&
+                decision.context_type == context,
+            message);
+    };
+
+    check(decide('/', "2").action == piinput::SmartPunctuationAction::literal,
+        "Physical slash stays ASCII for fractions");
+
+    expect('.', "1", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-DECIMAL-LIST", "SEQUENCE", "Line-leading 1. is an ASCII list marker");
+    expect('.', "  12", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-DECIMAL-LIST", "SEQUENCE", "Indented numeric list marker stays ASCII");
+    expect('.', "版本v1.0", "1", piinput::SmartPunctuationAction::literal,
+        "PUNC-DOT-VERSION", "VERSION", "Version segments keep an ASCII dot");
+    expect('.', "服务器192.168.1", "1", piinput::SmartPunctuationAction::literal,
+        "PUNC-DOT-IPV4", "IPV4", "A valid IPv4 separator stays ASCII");
+    expect('.', "价格3", "14", piinput::SmartPunctuationAction::literal,
+        "PUNC-DOT-DECIMAL", "DECIMAL", "A decimal point stays ASCII");
+    expect('.', "文件README", "md", piinput::SmartPunctuationAction::literal,
+        "PUNC-FILENAME", "FILENAME", "A filename extension separator stays ASCII");
+    expect('.', "访问https://example", "com?a=1", piinput::SmartPunctuationAction::literal,
+        "PUNC-URL", "URL", "A URL dot stays ASCII");
+    expect('.', "邮箱abc.test+dev@example", "com", piinput::SmartPunctuationAction::literal,
+        "PUNC-EMAIL", "EMAIL", "An email domain dot stays ASCII");
+    expect('.', "路径C:/folder/file", "txt", piinput::SmartPunctuationAction::literal,
+        "PUNC-PATH", "PATH", "A path dot stays ASCII");
+    expect('.', "版本v1.0.1", {}, piinput::SmartPunctuationAction::provisional,
+        "PUNC-NUMERIC-PENDING", "AMBIGUOUS",
+        "Version-final dot waits so Chinese prose can resolve it");
+    expect('.', "已有1.", "2", piinput::SmartPunctuationAction::transform,
+        "PUNC-NUMERIC-INVALID", "CHINESE_TEXT", "Malformed numeric punctuation is not protected");
+
+    expect(':', "12", "23", piinput::SmartPunctuationAction::literal,
+        "PUNC-COLON-TIME", "TIME", "A valid time colon stays ASCII");
+    expect(':', "24", "99", piinput::SmartPunctuationAction::literal,
+        "PUNC-COLON-RATIO", "RATIO", "Out-of-range time syntax remains a valid ratio");
+    expect(':', "BIT[31", "16]", piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-INFIX", "TECHNICAL", "A bit-field colon stays ASCII");
+    expect(':', "key", "value", piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-INFIX", "TECHNICAL", "A configuration colon stays ASCII");
+    expect(':', "https", "//example.com", piinput::SmartPunctuationAction::literal,
+        "PUNC-URL", "URL", "A URL scheme colon stays ASCII");
+    expect(':', "路径C", "/Windows", piinput::SmartPunctuationAction::literal,
+        "PUNC-PATH", "PATH", "A Windows drive colon stays ASCII");
+    expect(':', "共有12项", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A Chinese lead-in colon stays Chinese");
+
+    expect(',', "价格1", "299.50", piinput::SmartPunctuationAction::literal,
+        "PUNC-COMMA-THOUSANDS", "NUMBER", "A valid thousands separator stays ASCII");
+    expect(',', "数字1", "2", piinput::SmartPunctuationAction::transform,
+        "PUNC-NUMERIC-INVALID", "CHINESE_TEXT", "An invalid one-digit group becomes Chinese");
+    expect(',', "a", "b", piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-INFIX", "TECHNICAL", "A CSV/code comma stays ASCII");
+    expect(',', "金额1", {}, piinput::SmartPunctuationAction::provisional,
+        "PUNC-COMMA-GROUP-PENDING", "AMBIGUOUS",
+        "A trailing numeric comma waits for a complete three-digit group");
+    expect(',', "你好", "明天", piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A Chinese prose comma stays Chinese");
+
+    expect('?', "https://example.com", "a=1&b=2", piinput::SmartPunctuationAction::literal,
+        "PUNC-URL", "URL", "A URL query marker stays ASCII");
+    expect('?', "https://example.com 你去吗", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "Leaving a URL immediately restores Chinese punctuation");
+    expect('.', "联系abc@example.com 已完成", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "Leaving an email immediately restores Chinese punctuation");
+    expect('.', "路径C:/folder/file.txt 已完成", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "Leaving a path immediately restores Chinese punctuation");
+    expect('!', "func(x) 已完成", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "Leaving a code token immediately restores Chinese punctuation");
+    expect('?', "你去吗", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A Chinese question mark stays Chinese");
+    expect('[', "BIT", "31:16]", piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-BOUNDARY", "TECHNICAL", "A technical opening bracket stays ASCII");
+    expect(']', "BIT[31:16", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-BOUNDARY", "TECHNICAL", "A technical closing bracket stays ASCII");
+    expect('(', "func", "x)", piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-BOUNDARY", "TECHNICAL", "A function parenthesis stays ASCII");
+    expect('_', "file", "name", piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-BOUNDARY", "TECHNICAL", "An identifier underscore stays ASCII");
+    expect('(', "中文", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A Chinese opening parenthesis remains Chinese");
+    expect('(', "第1", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A digit alone does not make a parenthesis technical");
+    expect('[', "第1", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A digit alone does not make a bracket technical");
+    expect('!', "https://example.com/path", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-URL", "URL", "A URL exclamation mark stays ASCII");
+    expect('!', "完成了", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A Chinese exclamation mark remains Chinese");
+    expect('!', "", "flag", piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-PREFIX", "TECHNICAL", "A command-style bang prefix stays ASCII");
+    expect('!', "", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A standalone leading exclamation stays Chinese");
+    expect('!', "版本1", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A digit does not make exclamation numeric punctuation");
+    expect('?', "版本1", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT", "A digit does not make question mark numeric punctuation");
+    expect('"', "key=", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-QUOTE", "TECHNICAL", "A quote after assignment stays ASCII");
+    expect('"', "key=\"value", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-TECHNICAL-QUOTE", "TECHNICAL", "A matching technical closing quote stays ASCII");
+    expect('"', "他说", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-DEFAULT", "CHINESE_TEXT", "A Chinese prose quote remains owned by quote mapping");
+
+    check(decide('.', "1", {}, true).action == piinput::SmartPunctuationAction::transform,
+        "Active pinyin composition remains owned by the Host punctuation path");
+    check(decide('.', "版本v1").chinese_text == "。",
+        "Provisional period carries its Chinese resolution");
+    check(decide(':', "12").chinese_text == "：",
+        "Provisional colon carries its Chinese resolution");
+    check(engine.resolve_provisional('.', '0', "PUNC-NUMERIC-PENDING").keep_ascii,
+        "A digit resolves a provisional version dot to ASCII");
+    check(!engine.resolve_provisional('.', 'a', "PUNC-NUMERIC-PENDING").keep_ascii &&
+            engine.resolve_provisional('.', 'a', "PUNC-NUMERIC-PENDING").chinese_text == "。",
+        "A prose character resolves a provisional period to Chinese");
+    check(engine.resolve_provisional(':', '2', "PUNC-NUMERIC-PENDING").keep_ascii,
+        "A digit resolves a provisional time colon to ASCII");
+    check(!engine.resolve_provisional(':', '\0', "PUNC-NUMERIC-PENDING").keep_ascii &&
+            engine.resolve_provisional(':', '\0', "PUNC-NUMERIC-PENDING").chinese_text == "：",
+        "A boundary resolves a provisional colon to Chinese");
+    check(engine.resolve_provisional(',', '2', "PUNC-COMMA-GROUP-PENDING").continue_provisional,
+        "A grouped comma waits after the first following digit");
+    check(engine.resolve_provisional(',', '9', "PUNC-COMMA-GROUP-PENDING", "2").continue_provisional,
+        "A grouped comma waits after the second following digit");
+    const auto grouped_resolution =
+        engine.resolve_provisional(',', '9', "PUNC-COMMA-GROUP-PENDING", "29");
+    check(grouped_resolution.keep_ascii && !grouped_resolution.continue_provisional,
+        "A grouped comma commits only after three following digits");
+    check(!engine.resolve_provisional(',', 'a', "PUNC-COMMA-GROUP-PENDING", "29").keep_ascii,
+        "An incomplete grouped comma resolves to Chinese before a non-digit");
+}
+
 
 
 void test_user_model() {
@@ -974,6 +1126,7 @@ int run(const std::vector<std::string>& arguments) {
         test_builtin_base_lexicon();
         test_symbols();
         test_punctuation();
+        test_smart_punctuation();
         test_user_model();
         test_session();
         test_invalid_scel();

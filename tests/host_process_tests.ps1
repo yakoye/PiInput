@@ -55,8 +55,16 @@ try {
     if ($LASTEXITCODE -ne 0 -or ($health -join "`n") -notmatch "protocol=3" -or
         ($health -join "`n") -notmatch "startup_ms=[0-9]+" -or
         ($health -join "`n") -notmatch "version=[0-9]+\.[0-9]+\.[0-9]+" -or
+        ($health -join "`n") -notmatch "lexicon_storage=(mmap|heap)" -or
+        ($health -join "`n") -notmatch "lexicon_mapped_bytes=[0-9]+" -or
+        ($health -join "`n") -notmatch "host_pid=[1-9][0-9]*" -or
         ($health -join "`n") -notmatch "build_id=") {
         throw "Host health handshake failed: $($health -join ' ')"
+    }
+    if (-not [string]::IsNullOrWhiteSpace($LexiconPath) -and
+        (($health -join "`n") -notmatch "lexicon_storage=mmap" -or
+         ($health -join "`n") -notmatch "lexicon_mapped_bytes=[1-9][0-9]*")) {
+        throw "Host did not memory-map the packaged binary lexicon: $($health -join ' ')"
     }
     $buildId = (& $HostExe --build-id 2>&1 | Select-Object -First 1).ToString().Trim()
     $version = (& $HostExe --version 2>&1 | Select-Object -First 1).ToString().Trim()

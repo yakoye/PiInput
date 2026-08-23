@@ -15,6 +15,11 @@ inline constexpr UINT host_replay_update_message = WM_APP + 0x353U;
 // how to commit it -- only the text service can put text into the application
 // -- so it hands the id back and the shim replays it as an ordinary selection.
 inline constexpr UINT host_select_candidate_message = WM_APP + 0x354U;
+// The protocol client id includes the process creation time so a recycled PID
+// cannot inherit an old Host session. It therefore cannot be matched against
+// GetWindowThreadProcessId. Ask each callback window to identify itself using
+// that same 64-bit value before posting a Host UI action.
+inline constexpr UINT host_query_client_identity_message = WM_APP + 0x355U;
 
 inline bool post_to_shim(
     const std::uint64_t client_id,
@@ -25,9 +30,18 @@ inline bool post_to_shim(
     bool posted = false;
     while ((window = FindWindowExW(
                 HWND_MESSAGE, window, stable_shim_callback_window_class, nullptr)) != nullptr) {
-        DWORD process_id = 0U;
-        (void)GetWindowThreadProcessId(window, &process_id);
-        if (static_cast<std::uint64_t>(process_id) != client_id) continue;
+        DWORD_PTR matches = 0U;
+        const auto low = static_cast<WPARAM>(client_id & 0xFFFFFFFFULL);
+        const auto high = static_cast<LPARAM>(client_id >> 32U);
+        const bool identified = SendMessageTimeoutW(
+            window, host_query_client_identity_message, low, high,
+            SMTO_ABORTIFHUNG | SMTO_BLOCK, 50U, &matches) != 0U && matches == 1U;
+        if (!identified) {
+            // Compatibility with a callback window from a pre-identity Shim.
+            DWORD process_id = 0U;
+            (void)GetWindowThreadProcessId(window, &process_id);
+            if (static_cast<std::uint64_t>(process_id) != client_id) continue;
+        }
         if (PostMessageW(window, message, wparam, lparam) != FALSE) {
             posted = true;
         }

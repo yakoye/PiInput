@@ -118,6 +118,84 @@ private:
     bool sensitive_{};
 };
 
+class SurroundingTextQuerySession final : public ITfEditSession {
+public:
+    explicit SurroundingTextQuerySession(ITfContext* const context) : context_(context) {
+        context_->AddRef();
+    }
+
+    STDMETHODIMP QueryInterface(REFIID iid, void** object) override {
+        if (object == nullptr) return E_POINTER;
+        *object = nullptr;
+        if (!IsEqualIID(iid, IID_IUnknown) && !IsEqualIID(iid, IID_ITfEditSession)) {
+            return E_NOINTERFACE;
+        }
+        *object = static_cast<ITfEditSession*>(this);
+        AddRef();
+        return S_OK;
+    }
+    STDMETHODIMP_(ULONG) AddRef() override { return ++ref_count_; }
+    STDMETHODIMP_(ULONG) Release() override {
+        const ULONG value = --ref_count_;
+        if (value == 0U) delete this;
+        return value;
+    }
+
+    STDMETHODIMP DoEditSession(const TfEditCookie cookie) override {
+        TF_SELECTION selection{};
+        ULONG fetched = 0U;
+        if (FAILED(context_->GetSelection(
+                cookie, TF_DEFAULT_SELECTION, 1U, &selection, &fetched)) ||
+            fetched == 0U || selection.range == nullptr) {
+            if (selection.range != nullptr) selection.range->Release();
+            return S_OK;
+        }
+        ITfRange* left = nullptr;
+        ITfRange* right = nullptr;
+        const HRESULT left_clone = selection.range->Clone(&left);
+        const HRESULT right_clone = selection.range->Clone(&right);
+        selection.range->Release();
+        if (FAILED(left_clone) || FAILED(right_clone) || left == nullptr || right == nullptr) {
+            if (left != nullptr) left->Release();
+            if (right != nullptr) right->Release();
+            return S_OK;
+        }
+
+        std::array<WCHAR, 65U> left_buffer{};
+        std::array<WCHAR, 65U> right_buffer{};
+        ULONG left_read = 0U;
+        ULONG right_read = 0U;
+        LONG shifted = 0L;
+        const bool left_ok = SUCCEEDED(left->Collapse(cookie, TF_ANCHOR_START)) &&
+            SUCCEEDED(left->ShiftStart(cookie, -64L, &shifted, nullptr)) &&
+            SUCCEEDED(left->GetText(cookie, 0U, left_buffer.data(), 64U, &left_read));
+        shifted = 0L;
+        const bool right_ok = SUCCEEDED(right->Collapse(cookie, TF_ANCHOR_END)) &&
+            SUCCEEDED(right->ShiftEnd(cookie, 64L, &shifted, nullptr)) &&
+            SUCCEEDED(right->GetText(cookie, 0U, right_buffer.data(), 64U, &right_read));
+        left->Release();
+        right->Release();
+        if (!left_ok || !right_ok) return S_OK;
+        left_.assign(left_buffer.data(), left_read);
+        right_.assign(right_buffer.data(), right_read);
+        resolved_ = true;
+        return S_OK;
+    }
+
+    [[nodiscard]] bool resolved() const noexcept { return resolved_; }
+    [[nodiscard]] const std::wstring& left() const noexcept { return left_; }
+    [[nodiscard]] const std::wstring& right() const noexcept { return right_; }
+
+private:
+    ~SurroundingTextQuerySession() { context_->Release(); }
+
+    std::atomic<ULONG> ref_count_{1U};
+    ITfContext* context_{};
+    bool resolved_{};
+    std::wstring left_;
+    std::wstring right_;
+};
+
 // The mode the user last chose, kept across activations. Switching away to
 // another input method and back should come back to what was left, not to the
 // configured default -- the default is where a session starts, not somewhere to
@@ -131,10 +209,14 @@ public:
     EditSession(TextService* service, ITfContext* context, std::wstring text,
         const std::size_t caret, const bool commit, const bool cancel,
         HostCaretUpdate* const anchor, const bool deferred_completion = false,
-        const MirrorRequest* const request = nullptr)
+        const MirrorRequest* const request = nullptr,
+        const bool smart_punctuation_completion = false,
+        const std::uint64_t smart_session_id = 0U)
         : service_(service), context_(context), text_(std::move(text)), caret_(caret),
           commit_(commit), cancel_(cancel), anchor_(anchor),
-          deferred_completion_(deferred_completion) {
+          deferred_completion_(deferred_completion),
+          smart_punctuation_completion_(smart_punctuation_completion),
+          smart_session_id_(smart_session_id) {
         if (request != nullptr) deferred_request_ = *request;
         service_->AddRef();
         context_->AddRef();
@@ -157,6 +239,12 @@ public:
         return value;
     }
     STDMETHODIMP DoEditSession(const TfEditCookie cookie) override {
+        if (smart_punctuation_completion_ &&
+            !service_->is_current_smart_punctuation(context_, smart_session_id_)) {
+            service_->complete_smart_punctuation_edit(
+                context_, E_ABORT, commit_, cancel_, smart_session_id_);
+            return S_OK;
+        }
         if (deferred_completion_ && deferred_request_.has_value() &&
             !commit_ && !cancel_ &&
             !service_->is_current_update(*deferred_request_)) {
@@ -175,10 +263,15 @@ public:
             service_->capture_composition_caret(context_, cookie, *capture);
         }
         if (deferred_completion_) {
-            service_->complete_deferred_edit(
-                context_, result, commit_, cancel_,
-                deferred_request_ ? &*deferred_request_ : nullptr,
-                deferred_request_ ? &deferred_anchor_ : nullptr);
+            if (smart_punctuation_completion_) {
+                service_->complete_smart_punctuation_edit(
+                    context_, result, commit_, cancel_, smart_session_id_);
+            } else {
+                service_->complete_deferred_edit(
+                    context_, result, commit_, cancel_,
+                    deferred_request_ ? &*deferred_request_ : nullptr,
+                    deferred_request_ ? &deferred_anchor_ : nullptr);
+            }
         }
         return result;
     }
@@ -197,6 +290,8 @@ private:
     bool cancel_{};
     HostCaretUpdate* anchor_{};
     bool deferred_completion_{};
+    bool smart_punctuation_completion_{};
+    std::uint64_t smart_session_id_{};
     std::optional<MirrorRequest> deferred_request_;
     HostCaretUpdate deferred_anchor_;
 };
@@ -311,7 +406,8 @@ void trace_key(const char* const stage, const char* const detail) noexcept {
 }
 
 [[nodiscard]] bool is_decimal_digit_key(const WPARAM key) noexcept {
-    return key >= static_cast<WPARAM>('0') && key <= static_cast<WPARAM>('9');
+    return key >= static_cast<WPARAM>('0') && key <= static_cast<WPARAM>('9') &&
+        (GetKeyState(VK_SHIFT) & 0x8000) == 0;
 }
 
 [[nodiscard]] bool shift_is_down() noexcept {
@@ -362,6 +458,24 @@ void trace_key(const char* const stage, const char* const detail) noexcept {
     }
 }
 
+[[nodiscard]] char smart_punctuation_symbol(const WPARAM key) noexcept {
+    const bool shifted = shift_is_down();
+    if (!shifted && key == VK_OEM_PERIOD) return '.';
+    if (!shifted && key == VK_OEM_COMMA) return ',';
+    if (!shifted && key == VK_OEM_2) return '/';
+    if (shifted && key == VK_OEM_2) return '?';
+    if (shifted && key == VK_OEM_1) return ':';
+    if (!shifted && key == VK_OEM_4) return '[';
+    if (!shifted && key == VK_OEM_6) return ']';
+    if (!shifted && key == VK_OEM_7) return '\'';
+    if (shifted && key == VK_OEM_7) return '"';
+    if (shifted && key == VK_OEM_MINUS) return '_';
+    if (shifted && key == static_cast<WPARAM>('1')) return '!';
+    if (shifted && key == static_cast<WPARAM>('9')) return '(';
+    if (shifted && key == static_cast<WPARAM>('0')) return ')';
+    return '\0';
+}
+
 // The low bit is CapsLock being toggled on. The high bit, which is what the
 // same call reports for ordinary keys, is the key being physically down.
 [[nodiscard]] bool caps_lock_is_on() noexcept {
@@ -388,6 +502,80 @@ void trace_key(const char* const stage, const char* const detail) noexcept {
         return {};
     }
     return result;
+}
+
+[[nodiscard]] std::string wide_to_utf8_local(const std::wstring& text) {
+    if (text.empty()) return {};
+    const int needed = WideCharToMultiByte(
+        CP_UTF8, WC_ERR_INVALID_CHARS, text.data(), static_cast<int>(text.size()),
+        nullptr, 0, nullptr, nullptr);
+    if (needed <= 0) return {};
+    std::string result(static_cast<std::size_t>(needed), '\0');
+    if (WideCharToMultiByte(CP_UTF8, WC_ERR_INVALID_CHARS, text.data(),
+            static_cast<int>(text.size()), result.data(), needed, nullptr, nullptr) != needed) {
+        return {};
+    }
+    return result;
+}
+
+inline constexpr ULONG_PTR smart_punctuation_replay_tag =
+    static_cast<ULONG_PTR>(0x504950554E435452ULL);  // "PIPUNCTR"
+
+[[nodiscard]] bool is_smart_punctuation_replay() noexcept {
+    return static_cast<ULONG_PTR>(GetMessageExtraInfo()) == smart_punctuation_replay_tag;
+}
+
+// Scintilla intentionally exposes only its active TSF composition through the
+// TSF document store.  Already committed direct keys (notably digits) can
+// therefore be absent from an otherwise successful ITfRange read.  Read the
+// same bounded window from Scintilla's documented, read-only message surface as
+// a host adapter.  This remains document truth; it is not inferred from which
+// key callbacks happened to fire.
+[[nodiscard]] bool query_scintilla_surrounding_text(
+    std::string& left,
+    std::string& right) noexcept {
+    HWND editor = GetFocus();
+    if (editor == nullptr) {
+        GUITHREADINFO info{};
+        info.cbSize = sizeof(info);
+        if (GetGUIThreadInfo(0U, &info) != FALSE) editor = info.hwndFocus;
+    }
+    if (editor == nullptr) return false;
+    DWORD process_id = 0U;
+    (void)GetWindowThreadProcessId(editor, &process_id);
+    if (process_id != GetCurrentProcessId()) return false;
+    std::array<wchar_t, 32U> class_name{};
+    if (GetClassNameW(editor, class_name.data(), static_cast<int>(class_name.size())) <= 0 ||
+        _wcsicmp(class_name.data(), L"Scintilla") != 0) {
+        return false;
+    }
+
+    constexpr UINT sci_get_length = 2006U;
+    constexpr UINT sci_get_char_at = 2007U;
+    constexpr UINT sci_get_current_pos = 2008U;
+    const LRESULT length_result = SendMessageW(editor, sci_get_length, 0U, 0L);
+    const LRESULT caret_result = SendMessageW(editor, sci_get_current_pos, 0U, 0L);
+    if (length_result < 0 || caret_result < 0 || caret_result > length_result) return false;
+    const std::size_t length = static_cast<std::size_t>(length_result);
+    const std::size_t caret = static_cast<std::size_t>(caret_result);
+    constexpr std::size_t context_bytes = 192U;
+    const std::size_t left_start = caret > context_bytes ? caret - context_bytes : 0U;
+    const std::size_t right_end = (std::min)(length, caret + context_bytes);
+    left.clear();
+    right.clear();
+    left.reserve(caret - left_start);
+    right.reserve(right_end - caret);
+    for (std::size_t position = left_start; position < caret; ++position) {
+        const LRESULT value = SendMessageW(
+            editor, sci_get_char_at, static_cast<WPARAM>(position), 0L);
+        left.push_back(static_cast<char>(static_cast<unsigned char>(value & 0xFF)));
+    }
+    for (std::size_t position = caret; position < right_end; ++position) {
+        const LRESULT value = SendMessageW(
+            editor, sci_get_char_at, static_cast<WPARAM>(position), 0L);
+        right.push_back(static_cast<char>(static_cast<unsigned char>(value & 0xFF)));
+    }
+    return true;
 }
 
 [[nodiscard]] std::size_t utf16_caret_for_utf8(
@@ -559,6 +747,7 @@ STDMETHODIMP TextService::Deactivate() {
     destroy_callback_window();
     clear_deferred_updates();
     final_edit_keys_.clear();
+    clear_smart_punctuation();
     release_pending_contexts();
     release_active_context();
     if (composition_ != nullptr) {
@@ -592,7 +781,6 @@ STDMETHODIMP TextService::Deactivate() {
     english_mode_ = false;
     sensitive_context_ = false;
     english_direct_ = false;
-    last_passthrough_was_digit_ = false;
     shift_toggle_.reset();
     last_eaten_key_ = 0U;
     return S_OK;
@@ -627,6 +815,10 @@ STDMETHODIMP TextService::OnSetFocus(const BOOL foreground) {
 STDMETHODIMP TextService::OnTestKeyDown(
     ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
+    if (is_smart_punctuation_replay()) {
+        *eaten = FALSE;
+        return S_OK;
+    }
     // Refresh the bound scope here, not only in OnKeyDown: when a browser
     // reuses one TSF context for an ordinary field and a password field,
     // returning FALSE means OnKeyDown will not be called. bind_context also
@@ -641,19 +833,14 @@ STDMETHODIMP TextService::OnTestKeyDown(
 STDMETHODIMP TextService::OnKeyDown(
     ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
-    if (context != nullptr) {
-        // Binding here is a lazy attach to whatever the user is already typing
-        // into, not a document switch, so it must not forget that the previous
-        // keystroke was a digit. Losing it turned the first "3." of a session
-        // into "3。" while every retry produced the ASCII dot.
-        const bool digit_run = last_passthrough_was_digit_;
-        (void)bind_context(context);
-        last_passthrough_was_digit_ = digit_run;
+    if (is_smart_punctuation_replay()) {
+        *eaten = FALSE;
+        return S_OK;
     }
+    if (context != nullptr) (void)bind_context(context);
     if (sensitive_context_ && same_com_identity(active_context_, context)) {
         *eaten = FALSE;
         last_eaten_key_ = 0U;
-        last_passthrough_was_digit_ = false;
         shift_toggle_.reset();
         return S_OK;
     }
@@ -663,17 +850,17 @@ STDMETHODIMP TextService::OnKeyDown(
     }
     const bool consume = should_eat_key(wparam);
     *eaten = consume ? TRUE : FALSE;
-    if (!consume) {
-        if (is_decimal_digit_key(wparam)) {
-            last_passthrough_was_digit_ = true;
-        } else if (!is_shift_key(wparam)) {
-            last_passthrough_was_digit_ = false;
-        }
-        return S_OK;
-    }
+    if (!consume) return S_OK;
     last_eaten_key_ = wparam;
     if (is_shift_key(wparam)) {
         shift_toggle_.on_shift_down(has_disallowed_modifier());
+        return S_OK;
+    }
+    if (provisional_punctuation_.has_value() &&
+        resolve_smart_punctuation_key(context, wparam)) {
+        return S_OK;
+    }
+    if (!english_mode_ && handle_smart_punctuation_key(context, wparam)) {
         return S_OK;
     }
     // Direct English has no composition, no candidates and nothing for the Host
@@ -686,19 +873,21 @@ STDMETHODIMP TextService::OnKeyDown(
         const std::string character(1U, letter_for_key(wparam, true));
         if (request_edit(context, character, character.size(), true, false) !=
             EditRequestResult::failed) {
-            last_passthrough_was_digit_ = false;
             return S_OK;
         }
         english_direct_ = false;
     }
     if (context != nullptr) (void)dispatch(context, map_key(wparam));
-    last_passthrough_was_digit_ = false;
     return S_OK;
 }
 
 STDMETHODIMP TextService::OnTestKeyUp(
     ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
+    if (is_smart_punctuation_replay()) {
+        *eaten = FALSE;
+        return S_OK;
+    }
     *eaten = context_has_sensitive_input_scope(context)
         ? FALSE
         : ((is_shift_key(wparam) || wparam == last_eaten_key_) ? TRUE : FALSE);
@@ -708,6 +897,10 @@ STDMETHODIMP TextService::OnTestKeyUp(
 STDMETHODIMP TextService::OnKeyUp(
     ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
+    if (is_smart_punctuation_replay()) {
+        *eaten = FALSE;
+        return S_OK;
+    }
     if (context_has_sensitive_input_scope(context)) {
         *eaten = FALSE;
         last_eaten_key_ = 0U;
@@ -767,8 +960,16 @@ STDMETHODIMP TextService::OnCompositionTerminated(
             // range can map onto the text the user just pasted, and blanking it
             // unconditionally deletes their content. Leaving a stray syllable
             // behind is far better than destroying the user's paste.
-            if (range_holds_exactly(terminated_range, edit_cookie,
-                    utf8_to_wide_local(mirror_.composition_text()))) {
+            if (provisional_punctuation_.has_value() &&
+                range_holds_exactly(terminated_range, edit_cookie, composition_written_)) {
+                const std::wstring resolved =
+                    utf8_to_wide_local(provisional_punctuation_->chinese +
+                        provisional_punctuation_->accumulated_text);
+                (void)terminated_range->SetText(edit_cookie, 0U,
+                    resolved.empty() ? L"" : resolved.c_str(),
+                    static_cast<LONG>(resolved.size()));
+            } else if (range_holds_exactly(terminated_range, edit_cookie,
+                           utf8_to_wide_local(mirror_.composition_text()))) {
                 (void)terminated_range->SetText(edit_cookie, 0U, L"", 0L);
             }
             terminated_range->Release();
@@ -776,6 +977,7 @@ STDMETHODIMP TextService::OnCompositionTerminated(
         composition_->Release();
         composition_ = nullptr;
         composition_written_.clear();
+        clear_smart_punctuation();
         // The application, not PiInput, ended the TSF composition (for example
         // after a screenshot overlay or a mouse click moved the insertion
         // point).  Invalidate replies issued before that boundary and cancel
@@ -795,6 +997,7 @@ STDMETHODIMP TextService::OnCompositionTerminated(
 bool TextService::should_eat_key(const WPARAM wparam) const noexcept {
     if (has_disallowed_modifier()) return false;
     if (is_shift_key(wparam)) return true;
+    if (provisional_punctuation_.has_value()) return true;
     // Activation queues a resume handshake on the background pipe worker. Keep
     // the very first Chinese letter behind that handshake instead of leaking it
     // as Latin text while a cold resident Host is still loading its dictionary.
@@ -852,10 +1055,7 @@ HostKeyEvent TextService::map_key(const WPARAM wparam) const noexcept {
     }
     if (is_punctuation_key(wparam) &&
         !(composing && !shifted && (wparam == VK_OEM_MINUS || wparam == VK_OEM_PLUS))) {
-        event.kind = !english_mode_ && !shifted && wparam == VK_OEM_PERIOD &&
-                last_passthrough_was_digit_
-            ? HostKeyKind::literal_punctuation
-            : HostKeyKind::punctuation;
+        event.kind = HostKeyKind::punctuation;
         event.character = punctuation_base_key(wparam);
         event.shifted = shifted;
         return event;
@@ -888,6 +1088,166 @@ HostKeyEvent TextService::map_key(const WPARAM wparam) const noexcept {
         break;
     }
     return event;
+}
+
+bool TextService::handle_smart_punctuation_key(
+    ITfContext* const context,
+    const WPARAM wparam) {
+    const char symbol = smart_punctuation_symbol(wparam);
+    if (symbol == '\0' || context == nullptr) return false;
+
+    const bool composing = !mirror_.raw().empty() || !pending_contexts_.empty();
+    std::string left;
+    std::string right;
+    bool snapshot_available = true;
+    if (!composing && symbol != '/') {
+        snapshot_available = query_surrounding_text(context, left, right);
+        const bool scintilla_snapshot = left.empty() &&
+            query_scintilla_surrounding_text(left, right);
+        snapshot_available = snapshot_available || scintilla_snapshot;
+        trace_key("smart_context_source", scintilla_snapshot ? "scintilla" : "tsf");
+        const char* const context_class = !snapshot_available
+            ? "unavailable"
+            : (left.empty()
+                ? "empty"
+                : (SmartPunctuationEngine::is_ascii_digit(left.back())
+                    ? "digit_tail"
+                    : "non_digit_tail"));
+        trace_key("smart_context", context_class);
+    }
+    const SmartPunctuationDecision decision = smart_punctuation_engine_.decide({
+        .symbol = symbol,
+        .left_text = left,
+        .right_text = right,
+        .composing = composing,
+    });
+    trace_key("smart_punctuation", decision.rule_id.data());
+    trace_key("smart_context_type", decision.context_type.data());
+
+    if (decision.action == SmartPunctuationAction::transform) return false;
+    if (decision.action == SmartPunctuationAction::literal) {
+        HostKeyEvent event;
+        event.kind = HostKeyKind::literal_punctuation;
+        event.character = punctuation_base_key(wparam);
+        event.shifted = shift_is_down();
+        (void)dispatch(context, std::move(event));
+        return true;
+    }
+
+    ProvisionalPunctuation provisional;
+    provisional.ascii = symbol;
+    provisional.chinese.assign(decision.chinese_text);
+    provisional.rule_id.assign(decision.rule_id);
+    provisional_punctuation_ = std::move(provisional);
+    const std::string preview(1U, symbol);
+    const EditRequestResult result = request_edit(
+        context, preview, preview.size(), false, false,
+        nullptr, true, nullptr, true);
+    if (result == EditRequestResult::failed) {
+        clear_smart_punctuation();
+        return false;
+    }
+    return true;
+}
+
+bool TextService::resolve_smart_punctuation_key(
+    ITfContext* const context,
+    const WPARAM wparam) {
+    if (!provisional_punctuation_.has_value()) return false;
+    if (context == nullptr) {
+        clear_smart_punctuation();
+        return true;
+    }
+
+    if (wparam == VK_BACK && !provisional_punctuation_->accumulated_text.empty()) {
+        provisional_punctuation_->accumulated_text.pop_back();
+        std::string text(1U, provisional_punctuation_->ascii);
+        text.append(provisional_punctuation_->accumulated_text);
+        trace_key("smart_resolution", "PUNC-PENDING-BACKSPACE");
+        if (request_edit(context, text, text.size(), false, false,
+                nullptr, true, nullptr, true) == EditRequestResult::failed) {
+            clear_smart_punctuation();
+        }
+        return true;
+    }
+
+    const ProvisionalPunctuation provisional = *provisional_punctuation_;
+    const bool escape = wparam == VK_ESCAPE;
+    bool cancel = wparam == VK_BACK || (escape && provisional.accumulated_text.empty());
+    const char next_character = is_decimal_digit_key(wparam)
+        ? static_cast<char>(wparam)
+        : '\0';
+    const SmartPunctuationResolution resolution =
+        smart_punctuation_engine_.resolve_provisional(
+            provisional.ascii, next_character, provisional.rule_id,
+            provisional.accumulated_text);
+    trace_key("smart_resolution", resolution.rule_id.data());
+    std::string text;
+    smart_replay_event_.reset();
+    smart_replay_virtual_key_ = 0U;
+
+    if (resolution.continue_provisional) {
+        provisional_punctuation_->accumulated_text.push_back(next_character);
+        text.push_back(provisional.ascii);
+        text.append(provisional_punctuation_->accumulated_text);
+        if (request_edit(context, text, text.size(), false, false,
+                nullptr, true, nullptr, true) == EditRequestResult::failed) {
+            clear_smart_punctuation();
+        }
+        return true;
+    }
+
+    if (escape && !provisional.accumulated_text.empty()) {
+        text.assign(provisional.accumulated_text);
+    } else if (!cancel && resolution.keep_ascii) {
+        text.push_back(provisional.ascii);
+        text.append(provisional.accumulated_text);
+        text.push_back(next_character);
+    } else if (!cancel && wparam == VK_SPACE) {
+        text.assign(resolution.chinese_text);
+        text.append(provisional.accumulated_text);
+        text.push_back(' ');
+    } else if (!cancel) {
+        text.assign(resolution.chinese_text);
+        text.append(provisional.accumulated_text);
+        if (is_ascii_letter(wparam) || is_punctuation_key(wparam)) {
+            smart_replay_event_ = map_key(wparam);
+        } else {
+            // Enter/Tab/navigation retain their application meaning. They are
+            // replayed only after the punctuation edit reaches the document,
+            // so a send action cannot overtake the final Chinese symbol.
+            smart_replay_virtual_key_ = wparam;
+        }
+    }
+
+    const EditRequestResult result = request_edit(
+        context, text, text.size(), !cancel, cancel,
+        nullptr, true, nullptr, true);
+    if (result == EditRequestResult::completed) {
+        complete_smart_punctuation_edit(
+            context, S_OK, !cancel, cancel, session_id_);
+    } else if (result == EditRequestResult::failed) {
+        smart_replay_event_.reset();
+        smart_replay_virtual_key_ = 0U;
+    }
+    return true;
+}
+
+void TextService::clear_smart_punctuation() noexcept {
+    provisional_punctuation_.reset();
+    smart_replay_event_.reset();
+    smart_replay_virtual_key_ = 0U;
+}
+
+void TextService::replay_virtual_key(const WPARAM wparam) noexcept {
+    if (wparam == 0U) return;
+    std::array<INPUT, 2U> inputs{};
+    inputs[0].type = INPUT_KEYBOARD;
+    inputs[0].ki.wVk = static_cast<WORD>(wparam);
+    inputs[0].ki.dwExtraInfo = smart_punctuation_replay_tag;
+    inputs[1] = inputs[0];
+    inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
+    (void)SendInput(static_cast<UINT>(inputs.size()), inputs.data(), sizeof(INPUT));
 }
 
 bool TextService::dispatch(ITfContext* const context, HostKeyEvent event) {
@@ -1070,6 +1430,28 @@ bool TextService::context_has_sensitive_input_scope(
     return sensitive;
 }
 
+bool TextService::query_surrounding_text(
+    ITfContext* const context,
+    std::string& left,
+    std::string& right) const noexcept {
+    left.clear();
+    right.clear();
+    if (context == nullptr || client_id_ == TF_CLIENTID_NULL) return false;
+    auto* session = new (std::nothrow) SurroundingTextQuerySession(context);
+    if (session == nullptr) return false;
+    HRESULT session_result = E_FAIL;
+    const HRESULT request_result = context->RequestEditSession(
+        client_id_, session, TF_ES_SYNC | TF_ES_READ, &session_result);
+    const bool result = SUCCEEDED(request_result) && SUCCEEDED(session_result) &&
+        session->resolved();
+    if (result) {
+        left = wide_to_utf8_local(session->left());
+        right = wide_to_utf8_local(session->right());
+    }
+    session->Release();
+    return result;
+}
+
 bool TextService::bind_context(ITfContext* const context) {
     if (context == nullptr) return false;
     const bool sensitive = context_has_sensitive_input_scope(context);
@@ -1083,8 +1465,17 @@ bool TextService::bind_context(ITfContext* const context) {
     // if the host rejects the synchronous edit, detach locally rather than
     // ever applying that old range to the new context.
     if (active_context_ != nullptr && composition_ != nullptr) {
+        std::string final_text;
+        bool commit = false;
+        bool cancel = true;
+        if (provisional_punctuation_.has_value()) {
+            final_text = provisional_punctuation_->chinese +
+                provisional_punctuation_->accumulated_text;
+            commit = true;
+            cancel = false;
+        }
         const EditRequestResult ended = request_edit(
-            active_context_, {}, 0U, false, true, nullptr, false);
+            active_context_, final_text, final_text.size(), commit, cancel, nullptr, false);
         if (ended != EditRequestResult::completed && composition_ != nullptr) {
             composition_->Release();
             composition_ = nullptr;
@@ -1098,6 +1489,7 @@ bool TextService::bind_context(ITfContext* const context) {
     release_pending_contexts();
     clear_deferred_updates();
     final_edit_keys_.clear();
+    clear_smart_punctuation();
     release_active_context();
 
     active_context_ = context;
@@ -1107,7 +1499,6 @@ bool TextService::bind_context(ITfContext* const context) {
     sensitive_context_ = sensitive;
     set_english_mode(starting_english_mode());
     english_direct_ = false;
-    last_passthrough_was_digit_ = false;
     shift_toggle_.reset();
     last_eaten_key_ = 0U;
     if (sensitive_context_) return true;
@@ -1216,7 +1607,8 @@ EditRequestResult TextService::request_edit(
     const bool cancel,
     HostCaretUpdate* const anchor,
     const bool allow_async,
-    const MirrorRequest* const request) {
+    const MirrorRequest* const request,
+    const bool smart_punctuation_completion) {
     if (context == nullptr || client_id_ == TF_CLIENTID_NULL) return EditRequestResult::failed;
     const std::wstring wide = utf8_to_wide_local(text);
     const std::size_t wide_caret = utf16_caret_for_utf8(text, caret);
@@ -1235,7 +1627,9 @@ EditRequestResult TextService::request_edit(
     if (!allow_async) return EditRequestResult::failed;
 
     auto* deferred = new (std::nothrow) EditSession(
-        this, context, wide, wide_caret, commit, cancel, nullptr, true, request);
+        this, context, wide, wide_caret, commit, cancel, nullptr, true, request,
+        smart_punctuation_completion,
+        smart_punctuation_completion ? session_id_ : 0U);
     if (deferred == nullptr) return EditRequestResult::failed;
     session_result = E_FAIL;
     const HRESULT deferred_request = context->RequestEditSession(
@@ -1284,6 +1678,41 @@ void TextService::complete_deferred_edit(
         (void)request_resume(context, *recovery);
     }
     dispatch_replayed_key(final_edit_keys_.complete_final_edit());
+}
+
+void TextService::complete_smart_punctuation_edit(
+    ITfContext* const context,
+    const HRESULT result,
+    const bool commit,
+    const bool cancel,
+    const std::uint64_t smart_session_id) noexcept {
+    if (!is_current_smart_punctuation(context, smart_session_id)) return;
+    trace_key("smart_edit_ran", commit ? "commit" : (cancel ? "cancel" : "update"));
+    if (!commit && !cancel) {
+        if (FAILED(result)) clear_smart_punctuation();
+        return;
+    }
+    if (FAILED(result)) {
+        smart_replay_event_.reset();
+        smart_replay_virtual_key_ = 0U;
+        return;
+    }
+
+    auto event = std::exchange(smart_replay_event_, std::nullopt);
+    const WPARAM virtual_key = std::exchange(smart_replay_virtual_key_, 0U);
+    provisional_punctuation_.reset();
+    if (event.has_value() && context != nullptr) {
+        (void)dispatch(context, std::move(*event));
+    }
+    if (virtual_key != 0U) replay_virtual_key(virtual_key);
+}
+
+bool TextService::is_current_smart_punctuation(
+    ITfContext* const context,
+    const std::uint64_t smart_session_id) const noexcept {
+    return provisional_punctuation_.has_value() &&
+        smart_session_id != 0U && smart_session_id == session_id_ &&
+        same_com_identity(active_context_, context);
 }
 
 void TextService::send_candidate_anchor(
@@ -1550,6 +1979,7 @@ void TextService::cancel_from_host_ui() noexcept {
     mirror_.discard_composition();
     clear_deferred_updates();
     final_edit_keys_.clear();
+    clear_smart_punctuation();
     release_pending_contexts();
     if (active_context_ != nullptr) {
         (void)request_edit(active_context_, {}, 0U, false, true);
@@ -1830,6 +2260,11 @@ LRESULT CALLBACK TextService::callback_window_proc(
     if (message == host_select_candidate_message && service != nullptr) {
         service->select_candidate_from_host_ui(static_cast<std::uint64_t>(lparam));
         return 0L;
+    }
+    if (message == host_query_client_identity_message && service != nullptr) {
+        const auto requested = static_cast<std::uint64_t>(wparam & 0xFFFFFFFFULL) |
+            (static_cast<std::uint64_t>(static_cast<std::uint32_t>(lparam)) << 32U);
+        return requested == process_client_id() ? 1L : 0L;
     }
     if (message == WM_NCDESTROY) SetWindowLongPtrW(window, GWLP_USERDATA, 0L);
     return DefWindowProcW(window, message, wparam, lparam);

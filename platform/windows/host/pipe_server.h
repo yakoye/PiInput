@@ -3,6 +3,8 @@
 #include "piinput/host_protocol.h"
 
 #include <functional>
+#include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -29,7 +31,9 @@ public:
     PipeServer(
         std::string build_id,
         SessionManager* sessions,
-        CandidatePresenter* presenter = nullptr);
+        CandidatePresenter* presenter = nullptr,
+        bool lexicon_memory_mapped = false,
+        std::size_t lexicon_mapped_bytes = 0U);
     void set_composition_boundary_handler(std::function<void()> handler);
     void set_startup_duration(std::uint64_t milliseconds) noexcept;
     // Asked between requests. Lets the tray's "exit" entry end the host without
@@ -44,6 +48,8 @@ private:
     // timing it from outside, where process creation dominates the reading on a
     // loaded machine and the number says more about the machine than about us.
     std::uint64_t startup_ms_{};
+    bool lexicon_memory_mapped_{};
+    std::size_t lexicon_mapped_bytes_{};
     SessionManager* sessions_{};
     CandidatePresenter* presenter_{};
     std::function<void()> composition_boundary_handler_;

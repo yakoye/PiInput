@@ -1,0 +1,6 @@
+{
+  "cases": [
+    {"case_id": "BUILD-001", "status": "PASS", "duration_ms": 1, "failure_class": "", "evidence": []},
+    {"case_id": "BUILD-001", "status": "PASS", "duration_ms": 2, "failure_class": "", "evidence": []}
+  ]
+}

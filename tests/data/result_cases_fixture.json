@@ -1,0 +1,8 @@
+{
+  "cases": [
+    {"case_id": "BUILD-001", "status": "PASS", "duration_ms": 125.5, "failure_class": "", "evidence": ["ctest.xml"]},
+    {"case_id": "IME-SIGN-001", "status": "BLOCKED", "duration_ms": 0, "failure_class": "", "evidence": []},
+    {"case_id": "IME-APP-005", "status": "NOT_RUN", "duration_ms": 0, "failure_class": "", "evidence": []},
+    {"case_id": "IME-OS-003", "status": "N/A", "duration_ms": 0, "failure_class": "", "evidence": []}
+  ]
+}

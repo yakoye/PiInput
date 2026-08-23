@@ -42,24 +42,11 @@ foreach ($item in $language) {
 
 $professional = Read-Cases "professional_vocabulary_test_cases.json"
 if ($professional.Count -ne 59) { throw "Expected 59 professional-vocabulary cases" }
-$knownMissing = @(Get-Content -Raw -LiteralPath (
-    Join-Path $SourceDir "tests/data/known_missing_professional_targets.json") |
-    ConvertFrom-Json | ForEach-Object { foreach ($entry in $_) { $entry } })
-$knownMissingIds = @($knownMissing | ForEach-Object { [string]$_.id })
-if ($knownMissingIds.Count -ne 13 -or
-    @($knownMissingIds | Sort-Object -Unique).Count -ne $knownMissingIds.Count) {
-    throw "Expected 13 unique known-missing professional target IDs"
-}
 foreach ($item in $professional) {
-    $mode = if ($knownMissingIds -contains [string]$item.id) { "known_missing" } else { "rank" }
-    $fields = @($item.id, $mode, (Schema-Id $item.scheme),
+    $fields = @($item.id, "rank", (Schema-Id $item.scheme),
         $item.input_sequence, $item.target_text,
         $item.expected.recommended_max_rank) | ForEach-Object { Clean-Field $_ }
     $rows.Add($fields -join "`t")
-}
-$professionalIds = @($professional | ForEach-Object { [string]$_.id })
-foreach ($id in $knownMissingIds) {
-    if ($professionalIds -notcontains $id) { throw "Unknown professional baseline ID: $id" }
 }
 
 $correction = Read-Cases "correction_test_cases.json"
