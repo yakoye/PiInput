@@ -42,7 +42,7 @@
 | Windows CI | 脚本与 workflow 已存在 | Windows build/CTest、JUnit、固定词库、tag/VERSION/clean 检查、可选签名、失败证据上传、包闭环阶段化失败 summary、统一 `result.json`/artifact manifest 和公开资产回下载哈希步骤已写 | GitHub 在线执行记录及失败恢复验证 |
 | 代码签名 | 工具链已写，证据缺失 | `sign-binaries.ps1` 使用 SHA-256/RFC3161；逐 PE 验证签名和时间戳证书，并记录签名者/时间戳指纹与文件哈希；PFX/密码仅暴露给单个签名步骤并在 `finally` 删除临时文件 | 正式证书、tag 构建签名结果、证书链复核 |
 | 安装包闭环 | 静态闭环通过，提权闭环待 CI | ZIP 静态检查已通过；安装脚本现校验前版 ZIP 哈希与覆盖升级/用户数据哨兵、当前版安装×2、version/build ID、包/安装 PE 哈希、注册 TSF/Host 固定路径、受控宿主实际加载 DLL、卸载注册残留和可选重装 | 受信任签名后在干净用户实际执行并保存证据 |
-| 8h soak | 前候选 Host-only 8h 已通过；TSF/App harness 已实现 | 前候选 dirty build 共 958 样本，Private/WS/Handle 增量和斜率均通过且 mmap=40,758,365 bytes；Host 采样已修复 PID 复用和 CSV 并发缺陷；TSF/App 控制器可循环标点、敏感 scope 和 context 重建 | 冻结候选精确 build identity 的 Host-only 8h；当前候选安装后的 TSF/App smoke 与 8h |
+| 8h soak | 冻结候选 Host-only 8h 已通过；TSF/App harness 已实现 | `a2d5f8fe3c53` / `0.7.13+a2d5f8fe3c53` 共 957 样本，Private/WS/Handle 增量和斜率均通过且 mmap=40,758,365 bytes；TSF/App 控制器可循环标点、敏感 scope 和 context 重建 | 当前候选安装后的 TSF/App smoke 与 8h |
 
 当前仓库不能因为“CI/签名/soak 脚本已经存在”就宣布对应发布门禁通过。
 
@@ -246,7 +246,7 @@
 - G2/G3：受控自动化基础较好，但仍缺真实宿主完整矩阵。
 - G4：智能标点核心实现和 Notepad++ 新 DLL 矩阵已通过；其余 P0 宿主矩阵仍为 `BLOCKED`。
 - G5：Notepad++ 新版本根因与实机闭环已完成；ChatGPT/Chromium 等同构建验证仍为 `BLOCKED`。
-- G6：前候选 dirty build 的 Host-only 8h 已通过，但不能替代冻结候选重跑；TSF/App harness 与 fixture smoke 已建立，当前候选真实 smoke/8h 尚未执行，当前仍为 `BLOCKED`。
+- G6：冻结候选 `a2d5f8fe3c53` 的 Host-only 8h 已通过；TSF/App harness 与 fixture smoke 已建立，但当前候选真实 smoke/8h 尚未执行，因此 G6 整体仍为 `BLOCKED`。
 - G7：未签名包静态闭环通过；签名/时间戳清单、安装后路径/哈希/实际 DLL 身份和公开资产回下载门禁已写，无正式证书且提权执行证据缺失，仍为 `BLOCKED`。
 - G8：只有在前述 Gate 通过后才能执行。
 

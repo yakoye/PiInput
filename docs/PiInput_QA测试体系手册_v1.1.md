@@ -62,7 +62,7 @@ Word v1.0/v1.1 文件作为初稿归档；上述 Markdown 是后续工程执行�
 | Windows CI | 配置存在 | build/CTest + JUnit/词库、tag/clean 身份、签名、失败证据、包闭环、统一 `result.json`/artifact manifest、Release 回下载 workflow 已写 | 在线 run 成功并保存 artifacts |
 | 签名 | 工具存在、外部阻塞 | 可签名并逐 PE 验证 RFC3161 时间戳，输出 signer/timestamper 指纹与文件哈希；当前无正式证书 | 正式证书 + tag 构建验证 |
 | 包闭环 | 静态闭环通过 | 哈希、身份、payload、源码泄漏已实跑；tag 前版下载/哈希、覆盖升级与 UserData 哨兵、安装×2、注册 TSF/Host 路径、安装后哈希、受控实际 DLL、卸载残留和可选重装已写 | 受信任签名后在干净用户和升级路径实际通过 |
-| 8h 稳定性 | 前候选 Host-only 通过；TSF/App harness 已写 | dirty build 运行满 8h、958 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率通过；TSF/App 同一宿主循环与 GUI/Host 资源采样已实现，状态/CSV/summary 记录迭代和 context 重建数 | 冻结候选精确 build identity 的 Host-only 8h + 当前候选 TSF/App smoke/8h |
+| 8h 稳定性 | 冻结候选 Host-only 通过；TSF/App harness 已写 | `a2d5f8fe3c53` 精确 build 运行满 8h、957 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率通过；TSF/App 同一宿主循环与 GUI/Host 资源采样已实现 | 当前候选 TSF/App smoke/8h |
 | 真实应用 | 部分完成 | Notepad++ 新 DLL 已通过智能标点矩阵；旧 ChatGPT 进程不能代表新构建 | 新构建统一矩阵通过 |
 
 总体结论：当前处于“Smart Punctuation 核心与 Notepad++ 闭环完成，长时、跨宿主、可信签名和提权安装证据仍阻断正式候选”的阶段。
@@ -234,7 +234,7 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 
 ## 12. 接下来按文档实施的顺序
 
-1. 前候选 Host-only 8h 已核对通过；完成全量回归和本地候选提交后，用该提交的精确 build identity 启动最终 Host-only 8h。
+1. 冻结候选 `a2d5f8fe3c53` 的 Host-only 8h 已核对通过；保持该二进制身份，继续 TSF/App 与真实宿主 Gate。
 2. 在已完成严格 token、千位 provisional、技术符号和受控物理键/lifecycle Oracle 基础上，安装当前候选并完成真实 profile smoke。
 3. 用同一 build identity 完成 Smart Punctuation、敏感输入和基础状态的 P0 真实宿主矩阵。
 4. 完成全部修改后的干净 Release build/全 CTest，固化 313/59 语料、mmap 和构建身份结果。
@@ -252,7 +252,7 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 | 智能标点 | 01 G4、05 | `SP-MIX-001..009`、`SP-STATE-*`、`SP-HOST-*` | 03 §8、Controlled Host | 04 §7 | 核心子集和 Notepad++ 完成，完整规范/跨宿主未完 |
 | 真实应用/DPI/生命周期 | 01 G5 | `IME-APP-*`、`IME-DPI-*`、`IME-OS-*` | 03 L3–L5 | 04 §9/13 | 大部分 MANUAL/PLANNED |
 | 词库/中文质量 | 01 G1/G6.3 | `LEX-*`、`IME-QUAL-*` | 03 corpus/metrics | 04 §5/11/12 | 313/59 确定性回归已完成；完整质量基线未完 |
-| 性能/资源/长时 | 01 G6 | `IME-PERF-*`、`IME-RES-*` | 03 §12–14 | 04 §10/13 | 前候选 Host-only 8h 已通过；冻结候选重跑、UI 延迟与 TSF/App soak 未完 |
+| 性能/资源/长时 | 01 G6 | `IME-PERF-*`、`IME-RES-*` | 03 §12–14 | 04 §10/13 | 冻结候选 Host-only 8h 已通过；UI 延迟与 TSF/App soak 未完 |
 | 安装/签名/包 | 01 G7 | `IME-INST-*`、`IME-SIGN-*`、`IME-PKG-001` | 03 CI/Release adapter | 04 §2/4/14 | 静态闭环通过，路径/哈希/实际 DLL/时间戳门禁已写；证书/提权实跑/升级路径阻塞 |
 | 发布资产 | 01 G8 | `BUILD-005..007` | 03 Final tag pipeline | 04 §2/3/4/18 | 前置 Gate 未过，尚未执行 |
 

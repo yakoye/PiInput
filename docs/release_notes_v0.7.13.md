@@ -23,3 +23,5 @@ v0.7.13 是词库覆盖、发布工程和长时间运行质量的收口版本。
 - 正式 tag 在任何构建和签名前要求 Host-only 8h、TSF/App 8h 与 P0 真实宿主矩阵全部有 PASS 证据；未完成时流水线直接阻断。
 
 正式发布仍需使用可信代码签名证书跑标签流水线，并完成真实应用输入框验收。
+
+冻结候选 `a2d5f8fe3c53` 的 Host-only 8 小时稳定性 Gate 已通过：build ID `0.7.13+a2d5f8fe3c53`，957 个样本，40,758,365 bytes mmap，Private/Working Set/Handle 增量和斜率均在门槛内。TSF/App 8 小时与真实宿主矩阵仍是独立发布条件。

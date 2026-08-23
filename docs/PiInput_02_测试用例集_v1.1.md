@@ -194,7 +194,7 @@
 | LEX-004 | P0 | AUTO | L2 | COVERED | 大 `.lex` Host health | `lexicon_storage=mmap` 且映射字节有效 |
 | LEX-005 | P1 | AUTO | L0/L2 | PARTIAL | 映射/heap 结果一致性 | 查询和候选一致 |
 | LEX-006 | P1 | AUTO | L2 | PARTIAL | 大词库冷/热加载 | 输出分布、条目数、映射状态和内存 |
-| LEX-007 | P1 | AUTO | L4 | PARTIAL | 前候选 dirty build 8h 已通过：958 样本、mmap 40,758,365 bytes、Private/WS/Handle 增量与斜率均在阈值内；冻结候选须重跑 | 映射保持有效，无增长趋势 |
+| LEX-007 | P1 | AUTO | L4 | COVERED | 冻结候选 `a2d5f8fe3c53` 8h 已通过：957 样本、mmap 40,758,365 bytes、Private/WS/Handle 增量与斜率均在阈值内 | 映射保持有效，无增长趋势 |
 
 ## 13. 性能与资源
 
@@ -211,7 +211,7 @@
 | IME-RES-003 | P1 | AUTO | L4 | PARTIAL | 持续控制器每 20 轮销毁/重建 context 并验证无幽灵文本；状态/CSV/summary 已记录 `context_recreates`，fixture 22 轮/2 次通过，10k 正式规模待跑 | Handle/Thread/GDI/USER 回稳态 |
 | IME-RES-004 | P1 | AUTO | L4 | PLANNED | Idle 5 min | CPU 接近零，无高频轮询 |
 | IME-RES-005 | P2 | AUTO | L4 | PLANNED | 启动稳定后采样 10 min | 记录 Idle Memory 基线；重点无增长 |
-| IME-RES-006 | P0 | AUTO | L4 | PARTIAL | 前候选 dirty build Host-only 8h 已通过并生成 summary；因源码随后变化，冻结候选精确 build ID 必须重跑 | 运行满 8h，mmap 有效，增长量与斜率及 `summary.json` 通过；不替代 IME-RES-001 |
+| IME-RES-006 | P0 | AUTO | L4 | COVERED | 冻结候选 Host-only 8h 已通过：build ID `0.7.13+a2d5f8fe3c53`、957 样本、summary 与增长/斜率门禁全部通过 | 运行满 8h，mmap 有效，增长量与斜率及 `summary.json` 通过；不替代 IME-RES-001 |
 
 ## 14. 中文输入质量
 

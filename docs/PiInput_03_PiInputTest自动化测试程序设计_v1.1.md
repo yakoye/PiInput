@@ -327,7 +327,7 @@ CI 必须上传：CTest `LastTest.log`、统一 `result.json`、artifact manifes
 
 ### Phase D：长时与发布（进行中/受外部条件阻塞）
 
-1. 前候选 dirty build 的 Host-only 8h 已运行满时长并通过：958 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率均在阈值内；因运行后源码继续变化，冻结候选必须用精确 build identity 重新执行后才能关闭 Gate。
+1. 冻结候选提交 `a2d5f8fe3c53`、build ID `0.7.13+a2d5f8fe3c53` 的 Host-only 8h 已运行满时长并通过：957 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率均在阈值内；Host-only Gate 已关闭。
 2. TSF/App 持续控制器、资源采样器和 fixture smoke 已完成；当前候选真实 smoke/8h 待执行。
 3. 未签名包静态闭环已通过；正式签名/时间戳、安装后注册路径与哈希、受控实际 DLL、卸载残留和公开资产回下载门禁已写，实际闭环受正式证书和提权环境阻塞。
 4. WPF/WinUI/Qt 与更多真实应用待扩展。
