@@ -329,7 +329,7 @@ CI 必须上传：CTest `LastTest.log`、统一 `result.json`、artifact manifes
 
 1. 冻结候选提交 `a2d5f8fe3c53`、build ID `0.7.13+a2d5f8fe3c53` 的 Host-only 8h 已运行满时长并通过：957 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率均在阈值内；Host-only Gate 已关闭。
 2. TSF/App 持续控制器、资源采样器和 fixture smoke 已完成；当前候选真实 smoke/8h 待执行。
-3. 未签名包静态闭环已通过；正式签名/时间戳、安装后注册路径与哈希、受控实际 DLL、卸载残留和公开资产回下载门禁已写，实际闭环受正式证书和提权环境阻塞。
+3. 未签名包静态闭环已通过；冻结候选安装闭环在 `install-pass-1` 的 UAC 被取消，阶段化失败 summary 已保存且系统恢复。正式签名/时间戳、安装后注册路径与哈希、受控实际 DLL、卸载残留和公开资产回下载门禁已写，实际闭环仍受正式证书和提权环境阻塞。
 4. WPF/WinUI/Qt 与更多真实应用待扩展。
 
 ## 19. 推荐目录

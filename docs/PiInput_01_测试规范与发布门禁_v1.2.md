@@ -41,7 +41,7 @@
 | 智能标点 | 核心交付子集完成，完整规范未完 | 纯规则引擎、临时 composition、Scintilla 文档真值和 reason code 已实现；严格 token、技术符号、千位三位 provisional 及 Backspace/Esc/context 销毁 Oracle 已加入；新 DLL 在 Notepad++ 通过基础矩阵 | 当前候选 DLL 的 Controlled TSF smoke/生命周期实跑；更多边界；ChatGPT/Chromium/Office/VS Code 同构建矩阵 |
 | Windows CI | 脚本与 workflow 已存在 | Windows build/CTest、JUnit、固定词库、tag/VERSION/clean 检查、可选签名、失败证据上传、包闭环阶段化失败 summary、统一 `result.json`/artifact manifest 和公开资产回下载哈希步骤已写 | GitHub 在线执行记录及失败恢复验证 |
 | 代码签名 | 工具链已写，证据缺失 | `sign-binaries.ps1` 使用 SHA-256/RFC3161；逐 PE 验证签名和时间戳证书，并记录签名者/时间戳指纹与文件哈希；PFX/密码仅暴露给单个签名步骤并在 `finally` 删除临时文件 | 正式证书、tag 构建签名结果、证书链复核 |
-| 安装包闭环 | 静态闭环通过，提权闭环待 CI | ZIP 静态检查已通过；安装脚本现校验前版 ZIP 哈希与覆盖升级/用户数据哨兵、当前版安装×2、version/build ID、包/安装 PE 哈希、注册 TSF/Host 固定路径、受控宿主实际加载 DLL、卸载注册残留和可选重装 | 受信任签名后在干净用户实际执行并保存证据 |
+| 安装包闭环 | 静态闭环通过，提权闭环受阻 | ZIP 静态检查已通过；冻结候选包身份/哈希通过，首次安装在 UAC 被取消时正确输出 `stage=install-pass-1` 失败 summary，系统状态已恢复；脚本覆盖升级哨兵、安装×2、PE 哈希、注册路径、实际 DLL、卸载残留和可选重装 | 允许管理员权限后，用受信任签名候选在干净用户实际执行并保存证据 |
 | 8h soak | 冻结候选 Host-only 8h 已通过；TSF/App harness 已实现 | `a2d5f8fe3c53` / `0.7.13+a2d5f8fe3c53` 共 957 样本，Private/WS/Handle 增量和斜率均通过且 mmap=40,758,365 bytes；TSF/App 控制器可循环标点、敏感 scope 和 context 重建 | 当前候选安装后的 TSF/App smoke 与 8h |
 
 当前仓库不能因为“CI/签名/soak 脚本已经存在”就宣布对应发布门禁通过。

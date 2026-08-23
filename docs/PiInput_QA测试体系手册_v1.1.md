@@ -59,7 +59,7 @@ Word v1.0/v1.1 文件作为初稿归档；上述 Markdown 是后续工程执行�
 | 敏感输入 | 组件级完成 | InputScope 策略与 TSF 旁路已实现；Controlled TSF Host 显式发布 Password/Numeric PIN，真实 profile Oracle 已写 | 当前候选受控实跑及浏览器/WinUI/凭据矩阵 |
 | 大词库 mmap | 已实现，Host 8h 运行中 | Host/benchmark 可报告映射状态；短时稳态通过 | 完整 8h/24h 曲线与真实 TSF soak |
 | Smart Punctuation | 核心实现继续完善 | 严格数值、URL/Email/Path/File、技术中缀/边界、千位三位 provisional，Scintilla 文档真值、reason code、受控物理键夹具和 Notepad++ 基础矩阵已落地 | 当前候选 Controlled TSF smoke/直接 lifecycle、引号与单位等剩余规则及跨宿主同构建矩阵 |
-| Windows CI | 配置存在 | build/CTest + JUnit/词库、tag/clean 身份、签名、失败证据、包闭环、统一 `result.json`/artifact manifest、Release 回下载 workflow 已写 | 在线 run 成功并保存 artifacts |
+| Windows CI | 配置存在 | build/CTest + JUnit/词库、tag/clean 身份、签名、失败证据、包闭环、统一 `result.json`/artifact manifest、Release 回下载 workflow 已写；本地冻结候选在 UAC 取消时正确保留 `install-pass-1` 失败 summary | 允许提权的在线 run 成功并保存 artifacts |
 | 签名 | 工具存在、外部阻塞 | 可签名并逐 PE 验证 RFC3161 时间戳，输出 signer/timestamper 指纹与文件哈希；当前无正式证书 | 正式证书 + tag 构建验证 |
 | 包闭环 | 静态闭环通过 | 哈希、身份、payload、源码泄漏已实跑；tag 前版下载/哈希、覆盖升级与 UserData 哨兵、安装×2、注册 TSF/Host 路径、安装后哈希、受控实际 DLL、卸载残留和可选重装已写 | 受信任签名后在干净用户和升级路径实际通过 |
 | 8h 稳定性 | 冻结候选 Host-only 通过；TSF/App harness 已写 | `a2d5f8fe3c53` 精确 build 运行满 8h、957 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率通过；TSF/App 同一宿主循环与 GUI/Host 资源采样已实现 | 当前候选 TSF/App smoke/8h |

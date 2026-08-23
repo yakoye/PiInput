@@ -19,10 +19,13 @@ p0_real_host_matrix=NOT_RUN
 - TSF/App soak harness 的 fixture 正向、低工作负载密度失败、context 重建计数和双进程资源 summary 已验证；它不加载 PiInput，不能填写 `tsf_app_soak_8h=PASS`。
 - tag workflow 已 fail-closed：外部 Gate 未全 PASS 不进入构建/签名；PFX secret 仅存在于单一签名步骤，失败路径保留 JUnit 与阶段化 JSON。
 - 统一结果聚合器的正向、非法状态、重复 Case ID 和缺失 artifact 路径已通过；CI `always()` 收尾会输出 schema v1 `result.json` 与逐文件 SHA-256 manifest，但在线 workflow 证据尚未产生。
+- 冻结候选的未签名开发包已生成，SHA-256 为 `97cf0efadd5247b5c8a16a4ae83b3972eec9559399bd622eff39d5b4d2c1bc9d`，静态身份为 `0.7.13+a2d5f8fe3c53`。安装闭环在 `install-pass-1` 请求管理员权限时被用户取消，阶段化失败证据位于 `artifacts/candidate-a2d5f8fe3c53/package-closure-controlled/summary.json`；它不是产品失败，也不能记为安装闭环 PASS。
+- 未经安装器的隔离注册尝试已恢复到原系统状态；Controlled TSF smoke 未在受控宿主加载候选 DLL，`module_identity=false`，证据位于 `artifacts/candidate-a2d5f8fe3c53/controlled-tsf-a2d5f8fe3c53/`。因此 TSF/App Gate 仍为 `NOT_RUN`，不得把后续标点 Oracle 的未执行字段解释为功能失败。
 
 ## 尚需正式环境完成
 
 - 本机当前没有可用代码签名证书；未签名候选只能用于开发验证。正式标签流水线必须配置 `PIINPUT_SIGNING_PFX_BASE64` 与 `PIINPUT_SIGNING_PFX_PASSWORD`。
 - 冻结候选 `a2d5f8fe3c53` 的 Host-only 8 小时已完成并通过；后续若修改实现或测试代码，必须形成新候选并重新执行，证据文档更新不改变已验证二进制身份。
 - 当前候选的 TSF/App 8 小时与 P0 真实宿主同构建矩阵尚未执行，机器 Gate 保持 `NOT_RUN`。
+- 正式安装/Controlled TSF smoke 需要一次允许管理员权限的非交互闭环；本轮取消后已恢复原 0.7.12 卸载项、原 DevSmart TSF/Host 注册路径和搜狗默认输入法，没有把部分候选安装留在活动注册状态。
 - 浏览器、Win32、WinUI/UWP、登录/凭据等真实输入框仍需人工验收，自动化测试不替代这些运行时边界。

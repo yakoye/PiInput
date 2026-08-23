@@ -84,7 +84,7 @@
 | IME-SIGN-001 | P0 | AUTO | L2 | BLOCKED | `signtool verify /pa /all` 检查包内 PE | 全部有效，证书链可信 |
 | IME-SIGN-002 | P0 | AUTO | L2 | BLOCKED | 脚本已强制检查 RFC3161 时间戳证书并输出 signer/timestamper 指纹，待正式证书实跑 | SHA-256 + RFC3161 时间戳 |
 | IME-SIGN-003 | P0 | AUTO | L2 | PARTIAL | tag 缺 signing secret 的 fail-closed workflow 已写，待在线验证 | 流水线失败，不生成正式候选 |
-| IME-PKG-001 | P0 | AUTO | L3 | PARTIAL | package closure 已校验安装×2、注册路径、Host/TSF 哈希、受控实际 DLL、卸载残留和可选重装，待提权实跑 | 哈希、payload、身份、安装×2、受控输入、卸载均通过 |
+| IME-PKG-001 | P0 | AUTO | L3 | BLOCKED | 冻结候选静态身份通过；提权实跑在 `install-pass-1` 的 UAC 被取消并输出失败 summary，系统已恢复。允许管理员权限后重跑安装×2、注册路径、Host/TSF 哈希、受控实际 DLL、卸载残留和可选重装 | 哈希、payload、身份、安装×2、受控输入、卸载均通过 |
 
 ## 6. 基础输入与状态机
 
