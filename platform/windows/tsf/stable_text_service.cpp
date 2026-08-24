@@ -1003,7 +1003,7 @@ bool TextService::should_eat_key(const WPARAM wparam) const noexcept {
     // as Latin text while a cold resident Host is still loading its dictionary.
     if (is_ascii_letter(wparam)) return (GetKeyState(VK_SHIFT) & 0x8000) == 0 || english_mode_;
     if (!mirror_.connected() && mirror_.raw().empty() && pending_contexts_.empty()) return false;
-    const bool composing = !mirror_.raw().empty() || !pending_contexts_.empty();
+    const bool composing = !mirror_.raw().empty() || has_pending_key_request();
     if (is_punctuation_key(wparam)) return true;
     if (!composing) return false;
     if (is_number_key(wparam)) return true;
@@ -1027,6 +1027,14 @@ bool TextService::should_eat_key(const WPARAM wparam) const noexcept {
     }
 }
 
+bool TextService::has_pending_key_request() const noexcept {
+    for (const auto& [sequence, pending] : pending_contexts_) {
+        (void)sequence;
+        if (pending.key_request) return true;
+    }
+    return false;
+}
+
 HostKeyEvent TextService::map_key(const WPARAM wparam) const noexcept {
     HostKeyEvent event;
     if (is_ascii_letter(wparam)) {
@@ -1034,7 +1042,7 @@ HostKeyEvent TextService::map_key(const WPARAM wparam) const noexcept {
         event.character = letter_for_key(wparam, english_mode_);
         return event;
     }
-    const bool composing = !mirror_.raw().empty() || !pending_contexts_.empty();
+    const bool composing = !mirror_.raw().empty() || has_pending_key_request();
     const bool shifted = shift_is_down();
     if (!english_mode_ && composing && !shifted && wparam == VK_OEM_7) {
         event.kind = HostKeyKind::text;
@@ -1096,7 +1104,7 @@ bool TextService::handle_smart_punctuation_key(
     const char symbol = smart_punctuation_symbol(wparam);
     if (symbol == '\0' || context == nullptr) return false;
 
-    const bool composing = !mirror_.raw().empty() || !pending_contexts_.empty();
+    const bool composing = !mirror_.raw().empty() || has_pending_key_request();
     std::string left;
     std::string right;
     bool snapshot_available = true;
@@ -1273,7 +1281,7 @@ bool TextService::dispatch_now(
     context->AddRef();
     pending_contexts_.emplace(
         request.sequence,
-        PendingContext{request.session_id, context, replayed_key});
+        PendingContext{request.session_id, context, true, replayed_key});
     trace_key("send_key_begin", "send");
     const bool sent = pipe_client_->send_key(request, event);
     trace_key("send_key_end", sent ? "ok" : "failed");
@@ -1519,7 +1527,8 @@ bool TextService::request_resume(
         (sensitive_context_ && same_com_identity(active_context_, context))) return false;
     const auto request = mirror_.begin_request();
     context->AddRef();
-    pending_contexts_.emplace(request.sequence, PendingContext{request.session_id, context});
+    pending_contexts_.emplace(
+        request.sequence, PendingContext{request.session_id, context, false, false});
     if (!pipe_client_->send_resume(request, state)) {
         const auto found = pending_contexts_.find(request.sequence);
         if (found != pending_contexts_.end()) {

@@ -162,6 +162,8 @@ L1/L3 需要验证：
 - 同步只读 edit session 获取选择左右上下文；
 - `OnTestKeyDown` 无写操作；
 - 未吃掉直通键之后没有 `OnKeyDown` 时仍然正确；
+- Resume/focus 只属于会话同步，不得计入 composition；只有镜像中存在 raw，或真正的按键请求尚未返回，才允许数字进入候选选择路径；
+- 新 context 的 Resume 仍在途时连续输入 `123`，三个数字必须全部透传；快速输入拼音后紧接数字时，数字仍须在对应按键请求之后有序选词；
 - 临时标点 composition 仅拥有一个符号；
 - 下一数字与标点原子有序；
 - Backspace/Esc/focus/context destroy 清理正确；

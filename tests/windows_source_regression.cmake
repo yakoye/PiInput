@@ -108,12 +108,23 @@ endif()
 foreach(required_focus_token IN ITEMS
         "thread_manager_->GetFocus"
         "document->GetTop"
-        "pending_contexts_.emplace(request.sequence, PendingContext{request.session_id, context})"
+        "PendingContext{request.session_id, context, false, false}"
         "pipe_client_->send_focus(request, false)")
     string(FIND "${stable_text_service_text}" "${required_focus_token}" focus_token_position)
     if(focus_token_position LESS 0)
         message(FATAL_ERROR
             "Stable TSF focus recovery must bind Resume to the active context; missing ${required_focus_token}")
+    endif()
+endforeach()
+foreach(required_pending_key_token IN ITEMS
+        "bool key_request{};"
+        "PendingContext{request.session_id, context, true, replayed_key}"
+        "has_pending_key_request()")
+    string(FIND "${stable_text_service_header_text}${stable_text_service_text}"
+        "${required_pending_key_token}" pending_key_token_position)
+    if(pending_key_token_position LESS 0)
+        message(FATAL_ERROR
+            "Resume synchronization must not be treated as pending composition; missing ${required_pending_key_token}")
     endif()
 endforeach()
 string(FIND "${stable_text_service_text}"

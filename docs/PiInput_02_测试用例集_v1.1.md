@@ -103,6 +103,7 @@
 | IME-BASIC-011 | P0 | AUTO | L2 | COVERED | 连续两个会提交的标点快速输入 | 最终编辑严格串行 |
 | IME-BASIC-012 | P0 | AUTO+MANUAL | L2/L3 | PARTIAL | 粘贴后立即输入 | 不覆盖粘贴文本，不复活旧 composition |
 | IME-BASIC-013 | P1 | AUTO+MANUAL | L2/L3 | PARTIAL | Host 重启/升级 handoff | 会话恢复或安全取消，无重复提交 |
+| IME-BASIC-014 | P0 | AUTO+MANUAL | L2/L3 | PARTIAL | 新获焦点或新建 context 后立即连续输入 `123`；覆盖 Chrome 搜索框、远程桌面地址框和 Win32 Edit。L2 已区分 Resume 同步请求与真实按键请求，并有源码门禁；L3 待同构建实机验收 | 空闲状态三个数字全部由宿主上屏；不得把 Resume pending 当成候选态而吞首键或全部数字 |
 
 ## 7. 智能标点
 
@@ -163,7 +164,7 @@
 | IME-APP-002 | P0 | Notepad++ | MANUAL；当前数字标点缺陷的首要回归宿主 |
 | IME-APP-003 | P1 | Word | MANUAL |
 | IME-APP-004 | P1 | Excel | MANUAL |
-| IME-APP-005 | P0 | Chrome | MANUAL |
+| IME-APP-005 | P0 | Chrome | MANUAL；增加新获焦点后首个数字不丢失回归 |
 | IME-APP-006 | P1 | Edge | MANUAL |
 | IME-APP-007 | P0 | VS Code | MANUAL |
 | IME-APP-008 | P0 | ChatGPT Windows App | MANUAL |
@@ -172,6 +173,7 @@
 | IME-APP-011 | P0 | Windows 设置/搜索/WinUI | MANUAL |
 | IME-APP-012 | P1 | WPF 控件 | MANUAL/PLANNED HOST |
 | IME-APP-013 | P1 | Qt 控件 | MANUAL/PLANNED HOST |
+| IME-APP-014 | P0 | Windows 远程桌面连接地址框 | MANUAL；增加空闲状态连续数字完全透传回归 |
 
 ## 11. DPI、权限和系统生命周期
 

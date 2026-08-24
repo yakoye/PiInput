@@ -96,6 +96,9 @@ private:
     struct PendingContext final {
         std::uint64_t session_id{};
         ITfContext* context{};
+        // A Resume request only synchronizes the Host session. It must not make
+        // ordinary digits/navigation look like candidate-selection input.
+        bool key_request{};
         bool replayed_key{};
     };
     struct ProvisionalPunctuation final {
@@ -107,6 +110,7 @@ private:
     ~TextService();
 
     [[nodiscard]] bool should_eat_key(WPARAM wparam) const noexcept;
+    [[nodiscard]] bool has_pending_key_request() const noexcept;
     [[nodiscard]] HostKeyEvent map_key(WPARAM wparam) const noexcept;
     [[nodiscard]] bool handle_smart_punctuation_key(
         ITfContext* context,

@@ -11,6 +11,7 @@ p0_real_host_matrix=NOT_RUN
 ## 自动验证
 
 - 当前工作区标准 Release 全量 65/65 CTest 已通过，包含安装/卸载权限边界、实际 PE manifest、卸载临时 worker 和源码完整性回归。
+- 已修复新输入框建立 TSF/Host 会话期间的数字吞键：此前 `pending_contexts_` 同时容纳 Resume 同步与真实按键请求，按键门禁把任意 pending 都误判为 composition，导致 Chrome 搜索框可能丢首个数字、远程桌面地址框可能持续不接收数字。当前 `PendingContext` 明确区分请求类型；Resume 不再激活候选数字路径，真实拼音按键在途时仍保留数字选词顺序。源码门禁验证两类请求的标记和消费路径；Chrome/远程桌面同构建人工复测仍属于 P0 真实宿主矩阵。
 - 专业词结构化回归：59/59；结构化语料总计 313 个用例。
 - 大词库：928,725 条；`.lex` 使用只读内存映射，映射字节数由 Host 与 benchmark 对外报告。
 - 映射后本机 Host 进程测试：冷启动健康检查 576 ms，首次请求 25 ms，常驻请求 15 ms。
