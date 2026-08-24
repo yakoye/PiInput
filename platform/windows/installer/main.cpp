@@ -3,6 +3,8 @@
 #include "stable_runtime.h"
 #include "uninstall_layout.h"
 #include "piinput_tsf_guids.h"
+#include "profile_registration.h"
+#include "user_keyboard_registration.h"
 #include "piinput/host_protocol.h"
 
 #include "piinput/windows_compat.h"
@@ -34,7 +36,6 @@ using piinput::windows::installer::is_safe_migration_source;
 using piinput::windows::installer::locate_installer_payload;
 using piinput::windows::installer::make_post_install_launch_targets;
 using piinput::windows::installer::migrate_legacy_user_data;
-using piinput::windows::installer::profile_install_commands;
 using piinput::windows::installer::quote_windows_argument;
 using piinput::windows::installer::remove_or_schedule_legacy_runtime;
 using piinput::windows::installer::make_stable_runtime_layout;
@@ -47,6 +48,26 @@ using piinput::windows::installer::write_runtime_marker_atomic;
 using piinput::windows::installer::sanitize_component;
 using piinput::windows::installer::stable_shim_registration_fallback;
 using piinput::windows::installer::version_directory;
+using piinput::windows::tsf::disable_user_keyboard;
+using piinput::windows::tsf::enable_user_keyboard;
+using piinput::windows::tsf::get_profile;
+
+constexpr UINT kForegroundMessageBox = MB_TOPMOST | MB_SETFOREGROUND;
+
+class ScopedComApartment final {
+public:
+    ScopedComApartment() noexcept
+        : result_(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)) {}
+
+    ~ScopedComApartment() {
+        if (SUCCEEDED(result_)) CoUninitialize();
+    }
+
+    [[nodiscard]] HRESULT result() const noexcept { return result_; }
+
+private:
+    HRESULT result_;
+};
 
 // Retired product identity. It is intentionally kept as numeric GUID fields so
 // new packages can remove the obsolete TSF registration without publishing the
@@ -108,6 +129,44 @@ inline constexpr CLSID kLegacyPiInputTextService =
     std::array<wchar_t, 64> buffer{};
     StringFromGUID2(guid, buffer.data(), static_cast<int>(buffer.size()));
     return buffer.data();
+}
+
+[[nodiscard]] std::string hresult_error(
+    const std::string_view operation,
+    const HRESULT result) {
+    std::ostringstream message;
+    message << operation << ": HRESULT 0x"
+            << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
+            << static_cast<std::uint32_t>(result);
+    return message.str();
+}
+
+void enable_and_verify_current_user_profile(bool& keyboard_enabled) {
+    const HRESULT enabled = enable_user_keyboard();
+    if (FAILED(enabled)) {
+        throw std::runtime_error(hresult_error(
+            "Cannot add PiInput to the current user's keyboard list", enabled));
+    }
+    // Record the side effect before the visibility poll so a later timeout
+    // still removes the keyboard entry during first-install rollback.
+    keyboard_enabled = true;
+
+    HRESULT last_result = E_FAIL;
+    DWORD last_flags = 0U;
+    for (unsigned int attempt = 0U; attempt < 20U; ++attempt) {
+        TF_INPUTPROCESSORPROFILE profile{};
+        last_result = get_profile(&profile);
+        if (SUCCEEDED(last_result)) {
+            last_flags = profile.dwFlags;
+            if ((profile.dwFlags & TF_IPP_FLAG_ENABLED) != 0U) return;
+        }
+        Sleep(250U);
+    }
+
+    std::ostringstream message;
+    message << hresult_error("PiInput profile did not become enabled", last_result)
+            << ", flags=0x" << std::hex << std::uppercase << last_flags;
+    throw std::runtime_error(message.str());
 }
 
 void require_file(const std::filesystem::path& path) {
@@ -575,7 +634,6 @@ struct InstallResult {
         : install_or_refresh_stable_shim(
             versioned_shim, runtime->shim_dll, version_id);
     const auto new_host = target_bin / L"PiInputHost.exe";
-    const auto profile = target_bin / L"piinput-profile.exe";
     const auto stable_icon = runtime->shim_dll.parent_path() / L"piinput_icon.ico";
     std::filesystem::copy_file(
         source_bin / L"piinput_icon.ico", stable_icon,
@@ -584,8 +642,10 @@ struct InstallResult {
     bool first_registration_attempted = false;
     bool user_keyboard_enabled = false;
     try {
+        TF_INPUTPROCESSORPROFILE existing_profile{};
         const bool stable_shim_already_registered = !previous_dll.empty() &&
-            _wcsicmp(previous_dll.c_str(), new_dll.c_str()) == 0;
+            _wcsicmp(previous_dll.c_str(), new_dll.c_str()) == 0 &&
+            SUCCEEDED(get_profile(&existing_profile));
         if (!stable_shim_already_registered) {
             first_registration_attempted = true;
             const HRESULT registration = register_first_install(new_dll);
@@ -598,22 +658,12 @@ struct InstallResult {
             }
             write_registered_dll(new_dll);
         }
-        for (const auto& command : profile_install_commands()) {
-            DWORD exit_code = 1U;
-            for (unsigned int attempt = 0U; attempt < command.max_attempts; ++attempt) {
-                exit_code = run_hidden(profile, std::wstring(command.arguments));
-                if (exit_code == 0U) {
-                    break;
-                }
-                if (attempt + 1U < command.max_attempts && command.retry_delay_ms != 0U) {
-                    Sleep(command.retry_delay_ms);
-                }
-            }
-            if (exit_code != 0U) {
-                throw std::runtime_error(std::string(command.failure_message));
-            }
-            user_keyboard_enabled = user_keyboard_enabled || command.enables_user_keyboard;
-        }
+        // DllRegisterServer above is the single source of TSF profile metadata.
+        // Running a second helper that immediately unregisters/re-registers the
+        // profile created a clean-machine race and could be blocked as an
+        // unsigned child process. Add the already-registered profile to this
+        // user's keyboard list directly, then wait for Windows to publish it.
+        enable_and_verify_current_user_profile(user_keyboard_enabled);
         retire_previous_tsf_identities();
         if (effective_migration.has_value()) {
             migrate_legacy_user_data(*effective_migration, piinput_root);
@@ -632,7 +682,7 @@ struct InstallResult {
         install_uninstaller(source_bin / L"PiInput-Uninstall.exe", local_root, new_dll);
     } catch (...) {
         if (user_keyboard_enabled && first_registration_attempted) {
-            (void)run_hidden(profile, L"--disable-user");
+            (void)disable_user_keyboard();
         }
         if (!previous_dll.empty()) {
             write_registered_dll(previous_dll);
@@ -716,6 +766,10 @@ struct InstallResult {
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     const bool silent = has_argument(L"--silent");
     try {
+        ScopedComApartment com;
+        if (FAILED(com.result()) && com.result() != RPC_E_CHANGED_MODE) {
+            throw std::runtime_error(hresult_error("Cannot initialize COM", com.result()));
+        }
         const auto migration = argument_value(L"--migrate-from");
         const auto result = install(migration.has_value()
             ? std::optional<std::filesystem::path>(*migration)
@@ -727,7 +781,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             L"\n\n用户设置和词库：\n" + result.user_data.wstring() +
             L"\n\n点击「确定」后会打开配置目录和 PiInput 设置软件。";
         if (!silent) {
-            MessageBoxW(nullptr, message.c_str(), L"PiInput 安装完成", MB_OK | MB_ICONINFORMATION);
+            MessageBoxW(nullptr, message.c_str(), L"PiInput 安装完成",
+                MB_OK | MB_ICONINFORMATION | kForegroundMessageBox);
             const auto launch = make_post_install_launch_targets(
                 result.program_root, result.user_data);
             // Keep the configuration directory visible for dictionaries and
@@ -745,14 +800,14 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         const std::wstring detail = widen_error(error);
         if (!silent) {
             MessageBoxW(nullptr, (L"PiInput 安装失败：\n" + detail).c_str(),
-                L"PiInput 安装失败", MB_OK | MB_ICONERROR);
+                L"PiInput 安装失败", MB_OK | MB_ICONERROR | kForegroundMessageBox);
         }
         return 1;
     } catch (const std::exception& error) {
         const std::wstring detail = widen_error(error);
         if (!silent) {
             MessageBoxW(nullptr, (L"PiInput 安装失败：\n" + detail).c_str(),
-                L"PiInput 安装失败", MB_OK | MB_ICONERROR);
+                L"PiInput 安装失败", MB_OK | MB_ICONERROR | kForegroundMessageBox);
         }
         return 1;
     }

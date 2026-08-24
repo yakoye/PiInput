@@ -1260,9 +1260,18 @@ endif()
 if(NOT installer_text MATCHES "remove_or_schedule_legacy_runtime\\(item\\.path\\(\\)\\)")
     message(FATAL_ERROR "Installer must remove or reboot-schedule every inactive side-by-side runtime")
 endif()
-if(NOT installer_text MATCHES "command\\.max_attempts" OR
-   NOT installer_text MATCHES "command\\.retry_delay_ms")
-    message(FATAL_ERROR "Installer must tolerate delayed TSF profile visibility with bounded retries")
+if(NOT installer_text MATCHES "enable_and_verify_current_user_profile" OR
+   NOT installer_text MATCHES "enable_user_keyboard" OR
+   NOT installer_text MATCHES "keyboard_enabled = true" OR
+   NOT installer_text MATCHES "get_profile" OR
+   NOT installer_text MATCHES "TF_IPP_FLAG_ENABLED" OR
+   NOT installer_text MATCHES "Sleep\\(250U\\)")
+    message(FATAL_ERROR "Installer must directly enable the current-user profile and tolerate delayed TSF visibility")
+endif()
+if(installer_text MATCHES "profile_install_commands" OR
+   installer_text MATCHES "run_hidden\\(profile" OR
+   installer_text MATCHES "--refresh-profile")
+    message(FATAL_ERROR "Installer must not re-register the profile through a failure-prone unsigned helper process")
 endif()
 if(NOT installer_text MATCHES "install_or_refresh_stable_shim" OR
    NOT installer_text MATCHES "files_are_identical" OR
@@ -1272,6 +1281,13 @@ if(NOT installer_text MATCHES "install_or_refresh_stable_shim" OR
 endif()
 if(NOT installer_text MATCHES "--silent")
     message(FATAL_ERROR "Installer must support silent integration verification")
+endif()
+if(NOT installer_text MATCHES "MB_TOPMOST" OR
+   NOT installer_text MATCHES "MB_SETFOREGROUND")
+    message(FATAL_ERROR "Installer completion and failure dialogs must be foreground topmost windows")
+endif()
+if(NOT cmake_text MATCHES "MANIFESTUAC:level='asInvoker'")
+    message(FATAL_ERROR "The per-user installer must run asInvoker instead of changing HKCU under an administrator account")
 endif()
 if(NOT installer_text MATCHES "make_post_install_launch_targets" OR
    NOT installer_text MATCHES "launch\.user_data_directory" OR

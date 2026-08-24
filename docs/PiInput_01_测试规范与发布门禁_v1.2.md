@@ -34,14 +34,14 @@
 
 | 领域 | 当前状态 | 已有证据 | 仍缺少 |
 |---|---|---|---|
-| 核心引擎/Host/TSF | 较完整 | 同一工作分支在本轮后续修订前完成过标准 Release 构建与 63/63 CTest；新增 Controlled TSF Host 自检后当前注册 64 项，核心规则、TSF DLL、源码门禁和宿主自检已针对性通过 | 全部改动完成后的干净 64/64 重跑；不得把旧检查点或分项结果写成本次最终 PASS |
+| 核心引擎/Host/TSF | 较完整 | 当前 Release 构建和 65/65 CTest 已通过；新增 Controlled TSF Host 与 UAC manifest 自检均纳入全量回归 | 真实宿主矩阵和下一冻结候选长时验证；不得用组件测试替代 |
 | 敏感输入 | 已实现，待扩大真人验收 | `GUID_PROP_INPUTSCOPE`/`ITfInputScope` 策略测试；Controlled TSF Host 已显式发布 Password/Numeric PIN scope，真实配置 smoke 已包含旁路 Oracle | 当前候选 DLL 的受控 smoke 实跑；浏览器、WinUI、凭据框实测矩阵 |
 | 结构化语料 | 已实现 | 313 条结构化语料，其中专业词 59 条 | 固定版本产物的最终报告归档 |
 | 大词库内存映射 | 已实现，8h 运行中 | `.lex` 只读映射；Host health 报告 `lexicon_storage=mmap` 和映射字节；短时稳态回归通过 | 完整 8h/24h 曲线与大词库多宿主运行 |
 | 智能标点 | 核心交付子集完成，完整规范未完 | 纯规则引擎、临时 composition、Scintilla 文档真值和 reason code 已实现；严格 token、技术符号、千位三位 provisional 及 Backspace/Esc/context 销毁 Oracle 已加入；新 DLL 在 Notepad++ 通过基础矩阵 | 当前候选 DLL 的 Controlled TSF smoke/生命周期实跑；更多边界；ChatGPT/Chromium/Office/VS Code 同构建矩阵 |
 | Windows CI | 脚本与 workflow 已存在 | Windows build/CTest、JUnit、固定词库、tag/VERSION/clean 检查、可选签名、失败证据上传、包闭环阶段化失败 summary、统一 `result.json`/artifact manifest 和公开资产回下载哈希步骤已写 | GitHub 在线执行记录及失败恢复验证 |
 | 代码签名 | 工具链已写，证据缺失 | `sign-binaries.ps1` 使用 SHA-256/RFC3161；逐 PE 验证签名和时间戳证书，并记录签名者/时间戳指纹与文件哈希；PFX/密码仅暴露给单个签名步骤并在 `finally` 删除临时文件 | 正式证书、tag 构建签名结果、证书链复核 |
-| 安装包闭环 | 静态闭环通过，提权闭环受阻 | ZIP 静态检查已通过；冻结候选包身份/哈希通过，首次安装在 UAC 被取消时正确输出 `stage=install-pass-1` 失败 summary，系统状态已恢复；脚本覆盖升级哨兵、安装×2、PE 哈希、注册路径、实际 DLL、卸载残留和可选重装 | 允许管理员权限后，用受信任签名候选在干净用户实际执行并保存证据 |
+| 安装包闭环 | 普通用户架构完成，真实闭环待跑 | 安装/卸载 manifest 已改为 `asInvoker`；安装器直接注册并轮询当前用户 profile，不再执行重复 `--refresh-profile`；卸载器通过控制管道停止 Host 并直接调用 TSF API，不再提升权限、启动 Host/profile 子进程或加载产品 DLL；所有交互框置顶 | 用受信任签名候选在标准用户和启用应用控制的干净机器执行安装×2、卸载和重装闭环 |
 | 8h soak | 冻结候选 Host-only 8h 已通过；TSF/App harness 已实现 | `a2d5f8fe3c53` / `0.7.13+a2d5f8fe3c53` 共 957 样本，Private/WS/Handle 增量和斜率均通过且 mmap=40,758,365 bytes；TSF/App 控制器可循环标点、敏感 scope 和 context 重建 | 当前候选安装后的 TSF/App smoke 与 8h |
 
 当前仓库不能因为“CI/签名/soak 脚本已经存在”就宣布对应发布门禁通过。
@@ -242,12 +242,12 @@
 
 基于 2026-08-23 工作区状态：
 
-- G0/G1：旧检查点完成过标准 Release 构建和 63/63；当前已注册 64 项并完成相关分项回归，全部修改结束后仍需最终 64/64 重跑。
+- G0/G1：当前标准 Release 构建和 65/65 CTest 已通过。
 - G2/G3：受控自动化基础较好，但仍缺真实宿主完整矩阵。
 - G4：智能标点核心实现和 Notepad++ 新 DLL 矩阵已通过；其余 P0 宿主矩阵仍为 `BLOCKED`。
 - G5：Notepad++ 新版本根因与实机闭环已完成；ChatGPT/Chromium 等同构建验证仍为 `BLOCKED`。
 - G6：冻结候选 `a2d5f8fe3c53` 的 Host-only 8h 已通过；TSF/App harness 与 fixture smoke 已建立，但当前候选真实 smoke/8h 尚未执行，因此 G6 整体仍为 `BLOCKED`。
-- G7：未签名包静态闭环通过；签名/时间戳清单、安装后路径/哈希/实际 DLL 身份和公开资产回下载门禁已写，无正式证书且提权执行证据缺失，仍为 `BLOCKED`。
+- G7：普通用户安装/卸载架构与静态回归已通过；签名/时间戳清单、安装后路径/哈希/实际 DLL 身份和公开资产回下载门禁已写，无正式证书且干净机实跑证据缺失，仍为 `BLOCKED`。
 - G8：只有在前述 Gate 通过后才能执行。
 
 因此当前工作区不是正式发布候选。

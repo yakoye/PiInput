@@ -39,7 +39,7 @@
 
 ## 3. 当前 CTest 与用例映射
 
-当前 Release 配置注册 64 个 CTest。旧检查点曾通过 63/63；新增项是受控 TSF Host 自检，当前修改后的全量 64 项尚未统一重跑。关键映射如下：
+当前 Release 配置注册 65 个 CTest；受控 TSF Host 与安装/卸载 UAC manifest 自检均已纳入，全量 65/65 已通过。关键映射如下：
 
 | 自动化入口 | 主要覆盖 |
 |---|---|
@@ -61,11 +61,11 @@
 
 | ID | P | Mode | Layer | Current | 步骤 | 预期 |
 |---|---|---|---|---|---|---|
-| BUILD-001 | P0 | AUTO | L2 | COVERED | Release 构建，运行全 CTest；旧检查点 63/63，当前注册 64 项且分项已通过；CI `always()` 汇总统一 `result.json`，正式发布仍要求 clean 64/64 | 构建成功；Failed=0；skip/disabled 有解释；统一结果绑定 build ID |
+| BUILD-001 | P0 | AUTO | L2 | COVERED | 当前 Release 构建和全量 65/65 CTest 已通过；CI `always()` 汇总统一 `result.json`，正式发布仍要求冻结候选 clean 重跑 | 构建成功；Failed=0；skip/disabled 有解释；统一结果绑定 build ID |
 | BUILD-002 | P0 | AUTO | L2 | COVERED | 比较 `VERSION`、Host `--version`、包名 | 完全一致 |
 | BUILD-003 | P0 | AUTO | L2 | COVERED | 读取 Host `--build-id`；CI package closure 精确比较 `VERSION+12位 tag commit`，错误 ID 失败夹具已通过 | 含版本与源码身份；与 tag commit 精确一致 |
 | BUILD-004 | P0 | AUTO | L2 | PARTIAL | workflow 已加入 tag/VERSION 与 checkout dirty 检查，待在线执行 | dirty 构建或 tag/version 不一致被正式流程拒绝 |
-| BUILD-005 | P0 | AUTO | L2 | PARTIAL | 闭环脚本比较 ZIP、解包、安装后 Host/TSF PE 哈希，待提权实跑 | 同一构建文件一致 |
+| BUILD-005 | P0 | AUTO | L2 | PARTIAL | 闭环脚本比较 ZIP、解包、安装后 Host/TSF PE 哈希，待普通用户干净机实跑 | 同一构建文件一致 |
 | BUILD-006 | P1 | AUTO | L2 | COVERED | 检查包内禁止扩展名 | 无源码、脚本、PDB、map、工程文件泄漏 |
 | BUILD-007 | P1 | AUTO | L2 | COVERED | 校验 ZIP SHA-256 sidecar；`compose-test-result.ps1` 对输入证据生成逐文件 SHA-256 artifact manifest，非法状态、重复 Case ID、缺失 artifact 夹具均 fail-closed | 哈希一致，格式可机器解析；证据清单无重复或悬空文件 |
 | BUILD-008 | P0 | AUTO | L2 | PARTIAL | tag workflow 调用 `verify-release-evidence.ps1`，要求 Host/TSF-App 8h 与 P0 真实宿主矩阵均为 PASS；PASS/NOT_RUN fixture 已验证，待在线 run | 外部 Gate 未完成时不构建、不签名、不发布正式 tag |
@@ -84,7 +84,7 @@
 | IME-SIGN-001 | P0 | AUTO | L2 | BLOCKED | `signtool verify /pa /all` 检查包内 PE | 全部有效，证书链可信 |
 | IME-SIGN-002 | P0 | AUTO | L2 | BLOCKED | 脚本已强制检查 RFC3161 时间戳证书并输出 signer/timestamper 指纹，待正式证书实跑 | SHA-256 + RFC3161 时间戳 |
 | IME-SIGN-003 | P0 | AUTO | L2 | PARTIAL | tag 缺 signing secret 的 fail-closed workflow 已写，待在线验证 | 流水线失败，不生成正式候选 |
-| IME-PKG-001 | P0 | AUTO | L3 | BLOCKED | 冻结候选静态身份通过；提权实跑在 `install-pass-1` 的 UAC 被取消并输出失败 summary，系统已恢复。允许管理员权限后重跑安装×2、注册路径、Host/TSF 哈希、受控实际 DLL、卸载残留和可选重装 | 哈希、payload、身份、安装×2、受控输入、卸载均通过 |
+| IME-PKG-001 | P0 | AUTO | L3 | BLOCKED | 安装/卸载已改为当前用户 `asInvoker`；安装不再执行 profile refresh 子进程，卸载不再提升权限或加载/启动产品二进制，交互框置顶。待受信任签名候选在标准用户和应用控制机器重跑安装×2、注册路径、Host/TSF 哈希、受控实际 DLL、卸载残留和可选重装 | 哈希、payload、身份、安装×2、受控输入、卸载均通过 |
 
 ## 6. 基础输入与状态机
 

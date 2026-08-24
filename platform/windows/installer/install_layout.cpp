@@ -2,14 +2,6 @@
 
 namespace piinput::windows::installer {
 
-std::array<ProfileInstallCommand, 3> profile_install_commands() {
-    return {{
-        {L"--refresh-profile", "TSF profile metadata refresh failed", false, 1U, 0U},
-        {L"--enable-user", "Current-user keyboard list registration failed", true, 1U, 0U},
-        {L"--status", "TSF profile verification failed", false, 20U, 250U},
-    }};
-}
-
 std::wstring sanitize_component(const std::wstring_view value) {
     std::wstring result;
     result.reserve(value.size());

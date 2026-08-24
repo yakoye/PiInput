@@ -12,7 +12,7 @@
 
 ## 1. 设计结论
 
-PiInputTest 不应先另起一个与仓库现有测试平行的大工程。当前已经有 64 个 CTest、原生 C++ fixture、Host 进程测试、PowerShell 回归、结构化语料、benchmark、Windows CI、包闭环和 soak 脚本；第 64 项是本轮新增的 Controlled TSF Host 自检。
+PiInputTest 不应先另起一个与仓库现有测试平行的大工程。当前已经有 65 个 CTest、原生 C++ fixture、Host 进程测试、PowerShell 回归、结构化语料、benchmark、Windows CI、包闭环和 soak 脚本；新增项包含 Controlled TSF Host 与安装/卸载 UAC manifest 自检。
 
 当前已完成受控 Win32 TSF Host、物理扫描码注入、焦点/context 控制、最终文本 Oracle，以及可选的真实 PiInput profile/DLL 身份模式。下一阶段继续把这些执行器纳入统一“场景与证据层”，补齐仍缺失的能力：
 
@@ -26,7 +26,7 @@ PiInputTest 不应先另起一个与仓库现有测试平行的大工程。当�
 
 | 资产 | 当前能力 | 不应误认为 |
 |---|---|---|
-| CTest 64 项 | 旧检查点 63/63；新增受控宿主自检后当前注册 64 项，相关分项已通过 | 真实应用矩阵已自动化或当前候选已全量 64/64 PASS |
+| CTest 65 项 | 当前 Release 全量 65/65 已通过，包含受控宿主和 UAC manifest 自检 | 真实应用矩阵已自动化或当前冻结候选再次全量 65/65 PASS |
 | `piinput-host-client-fixture` | 驱动真实 Host 协议与负载 | 驱动了 TSF/Notepad++ |
 | `host_process_tests.ps1` | Host health、协议、身份、性能 smoke | 端到端按键到 UI 延迟 |
 | `structured_corpus_regression.ps1` | 313 条结构化语料和 59 条专业词 | 用户真实键盘/候选 UI 验收 |
@@ -329,7 +329,7 @@ CI 必须上传：CTest `LastTest.log`、统一 `result.json`、artifact manifes
 
 1. 冻结候选提交 `a2d5f8fe3c53`、build ID `0.7.13+a2d5f8fe3c53` 的 Host-only 8h 已运行满时长并通过：957 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率均在阈值内；Host-only Gate 已关闭。
 2. TSF/App 持续控制器、资源采样器和 fixture smoke 已完成；当前候选真实 smoke/8h 待执行。
-3. 未签名包静态闭环已通过；冻结候选安装闭环在 `install-pass-1` 的 UAC 被取消，阶段化失败 summary 已保存且系统恢复。正式签名/时间戳、安装后注册路径与哈希、受控实际 DLL、卸载残留和公开资产回下载门禁已写，实际闭环仍受正式证书和提权环境阻塞。
+3. 未签名包静态闭环已通过；安装/卸载现为当前用户 `asInvoker`，安装直接完成 profile 用户注册和可见性轮询，卸载通过控制管道停止 Host 并直接清理 TSF，不再需要 UAC 或启动/加载产品辅助二进制；实际闭环仍受正式证书和标准用户/应用控制干净机证据阻塞。
 4. WPF/WinUI/Qt 与更多真实应用待扩展。
 
 ## 19. 推荐目录

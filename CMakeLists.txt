@@ -280,6 +280,7 @@ if(WIN32)
         platform/windows/installer/migration.cpp
         platform/windows/installer/stable_runtime.cpp
         platform/windows/installer/uninstall_layout.cpp
+        platform/windows/tsf/user_keyboard_registration.cpp
     )
     target_include_directories(PiInput-Install PRIVATE
         include
@@ -292,18 +293,21 @@ if(WIN32)
     target_link_libraries(PiInput-Install PRIVATE piinput_core ole32 shell32 advapi32 user32)
     if(MSVC)
         target_link_options(PiInput-Install PRIVATE
-            "/MANIFESTUAC:level='requireAdministrator' uiAccess='false'")
+            "/MANIFESTUAC:level='asInvoker' uiAccess='false'")
     endif()
     piinput_enable_warnings(PiInput-Install)
 
     add_executable(PiInput-Uninstall WIN32
         platform/windows/uninstaller/main.cpp
+        platform/windows/host/pipe_endpoint.cpp
         platform/windows/installer/stable_runtime.cpp
         platform/windows/installer/uninstall_layout.cpp
         platform/windows/installer/migration.cpp
+        platform/windows/tsf/user_keyboard_registration.cpp
     )
     target_include_directories(PiInput-Uninstall PRIVATE
         include
+        platform/windows/host
         platform/windows/installer
         platform/windows/tsf
     )
@@ -311,7 +315,7 @@ if(WIN32)
         piinput_core ole32 shell32 advapi32 user32 comctl32)
     if(MSVC)
         target_link_options(PiInput-Uninstall PRIVATE
-            "/MANIFESTUAC:level='requireAdministrator' uiAccess='false'"
+            "/MANIFESTUAC:level='asInvoker' uiAccess='false'"
             "/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'")
     endif()
     piinput_enable_warnings(PiInput-Uninstall)
@@ -928,6 +932,14 @@ if(PIINPUT_BUILD_TESTS)
             COMMAND ${CMAKE_COMMAND}
                 -DPIINPUT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
                 -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/uninstaller_source_regression.cmake
+        )
+        add_test(
+            NAME piinput-uac-manifest-regression
+            COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
+                -NoProfile
+                -File ${CMAKE_SOURCE_DIR}/tests/uac_manifest_regression.ps1
+                -InstallerExe $<TARGET_FILE:PiInput-Install>
+                -UninstallerExe $<TARGET_FILE:PiInput-Uninstall>
         )
     endif()
     add_test(

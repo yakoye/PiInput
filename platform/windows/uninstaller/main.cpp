@@ -1,15 +1,20 @@
 #include "migration.h"
 #include "uninstall_layout.h"
+#include "pipe_endpoint.h"
+#include "profile_registration.h"
+#include "user_keyboard_registration.h"
 
+#include "piinput/host_protocol.h"
 #include "piinput/windows_compat.h"
 
 #include <commctrl.h>
 #include <shellapi.h>
 #include <shlobj.h>
 
+#include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -19,11 +24,29 @@ namespace {
 
 using piinput::windows::installer::UninstallLayout;
 using piinput::windows::installer::make_uninstall_layout;
-using piinput::windows::installer::quote_windows_argument;
 using piinput::windows::installer::remove_or_schedule_legacy_runtime;
-using piinput::windows::installer::resolve_active_version;
 using piinput::windows::installer::uninstall_roots;
 using piinput::windows::installer::validate_uninstall_layout;
+using piinput::windows::tsf::deactivate_profile;
+using piinput::windows::tsf::disable_user_keyboard;
+using piinput::windows::tsf::unregister_profile;
+
+constexpr UINT kForegroundMessageBox = MB_TOPMOST | MB_SETFOREGROUND;
+
+class ScopedComApartment final {
+public:
+    ScopedComApartment() noexcept
+        : result_(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED)) {}
+
+    ~ScopedComApartment() {
+        if (SUCCEEDED(result_)) CoUninitialize();
+    }
+
+    [[nodiscard]] HRESULT result() const noexcept { return result_; }
+
+private:
+    HRESULT result_;
+};
 
 struct Arguments {
     bool silent{};
@@ -81,25 +104,6 @@ struct Arguments {
     return result;
 }
 
-[[nodiscard]] DWORD run_hidden(
-    const std::filesystem::path& program,
-    const std::wstring_view arguments) {
-    std::wstring command = quote_windows_argument(program.wstring()) + L" " + std::wstring(arguments);
-    STARTUPINFOW startup{};
-    startup.cb = sizeof(startup);
-    PROCESS_INFORMATION process{};
-    if (CreateProcessW(nullptr, command.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW,
-            nullptr, program.parent_path().c_str(), &startup, &process) == FALSE) {
-        return GetLastError();
-    }
-    WaitForSingleObject(process.hProcess, INFINITE);
-    DWORD exit_code = ERROR_GEN_FAILURE;
-    GetExitCodeProcess(process.hProcess, &exit_code);
-    CloseHandle(process.hThread);
-    CloseHandle(process.hProcess);
-    return exit_code;
-}
-
 void wait_for_parent(const DWORD process_id) {
     if (process_id == 0U) {
         return;
@@ -111,55 +115,101 @@ void wait_for_parent(const DWORD process_id) {
     }
 }
 
+// Ask the already-running Host to drain over its control pipe. Launching
+// PiInputHost.exe from a temporary unsigned uninstall worker is exactly the
+// child-process pattern Windows application control blocks. Speaking the
+// existing protocol directly is both quieter and allows its mapped files to be
+// removed without administrator-only delayed-delete registration.
+void request_host_drain() noexcept {
+    const auto endpoint = piinput::windows::current_host_endpoint_names();
+    if (!endpoint.has_value()) return;
+
+    const HANDLE host_mutex = OpenMutexW(SYNCHRONIZE, FALSE, endpoint->mutex.c_str());
+    HANDLE pipe = CreateFileW(endpoint->pipe.c_str(), GENERIC_WRITE, 0U, nullptr,
+        OPEN_EXISTING, 0U, nullptr);
+    if (pipe == INVALID_HANDLE_VALUE && GetLastError() == ERROR_PIPE_BUSY &&
+        WaitNamedPipeW(endpoint->pipe.c_str(), 500U) != FALSE) {
+        pipe = CreateFileW(endpoint->pipe.c_str(), GENERIC_WRITE, 0U, nullptr,
+            OPEN_EXISTING, 0U, nullptr);
+    }
+    if (pipe != INVALID_HANDLE_VALUE) {
+        try {
+            const piinput::HostEnvelope request{
+                .version = piinput::host_protocol_v1,
+                .client_id = static_cast<std::uint64_t>(GetCurrentProcessId()),
+                .session_id = 1U,
+                .sequence = (std::max)(GetTickCount64(), 1ULL),
+                .generation = 1U,
+                .type = piinput::HostMessageType::drain,
+            };
+            const auto encoded = piinput::encode_host_envelope(request);
+            DWORD written = 0U;
+            (void)WriteFile(pipe, encoded.data(), static_cast<DWORD>(encoded.size()),
+                &written, nullptr);
+        } catch (...) {
+        }
+        CloseHandle(pipe);
+    }
+    if (host_mutex != nullptr) {
+        (void)WaitForSingleObject(host_mutex, 3000U);
+        CloseHandle(host_mutex);
+    }
+}
+
 // Unregistering still happens before anything is deleted, so a live TSF
 // profile is never left pointing at files that are already gone. What changed
 // is the response to failure: every step reports and continues. Refusing to
 // clean up because a program is missing left users with an installation they
 // could not remove by any means -- and a missing program is usually the reason
 // there is nothing left to unregister.
-[[nodiscard]] std::vector<std::wstring> unregister_tsf(
-    const UninstallLayout& layout,
-    const std::optional<std::filesystem::path>& active_version) {
-    std::vector<std::wstring> problems;
-    const auto tools = locate_uninstall_tools(layout, active_version);
-    if (tools.host.has_value()) {
-        (void)run_hidden(*tools.host, L"--drain");
+void unregister_categories(std::vector<std::wstring>& problems) {
+    ITfCategoryMgr* category_manager = nullptr;
+    const HRESULT created = CoCreateInstance(CLSID_TF_CategoryMgr, nullptr,
+        CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&category_manager));
+    if (FAILED(created) || category_manager == nullptr) {
+        problems.emplace_back(L"无法打开 TSF 分类管理器，跳过能力分类清理");
+        return;
     }
-    if (tools.profile.has_value()) {
-        (void)run_hidden(*tools.profile, L"--deactivate");
-        if (run_hidden(*tools.profile, L"--disable-user") != 0U) {
-            problems.emplace_back(L"未能从当前用户的键盘列表中移除 PiInput");
-        }
-    } else {
-        problems.emplace_back(L"未找到 piinput-profile.exe，跳过键盘列表清理");
+    static const GUID* const categories[] = {
+        &GUID_TFCAT_TIP_KEYBOARD,
+        &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
+        &GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
+        &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
+        &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
+    };
+    bool failed = false;
+    for (const GUID* const category : categories) {
+        const HRESULT removed = category_manager->UnregisterCategory(
+            CLSID_PiInputTextService, *category, CLSID_PiInputTextService);
+        failed = failed || (FAILED(removed) && removed != E_FAIL);
     }
+    category_manager->Release();
+    if (failed) {
+        problems.emplace_back(L"部分 TSF 能力分类未能清理");
+    }
+}
 
-    if (!tools.tsf_dll.has_value()) {
-        problems.emplace_back(L"未找到 PiInputTSF.dll，跳过输入法组件反注册");
-        return problems;
+[[nodiscard]] std::vector<std::wstring> unregister_tsf() {
+    std::vector<std::wstring> problems;
+    const HRESULT deactivated = deactivate_profile();
+    if (FAILED(deactivated)) {
+        problems.emplace_back(L"未能停用当前 PiInput profile");
     }
-    const HMODULE module = LoadLibraryExW(tools.tsf_dll->c_str(), nullptr,
-        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-    if (module == nullptr) {
-        problems.emplace_back(L"无法加载 PiInputTSF.dll 进行反注册");
-        return problems;
+    if (FAILED(disable_user_keyboard())) {
+        problems.emplace_back(L"未能从当前用户的键盘列表中移除 PiInput");
     }
-    using UnregisterServer = HRESULT(__stdcall*)();
-    const auto function = reinterpret_cast<UnregisterServer>(
-        GetProcAddress(module, "DllUnregisterServer"));
-    const HRESULT result = function == nullptr
-        ? HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND)
-        : function();  // DllUnregisterServer
-    FreeLibrary(module);
-    if (FAILED(result)) {
-        problems.emplace_back(L"输入法组件反注册失败");
+    unregister_categories(problems);
+    const HRESULT unregistered = unregister_profile();
+    if (FAILED(unregistered)) {
+        problems.emplace_back(L"输入法 profile 反注册失败");
     }
     return problems;
 }
 
-// The COM registration the DLL writes about itself. When the DLL is already
-// gone there is nobody left to call DllUnregisterServer, and without this the
-// class registration would outlive the product forever.
+// Remove the per-user COM registration directly. The uninstaller deliberately
+// does not load the product DLL: application-control policies commonly reject
+// an unsigned DLL loaded by a temporary uninstall worker, and cleanup must
+// still work when the DLL is damaged or already gone.
 // CLSID_PiInputTextService, the permanent stable Shim identity declared
 // in platform/windows/tsf/piinput_tsf_guids.h.
 void delete_com_registration() noexcept {
@@ -207,7 +257,8 @@ void delete_runtime_registry() noexcept {
     // files that are already gone. Whatever fails here is reported, not fatal:
     // the files still have to go, or the user keeps an installation that no
     // uninstaller on the machine can remove.
-    auto problems = unregister_tsf(layout, resolve_active_version(layout));
+    request_host_drain();
+    auto problems = unregister_tsf();
 
     std::error_code ignored;
     std::filesystem::remove_all(layout.start_menu_root, ignored);
@@ -228,9 +279,21 @@ void delete_runtime_registry() noexcept {
     delete_runtime_registry();
     delete_com_registration();
 
-    const auto temporary_worker = executable_path();
-    (void)MoveFileExW(temporary_worker.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT);
     return problems;
+}
+
+HRESULT CALLBACK topmost_task_dialog_callback(
+    const HWND dialog,
+    const UINT notification,
+    WPARAM,
+    LPARAM,
+    LONG_PTR) {
+    if (notification == TDN_CREATED) {
+        (void)SetWindowPos(dialog, HWND_TOPMOST, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+        (void)SetForegroundWindow(dialog);
+    }
+    return S_OK;
 }
 
 [[nodiscard]] bool confirm_uninstall(bool& remove_user_data) {
@@ -247,6 +310,7 @@ void delete_runtime_registry() noexcept {
         L"默认保留用户词库、设置和学习记录，重新安装后可以继续使用。";
     config.pszVerificationText = L"同时删除用户词库、设置和学习记录";
     config.nDefaultButton = IDNO;
+    config.pfCallback = topmost_task_dialog_callback;
     int button = IDNO;
     const HRESULT result = TaskDialogIndirect(&config, &button, nullptr, &verification_checked);
     if (FAILED(result)) {
@@ -277,7 +341,7 @@ void launch_worker(const Arguments& arguments) {
     SHELLEXECUTEINFOW execute{};
     execute.cbSize = sizeof(execute);
     execute.fMask = SEE_MASK_NOCLOSEPROCESS;
-    execute.lpVerb = L"runas";
+    execute.lpVerb = L"open";
     execute.lpFile = worker.c_str();
     execute.lpParameters = parameters.c_str();
     execute.nShow = SW_SHOWNORMAL;
@@ -298,13 +362,18 @@ void launch_worker(const Arguments& arguments) {
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     try {
+        ScopedComApartment com;
+        if (FAILED(com.result()) && com.result() != RPC_E_CHANGED_MODE) {
+            throw std::runtime_error("Cannot initialize COM for PiInput uninstall");
+        }
         auto arguments = parse_arguments();
         if (arguments.worker) {
             const auto problems = run_worker(arguments);
             if (!arguments.silent) {
                 if (problems.empty()) {
                     MessageBoxW(nullptr, L"PiInput 已卸载，相关文件和注册表项已清理。",
-                        L"PiInput 卸载完成", MB_OK | MB_ICONINFORMATION);
+                        L"PiInput 卸载完成",
+                        MB_OK | MB_ICONINFORMATION | kForegroundMessageBox);
                 } else {
                     // Say what is left rather than calling the whole uninstall a
                     // failure. The product is gone either way; these are the
@@ -315,7 +384,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
                         message += L"\n· " + problem;
                     }
                     MessageBoxW(nullptr, message.c_str(), L"PiInput 卸载完成",
-                        MB_OK | MB_ICONWARNING);
+                        MB_OK | MB_ICONWARNING | kForegroundMessageBox);
                 }
             }
             return 0;
@@ -328,7 +397,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     } catch (const std::exception& error) {
         const auto detail = widen_error(error);
         MessageBoxW(nullptr, (L"PiInput 卸载失败：\n" + detail).c_str(),
-            L"PiInput 卸载失败", MB_OK | MB_ICONERROR);
+            L"PiInput 卸载失败", MB_OK | MB_ICONERROR | kForegroundMessageBox);
         return 1;
     }
 }

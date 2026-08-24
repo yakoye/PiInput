@@ -610,6 +610,7 @@ tests/structured_corpus_regression.ps1
 tests/test_main.cpp
 tests/tsf_app_soak_tests.ps1
 tests/typing_latency_tests.ps1
+tests/uac_manifest_regression.ps1
 tests/uninstall_fail_closed_regression.ps1
 tests/uninstall_layout_tests.cpp
 tests/uninstaller_source_regression.cmake

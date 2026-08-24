@@ -54,18 +54,18 @@ Word v1.0/v1.1 文件作为初稿归档；上述 Markdown 是后续工程执行�
 
 | 领域 | 成熟度 | 说明 | 下一完成条件 |
 |---|---|---|---|
-| 核心拼音/候选/Host | 可持续回归 | 旧检查点标准 Release 构建及 63/63 已通过；新增 Controlled TSF Host 后当前注册 64 项，相关分项通过 | 最终修改完成后干净 64/64 重跑并归档 |
+| 核心拼音/候选/Host | 可持续回归 | 当前标准 Release 构建及 65/65 已通过；Controlled TSF Host 与 UAC manifest 自检已纳入 | 冻结候选再次 clean 重跑并归档 |
 | 结构化语料/专业词 | 已实现 | 313 条总语料，59 条专业词；13 个缺口已补数据 | 固定候选构建报告归档 |
 | 敏感输入 | 组件级完成 | InputScope 策略与 TSF 旁路已实现；Controlled TSF Host 显式发布 Password/Numeric PIN，真实 profile Oracle 已写 | 当前候选受控实跑及浏览器/WinUI/凭据矩阵 |
 | 大词库 mmap | 已实现，Host 8h 运行中 | Host/benchmark 可报告映射状态；短时稳态通过 | 完整 8h/24h 曲线与真实 TSF soak |
 | Smart Punctuation | 核心实现继续完善 | 严格数值、URL/Email/Path/File、技术中缀/边界、千位三位 provisional，Scintilla 文档真值、reason code、受控物理键夹具和 Notepad++ 基础矩阵已落地 | 当前候选 Controlled TSF smoke/直接 lifecycle、引号与单位等剩余规则及跨宿主同构建矩阵 |
-| Windows CI | 配置存在 | build/CTest + JUnit/词库、tag/clean 身份、签名、失败证据、包闭环、统一 `result.json`/artifact manifest、Release 回下载 workflow 已写；本地冻结候选在 UAC 取消时正确保留 `install-pass-1` 失败 summary | 允许提权的在线 run 成功并保存 artifacts |
+| Windows CI | 配置存在 | build/CTest + JUnit/词库、tag/clean 身份、签名、失败证据、包闭环、统一 `result.json`/artifact manifest、Release 回下载 workflow 已写；安装/卸载改为普通用户 `asInvoker` 并加入无辅助产品进程与置顶窗口门禁 | 标准用户和应用控制环境的在线 run 成功并保存 artifacts |
 | 签名 | 工具存在、外部阻塞 | 可签名并逐 PE 验证 RFC3161 时间戳，输出 signer/timestamper 指纹与文件哈希；当前无正式证书 | 正式证书 + tag 构建验证 |
 | 包闭环 | 静态闭环通过 | 哈希、身份、payload、源码泄漏已实跑；tag 前版下载/哈希、覆盖升级与 UserData 哨兵、安装×2、注册 TSF/Host 路径、安装后哈希、受控实际 DLL、卸载残留和可选重装已写 | 受信任签名后在干净用户和升级路径实际通过 |
 | 8h 稳定性 | 冻结候选 Host-only 通过；TSF/App harness 已写 | `a2d5f8fe3c53` 精确 build 运行满 8h、957 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率通过；TSF/App 同一宿主循环与 GUI/Host 资源采样已实现 | 当前候选 TSF/App smoke/8h |
 | 真实应用 | 部分完成 | Notepad++ 新 DLL 已通过智能标点矩阵；旧 ChatGPT 进程不能代表新构建 | 新构建统一矩阵通过 |
 
-总体结论：当前处于“Smart Punctuation 核心与 Notepad++ 闭环完成，长时、跨宿主、可信签名和提权安装证据仍阻断正式候选”的阶段。
+总体结论：当前处于“Smart Punctuation 核心与 Notepad++ 闭环完成，长时、跨宿主、可信签名和普通用户干净机安装证据仍阻断正式候选”的阶段。
 
 ## 5. 工作流
 
@@ -246,14 +246,14 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 
 | 需求族 | 规范/Gate | 稳定 Case ID | 自动化/执行设计 | 报告落点 | 当前结论 |
 |---|---|---|---|---|---|
-| 构建身份与回归 | 01 G0/G1 | `BUILD-001..008` | 03 L0–L2、CI | 04 §1/2/4/5 | 旧检查点 63/63；当前注册 64，统一 result/manifest 已接入，最终 clean 64/64 与在线 run 待完成 |
+| 构建身份与回归 | 01 G0/G1 | `BUILD-001..008` | 03 L0–L2、CI | 04 §1/2/4/5 | 当前 Release 65/65；统一 result/manifest 已接入，冻结候选 clean 重跑与在线 run 待完成 |
 | 输入完整性/状态机 | 01 G2 | `IME-BASIC-*`、`IME-FOCUS-*`、`IME-SW-*` | 03 Controller/Oracle/Controlled Host | 04 §5/6/9 | 组件较完整，受控/真实宿主压力未完 |
 | 敏感输入 | 01 G3 | `PRIV-001..006`、`SP-PRIV-001` | 03 scope event/Oracle | 04 §7/8 | 策略已实现，真实输入框矩阵未完 |
 | 智能标点 | 01 G4、05 | `SP-MIX-001..009`、`SP-STATE-*`、`SP-HOST-*` | 03 §8、Controlled Host | 04 §7 | 核心子集和 Notepad++ 完成，完整规范/跨宿主未完 |
 | 真实应用/DPI/生命周期 | 01 G5 | `IME-APP-*`、`IME-DPI-*`、`IME-OS-*` | 03 L3–L5 | 04 §9/13 | 大部分 MANUAL/PLANNED |
 | 词库/中文质量 | 01 G1/G6.3 | `LEX-*`、`IME-QUAL-*` | 03 corpus/metrics | 04 §5/11/12 | 313/59 确定性回归已完成；完整质量基线未完 |
 | 性能/资源/长时 | 01 G6 | `IME-PERF-*`、`IME-RES-*` | 03 §12–14 | 04 §10/13 | 冻结候选 Host-only 8h 已通过；UI 延迟与 TSF/App soak 未完 |
-| 安装/签名/包 | 01 G7 | `IME-INST-*`、`IME-SIGN-*`、`IME-PKG-001` | 03 CI/Release adapter | 04 §2/4/14 | 静态闭环通过，路径/哈希/实际 DLL/时间戳门禁已写；证书/提权实跑/升级路径阻塞 |
+| 安装/签名/包 | 01 G7 | `IME-INST-*`、`IME-SIGN-*`、`IME-PKG-001` | 03 CI/Release adapter | 04 §2/4/14 | 普通用户静态闭环通过，路径/哈希/实际 DLL/时间戳门禁已写；证书/标准用户与应用控制实跑/升级路径阻塞 |
 | 发布资产 | 01 G8 | `BUILD-005..007` | 03 Final tag pipeline | 04 §2/3/4/18 | 前置 Gate 未过，尚未执行 |
 
 ## 14. 初稿保留与文档完成检查

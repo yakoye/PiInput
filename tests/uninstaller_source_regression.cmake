@@ -21,11 +21,18 @@ foreach(required IN ITEMS
     "CopyFileW"
     "OpenProcess"
     "SYNCHRONIZE"
-    "--disable-user"
-    "--deactivate"
-    "DllUnregisterServer"
+    "disable_user_keyboard"
+    "deactivate_profile"
+    "unregister_profile"
+    "unregister_categories"
+    "request_host_drain"
+    "HostMessageType::drain"
+    "host_mutex, 3000U"
     "remove_or_schedule_legacy_runtime"
-    "delete_uninstall_registry")
+    "delete_uninstall_registry"
+    "topmost_task_dialog_callback"
+    "MB_TOPMOST"
+    "MB_SETFOREGROUND")
     if(NOT source_text MATCHES "${required}")
         message(FATAL_ERROR "Native uninstaller is missing required behavior: ${required}")
     endif()
@@ -34,8 +41,12 @@ endforeach()
 if(source_text MATCHES "TerminateProcess" OR source_text MATCHES "taskkill")
     message(FATAL_ERROR "Uninstaller must not terminate applications that may have loaded the TSF DLL")
 endif()
+if(source_text MATCHES "LoadLibraryExW" OR source_text MATCHES "run_hidden" OR
+   source_text MATCHES "lpVerb = L\"runas\"")
+    message(FATAL_ERROR "Per-user uninstall must not elevate or load unsigned product binaries from its temporary worker")
+endif()
 
-string(FIND "${source_text}" "DllUnregisterServer" unregister_position)
+string(FIND "${source_text}" "auto problems = unregister_tsf();" unregister_position)
 string(FIND "${source_text}" "for (const auto& root : uninstall_roots" delete_position)
 if(unregister_position LESS 0 OR delete_position LESS 0 OR
    delete_position LESS unregister_position)
@@ -44,10 +55,10 @@ endif()
 
 if(NOT cmake_text MATCHES "add_executable\\(PiInput-Uninstall WIN32" OR
    NOT cmake_text MATCHES "target_link_libraries\\(PiInput-Uninstall PRIVATE[^\\)]*comctl32" OR
-   NOT cmake_text MATCHES "MANIFESTUAC:level='requireAdministrator'" OR
+   NOT cmake_text MATCHES "MANIFESTUAC:level='asInvoker'" OR
    NOT cmake_text MATCHES "Microsoft.Windows.Common-Controls" OR
    NOT cmake_text MATCHES "version='6.0.0.0'")
-    message(FATAL_ERROR "PiInput-Uninstall must be a native elevated Windows GUI target")
+    message(FATAL_ERROR "PiInput-Uninstall must be a native per-user Windows GUI target")
 endif()
 
 message(STATUS "PiInput native uninstaller source regression passed")
