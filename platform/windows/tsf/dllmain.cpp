@@ -1,6 +1,7 @@
 #include "stable_text_service.h"
 #include "piinput_tsf_guids.h"
 #include "profile_registration.h"
+#include "machine_registration.h"
 
 #include "piinput/windows_compat.h"
 
@@ -142,78 +143,12 @@ HRESULT register_tsf_profile() {
         return HRESULT_FROM_WIN32(GetLastError());
     }
 
-    HRESULT result = piinput::windows::tsf::register_profile(
-        std::wstring_view(module_path, module_path_length));
-    if (FAILED(result)) {
-        return result;
-    }
-
-    ITfCategoryMgr* category_manager = nullptr;
-    result = CoCreateInstance(CLSID_TF_CategoryMgr, nullptr,
-        CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&category_manager));
-    if (SUCCEEDED(result)) {
-        // A text service is only offered to a host whose activation mode it
-        // declares support for. Registering the keyboard category alone leaves
-        // PiInput out of hosts that run TSF in UI-element or immersive mode --
-        // Windows then silently keeps the previous input method, which is why
-        // the tray icon never changed in the ChatGPT desktop app while the same
-        // profile switched normally in ordinary desktop windows.
-        //
-        // COMLESS and SECUREMODE are deliberately not declared: they promise
-        // behaviour this service does not implement.
-        //
-        // INPUTMODECOMPARTMENT is what tells Windows to read this service's
-        // conversion-mode compartment. Without it the shell never looks, so the
-        // 中/英 mark never appears in the taskbar input indicator no matter what
-        // the service publishes -- which is exactly what happened here.
-        static const GUID* const categories[] = {
-            &GUID_TFCAT_TIP_KEYBOARD,
-            &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
-            &GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
-            &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
-            &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
-        };
-        for (const GUID* const category : categories) {
-            result = category_manager->RegisterCategory(
-                CLSID_PiInputTextService, *category, CLSID_PiInputTextService);
-            if (FAILED(result)) break;
-        }
-        category_manager->Release();
-    }
-    if (FAILED(result)) {
-        piinput::windows::tsf::unregister_profile();
-    }
-    return result;
+    return piinput::windows::tsf::register_machine_tsf(
+        std::wstring_view(module_path, module_path_length)).result;
 }
 
 HRESULT unregister_tsf_profile() {
-    ITfCategoryMgr* category_manager = nullptr;
-    HRESULT category_result = CoCreateInstance(CLSID_TF_CategoryMgr, nullptr,
-        CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&category_manager));
-    if (SUCCEEDED(category_result)) {
-        static const GUID* const categories[] = {
-            &GUID_TFCAT_TIP_KEYBOARD,
-            &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
-            &GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
-            &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
-            &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
-        };
-        category_result = S_OK;
-        for (const GUID* const category : categories) {
-            const HRESULT removed = category_manager->UnregisterCategory(
-                CLSID_PiInputTextService, *category, CLSID_PiInputTextService);
-            if (FAILED(removed) && SUCCEEDED(category_result)) category_result = removed;
-        }
-        category_manager->Release();
-    }
-
-    const HRESULT profile_result = piinput::windows::tsf::unregister_profile();
-    const bool profile_missing = (profile_result == S_FALSE);
-    const bool category_missing_or_removed = SUCCEEDED(category_result) || category_result == E_FAIL;
-    if (profile_missing && category_missing_or_removed) {
-        return S_OK;
-    }
-    return FAILED(profile_result) ? profile_result : category_result;
+    return piinput::windows::tsf::unregister_machine_tsf().result;
 }
 
 class ComInitializer final {

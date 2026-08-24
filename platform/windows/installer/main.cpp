@@ -3,6 +3,7 @@
 #include "stable_runtime.h"
 #include "uninstall_layout.h"
 #include "piinput_tsf_guids.h"
+#include "machine_registration.h"
 #include "profile_registration.h"
 #include "user_keyboard_registration.h"
 #include "piinput/host_protocol.h"
@@ -51,6 +52,8 @@ using piinput::windows::installer::version_directory;
 using piinput::windows::tsf::disable_user_keyboard;
 using piinput::windows::tsf::enable_user_keyboard;
 using piinput::windows::tsf::get_profile;
+using piinput::windows::tsf::register_machine_tsf;
+using piinput::windows::tsf::unregister_machine_tsf;
 
 constexpr UINT kForegroundMessageBox = MB_TOPMOST | MB_SETFOREGROUND;
 
@@ -431,31 +434,54 @@ void retire_previous_tsf_identities() noexcept {
     retire_tsf_identity(kLegacyPiInputTextService);
 }
 
-[[nodiscard]] HRESULT register_first_install(const std::filesystem::path& dll) {
-    const HMODULE module = LoadLibraryExW(dll.c_str(), nullptr,
-        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-    if (module == nullptr) {
-        return HRESULT_FROM_WIN32(GetLastError());
+[[nodiscard]] bool process_is_elevated() noexcept {
+    SID_IDENTIFIER_AUTHORITY authority = SECURITY_NT_AUTHORITY;
+    PSID administrators = nullptr;
+    if (AllocateAndInitializeSid(&authority, 2U,
+            SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
+            0U, 0U, 0U, 0U, 0U, 0U, &administrators) == FALSE) {
+        return false;
     }
-    using RegisterServer = HRESULT(__stdcall*)();
-    const auto function = reinterpret_cast<RegisterServer>(GetProcAddress(module, "DllRegisterServer"));
-    const HRESULT result = function == nullptr ? HRESULT_FROM_WIN32(ERROR_PROC_NOT_FOUND) : function();
-    FreeLibrary(module);
-    return result;
+    BOOL member = FALSE;
+    const BOOL checked = CheckTokenMembership(nullptr, administrators, &member);
+    FreeSid(administrators);
+    return checked != FALSE && member != FALSE;
 }
 
-void unregister_failed_first_install(const std::filesystem::path& dll) noexcept {
-    const HMODULE module = LoadLibraryExW(dll.c_str(), nullptr,
-        LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR | LOAD_LIBRARY_SEARCH_DEFAULT_DIRS);
-    if (module == nullptr) {
-        return;
+[[nodiscard]] HRESULT run_elevated_machine_action(
+    const std::wstring& arguments) {
+    const auto program = executable_path();
+    SHELLEXECUTEINFOW execute{};
+    execute.cbSize = sizeof(execute);
+    execute.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
+    execute.hwnd = GetForegroundWindow();
+    execute.lpVerb = L"runas";
+    execute.lpFile = program.c_str();
+    execute.lpParameters = arguments.c_str();
+    execute.lpDirectory = program.parent_path().c_str();
+    execute.nShow = SW_SHOWNORMAL;
+    if (ShellExecuteExW(&execute) == FALSE) {
+        return HRESULT_FROM_WIN32(GetLastError());
     }
-    using UnregisterServer = HRESULT(__stdcall*)();
-    const auto function = reinterpret_cast<UnregisterServer>(GetProcAddress(module, "DllUnregisterServer"));
-    if (function != nullptr) {
-        (void)function();
+    if (execute.hProcess == nullptr) return E_FAIL;
+    (void)WaitForSingleObject(execute.hProcess, INFINITE);
+    DWORD exit_code = static_cast<DWORD>(E_FAIL);
+    (void)GetExitCodeProcess(execute.hProcess, &exit_code);
+    CloseHandle(execute.hProcess);
+    return static_cast<HRESULT>(exit_code);
+}
+
+[[nodiscard]] HRESULT register_machine_profile_elevated(
+    const std::filesystem::path& dll) {
+    return run_elevated_machine_action(
+        L"--machine-register " + quote_windows_argument(dll.wstring()) + L" --silent");
+}
+
+void unregister_machine_profile_elevated() noexcept {
+    try {
+        (void)run_elevated_machine_action(L"--machine-unregister --silent");
+    } catch (...) {
     }
-    FreeLibrary(module);
 }
 
 void initialize_user_settings(const std::filesystem::path& user_data) {
@@ -641,28 +667,33 @@ struct InstallResult {
     const std::wstring previous_host = read_runtime_registry_string(L"CurrentHostPath");
     bool first_registration_attempted = false;
     bool user_keyboard_enabled = false;
+    bool machine_profile_preexisted = false;
     try {
         TF_INPUTPROCESSORPROFILE existing_profile{};
+        machine_profile_preexisted = SUCCEEDED(get_profile(&existing_profile));
         const bool stable_shim_already_registered = !previous_dll.empty() &&
             _wcsicmp(previous_dll.c_str(), new_dll.c_str()) == 0 &&
-            SUCCEEDED(get_profile(&existing_profile));
+            machine_profile_preexisted;
         if (!stable_shim_already_registered) {
             first_registration_attempted = true;
-            const HRESULT registration = register_first_install(new_dll);
+            // TSF profile/category registration is machine-wide on Windows and
+            // therefore requires elevation. File deployment, HKCU COM wiring,
+            // settings and keyboard-list changes deliberately stay in this
+            // original user's unelevated process. This also works when a
+            // standard user supplies different administrator credentials.
+            const HRESULT registration = register_machine_profile_elevated(new_dll);
             if (FAILED(registration)) {
                 std::ostringstream message;
-                message << "TSF registration or capability refresh failed: HRESULT 0x"
+                message << "TSF system registration failed: HRESULT 0x"
                         << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
                         << static_cast<std::uint32_t>(registration);
                 throw std::runtime_error(message.str());
             }
             write_registered_dll(new_dll);
         }
-        // DllRegisterServer above is the single source of TSF profile metadata.
-        // Running a second helper that immediately unregisters/re-registers the
-        // profile created a clean-machine race and could be blocked as an
-        // unsigned child process. Add the already-registered profile to this
-        // user's keyboard list directly, then wait for Windows to publish it.
+        // The elevated action above only owns machine-wide TSF state. Add the
+        // profile to this original user's keyboard list here, never in the
+        // administrator account used to approve UAC.
         enable_and_verify_current_user_profile(user_keyboard_enabled);
         retire_previous_tsf_identities();
         if (effective_migration.has_value()) {
@@ -687,7 +718,12 @@ struct InstallResult {
         if (!previous_dll.empty()) {
             write_registered_dll(previous_dll);
         } else if (first_registration_attempted) {
-            unregister_failed_first_install(new_dll);
+            const std::wstring base = L"Software\\Classes\\CLSID\\" +
+                guid_string(CLSID_PiInputTextService);
+            (void)RegDeleteTreeW(HKEY_CURRENT_USER, base.c_str());
+            if (!machine_profile_preexisted) {
+                unregister_machine_profile_elevated();
+            }
         }
         if (!previous_host.empty()) {
             write_runtime_registry_string(L"CurrentHostPath", previous_host);
@@ -769,6 +805,20 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         ScopedComApartment com;
         if (FAILED(com.result()) && com.result() != RPC_E_CHANGED_MODE) {
             throw std::runtime_error(hresult_error("Cannot initialize COM", com.result()));
+        }
+        if (const auto dll = argument_value(L"--machine-register"); dll.has_value()) {
+            if (!process_is_elevated()) return static_cast<int>(E_ACCESSDENIED);
+            std::error_code error;
+            const std::filesystem::path path(*dll);
+            if (!std::filesystem::is_regular_file(path, error) || error ||
+                _wcsicmp(path.filename().c_str(), L"PiInputTSF.dll") != 0) {
+                return static_cast<int>(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
+            }
+            return static_cast<int>(register_machine_tsf(path.wstring()).result);
+        }
+        if (has_argument(L"--machine-unregister")) {
+            if (!process_is_elevated()) return static_cast<int>(E_ACCESSDENIED);
+            return static_cast<int>(unregister_machine_tsf().result);
         }
         const auto migration = argument_value(L"--migrate-from");
         const auto result = install(migration.has_value()

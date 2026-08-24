@@ -1,4 +1,5 @@
 #include "migration.h"
+#include "machine_registration.h"
 #include "uninstall_layout.h"
 #include "pipe_endpoint.h"
 #include "profile_registration.h"
@@ -29,7 +30,7 @@ using piinput::windows::installer::uninstall_roots;
 using piinput::windows::installer::validate_uninstall_layout;
 using piinput::windows::tsf::deactivate_profile;
 using piinput::windows::tsf::disable_user_keyboard;
-using piinput::windows::tsf::unregister_profile;
+using piinput::windows::tsf::unregister_machine_tsf;
 
 constexpr UINT kForegroundMessageBox = MB_TOPMOST | MB_SETFOREGROUND;
 
@@ -52,6 +53,7 @@ struct Arguments {
     bool silent{};
     bool remove_user_data{};
     bool worker{};
+    bool machine_unregister{};
     DWORD wait_pid{};
 };
 
@@ -91,6 +93,8 @@ struct Arguments {
             result.remove_user_data = true;
         } else if (current == L"--worker") {
             result.worker = true;
+        } else if (current == L"--machine-unregister") {
+            result.machine_unregister = true;
         } else if (current == L"--wait-pid" && index + 1 < count) {
             try {
                 result.wait_pid = static_cast<DWORD>(std::stoul(values[++index]));
@@ -162,34 +166,7 @@ void request_host_drain() noexcept {
 // clean up because a program is missing left users with an installation they
 // could not remove by any means -- and a missing program is usually the reason
 // there is nothing left to unregister.
-void unregister_categories(std::vector<std::wstring>& problems) {
-    ITfCategoryMgr* category_manager = nullptr;
-    const HRESULT created = CoCreateInstance(CLSID_TF_CategoryMgr, nullptr,
-        CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&category_manager));
-    if (FAILED(created) || category_manager == nullptr) {
-        problems.emplace_back(L"无法打开 TSF 分类管理器，跳过能力分类清理");
-        return;
-    }
-    static const GUID* const categories[] = {
-        &GUID_TFCAT_TIP_KEYBOARD,
-        &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
-        &GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
-        &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
-        &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
-    };
-    bool failed = false;
-    for (const GUID* const category : categories) {
-        const HRESULT removed = category_manager->UnregisterCategory(
-            CLSID_PiInputTextService, *category, CLSID_PiInputTextService);
-        failed = failed || (FAILED(removed) && removed != E_FAIL);
-    }
-    category_manager->Release();
-    if (failed) {
-        problems.emplace_back(L"部分 TSF 能力分类未能清理");
-    }
-}
-
-[[nodiscard]] std::vector<std::wstring> unregister_tsf() {
+[[nodiscard]] std::vector<std::wstring> unregister_user_tsf() {
     std::vector<std::wstring> problems;
     const HRESULT deactivated = deactivate_profile();
     if (FAILED(deactivated)) {
@@ -197,11 +174,6 @@ void unregister_categories(std::vector<std::wstring>& problems) {
     }
     if (FAILED(disable_user_keyboard())) {
         problems.emplace_back(L"未能从当前用户的键盘列表中移除 PiInput");
-    }
-    unregister_categories(problems);
-    const HRESULT unregistered = unregister_profile();
-    if (FAILED(unregistered)) {
-        problems.emplace_back(L"输入法 profile 反注册失败");
     }
     return problems;
 }
@@ -258,7 +230,7 @@ void delete_runtime_registry() noexcept {
     // the files still have to go, or the user keeps an installation that no
     // uninstaller on the machine can remove.
     request_host_drain();
-    auto problems = unregister_tsf();
+    auto problems = unregister_user_tsf();
 
     std::error_code ignored;
     std::filesystem::remove_all(layout.start_menu_root, ignored);
@@ -322,6 +294,35 @@ HRESULT CALLBACK topmost_task_dialog_callback(
 
 void launch_worker(const Arguments& arguments) {
     const auto source = executable_path();
+    // Remove the keyboard entry while this process still has the original
+    // user's token and while the machine profile still exists. The later
+    // worker repeats this idempotently to cover races with the text service.
+    request_host_drain();
+    (void)unregister_user_tsf();
+    // Only the machine-wide TSF profile/categories need elevation. Run that
+    // narrow action from the installed executable, wait for it, then let the
+    // original user's normal-token worker remove HKCU state and LocalAppData.
+    // This remains correct when UAC credentials belong to a different account.
+    SHELLEXECUTEINFOW privileged{};
+    privileged.cbSize = sizeof(privileged);
+    privileged.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
+    privileged.hwnd = GetForegroundWindow();
+    privileged.lpVerb = L"runas";
+    privileged.lpFile = source.c_str();
+    privileged.lpParameters = L"--machine-unregister --silent";
+    privileged.lpDirectory = source.parent_path().c_str();
+    privileged.nShow = SW_SHOWNORMAL;
+    if (ShellExecuteExW(&privileged) == FALSE || privileged.hProcess == nullptr) {
+        throw std::runtime_error("Administrator permission is required to remove the TSF profile");
+    }
+    (void)WaitForSingleObject(privileged.hProcess, INFINITE);
+    DWORD privileged_exit = static_cast<DWORD>(E_FAIL);
+    (void)GetExitCodeProcess(privileged.hProcess, &privileged_exit);
+    CloseHandle(privileged.hProcess);
+    if (FAILED(static_cast<HRESULT>(privileged_exit))) {
+        throw std::runtime_error("Machine-wide TSF profile cleanup failed");
+    }
+
     const auto temp_root = std::filesystem::temp_directory_path() /
         (L"PiInput-Uninstall-" + std::to_wstring(GetCurrentProcessId()) + L"-" +
             std::to_wstring(std::chrono::steady_clock::now().time_since_epoch().count()));
@@ -367,6 +368,22 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             throw std::runtime_error("Cannot initialize COM for PiInput uninstall");
         }
         auto arguments = parse_arguments();
+        if (arguments.machine_unregister) {
+            SID_IDENTIFIER_AUTHORITY authority = SECURITY_NT_AUTHORITY;
+            PSID administrators = nullptr;
+            BOOL member = FALSE;
+            const BOOL allocated = AllocateAndInitializeSid(&authority, 2U,
+                SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
+                0U, 0U, 0U, 0U, 0U, 0U, &administrators);
+            const BOOL checked = allocated != FALSE
+                ? CheckTokenMembership(nullptr, administrators, &member)
+                : FALSE;
+            if (administrators != nullptr) FreeSid(administrators);
+            if (checked == FALSE || member == FALSE) {
+                return static_cast<int>(E_ACCESSDENIED);
+            }
+            return static_cast<int>(unregister_machine_tsf().result);
+        }
         if (arguments.worker) {
             const auto problems = run_worker(arguments);
             if (!arguments.silent) {

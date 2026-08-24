@@ -23,8 +23,9 @@ foreach(required IN ITEMS
     "SYNCHRONIZE"
     "disable_user_keyboard"
     "deactivate_profile"
-    "unregister_profile"
-    "unregister_categories"
+    "unregister_machine_tsf"
+    "unregister_user_tsf"
+    "--machine-unregister"
     "request_host_drain"
     "HostMessageType::drain"
     "host_mutex, 3000U"
@@ -42,11 +43,11 @@ if(source_text MATCHES "TerminateProcess" OR source_text MATCHES "taskkill")
     message(FATAL_ERROR "Uninstaller must not terminate applications that may have loaded the TSF DLL")
 endif()
 if(source_text MATCHES "LoadLibraryExW" OR source_text MATCHES "run_hidden" OR
-   source_text MATCHES "lpVerb = L\"runas\"")
-    message(FATAL_ERROR "Per-user uninstall must not elevate or load unsigned product binaries from its temporary worker")
+   NOT source_text MATCHES "lpVerb = L\"runas\"")
+    message(FATAL_ERROR "Uninstall must elevate only direct machine TSF cleanup and must never load product binaries from its temporary worker")
 endif()
 
-string(FIND "${source_text}" "auto problems = unregister_tsf();" unregister_position)
+string(FIND "${source_text}" "auto problems = unregister_user_tsf();" unregister_position)
 string(FIND "${source_text}" "for (const auto& root : uninstall_roots" delete_position)
 if(unregister_position LESS 0 OR delete_position LESS 0 OR
    delete_position LESS unregister_position)

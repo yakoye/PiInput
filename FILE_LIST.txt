@@ -364,6 +364,7 @@ platform/windows/tsf/final_edit_key_queue.h
 platform/windows/tsf/input_scope_policy.h
 platform/windows/tsf/lang_bar_item.cpp
 platform/windows/tsf/lang_bar_item.h
+platform/windows/tsf/machine_registration.h
 platform/windows/tsf/mode_indicator.cpp
 platform/windows/tsf/mode_indicator.h
 platform/windows/tsf/piinput_icon.ico

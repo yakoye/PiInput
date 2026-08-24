@@ -6,6 +6,7 @@ file(READ "${PIINPUT_SOURCE_DIR}/CMakeLists.txt" cmake_text)
 file(READ "${PIINPUT_SOURCE_DIR}/build.ps1" build_script_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/profile_tool.cpp" profile_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/profile_registration.h" registration_text)
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/machine_registration.h" machine_registration_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/piinput_tsf_guids.h" guid_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/installer/main.cpp" installer_main_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/installer/stable_runtime.cpp" stable_runtime_text)
@@ -793,7 +794,7 @@ if(NOT registration_text MATCHES "icon_file" OR
 endif()
 
 if(dllmain_text MATCHES "replace_filename\\(L\"piinput_icon\\.ico\"\\)" OR
-   NOT dllmain_text MATCHES "register_profile\\([\r\n ]*std::wstring_view\\(module_path, module_path_length\\)\\)")
+   NOT dllmain_text MATCHES "register_machine_tsf\\([\r\n ]*std::wstring_view\\(module_path, module_path_length\\)\\)")
     message(FATAL_ERROR "DllRegisterServer must register the branding icon embedded in PiInputTSF.dll")
 endif()
 
@@ -824,7 +825,7 @@ if(NOT installer_main_text MATCHES "retire_previous_tsf_identities" OR
    NOT installer_main_text MATCHES "DllUnregisterServer")
     message(FATAL_ERROR "Installer must retire the pre-PiInput TSF identity before registering the new profile")
 endif()
-string(FIND "${installer_main_text}" "register_first_install(new_dll)" installer_register_position)
+string(FIND "${installer_main_text}" "register_machine_profile_elevated(new_dll)" installer_register_position)
 string(FIND "${installer_main_text}" "retire_previous_tsf_identities();" installer_retire_position)
 if(installer_register_position LESS 0 OR installer_retire_position LESS 0 OR
    installer_retire_position LESS installer_register_position)
@@ -839,11 +840,12 @@ if(NOT profile_text MATCHES "result == S_FALSE")
     message(FATAL_ERROR "Idempotent deactivate/unregister must accept an absent profile")
 endif()
 
-if(NOT dllmain_text MATCHES "register_profile\\(")
+if(NOT dllmain_text MATCHES "register_machine_tsf" OR
+   NOT machine_registration_text MATCHES "register_profile\\(")
     message(FATAL_ERROR "DllRegisterServer must use the shared profile registration helper")
 endif()
 
-if(NOT dllmain_text MATCHES "GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT")
+if(NOT machine_registration_text MATCHES "GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT")
     message(FATAL_ERROR "PiInput must declare Windows system-tray compatibility")
 endif()
 
@@ -1295,14 +1297,17 @@ if(NOT installer_text MATCHES "make_post_install_launch_targets" OR
    NOT installer_text MATCHES "--settings")
     message(FATAL_ERROR "Interactive installation must open both UserData and PiInput Settings")
 endif()
-if(NOT installer_text MATCHES "ERROR_PROC_NOT_FOUND")
-    message(FATAL_ERROR "Missing DllRegisterServer must report ERROR_PROC_NOT_FOUND instead of a stale last-error value")
+if(installer_text MATCHES "LoadLibraryExW\\(new_dll" OR
+   NOT installer_text MATCHES "lpVerb = L\"runas\"" OR
+   NOT installer_text MATCHES "--machine-register" OR
+   NOT installer_text MATCHES "process_is_elevated")
+    message(FATAL_ERROR "Installer must elevate only machine-wide TSF registration and keep per-user work in the original token")
 endif()
-if(NOT installer_text MATCHES "DllUnregisterServer")
+if(NOT installer_text MATCHES "unregister_machine_profile_elevated")
     message(FATAL_ERROR "A failed first installation must best-effort unregister a partially created TSF profile")
 endif()
 if(installer_text MATCHES "if \\(previous_status == 0U\\)" OR
-   NOT installer_text MATCHES "register_first_install\\(new_dll\\)")
+   NOT installer_text MATCHES "register_machine_profile_elevated\\(new_dll\\)")
     message(FATAL_ERROR "Every installer upgrade must refresh TSF capability categories")
 endif()
 if(NOT setup_text MATCHES "PiInput-Install\\.exe" OR NOT setup_text MATCHES "--silent")
