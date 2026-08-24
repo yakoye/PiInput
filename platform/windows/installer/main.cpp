@@ -32,8 +32,10 @@ using piinput::windows::installer::discover_legacy_runtime;
 using piinput::windows::installer::files_are_identical;
 using piinput::windows::installer::is_safe_migration_source;
 using piinput::windows::installer::locate_installer_payload;
+using piinput::windows::installer::make_post_install_launch_targets;
 using piinput::windows::installer::migrate_legacy_user_data;
 using piinput::windows::installer::profile_install_commands;
+using piinput::windows::installer::quote_windows_argument;
 using piinput::windows::installer::remove_or_schedule_legacy_runtime;
 using piinput::windows::installer::make_stable_runtime_layout;
 using piinput::windows::installer::make_uninstall_layout;
@@ -723,13 +725,20 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             L"安装器没有自动激活输入法，也没有关闭任何程序。请重新打开要测试的程序，"
             L"再通过 Win+Space 主动选择 PiInput。\n\n安装目录：\n" + result.program_root.wstring() +
             L"\n\n用户设置和词库：\n" + result.user_data.wstring() +
-            L"\n\n点击「确定」后会打开设置目录。";
+            L"\n\n点击「确定」后会打开配置目录和 PiInput 设置软件。";
         if (!silent) {
             MessageBoxW(nullptr, message.c_str(), L"PiInput 安装完成", MB_OK | MB_ICONINFORMATION);
-            // Settings are edited by hand in settings.ini, so put the user in
-            // front of the file instead of making them find AppData themselves.
-            ShellExecuteW(nullptr, L"open", result.user_data.c_str(),
+            const auto launch = make_post_install_launch_targets(
+                result.program_root, result.user_data);
+            // Keep the configuration directory visible for dictionaries and
+            // advanced editing, then bring the normal Settings UI to the front.
+            (void)ShellExecuteW(nullptr, L"open", launch.user_data_directory.c_str(),
                 nullptr, nullptr, SW_SHOWNORMAL);
+            const std::wstring settings_arguments =
+                L"--settings " + quote_windows_argument(launch.settings_file.wstring());
+            (void)ShellExecuteW(nullptr, L"open", launch.settings_executable.c_str(),
+                settings_arguments.c_str(), launch.settings_executable.parent_path().c_str(),
+                SW_SHOWNORMAL);
         }
         return 0;
     } catch (const std::filesystem::filesystem_error& error) {

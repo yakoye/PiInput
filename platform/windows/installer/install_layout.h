@@ -12,6 +12,12 @@ struct InstallerPayloadLayout {
     std::filesystem::path data;
 };
 
+struct PostInstallLaunchTargets {
+    std::filesystem::path settings_executable;
+    std::filesystem::path settings_file;
+    std::filesystem::path user_data_directory;
+};
+
 struct ProfileInstallCommand {
     std::wstring_view arguments;
     std::string_view failure_message;
@@ -34,5 +40,9 @@ struct ProfileInstallCommand {
 
 [[nodiscard]] InstallerPayloadLayout locate_installer_payload(
     const std::filesystem::path& installer_path);
+
+[[nodiscard]] PostInstallLaunchTargets make_post_install_launch_targets(
+    const std::filesystem::path& program_root,
+    const std::filesystem::path& user_data_directory);
 
 }  // namespace piinput::windows::installer

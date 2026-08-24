@@ -55,4 +55,14 @@ InstallerPayloadLayout locate_installer_payload(
     return {root, root.parent_path() / L"data"};
 }
 
+PostInstallLaunchTargets make_post_install_launch_targets(
+    const std::filesystem::path& program_root,
+    const std::filesystem::path& user_data_directory) {
+    return {
+        program_root / L"bin" / L"PiInput-Settings.exe",
+        user_data_directory / L"settings.ini",
+        user_data_directory,
+    };
+}
+
 }  // namespace piinput::windows::installer

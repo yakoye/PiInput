@@ -1273,6 +1273,12 @@ endif()
 if(NOT installer_text MATCHES "--silent")
     message(FATAL_ERROR "Installer must support silent integration verification")
 endif()
+if(NOT installer_text MATCHES "make_post_install_launch_targets" OR
+   NOT installer_text MATCHES "launch\.user_data_directory" OR
+   NOT installer_text MATCHES "launch\.settings_executable" OR
+   NOT installer_text MATCHES "--settings")
+    message(FATAL_ERROR "Interactive installation must open both UserData and PiInput Settings")
+endif()
 if(NOT installer_text MATCHES "ERROR_PROC_NOT_FOUND")
     message(FATAL_ERROR "Missing DllRegisterServer must report ERROR_PROC_NOT_FOUND instead of a stale last-error value")
 endif()
