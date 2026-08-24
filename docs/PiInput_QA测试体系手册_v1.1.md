@@ -61,7 +61,7 @@ Word v1.0/v1.1 文件作为初稿归档；上述 Markdown 是后续工程执行�
 | Smart Punctuation | 核心实现继续完善 | 严格数值、URL/Email/Path/File、技术中缀/边界、千位三位 provisional，Scintilla 文档真值、reason code、受控物理键夹具和 Notepad++ 基础矩阵已落地 | 当前候选 Controlled TSF smoke/直接 lifecycle、引号与单位等剩余规则及跨宿主同构建矩阵 |
 | Windows CI | 配置存在 | build/CTest + JUnit/词库、tag/clean 身份、签名、失败证据、包闭环、统一 `result.json`/artifact manifest、Release 回下载 workflow 已写；安装/卸载改为普通用户 `asInvoker` 并加入无辅助产品进程与置顶窗口门禁 | 标准用户和应用控制环境的在线 run 成功并保存 artifacts |
 | 签名 | 工具存在、外部阻塞 | 可签名并逐 PE 验证 RFC3161 时间戳，输出 signer/timestamper 指纹与文件哈希；当前无正式证书 | 正式证书 + tag 构建验证 |
-| 包闭环 | 静态闭环通过 | 哈希、身份、payload、源码泄漏已实跑；tag 前版下载/哈希、覆盖升级与 UserData 哨兵、安装×2、注册 TSF/Host 路径、安装后哈希、受控实际 DLL、卸载残留和可选重装已写 | 受信任签名后在干净用户和升级路径实际通过 |
+| 包闭环 | 静态闭环通过 | 哈希、身份、payload、源码泄漏已实跑；tag 前版下载/哈希、覆盖升级与 UserData 哨兵、安装×2、HKCU/HKLM TSF 与 Host 路径、安装后哈希、受控实际 DLL、卸载残留和可选重装已写 | 受信任签名后在干净用户、Windows 搜索和升级路径实际通过 |
 | 8h 稳定性 | 冻结候选 Host-only 通过；TSF/App harness 已写 | `a2d5f8fe3c53` 精确 build 运行满 8h、957 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率通过；TSF/App 同一宿主循环与 GUI/Host 资源采样已实现 | 当前候选 TSF/App smoke/8h |
 | 真实应用 | 部分完成 | Notepad++ 新 DLL 已通过智能标点矩阵；旧 ChatGPT 进程不能代表新构建 | 新构建统一矩阵通过 |
 
@@ -218,7 +218,7 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 - PFX Base64/密码 secret 只暴露给单个签名步骤，不进入 job 级环境；临时 PFX 在该步骤 `finally` 删除且绝不上传。
 - `RequireSigned` 由 tag/final policy 决定，不能由开发者为通过测试随意关闭。
 - 正式资产必须再次验证每个 PE 签名和 ZIP SHA-256。
-- 安装闭环必须核对注册 TSF/Host 路径、包内/安装后 Host 与 TSF 哈希，并用 Controlled TSF Host 证明实际加载 DLL；tag 发布后再次下载 ZIP，与 sidecar 和本地 SHA-256 三方比对。
+- 安装闭环必须核对 HKCU 与 SearchHost 可见的 HKLM TSF 路径、Host 路径、包内/安装后 Host 与 TSF 哈希，并用 Controlled TSF Host 证明实际加载 DLL；tag 发布后再次下载 ZIP，与 sidecar 和本地 SHA-256 三方比对。
 - CI 失败也必须保存证据：CTest 输出 JUnit，package closure 在最早的哈希失败到安装/卸载失败之间都写出 `status=failed`、`stage` 和错误原因。
 - CI 的 `always()` 收尾使用 `compose-test-result.ps1` 生成 schema v1 统一结果和 SHA-256 manifest；非法状态、重复 Case ID 或声明证据缺失必须失败，`BLOCKED/NOT_RUN/N/A` 只单独计数，不进入 executed pass rate。
 - 正式 tag 在任何构建/签名前先执行 `verify-release-evidence.ps1`；Host-only 8h、TSF/App 8h、P0 真实宿主矩阵必须在对应版本验证记录中全部标为 `PASS`，否则流水线 fail-closed。

@@ -64,4 +64,14 @@ struct StableShimRefreshResult final {
 [[nodiscard]] std::filesystem::path resolve_current_host(
     const std::filesystem::path& runtime_root) noexcept;
 
+[[nodiscard]] std::filesystem::path machine_runtime_root(
+    const std::filesystem::path& program_files) noexcept;
+
+[[nodiscard]] std::filesystem::path machine_shim_path(
+    const std::filesystem::path& program_files) noexcept;
+
+[[nodiscard]] bool is_safe_machine_runtime_root(
+    const std::filesystem::path& runtime_root,
+    const std::filesystem::path& program_files) noexcept;
+
 }  // namespace piinput::windows::installer

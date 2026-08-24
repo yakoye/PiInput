@@ -19,13 +19,18 @@
 namespace {
 
 [[nodiscard]] std::wstring registry_string(
-    const HKEY root, const wchar_t* const key, const wchar_t* const name) {
+    const HKEY root,
+    const wchar_t* const key,
+    const wchar_t* const name,
+    const DWORD view_flags = 0U) {
     DWORD bytes = 0U;
     DWORD type = 0U;
-    if (RegGetValueW(root, key, name, RRF_RT_REG_SZ, &type, nullptr, &bytes) != ERROR_SUCCESS ||
+    if (RegGetValueW(root, key, name, RRF_RT_REG_SZ | view_flags,
+            &type, nullptr, &bytes) != ERROR_SUCCESS ||
         bytes < sizeof(wchar_t)) return {};
     std::wstring value(bytes / sizeof(wchar_t), L'\0');
-    if (RegGetValueW(root, key, name, RRF_RT_REG_SZ, &type, value.data(), &bytes) != ERROR_SUCCESS) {
+    if (RegGetValueW(root, key, name, RRF_RT_REG_SZ | view_flags,
+            &type, value.data(), &bytes) != ERROR_SUCCESS) {
         return {};
     }
     while (!value.empty() && value.back() == L'\0') value.pop_back();
@@ -168,6 +173,8 @@ int wmain() {
     constexpr wchar_t clsid_path[] =
         L"Software\\Classes\\CLSID\\{13EB305F-2DA3-4CF7-8C45-16B016B801B5}\\InprocServer32";
     const std::wstring shim = registry_string(HKEY_CURRENT_USER, clsid_path, nullptr);
+    const std::wstring machine_shim = registry_string(
+        HKEY_LOCAL_MACHINE, clsid_path, nullptr, RRF_SUBKEY_WOW6464KEY);
     const std::wstring host = registry_string(
         HKEY_CURRENT_USER, L"Software\\PiInput\\Runtime", L"CurrentHostPath");
     TF_INPUTPROCESSORPROFILE profile{};
@@ -176,6 +183,10 @@ int wmain() {
     const bool enabled = registered && (profile.dwFlags & TF_IPP_FLAG_ENABLED) != 0U;
     const bool active = registered && (profile.dwFlags & TF_IPP_FLAG_ACTIVE) != 0U;
     const bool shim_exists = !shim.empty() && std::filesystem::is_regular_file(shim);
+    const bool machine_shim_exists =
+        !machine_shim.empty() && std::filesystem::is_regular_file(machine_shim);
+    const bool machine_shim_matches_user = shim_exists && machine_shim_exists &&
+        _wcsicmp(shim.c_str(), machine_shim.c_str()) == 0;
     const bool host_exists = !host.empty() && std::filesystem::is_regular_file(host);
     const std::filesystem::path lexicon = host_exists
         ? std::filesystem::path(host).parent_path().parent_path() / L"data" / L"piinput-base.lex"
@@ -191,6 +202,12 @@ int wmain() {
               << "  \"shim_path\": \"" << json_escape(utf8(shim)) << "\",\n"
               << "  \"shim_exists\": " << (shim_exists ? "true" : "false") << ",\n"
               << "  \"shim_sha256\": \"" << (shim_exists ? sha256_file(shim) : "") << "\",\n"
+              << "  \"machine_shim_path\": \"" << json_escape(utf8(machine_shim)) << "\",\n"
+              << "  \"machine_shim_exists\": " << (machine_shim_exists ? "true" : "false") << ",\n"
+              << "  \"machine_shim_matches_user\": "
+              << (machine_shim_matches_user ? "true" : "false") << ",\n"
+              << "  \"machine_shim_sha256\": \""
+              << (machine_shim_exists ? sha256_file(machine_shim) : "") << "\",\n"
               << "  \"host_path\": \"" << json_escape(utf8(host)) << "\",\n"
               << "  \"host_exists\": " << (host_exists ? "true" : "false") << ",\n"
               << "  \"host_sha256\": \"" << (host_exists ? sha256_file(host) : "") << "\",\n"

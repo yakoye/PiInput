@@ -33,7 +33,7 @@ PiInputTest 不应先另起一个与仓库现有测试平行的大工程。当�
 | `piinput-key-trace-<PID>.csv` | 隔离每个 Shim 进程的时序 | 完整语义 reason code |
 | `host_soak_tests.ps1` | Host workload、mmap、资源采样和斜率；支持并发读取的追加采样 | 已经运行满 8h；真实 TSF soak |
 | `windows-release.yml` | Windows build/CTest、tag/clean 身份、签名、失败证据、包闭环、Release 回下载 | workflow 已在线成功运行且公开资产哈希与本地产物一致 |
-| `verify-package-closure.ps1` | ZIP/身份/签名与时间戳/前版升级与 UserData 哨兵/安装×2/注册路径与哈希/受控实际 DLL/卸载 | 正式证书和干净机已经通过 |
+| `verify-package-closure.ps1` | ZIP/身份/签名与时间戳/前版升级与 UserData 哨兵/安装×2/HKCU+HKLM COM 与 Host 路径及哈希/受控实际 DLL/卸载 | 正式证书和干净机已经通过 |
 
 ## 3. 自动化分层
 
@@ -172,6 +172,8 @@ L1/L3 需要验证：
 ### 8.3 真实宿主
 
 Notepad++ 是 Smart Punctuation 的 P0 首要宿主，因为它已经暴露出“直通键只有 `OnTestKeyDown`”的差异。ChatGPT Windows App 作为另一种宿主模型同时验证，不能用其中一个替代另一个。
+
+Windows 搜索必须单列为打包系统宿主：除了 profile/category、`IMMERSIVESUPPORT` 和 DLL 的 `ALL APPLICATION PACKAGES` 读取执行权限，还要核对 64 位 HKLM COM 入口。HKCU/HKLM 都必须指向 Program Files 下仅管理员可写的同一 Shim；绝不能让机器 COM 指向用户可写的 LocalAppData。只存在 HKCU `InprocServer32` 时，普通桌面应用可以加载，而 SearchHost 看不到该类；测试必须记录 SearchHost PID、实际模块路径和中文最终文本。
 
 ## 9. Controlled TSF TestHost
 
@@ -331,7 +333,7 @@ CI 必须上传：CTest `LastTest.log`、统一 `result.json`、artifact manifes
 
 1. 冻结候选提交 `a2d5f8fe3c53`、build ID `0.7.13+a2d5f8fe3c53` 的 Host-only 8h 已运行满时长并通过：957 样本，mmap 40,758,365 bytes，Private/WS/Handle 增量和斜率均在阈值内；Host-only Gate 已关闭。
 2. TSF/App 持续控制器、资源采样器和 fixture smoke 已完成；当前候选真实 smoke/8h 待执行。
-3. 未签名包静态闭环已通过；安装/卸载现为当前用户 `asInvoker`，安装直接完成 profile 用户注册和可见性轮询，卸载通过控制管道停止 Host 并直接清理 TSF，不再需要 UAC 或启动/加载产品辅助二进制；实际闭环仍受正式证书和标准用户/应用控制干净机证据阻塞。
+3. 未签名包静态闭环已通过；安装/卸载主流程为当前用户 `asInvoker`，窄范围 UAC 只处理机器 profile/category 与 HKLM COM，用户数据和 Host 保持原用户令牌；实际闭环仍受正式证书和标准用户/应用控制干净机证据阻塞。
 4. WPF/WinUI/Qt 与更多真实应用待扩展。
 
 ## 19. 推荐目录

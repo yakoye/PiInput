@@ -12,6 +12,7 @@ p0_real_host_matrix=NOT_RUN
 
 - 当前工作区标准 Release 全量 65/65 CTest 已通过，包含安装/卸载权限边界、实际 PE manifest、卸载临时 worker 和源码完整性回归。
 - 已修复新输入框建立 TSF/Host 会话期间的数字吞键：此前 `pending_contexts_` 同时容纳 Resume 同步与真实按键请求，按键门禁把任意 pending 都误判为 composition，导致 Chrome 搜索框可能丢首个数字、远程桌面地址框可能持续不接收数字。当前 `PendingContext` 明确区分请求类型；Resume 不再激活候选数字路径，真实拼音按键在途时仍保留数字选词顺序。源码门禁验证两类请求的标记和消费路径；Chrome/远程桌面同构建人工复测仍属于 P0 真实宿主矩阵。
+- 已定位并修复 Windows 搜索无法中文输入：现场模块枚举显示 SearchHost 已加载搜狗 TSF，但未加载 PiInput；机器 profile、`IMMERSIVESUPPORT` 类别和 DLL 的 AppContainer ACL 均存在，缺口是安装器只写 HKCU COM，而打包系统宿主需要 64 位 HKLM COM 才能创建 TIP。提权事务现先把 Shim 部署到 Program Files 的固定受保护路径，再原子注册 profile、capability category 和 HKLM `InprocServer32`；HKCU 指向同一机器 Shim，避免让机器 COM 加载用户可写 DLL。失败恢复此前机器 COM，卸载对称清理注册和机器运行目录。诊断 JSON 与包闭环同时核对 HKCU/HKLM 路径、存在性、哈希和卸载残留。当前候选的 SearchHost 实际加载与最终中文文本仍待安装后验收。
 - 专业词结构化回归：59/59；结构化语料总计 313 个用例。
 - 大词库：928,725 条；`.lex` 使用只读内存映射，映射字节数由 Host 与 benchmark 对外报告。
 - 映射后本机 Host 进程测试：冷启动健康检查 576 ms，首次请求 25 ms，常驻请求 15 ms。

@@ -836,7 +836,7 @@ if(NOT installer_main_text MATCHES "retire_previous_tsf_identities" OR
    NOT installer_main_text MATCHES "DllUnregisterServer")
     message(FATAL_ERROR "Installer must retire the pre-PiInput TSF identity before registering the new profile")
 endif()
-string(FIND "${installer_main_text}" "register_machine_profile_elevated(new_dll)" installer_register_position)
+string(FIND "${installer_main_text}" "register_machine_profile_elevated(user_shim)" installer_register_position)
 string(FIND "${installer_main_text}" "retire_previous_tsf_identities();" installer_retire_position)
 if(installer_register_position LESS 0 OR installer_retire_position LESS 0 OR
    installer_retire_position LESS installer_register_position)
@@ -858,6 +858,32 @@ endif()
 
 if(NOT machine_registration_text MATCHES "GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT")
     message(FATAL_ERROR "PiInput must declare Windows system-tray compatibility")
+endif()
+
+foreach(machine_com_token IN ITEMS
+        "HKEY_LOCAL_MACHINE"
+        "RRF_SUBKEY_WOW6464KEY"
+        "KEY_WOW64_64KEY"
+        "register_machine_com_server"
+        "unregister_machine_com_server"
+        "MachineRegistrationStage::com_server")
+    if(NOT machine_registration_text MATCHES "${machine_com_token}")
+        message(FATAL_ERROR
+            "Packaged Windows hosts require machine-visible COM activation; missing ${machine_com_token}")
+    endif()
+endforeach()
+if(NOT installer_main_text MATCHES "read_machine_com_server" OR
+   NOT installer_main_text MATCHES "previous_machine_dll" OR
+   NOT installer_main_text MATCHES "SearchHost ignore")
+    message(FATAL_ERROR
+        "Installer upgrades must repair a missing HKLM COM entry for packaged Windows hosts")
+endif()
+if(NOT package_closure_text MATCHES "Get-MachineRegisteredTsfPath" OR
+   NOT package_closure_text MATCHES "machine_registered_tsf_path" OR
+   NOT package_closure_text MATCHES "ProgramFiles" OR
+   NOT diagnostics_main_text MATCHES "machine_shim_matches_user")
+    message(FATAL_ERROR
+        "Release closure and diagnostics must verify machine-visible TSF COM activation")
 endif()
 
 if(NOT repair_text MATCHES "Invoke-NativeBestEffort")
@@ -1318,8 +1344,15 @@ if(NOT installer_text MATCHES "unregister_machine_profile_elevated")
     message(FATAL_ERROR "A failed first installation must best-effort unregister a partially created TSF profile")
 endif()
 if(installer_text MATCHES "if \\(previous_status == 0U\\)" OR
-   NOT installer_text MATCHES "register_machine_profile_elevated\\(new_dll\\)")
+   NOT installer_text MATCHES "register_machine_profile_elevated\\(user_shim\\)")
     message(FATAL_ERROR "Every installer upgrade must refresh TSF capability categories")
+endif()
+if(NOT installer_main_text MATCHES "machine_shim_path\\(program_files\\(\\)\\)" OR
+   NOT installer_main_text MATCHES "files_are_identical\\(user_shim, machine_dll\\)" OR
+   NOT stable_runtime_text MATCHES "is_safe_machine_runtime_root" OR
+   NOT stable_runtime_text MATCHES "program_files / L\"PiInput\" / L\"Runtime\"")
+    message(FATAL_ERROR
+        "Machine COM must load a protected Program Files Shim, never a user-writable DLL")
 endif()
 if(NOT setup_text MATCHES "PiInput-Install\\.exe" OR NOT setup_text MATCHES "--silent")
     message(FATAL_ERROR "setup-dev.ps1 must use the native side-by-side installer")

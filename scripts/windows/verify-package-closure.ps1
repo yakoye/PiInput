@@ -30,6 +30,12 @@ function Get-RegisteredTsfPath {
     return [string](Get-Item -LiteralPath $key).GetValue("")
 }
 
+function Get-MachineRegisteredTsfPath {
+    $key = "Registry::HKEY_LOCAL_MACHINE\Software\Classes\CLSID\{13EB305F-2DA3-4CF7-8C45-16B016B801B5}\InprocServer32"
+    if (-not (Test-Path -LiteralPath $key)) { return "" }
+    return [string](Get-Item -LiteralPath $key).GetValue("")
+}
+
 function Get-RuntimeHostPath {
     $key = "HKCU:\Software\PiInput\Runtime"
     if (-not (Test-Path -LiteralPath $key)) { return "" }
@@ -161,8 +167,9 @@ try {
             $installedRoot = [IO.Path]::GetFullPath([string]$entry.InstallLocation)
             $installedBin = Join-Path $installedRoot "bin"
             $installedHost = Join-Path $installedBin "PiInputHost.exe"
-            $installedTsf = Join-Path $installedBin "PiInputTSF.dll"
-            foreach ($requiredInstalled in @($installedHost, $installedTsf)) {
+            $installedUserTsf = Join-Path $installedBin "PiInputTSF.dll"
+            $expectedMachineTsf = Join-Path $env:ProgramFiles "PiInput/Runtime/Shim/PiInputTSF.dll"
+            foreach ($requiredInstalled in @($installedHost, $installedUserTsf, $expectedMachineTsf)) {
                 if (-not (Test-Path -LiteralPath $requiredInstalled -PathType Leaf)) {
                     throw "Installed binary is missing during ${Label}: $requiredInstalled"
                 }
@@ -173,8 +180,12 @@ try {
                 throw "Installed Host identity mismatch during ${Label}: version=$installedVersion build_id=$installedBuildId"
             }
             $registeredTsf = Get-RegisteredTsfPath
-            if (-not (Test-SamePath $registeredTsf $installedTsf)) {
-                throw "Registered TSF path mismatch during ${Label}: expected=$installedTsf actual=$registeredTsf"
+            if (-not (Test-SamePath $registeredTsf $expectedMachineTsf)) {
+                throw "Registered TSF path mismatch during ${Label}: expected=$expectedMachineTsf actual=$registeredTsf"
+            }
+            $machineRegisteredTsf = Get-MachineRegisteredTsfPath
+            if (-not (Test-SamePath $machineRegisteredTsf $expectedMachineTsf)) {
+                throw "Machine COM TSF path mismatch during ${Label}: expected=$expectedMachineTsf actual=$machineRegisteredTsf"
             }
             $runtimeHost = Get-RuntimeHostPath
             if (-not (Test-SamePath $runtimeHost $installedHost)) {
@@ -183,8 +194,11 @@ try {
             $packageHostHash = Get-Sha256 (Join-Path $package "bin/PiInputHost.exe")
             $packageTsfHash = Get-Sha256 (Join-Path $package "bin/PiInputTSF.dll")
             $installedHostHash = Get-Sha256 $installedHost
-            $installedTsfHash = Get-Sha256 $installedTsf
-            if ($packageHostHash -ne $installedHostHash -or $packageTsfHash -ne $installedTsfHash) {
+            $installedUserTsfHash = Get-Sha256 $installedUserTsf
+            $machineTsfHash = Get-Sha256 $expectedMachineTsf
+            if ($packageHostHash -ne $installedHostHash -or
+                $packageTsfHash -ne $installedUserTsfHash -or
+                $packageTsfHash -ne $machineTsfHash) {
                 throw "Installed PE hash mismatch during $Label."
             }
             return [pscustomobject]@{
@@ -192,9 +206,11 @@ try {
                 install_root = $installedRoot
                 host_path = $installedHost
                 host_sha256 = $installedHostHash
-                tsf_path = $installedTsf
-                tsf_sha256 = $installedTsfHash
+                user_tsf_path = $installedUserTsf
+                tsf_path = $expectedMachineTsf
+                tsf_sha256 = $machineTsfHash
                 registered_tsf_path = $registeredTsf
+                machine_registered_tsf_path = $machineRegisteredTsf
                 registered_host_path = $runtimeHost
                 version = $installedVersion
                 build_id = $installedBuildId
@@ -291,6 +307,12 @@ try {
         if (-not $removed) { throw "Uninstall registry entry remained after the silent uninstall." }
         if (-not [string]::IsNullOrWhiteSpace((Get-RegisteredTsfPath))) {
             throw "TSF CLSID registration remained after the silent uninstall."
+        }
+        if (-not [string]::IsNullOrWhiteSpace((Get-MachineRegisteredTsfPath))) {
+            throw "Machine COM TSF registration remained after the silent uninstall."
+        }
+        if (Test-Path -LiteralPath (Join-Path $env:ProgramFiles "PiInput/Runtime/Shim/PiInputTSF.dll") -PathType Leaf) {
+            throw "Protected machine TSF Shim remained after the silent uninstall."
         }
         if (-not [string]::IsNullOrWhiteSpace((Get-RuntimeHostPath))) {
             throw "Host runtime registration remained after the silent uninstall."

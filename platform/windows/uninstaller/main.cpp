@@ -1,6 +1,7 @@
 #include "migration.h"
 #include "machine_registration.h"
 #include "uninstall_layout.h"
+#include "stable_runtime.h"
 #include "pipe_endpoint.h"
 #include "profile_registration.h"
 #include "user_keyboard_registration.h"
@@ -26,6 +27,8 @@ namespace {
 using piinput::windows::installer::UninstallLayout;
 using piinput::windows::installer::make_uninstall_layout;
 using piinput::windows::installer::remove_or_schedule_legacy_runtime;
+using piinput::windows::installer::machine_runtime_root;
+using piinput::windows::installer::is_safe_machine_runtime_root;
 using piinput::windows::installer::uninstall_roots;
 using piinput::windows::installer::validate_uninstall_layout;
 using piinput::windows::tsf::deactivate_profile;
@@ -382,7 +385,19 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             if (checked == FALSE || member == FALSE) {
                 return static_cast<int>(E_ACCESSDENIED);
             }
-            return static_cast<int>(unregister_machine_tsf().result);
+            const HRESULT result = unregister_machine_tsf().result;
+            if (FAILED(result)) return static_cast<int>(result);
+            const auto program_files = known_folder(FOLDERID_ProgramFiles);
+            const auto machine_root = machine_runtime_root(program_files);
+            if (!is_safe_machine_runtime_root(machine_root, program_files)) {
+                return static_cast<int>(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
+            }
+            try {
+                remove_or_schedule_legacy_runtime(machine_root);
+            } catch (...) {
+                return static_cast<int>(HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED));
+            }
+            return 0;
         }
         if (arguments.worker) {
             const auto problems = run_worker(arguments);

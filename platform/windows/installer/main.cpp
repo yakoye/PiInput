@@ -40,6 +40,9 @@ using piinput::windows::installer::migrate_legacy_user_data;
 using piinput::windows::installer::quote_windows_argument;
 using piinput::windows::installer::remove_or_schedule_legacy_runtime;
 using piinput::windows::installer::make_stable_runtime_layout;
+using piinput::windows::installer::machine_runtime_root;
+using piinput::windows::installer::machine_shim_path;
+using piinput::windows::installer::is_safe_machine_runtime_root;
 using piinput::windows::installer::make_uninstall_layout;
 using piinput::windows::installer::make_uninstall_registry_values;
 using piinput::windows::installer::RuntimeMarker;
@@ -52,6 +55,7 @@ using piinput::windows::installer::version_directory;
 using piinput::windows::tsf::disable_user_keyboard;
 using piinput::windows::tsf::enable_user_keyboard;
 using piinput::windows::tsf::get_profile;
+using piinput::windows::tsf::read_machine_com_server;
 using piinput::windows::tsf::register_machine_tsf;
 using piinput::windows::tsf::unregister_machine_tsf;
 
@@ -107,6 +111,17 @@ inline constexpr CLSID kLegacyPiInputTextService =
     const HRESULT result = SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_DEFAULT, nullptr, &raw);
     if (FAILED(result) || raw == nullptr) {
         throw std::runtime_error("Cannot locate RoamingAppData");
+    }
+    const std::filesystem::path path(raw);
+    CoTaskMemFree(raw);
+    return path;
+}
+
+[[nodiscard]] std::filesystem::path program_files() {
+    PWSTR raw = nullptr;
+    const HRESULT result = SHGetKnownFolderPath(FOLDERID_ProgramFiles, KF_FLAG_DEFAULT, nullptr, &raw);
+    if (FAILED(result) || raw == nullptr) {
+        throw std::runtime_error("Cannot locate Program Files");
     }
     const std::filesystem::path path(raw);
     CoTaskMemFree(raw);
@@ -653,8 +668,9 @@ struct InstallResult {
     initialize_user_settings(piinput_root / L"UserData");
 
     const std::wstring previous_dll = read_registered_dll(CLSID_PiInputTextService);
+    const std::wstring previous_machine_dll = read_machine_com_server();
     const auto versioned_shim = target_bin / L"PiInputTSF.dll";
-    const auto new_dll = can_reuse_registered_stable_shim(
+    const auto user_shim = can_reuse_registered_stable_shim(
             previous_dll, runtime->shim_dll, versioned_shim)
         ? runtime->shim_dll
         : install_or_refresh_stable_shim(
@@ -671,17 +687,22 @@ struct InstallResult {
     try {
         TF_INPUTPROCESSORPROFILE existing_profile{};
         machine_profile_preexisted = SUCCEEDED(get_profile(&existing_profile));
+        const auto expected_machine_dll = machine_shim_path(program_files());
         const bool stable_shim_already_registered = !previous_dll.empty() &&
-            _wcsicmp(previous_dll.c_str(), new_dll.c_str()) == 0 &&
+            _wcsicmp(previous_dll.c_str(), expected_machine_dll.c_str()) == 0 &&
+            !previous_machine_dll.empty() &&
+            _wcsicmp(previous_machine_dll.c_str(), expected_machine_dll.c_str()) == 0 &&
+            files_are_identical(user_shim, expected_machine_dll) &&
             machine_profile_preexisted;
         if (!stable_shim_already_registered) {
             first_registration_attempted = true;
-            // TSF profile/category registration is machine-wide on Windows and
-            // therefore requires elevation. File deployment, HKCU COM wiring,
-            // settings and keyboard-list changes deliberately stay in this
-            // original user's unelevated process. This also works when a
-            // standard user supplies different administrator credentials.
-            const HRESULT registration = register_machine_profile_elevated(new_dll);
+            // The profile, capability categories and HKLM COM activation are
+            // machine-wide. Packaged Windows surfaces such as SearchHost ignore
+            // the per-user COM class table, so registering only HKCU makes the
+            // profile selectable but leaves its DLL impossible to activate.
+            // File deployment, HKCU wiring, settings and keyboard-list changes
+            // remain in the original user's unelevated process.
+            const HRESULT registration = register_machine_profile_elevated(user_shim);
             if (FAILED(registration)) {
                 std::ostringstream message;
                 message << "TSF system registration failed: HRESULT 0x"
@@ -689,8 +710,15 @@ struct InstallResult {
                         << static_cast<std::uint32_t>(registration);
                 throw std::runtime_error(message.str());
             }
-            write_registered_dll(new_dll);
         }
+        const std::filesystem::path machine_dll(read_machine_com_server());
+        if (machine_dll.empty() ||
+            _wcsicmp(machine_dll.c_str(), expected_machine_dll.c_str()) != 0 ||
+            !files_are_identical(user_shim, machine_dll)) {
+            throw std::runtime_error(
+                "Machine TSF registration does not point to the protected PiInput Shim");
+        }
+        write_registered_dll(machine_dll);
         // The elevated action above only owns machine-wide TSF state. Add the
         // profile to this original user's keyboard list here, never in the
         // administrator account used to approve UAC.
@@ -710,7 +738,7 @@ struct InstallResult {
         // login entry is both unnecessary and user-visible. Upgrades also
         // remove the entry left by older releases.
         remove_host_autostart();
-        install_uninstaller(source_bin / L"PiInput-Uninstall.exe", local_root, new_dll);
+        install_uninstaller(source_bin / L"PiInput-Uninstall.exe", local_root, machine_dll);
     } catch (...) {
         if (user_keyboard_enabled && first_registration_attempted) {
             (void)disable_user_keyboard();
@@ -814,11 +842,30 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
                 _wcsicmp(path.filename().c_str(), L"PiInputTSF.dll") != 0) {
                 return static_cast<int>(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
             }
-            return static_cast<int>(register_machine_tsf(path.wstring()).result);
+            const auto destination = machine_shim_path(program_files());
+            const StableShimRefreshResult refreshed =
+                refresh_stable_shim(path, destination, build_id());
+            if (!refreshed.exact_bytes) {
+                return static_cast<int>(HRESULT_FROM_WIN32(
+                    refreshed.error == ERROR_SUCCESS ? ERROR_WRITE_FAULT : refreshed.error));
+            }
+            return static_cast<int>(register_machine_tsf(destination.wstring()).result);
         }
         if (has_argument(L"--machine-unregister")) {
             if (!process_is_elevated()) return static_cast<int>(E_ACCESSDENIED);
-            return static_cast<int>(unregister_machine_tsf().result);
+            const HRESULT result = unregister_machine_tsf().result;
+            if (FAILED(result)) return static_cast<int>(result);
+            const auto program_files_root = program_files();
+            const auto root = machine_runtime_root(program_files_root);
+            if (!is_safe_machine_runtime_root(root, program_files_root)) {
+                return static_cast<int>(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
+            }
+            try {
+                remove_or_schedule_legacy_runtime(root);
+            } catch (...) {
+                return static_cast<int>(HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED));
+            }
+            return 0;
         }
         const auto migration = argument_value(L"--migrate-from");
         const auto result = install(migration.has_value()

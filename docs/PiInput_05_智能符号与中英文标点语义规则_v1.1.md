@@ -54,7 +54,7 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 | 时间冒号、分数/日期斜杠 | 已实现核心子集 | `/` 固定保留 ASCII；数字两侧的 `:` 保留 ASCII；`12:23`、`2/3` 与中文冒号/顿号在 Notepad++ 新 DLL 通过；时间范围和扩展 token 语义仍待补充 |
 | 临时标点 composition 与右侧前瞻 | 已实现 | 后续数字保留 ASCII，否则解析为中文；焦点/异步完成按 context 与 session 校验 |
 | 决策 reason code 与结构化日志 | 已实现 | `smart_context_source`、`smart_context`、`smart_punctuation`、`smart_resolution` 已进入隔离 trace |
-| 多真实宿主语义矩阵 | 部分完成 | Notepad++ 已完成；ChatGPT、浏览器、Office、VS Code 仍需加载同一新 Shim 验收 |
+| 多真实宿主语义矩阵 | 部分完成 | Notepad++ 已完成；ChatGPT、浏览器、Windows 搜索、Office、VS Code 仍需加载同一新 Shim 验收；Windows 搜索另要求 HKLM COM 可见 |
 
 已实现能力可以按组件和 Notepad++ 证据写为通过，但在跨宿主矩阵完成前不得把整个 Smart Punctuation Gate 写成通过。
 

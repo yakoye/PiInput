@@ -74,7 +74,7 @@
 
 | ID | P | Mode | Layer | Current | 场景 | 预期 |
 |---|---|---|---|---|---|---|
-| IME-INST-001 | P0 | AUTO+MANUAL | L3 | PARTIAL | 干净用户全新安装 | profile 可见、可激活、版本正确 |
+| IME-INST-001 | P0 | AUTO+MANUAL | L3 | PARTIAL | 干净用户全新安装；核对 Program Files 受保护 Shim、HKCU/HKLM COM、profile/category 和键盘列表 | profile 可见、可激活；桌面与 SearchHost 均加载同一受保护 DLL；版本正确 |
 | IME-INST-002 | P0 | AUTO+MANUAL | L3 | PARTIAL | 静默卸载并检查 | 无失效 profile、卸载项和孤儿运行时 |
 | IME-INST-003 | P1 | AUTO+MANUAL | L3 | PARTIAL | tag CI 自动下载最近正式版 ZIP/sidecar，安装前版并写 UserData 哨兵后升级当前候选；待在线实跑 | 运行时替换；配置/词库按策略保留；旧 DLL 不残留 |
 | IME-INST-004 | P1 | AUTO+MANUAL | L3 | PLANNED | RC 到 Final | Final 身份唯一，无 RC 残留或双 profile |
@@ -84,7 +84,7 @@
 | IME-SIGN-001 | P0 | AUTO | L2 | BLOCKED | `signtool verify /pa /all` 检查包内 PE | 全部有效，证书链可信 |
 | IME-SIGN-002 | P0 | AUTO | L2 | BLOCKED | 脚本已强制检查 RFC3161 时间戳证书并输出 signer/timestamper 指纹，待正式证书实跑 | SHA-256 + RFC3161 时间戳 |
 | IME-SIGN-003 | P0 | AUTO | L2 | PARTIAL | tag 缺 signing secret 的 fail-closed workflow 已写，待在线验证 | 流水线失败，不生成正式候选 |
-| IME-PKG-001 | P0 | AUTO | L3 | BLOCKED | 安装/卸载已改为当前用户 `asInvoker`；安装不再执行 profile refresh 子进程，卸载不再提升权限或加载/启动产品二进制，交互框置顶。待受信任签名候选在标准用户和应用控制机器重跑安装×2、注册路径、Host/TSF 哈希、受控实际 DLL、卸载残留和可选重装 | 哈希、payload、身份、安装×2、受控输入、卸载均通过 |
+| IME-PKG-001 | P0 | AUTO | L3 | BLOCKED | 主流程为当前用户 `asInvoker`；窄范围 UAC 只注册/反注册机器 profile/category 与 HKLM COM。闭环已同时核对 HKCU/HKLM TSF 路径、Host/TSF 哈希、受控实际 DLL、卸载残留和可选重装；待受信任签名候选在标准用户和应用控制机器实跑 | 哈希、payload、身份、安装×2、Windows 搜索、受控输入、卸载均通过 |
 
 ## 6. 基础输入与状态机
 
@@ -170,7 +170,7 @@
 | IME-APP-008 | P0 | ChatGPT Windows App | MANUAL |
 | IME-APP-009 | P1 | Windows Terminal | MANUAL |
 | IME-APP-010 | P1 | PowerShell/CMD | MANUAL |
-| IME-APP-011 | P0 | Windows 设置/搜索/WinUI | MANUAL |
+| IME-APP-011 | P0 | Windows 设置/搜索/WinUI | PARTIAL；已修复仅有 HKCU COM 导致 SearchHost 无法创建 TIP，待同构建核对 SearchHost 实际加载 DLL 并完成中文输入 |
 | IME-APP-012 | P1 | WPF 控件 | MANUAL/PLANNED HOST |
 | IME-APP-013 | P1 | Qt 控件 | MANUAL/PLANNED HOST |
 | IME-APP-014 | P0 | Windows 远程桌面连接地址框 | MANUAL；增加空闲状态连续数字完全透传回归 |

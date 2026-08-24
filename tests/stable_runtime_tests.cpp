@@ -172,6 +172,24 @@ void test_runtime_marker_resolves_host_without_a_login_start_command() {
     std::filesystem::remove_all(root, error);
 }
 
+void test_machine_shim_uses_a_protected_fixed_path() {
+    const std::filesystem::path program_files = LR"(C:\Program Files)";
+    const auto root = piinput::windows::installer::machine_runtime_root(program_files);
+    const auto shim = piinput::windows::installer::machine_shim_path(program_files);
+    check(root == program_files / L"PiInput" / L"Runtime",
+        "machine runtime is rooted below Program Files");
+    check(shim == root / L"Shim" / L"PiInputTSF.dll",
+        "machine COM uses a fixed protected Shim path");
+    check(piinput::windows::installer::is_safe_machine_runtime_root(root, program_files),
+        "the exact protected machine runtime is accepted for cleanup");
+    check(!piinput::windows::installer::is_safe_machine_runtime_root(
+              program_files, program_files),
+        "Program Files itself is never accepted as a recursive cleanup target");
+    check(!piinput::windows::installer::is_safe_machine_runtime_root(
+              LR"(C:\Users\test\AppData\Local\PiInput)", program_files),
+        "a per-user writable directory is never accepted as machine runtime");
+}
+
 }  // namespace
 
 int main() {
@@ -183,6 +201,7 @@ int main() {
     test_locked_stable_shim_never_falls_back_to_a_versioned_registration();
     test_stable_shim_refresh_keeps_the_entry_path_and_replaces_its_bytes();
     test_runtime_marker_resolves_host_without_a_login_start_command();
+    test_machine_shim_uses_a_protected_fixed_path();
     std::cout << "PiInput stable runtime tests passed.\n";
     return 0;
 }

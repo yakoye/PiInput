@@ -317,4 +317,37 @@ std::filesystem::path resolve_current_host(
     }
 }
 
+std::filesystem::path machine_runtime_root(
+    const std::filesystem::path& program_files) noexcept {
+    try {
+        if (program_files.empty() || !program_files.is_absolute()) return {};
+        return (program_files / L"PiInput" / L"Runtime").lexically_normal();
+    } catch (...) {
+        return {};
+    }
+}
+
+std::filesystem::path machine_shim_path(
+    const std::filesystem::path& program_files) noexcept {
+    const auto root = machine_runtime_root(program_files);
+    return root.empty() ? std::filesystem::path{}
+                        : root / L"Shim" / L"PiInputTSF.dll";
+}
+
+bool is_safe_machine_runtime_root(
+    const std::filesystem::path& runtime_root,
+    const std::filesystem::path& program_files) noexcept {
+    try {
+        const auto expected = machine_runtime_root(program_files);
+        if (expected.empty() || runtime_root.empty()) return false;
+        const std::wstring actual_text = runtime_root.lexically_normal().wstring();
+        const std::wstring expected_text = expected.wstring();
+        return CompareStringOrdinal(
+            actual_text.c_str(), static_cast<int>(actual_text.size()),
+            expected_text.c_str(), static_cast<int>(expected_text.size()), TRUE) == CSTR_EQUAL;
+    } catch (...) {
+        return false;
+    }
+}
+
 }  // namespace piinput::windows::installer

@@ -309,6 +309,8 @@ p0_real_host_matrix=NOT_RUN
 | 静默卸载 |  |  |
 | 重启后 profile/残留检查 |  |  |
 | 注册 TSF/Host 固定路径 |  |  |
+| HKCU/HKLM `InprocServer32` 均指向安装后同一 TSF DLL |  |  |
+| SearchHost PID、实际加载 PiInputTSF.dll 路径及中文最终文本 |  |  |
 | 包内/安装后 Host 与 TSF 哈希对应 |  |  |
 | Controlled TSF 实际加载 DLL + 物理键 smoke |  |  |
 | 公开 Release ZIP 回下载与本地/sidecar 哈希 |  |  |

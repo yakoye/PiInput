@@ -41,7 +41,7 @@
 | 智能标点 | 核心交付子集完成，完整规范未完 | 纯规则引擎、临时 composition、Scintilla 文档真值和 reason code 已实现；严格 token、技术符号、千位三位 provisional 及 Backspace/Esc/context 销毁 Oracle 已加入；新 DLL 在 Notepad++ 通过基础矩阵 | 当前候选 DLL 的 Controlled TSF smoke/生命周期实跑；更多边界；ChatGPT/Chromium/Office/VS Code 同构建矩阵 |
 | Windows CI | 脚本与 workflow 已存在 | Windows build/CTest、JUnit、固定词库、tag/VERSION/clean 检查、可选签名、失败证据上传、包闭环阶段化失败 summary、统一 `result.json`/artifact manifest 和公开资产回下载哈希步骤已写 | GitHub 在线执行记录及失败恢复验证 |
 | 代码签名 | 工具链已写，证据缺失 | `sign-binaries.ps1` 使用 SHA-256/RFC3161；逐 PE 验证签名和时间戳证书，并记录签名者/时间戳指纹与文件哈希；PFX/密码仅暴露给单个签名步骤并在 `finally` 删除临时文件 | 正式证书、tag 构建签名结果、证书链复核 |
-| 安装包闭环 | 普通用户架构完成，真实闭环待跑 | 安装/卸载 manifest 已改为 `asInvoker`；安装器直接注册并轮询当前用户 profile，不再执行重复 `--refresh-profile`；卸载器通过控制管道停止 Host 并直接调用 TSF API，不再提升权限、启动 Host/profile 子进程或加载产品 DLL；所有交互框置顶 | 用受信任签名候选在标准用户和启用应用控制的干净机器执行安装×2、卸载和重装闭环 |
+| 安装包闭环 | 分权架构完成，真实闭环待跑 | 主安装/卸载进程保持 `asInvoker`，负责当前用户文件、设置、键盘列表与 Host；窄范围 UAC 子步骤把只读 Shim 部署到 Program Files，注册机器 profile/category 与 SearchHost 可见的 HKLM COM；HKCU COM 指向同一受保护 Shim，不在管理员账户下处理用户数据；所有交互框置顶 | 用受信任签名候选在标准用户和启用应用控制的干净机器执行安装×2、Windows 搜索、卸载和重装闭环 |
 | 8h soak | 冻结候选 Host-only 8h 已通过；TSF/App harness 已实现 | `a2d5f8fe3c53` / `0.7.13+a2d5f8fe3c53` 共 957 样本，Private/WS/Handle 增量和斜率均通过且 mmap=40,758,365 bytes；TSF/App 控制器可循环标点、敏感 scope 和 context 重建 | 当前候选安装后的 TSF/App smoke 与 8h |
 
 当前仓库不能因为“CI/签名/soak 脚本已经存在”就宣布对应发布门禁通过。
@@ -125,7 +125,7 @@
 | Chromium/Web | Chrome、Edge | 普通/密码输入框、tab/context 复用 |
 | Electron | VS Code、ChatGPT Windows App | 连续输入、失焦、粘贴、快速标点 |
 | Office | Word、Excel | composition、单元格/段落切换 |
-| Windows App/WinUI | 设置、搜索等 | profile、候选位置、敏感范围 |
+| Windows App/WinUI | 设置、Windows 搜索等 | profile、HKLM COM 可见性、实际加载 DLL、候选位置、敏感范围 |
 | Terminal | Windows Terminal、PowerShell/CMD | 命令符号、路径、中文提交 |
 | 聊天/IM | 微信、企业微信/Teams 等 | 多输入框、粘贴、焦点与候选生命周期 |
 | 生命周期 | 锁屏、睡眠、IME 切换 | 恢复后直接可输入 |
@@ -191,7 +191,7 @@
 - 正式 tag 必须有受信任的 Authenticode 代码签名证书，测试证书无效。
 - 所有包内 EXE/DLL 使用 SHA-256 摘要和 RFC3161 时间戳并验证证书链。
 - 包闭环至少验证：ZIP 哈希、唯一包根、必需文件、禁止源码/脚本泄漏、版本/build ID、签名和时间戳状态、静默安装、覆盖安装、静默卸载。
-- 安装后必须比较包内与实际运行 `PiInputHost.exe`/注册 `PiInputTSF.dll` 的 SHA-256，核对 `CurrentHostPath` 与 CLSID 注册路径，并由受控 TSF 宿主验证实际加载模块路径；只看卸载项版本号不算闭环。
+- 安装后必须比较包内与实际运行 `PiInputHost.exe`/注册 `PiInputTSF.dll` 的 SHA-256，核对 `CurrentHostPath`、HKCU CLSID 与 SearchHost 可见的 HKLM CLSID 均指向同一 DLL，并由受控 TSF 宿主验证实际加载模块路径；只看卸载项版本号不算闭环。
 - 必须在干净用户配置执行一次；在已有安装上执行一次升级路径。
 - 安装后实际 DLL/EXE 哈希与包内文件对应。
 - 从前一正式版升级和 RC -> Final 必须验证无双 profile/旧 DLL；用户词库、配置、主题和双拼方案按产品策略保留或迁移。
