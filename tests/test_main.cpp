@@ -555,6 +555,36 @@ void test_date_and_time_candidates() {
     check(timed.size() >= 2U && timed[1U].word == piinput::datetime_group_label(false),
         "第二位应是时间入口");
 
+    struct ShortcutCase {
+        const char* input;
+        bool date;
+    };
+    for (const ShortcutCase shortcut : {
+             ShortcutCase{"sj", false},
+             ShortcutCase{"shij", false},
+             ShortcutCase{"shijian", false},
+             ShortcutCase{"riq", true},
+             ShortcutCase{"riqi", true}}) {
+        const auto candidates = engine.query(shortcut.input, "full", 8U);
+        const std::string expected_label = piinput::datetime_group_label(shortcut.date);
+        check(std::any_of(candidates.begin(), candidates.end(),
+                  [&](const piinput::EngineCandidate& candidate) {
+                      return candidate.word == expected_label &&
+                          candidate.pinyin == shortcut.input &&
+                          candidate.evidence.kind == piinput::CandidateKind::datetime_group;
+                  }),
+            std::string("全拼日期时间快捷码应生成对应入口：") + shortcut.input);
+        const auto formats = engine.datetime_formats(shortcut.input);
+        check(formats == (shortcut.date ? expected_dates : expected_times),
+            std::string("日期时间快捷码应展开完整格式列表：") + shortcut.input);
+    }
+    const auto flypy_short_alias = engine.query("sj", "flypy", 8U);
+    check(std::none_of(flypy_short_alias.begin(), flypy_short_alias.end(),
+              [](const piinput::EngineCandidate& candidate) {
+                  return candidate.evidence.kind == piinput::CandidateKind::datetime_group;
+              }),
+        "全拼专用的 sj 快捷码不应覆盖双拼键位");
+
     // 小鹤双拼: shi is ui, jian is jm. Nothing in the date code knows that.
     const auto shuangpin = engine.query("uijm", "flypy", 8U);
     check(!shuangpin.empty() && shuangpin.front().word == "时间",

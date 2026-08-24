@@ -51,8 +51,8 @@ public:
     void set_symbol_shortcuts(
         std::unordered_map<std::string, std::vector<std::string>> shortcuts);
 
-    // What "now" means when riqi and shijian are typed. Defaults to the system
-    // clock; tests pin it so the expected strings can be written down.
+    // What "now" means when riq/riqi or sj/shij/shijian are typed. Defaults to
+    // the system clock; tests pin it so the expected strings can be written down.
     using Clock = std::function<std::tm()>;
     void set_clock(Clock clock);
     void load_user_model(const std::filesystem::path& path);
@@ -137,8 +137,8 @@ private:
     // is already more than a screen of real matches, and running the extra
     // prefix scan on every keystroke cost enough to show up in the p95.
     static constexpr std::size_t prefix_fill_threshold = 12U;
-    // riqi and shijian spell out the current date and time in every format
-    // anyone asks for. Generated per keystroke rather than stored, so they
+    // riq/riqi and sj/shij/shijian spell out the current date and time in every
+    // supported format. Generated per keystroke rather than stored, so they
     // cannot go stale the way a cached string would.
     [[nodiscard]] std::vector<std::string> generated_candidates_for(
         const std::string& key) const;
@@ -155,6 +155,7 @@ private:
         std::vector<EngineCandidate>& results,
         const std::string& input,
         const std::vector<std::string>& syllables,
+        bool allow_short_datetime_aliases,
         std::size_t result_limit) const;
 
     struct PrefixQueryCache {

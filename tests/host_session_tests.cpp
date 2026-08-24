@@ -470,7 +470,8 @@ void test_datetime_entry_opens_a_second_level_list() {
         "piinput-datetime-menu.tsv";
     {
         std::ofstream output(lexicon_path, std::ios::binary | std::ios::trunc);
-        output << "word\tpinyin\tweight\n日期\tri'qi\t9000\n日前\tri'qian\t100\n";
+        output << "word\tpinyin\tweight\n日期\tri'qi\t9000\n日前\tri'qian\t100\n"
+               << "时间\tshi'jian\t9000\n事件\tshi'jian\t100\n";
     }
     engine.load_lexicon(lexicon_path);
     std::tm fixed{};
@@ -547,6 +548,55 @@ void test_datetime_entry_opens_a_second_level_list() {
     check(session.snapshot().raw == "riqi", "Esc 只退出列表，不取消输入");
     check(session.snapshot().candidates.front().text == "日期",
         "退出列表后回到词典候选");
+
+    // Every requested full-pinyin alias must reach the second-level list and
+    // commit a real current value, not merely show a decorative entry.
+    struct ShortcutCase {
+        const char* input;
+        bool date;
+        const char* first_format;
+    };
+    for (const ShortcutCase shortcut : {
+             ShortcutCase{"sj", false, "00:00:00"},
+             ShortcutCase{"shij", false, "00:00:00"},
+             ShortcutCase{"shijian", false, "00:00:00"},
+             ShortcutCase{"riq", true, "2026年8月21日"},
+             ShortcutCase{"riqi", true, "2026年8月21日"}}) {
+        piinput::HostSession alias_session(engine, nullptr, settings, "full");
+        type(alias_session, shortcut.input);
+        const auto aliases = alias_session.snapshot();
+        const std::string expected_label = piinput::datetime_group_label(shortcut.date);
+        const auto alias_entry = std::find_if(aliases.candidates.begin(), aliases.candidates.end(),
+            [&](const piinput::HostCandidate& candidate) {
+                return candidate.text == expected_label;
+            });
+        const std::string entry_message =
+            std::string("全拼快捷码应显示日期时间入口：") + shortcut.input;
+        check(alias_entry != aliases.candidates.end(), entry_message.c_str());
+        if (alias_entry == aliases.candidates.end()) continue;
+        const auto opened_alias = alias_session.apply({
+            .kind = piinput::HostKeyKind::select_candidate,
+            .candidate_id = alias_entry->id});
+        const std::string open_message =
+            std::string("全拼快捷码应能展开格式列表：") + shortcut.input;
+        check(opened_alias.accepted && opened_alias.action == piinput::HostAction::update,
+            open_message.c_str());
+        const auto formats = alias_session.snapshot();
+        const std::string format_message =
+            std::string("全拼快捷码的第一种格式应正确：") + shortcut.input;
+        check(!formats.candidates.empty() &&
+                formats.candidates.front().text == shortcut.first_format,
+            format_message.c_str());
+        if (formats.candidates.empty()) continue;
+        const auto committed_alias = alias_session.apply({
+            .kind = piinput::HostKeyKind::select_candidate,
+            .candidate_id = formats.candidates.front().id});
+        const std::string commit_message =
+            std::string("全拼快捷码应能上屏实际日期时间：") + shortcut.input;
+        check(committed_alias.accepted && committed_alias.action == piinput::HostAction::commit &&
+                committed_alias.text == shortcut.first_format,
+            commit_message.c_str());
+    }
 
     std::filesystem::remove(lexicon_path);
 }

@@ -21,6 +21,28 @@ namespace {
     return schema == "full" || schema == "full-pinyin" || schema == "pinyin";
 }
 
+enum class DatetimeShortcutKind {
+    none,
+    date,
+    time,
+};
+
+[[nodiscard]] DatetimeShortcutKind datetime_shortcut_kind(
+    const std::string_view key) noexcept {
+    if (key == "riq" || key == "riqi" || key == "date") {
+        return DatetimeShortcutKind::date;
+    }
+    if (key == "sj" || key == "shij" || key == "shijian" || key == "time") {
+        return DatetimeShortcutKind::time;
+    }
+    return DatetimeShortcutKind::none;
+}
+
+[[nodiscard]] bool is_canonical_datetime_shortcut(
+    const std::string_view key) noexcept {
+    return key == "riqi" || key == "date" || key == "shijian" || key == "time";
+}
+
 struct FullPinyinDecodeResult {
     std::vector<std::string> variants;
     std::vector<PinyinSegmentation> segmentations;
@@ -579,9 +601,8 @@ std::vector<std::string> Engine::datetime_formats(const std::string& reading) co
 }
 
 std::vector<std::string> Engine::generated_candidates_for(const std::string& key) const {
-    const bool wants_date = key == "riqi" || key == "date";
-    const bool wants_time = key == "shijian" || key == "time";
-    if (!wants_date && !wants_time) return {};
+    const DatetimeShortcutKind kind = datetime_shortcut_kind(key);
+    if (kind == DatetimeShortcutKind::none) return {};
 
     std::tm local{};
     if (clock_) {
@@ -594,7 +615,8 @@ std::vector<std::string> Engine::generated_candidates_for(const std::string& key
         if (localtime_r(&now, &local) == nullptr) return {};
 #endif
     }
-    return wants_date ? date_candidates(local) : time_candidates(local);
+    return kind == DatetimeShortcutKind::date
+        ? date_candidates(local) : time_candidates(local);
 }
 
 void Engine::set_symbol_shortcuts(
@@ -610,6 +632,7 @@ void Engine::splice_symbol_shortcuts(
     std::vector<EngineCandidate>& results,
     const std::string& input,
     const std::vector<std::string>& syllables,
+    const bool allow_short_datetime_aliases,
     const std::size_t result_limit) const {
 
 
@@ -626,9 +649,13 @@ void Engine::splice_symbol_shortcuts(
     std::string datetime_label;
     const auto collect = [&](const std::string& key) {
         if (key.empty()) return;
-        if (datetime_label.empty() && !generated_candidates_for(key).empty()) {
+        const bool datetime_allowed = allow_short_datetime_aliases ||
+            is_canonical_datetime_shortcut(key);
+        if (datetime_allowed && datetime_label.empty() &&
+            !generated_candidates_for(key).empty()) {
             datetime_reading = key;
-            datetime_label = datetime_group_label(key == "riqi" || key == "date");
+            datetime_label = datetime_group_label(
+                datetime_shortcut_kind(key) == DatetimeShortcutKind::date);
         }
         const auto found = symbol_shortcuts_.find(key);
         if (found == symbol_shortcuts_.end()) return;
@@ -1367,6 +1394,7 @@ std::vector<EngineCandidate> Engine::query(
     splice_symbol_shortcuts(results, input,
         primary_parse != nullptr ? primary_parse->complete_syllables
                                  : std::vector<std::string>{},
+        is_full_pinyin_schema(schema),
         result_limit);
     return results;
 }
