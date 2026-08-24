@@ -106,6 +106,65 @@ void test_presenter_model_keeps_candidates_visible_while_caret_is_resolved() {
     check(model.focused_session() == 0U, "hiding the focused session clears presentation focus");
 }
 
+void test_an_early_matching_caret_opens_the_snapshot() {
+    piinput::windows::CandidatePresenterModel model;
+    const piinput::HostCaretUpdate early{
+        .generation = 10U,
+        .has_text_caret = true,
+        .left = 400,
+        .top = 500,
+        .right = 402,
+        .bottom = 524,
+    };
+    model.remember_caret(11U, early);
+    check(model.stage(11U, snapshot(10U, false, 1U)),
+        "the snapshot accepts a caret that raced ahead of staging");
+    const auto* consumed = model.current_caret();
+    check(consumed != nullptr && *consumed == early,
+        "the exact matching early caret opens the candidate window");
+
+    piinput::windows::CandidatePresenterModel fallback_model;
+    fallback_model.remember_caret(11U, {
+        .generation = 10U,
+        .has_text_caret = false,
+    });
+    check(fallback_model.stage(11U, snapshot(10U, false, 1U)),
+        "the snapshot accepts an early no-geometry result");
+    const auto* fallback = fallback_model.current_caret();
+    check(fallback != nullptr && !fallback->has_text_caret,
+        "an explicit no-geometry result opens at the normal fallback instead of waiting forever");
+}
+
+void test_an_early_caret_must_match_generation_and_session() {
+    piinput::windows::CandidatePresenterModel model;
+    model.remember_caret(11U, {
+        .generation = 9U,
+        .has_text_caret = true,
+        .left = 100,
+        .top = 200,
+        .right = 102,
+        .bottom = 224,
+    });
+    check(model.stage(11U, snapshot(10U, false, 1U)),
+        "a newer snapshot is staged after an older early caret");
+    check(model.current_caret() == nullptr,
+        "a stale generation cannot open the candidate window");
+
+    piinput::windows::CandidatePresenterModel other_session;
+    other_session.remember_caret(22U, {
+        .generation = 10U,
+        .has_text_caret = true,
+        .left = 100,
+        .top = 200,
+        .right = 102,
+        .bottom = 224,
+    });
+    check(other_session.stage(11U, snapshot(10U, false, 1U)),
+        "a snapshot is staged after another session's early caret");
+    check(other_session.current_caret() == nullptr,
+        "another session's caret cannot open the candidate window");
+}
+
 void test_unmatched_raw_input_does_not_show_an_empty_candidate_frame() {
     piinput::windows::CandidatePresenterModel model;
     piinput::HostSnapshot unmatched;
@@ -552,6 +611,8 @@ void test_text_caret_dpi_normalization_does_not_double_scale_per_monitor_apps() 
 int main() {
     test_candidate_context_commands_include_dismissal();
     test_presenter_model_keeps_candidates_visible_while_caret_is_resolved();
+    test_an_early_matching_caret_opens_the_snapshot();
+    test_an_early_caret_must_match_generation_and_session();
     test_unmatched_raw_input_does_not_show_an_empty_candidate_frame();
     test_candidate_geometry_scales_and_clamps_to_monitor_work_area();
     test_a_caret_shorter_than_its_text_line_does_not_get_covered();

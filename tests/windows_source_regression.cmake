@@ -612,12 +612,18 @@ if(composition_write_guard LESS 0)
         "The composition range must be verified against composition_written_ before SetText overwrites it")
 endif()
 
-# The anchor a word opens on is a guess. Locking on it would stop the
-# authoritative caret from ever correcting the candidate bar's position.
+# A prior word's remembered anchor is only a guess. A caret result that raced
+# ahead of its own snapshot is different: presentation identity and generation
+# make it authoritative, and packaged XAML hosts may never send it a second
+# time. Consume only that exact match.
 string(FIND "${candidate_presenter_text}"
     "anchor_locked_ = !current_.raw.empty() && !provisional" authoritative_anchor_lock)
 string(FIND "${candidate_presenter_text}"
-    "caret_ = remembered_caret_" guessed_anchor)
+    "remembered_session_ == session_id" early_caret_session_guard)
+string(FIND "${candidate_presenter_text}"
+    "remembered_caret_.generation == snapshot.generation" early_caret_generation_guard)
+string(FIND "${candidate_presenter_text}"
+    "caret_ = remembered_caret_" early_caret_consumed)
 # The window keeps its geometry locked until something releases it. A word that
 # opens must release it explicitly rather than depending on hide() having run.
 string(FIND "${candidate_presenter_text}"
@@ -631,9 +637,10 @@ if(authoritative_anchor_lock LESS 0)
     message(FATAL_ERROR
         "Only an authoritative caret may lock the candidate anchor")
 endif()
-if(NOT guessed_anchor LESS 0)
+if(early_caret_session_guard LESS 0 OR early_caret_generation_guard LESS 0 OR
+   early_caret_consumed LESS 0)
     message(FATAL_ERROR
-        "A word must never open the candidate bar on a remembered caret; that is what put the bar a step behind the insertion point")
+        "An early candidate caret may be consumed only when session and generation exactly match the staged snapshot")
 endif()
 
 # Store-packaged applications run in an AppContainer and cannot load a Shim

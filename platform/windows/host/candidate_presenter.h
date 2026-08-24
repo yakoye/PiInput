@@ -50,9 +50,9 @@ private:
     std::uint64_t focused_session_{};
     HostSnapshot current_;
     HostCaretUpdate caret_;
-    // A commit clears the live caret, but the next word starts within a few
-    // characters of it. Remembering it lets the first key of the next word show
-    // its candidates at once rather than after the caret round trip.
+    // A fast Shim can return the generation's caret before the Host has staged
+    // that generation's snapshot. Keep the complete result, including an
+    // explicit no-geometry fallback, until stage() can match both identities.
     HostCaretUpdate remembered_caret_;
     std::uint64_t remembered_session_{};
     bool visible_{};

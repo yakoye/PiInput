@@ -170,7 +170,7 @@
 | IME-APP-008 | P0 | ChatGPT Windows App | MANUAL |
 | IME-APP-009 | P1 | Windows Terminal | MANUAL |
 | IME-APP-010 | P1 | PowerShell/CMD | MANUAL |
-| IME-APP-011 | P0 | Windows 设置/搜索/WinUI | PARTIAL；已修复仅有 HKCU COM 导致 SearchHost 无法创建 TIP，待同构建核对 SearchHost 实际加载 DLL 并完成中文输入 |
+| IME-APP-011 | P0 | Windows 设置/搜索/WinUI | PARTIAL；HKLM COM 修复后 `0.7.13+ed980905fcb4` 已由 SearchHost 加载并可空格提交汉字；随后定位并修复 caret 先于候选快照到达时 Presenter 永久等待的竞态，L2 已覆盖同代提前结果、no-geometry fallback、旧代及跨会话拒绝，新候选候选 UI 待实机复测 |
 | IME-APP-012 | P1 | WPF 控件 | MANUAL/PLANNED HOST |
 | IME-APP-013 | P1 | Qt 控件 | MANUAL/PLANNED HOST |
 | IME-APP-014 | P0 | Windows 远程桌面连接地址框 | MANUAL；增加空闲状态连续数字完全透传回归 |

@@ -67,10 +67,24 @@ bool CandidatePresenterModel::stage(
     generations_[session_id] = snapshot.generation;
     const bool reuse_caret = visible_ && caret_available_ &&
         focused_session_ == session_id;
+    const bool consume_early_caret = !reuse_caret &&
+        remembered_session_ == session_id &&
+        remembered_caret_.generation == snapshot.generation;
     staged_session_ = session_id;
     current_ = snapshot;
     if (reuse_caret) {
         caret_.generation = snapshot.generation;
+        caret_available_ = true;
+        caret_inherited_ = false;
+    } else if (consume_early_caret) {
+        // The Shim applies the composition and reports its caret after reading
+        // the key reply. The Host writes that reply before staging the matching
+        // snapshot, so a fast packaged host such as SearchHost can send the
+        // caret back on another pipe first. That is not stale data: generation
+        // and presentation identity make it the exact anchor for this snapshot.
+        // Consume it now; otherwise the snapshot waits forever for a second
+        // caret message that will never be sent.
+        caret_ = remembered_caret_;
         caret_available_ = true;
         caret_inherited_ = false;
     } else {
@@ -106,13 +120,12 @@ void CandidatePresenterModel::remember_caret(
     const std::uint64_t session_id,
     const HostCaretUpdate& update) noexcept {
     if (session_id == 0U) return;
-    if (update.has_text_caret) {
-        remembered_caret_ = update;
-        remembered_session_ = session_id;
-    } else if (remembered_session_ == session_id) {
-        remembered_caret_ = {};
-        remembered_session_ = 0U;
-    }
+    // "No text geometry" is also a complete answer: once the matching
+    // snapshot arrives it must open at the system-caret/mouse fallback. Dropping
+    // that answer made packaged XAML hosts wait forever just as surely as
+    // dropping a real rectangle did.
+    remembered_caret_ = update;
+    remembered_session_ = session_id;
 }
 
 bool CandidatePresenterModel::apply_caret(
