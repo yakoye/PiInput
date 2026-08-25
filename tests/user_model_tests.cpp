@@ -194,18 +194,19 @@ void test_concurrent_saves_use_unique_temporary_files() {
             "word" + std::to_string(index));
     }
 
-    std::exception_ptr first_error;
-    std::exception_ptr second_error;
-    std::thread first([&] {
-        try { model.save(path); } catch (...) { first_error = std::current_exception(); }
-    });
-    std::thread second([&] {
-        try { model.save(path); } catch (...) { second_error = std::current_exception(); }
-    });
-    first.join();
-    second.join();
-    check(first_error == nullptr && second_error == nullptr,
-        "concurrent snapshots do not collide on one fixed temporary filename");
+    constexpr std::size_t writer_count = 8U;
+    std::vector<std::exception_ptr> errors(writer_count);
+    std::vector<std::thread> writers;
+    writers.reserve(writer_count);
+    for (std::size_t index = 0U; index < writer_count; ++index) {
+        writers.emplace_back([&, index] {
+            try { model.save(path); } catch (...) { errors[index] = std::current_exception(); }
+        });
+    }
+    for (auto& writer : writers) writer.join();
+    check(std::all_of(errors.begin(), errors.end(), [](const auto& error) {
+        return error == nullptr;
+    }), "concurrent snapshots publish without temporary-name or destination-replace conflicts");
 
     piinput::UserModel loaded;
     const auto diagnostics = loaded.load(path);

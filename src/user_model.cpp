@@ -67,12 +67,29 @@ template <typename T>
     const std::filesystem::path& destination,
     std::string& error_message) noexcept {
 #ifdef _WIN32
-    if (MoveFileExW(
-            temporary.c_str(), destination.c_str(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE) {
-        return true;
+    // Unique temporary names prevent writers from corrupting each other's
+    // snapshots, but Windows can still reject one of two simultaneous atomic
+    // publications with a transient sharing/access conflict. This also occurs
+    // briefly when an indexer or antivirus scanner opens the destination. Keep
+    // the atomic replace operation and retry only those transient conditions;
+    // all structural/path errors remain fail-fast.
+    constexpr unsigned int maximum_attempts = 40U;
+    DWORD last_error = ERROR_SUCCESS;
+    for (unsigned int attempt = 0U; attempt < maximum_attempts; ++attempt) {
+        if (MoveFileExW(
+                temporary.c_str(), destination.c_str(),
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != FALSE) {
+            return true;
+        }
+        last_error = GetLastError();
+        const bool transient = last_error == ERROR_ACCESS_DENIED ||
+            last_error == ERROR_SHARING_VIOLATION ||
+            last_error == ERROR_LOCK_VIOLATION ||
+            last_error == ERROR_USER_MAPPED_FILE;
+        if (!transient || attempt + 1U == maximum_attempts) break;
+        Sleep(10U);
     }
-    error_message = "Windows error " + std::to_string(GetLastError());
+    error_message = "Windows error " + std::to_string(last_error);
     return false;
 #else
     std::error_code error;
