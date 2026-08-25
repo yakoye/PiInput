@@ -121,7 +121,7 @@
 | SP-MIX-008 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | URL scheme/dot/query 及退出 URL 后恢复中文问号的 L0 已通过，Controlled TSF 连续 Oracle 已编译；当前候选与跨宿主待验收 | URL token 全 ASCII，离开后恢复中文 |
 | SP-MIX-009 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | Email/文件名/版本/Path/Code 内部规则及退出四类 token 后恢复中文的 L0 已通过，Controlled TSF Oracle 已编译；当前候选与跨宿主待验收 | token 内部符号保护，随后立即恢复中文 |
 | SP-MIX-010 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | 中文状态输入 `以万物为刍狗;圣人不仁。`；L1 Host 与 Controlled TSF 物理键 Oracle 已加入，当前候选实跑待完成 | 单次 `;` 立即上屏 `；`；不得进入 `;;f`、`;;u` 或 `;关键词` 命令状态 |
-| SP-MODE-001 | P0 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 中文状态选择“中文时使用英文标点”，输入 `wo` 后依次验证主键盘全部标点；设置解析、完整标点表、Host 组合提交和 TSF 旁路源码门禁已覆盖，真实 TSF 待验收 | 中文候选保持可用；所有标点逐键输出 ASCII；句号、冒号、逗号不进入智能 provisional；切回“中文标点”后恢复智能规则 |
+| SP-MODE-001 | P0 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 中文状态选择“英文标点”，输入 `wo` 后依次验证主键盘全部标点；设置解析、完整标点表、Host 组合提交和 TSF 旁路源码门禁已覆盖，真实 TSF 待验收 | 中文候选保持可用；所有标点逐键输出 ASCII；句号、冒号、逗号不进入智能 provisional；切回“中文标点”后恢复智能规则 |
 | SP-STATE-001 | P0 | AUTO | L1/L2 | COVERED | `1` `.` `0` 快速连打；pending 数字解析和异步串行已有测试/源码门禁 | 输出 `1.0`，顺序不乱 |
 | SP-STATE-002 | P0 | AUTO | L1/L2 | PARTIAL | 千位 provisional 已实现逐位回退且 Esc 保留数字，Controlled TSF 物理键 Oracle 已写，待当前候选实跑 | 只取消临时符号，不吞后续数字 |
 | SP-STATE-003 | P0 | AUTO+MANUAL | L2/L3 | PARTIAL | context/session 所有权校验已实现；受控跨输入框和销毁重建 Oracle 已写，待当前候选实跑及真实宿主补充 | 无跨 context 回写 |

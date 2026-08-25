@@ -47,7 +47,7 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 
 | 能力 | 状态 | 当前证据与限制 |
 |---|---|---|
-| 中文标点/中文时使用英文标点/程序员标点模式 | 已实现 | `PunctuationTransformer` 和设置页共用三态配置；选择英文标点不改变中文输入模式 |
+| 中文标点/英文标点/程序员标点模式 | 已实现 | `PunctuationTransformer` 和设置页共用三态配置；选择英文标点不改变中文输入模式；当前程序员标点与英文标点均逐键输出 ASCII，尚无行为差异 |
 | 中文输入时强制英文标点 | 已实现组件层，真实宿主待验收 | TSF 智能标点在 English/Programmer 标点模式下完整旁路，Host 仍保留中文候选并按 ASCII 表提交 |
 | 基础中文标点、单双引号、括号样式 | 已实现 | 核心表驱动测试和 Host session 测试覆盖 |
 | Shim 向 Host 传递普通/字面标点 | 已实现 | `HostKeyKind::punctuation` / `literal_punctuation` |
@@ -396,7 +396,7 @@ KEY=: LEFT=INTEGER RIGHT=PENDING CONTEXT=AMBIGUOUS RULE=PUNC-NUMERIC-PENDING DEC
 | `SP-MIX-007` | `支持Windows/Linux/macOS，选择是/否即可。` | 中文句子中的 `/` 保持本义 |
 | `SP-MIX-008` | `访问https://example.com?a=1&b=2，然后继续输入中文。` | URL 全 ASCII，退出 token 后恢复中文 |
 | `SP-MIX-009` | `文件是PiInput-v0.8.0.zip，请打开。` | 文件名/版本符号保护，随后恢复中文 |
-| `SP-MODE-001` | 中文状态选择“中文时使用英文标点”，输入中文候选及主键盘全部标点 | 中文候选不变；标点全部 ASCII；不得进入 smart/provisional；切回中文标点后恢复上下文规则 |
+| `SP-MODE-001` | 中文状态选择“英文标点”，输入中文候选及主键盘全部标点 | 中文候选不变；标点全部 ASCII；不得进入 smart/provisional；切回中文标点后恢复上下文规则 |
 | `SP-STATE-001` | `1.`、`1.文本`、`1..` 快速输入 | 分别得到 `1.`、`1.文本`、`1.。`，Lost/Duplicate=0 |
 | `SP-STATE-002` | 临时符号后 Backspace/Esc | 只取消临时符号，不伤及左侧文本 |
 | `SP-STATE-003` | 临时符号时 Alt+Tab/切输入框 | 无幽灵 composition，无跨 context 回写 |

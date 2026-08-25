@@ -84,7 +84,7 @@ constexpr std::array<Row, 31U> kRows{{
     {1, Kind::choice, Field::up_key, L"↑ 键", kRowKeys, 0U, 0U},
 
     {2, Kind::choice, Field::punctuation_mode, L"中文输入时的标点",
-        {L"中文标点", L"中文时使用英文标点", L"程序员标点", nullptr, nullptr}, 0U, 0U},
+        {L"中文标点", L"英文标点", L"程序员标点", nullptr, nullptr}, 0U, 0U},
     {2, Kind::choice, Field::bracket_style, L"Shift+[ 和 Shift+]",
         {L"{ }", L"「 」", nullptr, nullptr, nullptr}, 0U, 0U},
     {2, Kind::choice, Field::command_hotkey, L"符号面板快捷键",

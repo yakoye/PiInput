@@ -1310,9 +1310,10 @@ foreach(settings_field IN ITEMS
         message(FATAL_ERROR "PiInput Settings must expose ${settings_field}")
     endif()
 endforeach()
-if(NOT settings_main_text MATCHES "中文时使用英文标点")
+if(NOT settings_main_text MATCHES "L\"中文输入时的标点\"" OR
+   NOT settings_main_text MATCHES "L\"中文标点\", L\"英文标点\", L\"程序员标点\"")
     message(FATAL_ERROR
-        "PiInput Settings must expose the Chinese-input English-punctuation option")
+        "PiInput Settings must expose concise Chinese, English, and programmer punctuation choices")
 endif()
 if(NOT cmake_text MATCHES "PIINPUT_BUILD_TIME_UTC" OR
    NOT cmake_text MATCHES "PIINPUT_GIT_COMMIT_ID" OR
