@@ -843,3 +843,10 @@ v0.6.6 宣称修复的两个问题在真机上都没解决，两段录屏经进�
 - 动作目标进入 Host 协议但不作为正文或学习候选。Host 清理组合后才返回 launch action，Shim 只有在同步或异步 cancel edit 成功后才调用目标；空目标在清理前拒绝；
 - 从 RegCalcTextTool 取入 `RegCalc64Tool.html`、`shared-ui.css`、`shared-ui.js`，直接安装到活动版本 `bin`。CMake、打包脚本、静态包闭环和 Windows 源码门禁共同要求三项资产存在；
 - 引擎别名/候选位置、撤销别名、设置解析与保存、Host 会话、协议往返、CompositionMirror 时序均有自动回归；系统 GUI 与 HTML 的真实拉起仍留给同一已安装候选的人工验收，自动化不抢用户桌面。
+
+## 12.50 v0.7.15 发布候选汇总
+
+- v0.7.15 汇总 v0.7.12 后的数字首键、Windows 搜索 UIElement、智能标点、Shift 原始字母提交、专业词与 mmap、安装权限拆分、工具候选和自定义快捷调用；不另起一套实现分支；
+- `VERSION`、CMake、README、版本说明、验证记录、安装测试和长文本测试使用同一 `0.7.15` 身份；
+- 发布候选必须从干净提交在独立目录构建，执行全量 CTest、包内精确 build ID、SHA-256、运行时资产和包闭环检查；
+- 本机和 GitHub 仓库没有正式代码签名密钥；Host/TSF/App 8 小时及 P0 真实宿主也必须绑定最终冻结提交。未满足时只允许生成开发候选，不把验证文档机器 Gate 改成 PASS，也不绕过 tag workflow。
