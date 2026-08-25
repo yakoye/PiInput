@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.24)
 
-project(PiInput VERSION 0.7.13 LANGUAGES CXX)
+project(PiInput VERSION 0.7.14 LANGUAGES CXX)
 
 option(PIINPUT_BUILD_TESTS "Build PiInput tests" ON)
 option(PIINPUT_STATIC_MSVC_RUNTIME "Use the static MSVC runtime" ON)
@@ -11,8 +11,21 @@ set(PIINPUT_TEST_REGISTERED_TSF "" CACHE FILEPATH
 set(PIINPUT_TESTDATA_DIR "" CACHE PATH "Directory containing the two SCEL regression files")
 set(PIINPUT_BUILD_REVISION "" CACHE STRING
     "Exact source revision embedded in runtime diagnostics; auto-detected when empty")
+find_package(Git QUIET)
+set(PIINPUT_GIT_COMMIT_ID "source")
+if(GIT_FOUND)
+    execute_process(
+        COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_SOURCE_DIR}" rev-parse HEAD
+        OUTPUT_VARIABLE PIINPUT_DETECTED_COMMIT_ID
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE PIINPUT_COMMIT_ID_RESULT
+    )
+    if(PIINPUT_COMMIT_ID_RESULT EQUAL 0 AND PIINPUT_DETECTED_COMMIT_ID)
+        set(PIINPUT_GIT_COMMIT_ID "${PIINPUT_DETECTED_COMMIT_ID}")
+    endif()
+endif()
 if(NOT PIINPUT_BUILD_REVISION)
-    find_package(Git QUIET)
     if(GIT_FOUND)
         execute_process(
             COMMAND "${GIT_EXECUTABLE}" -C "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -41,7 +54,11 @@ if(NOT PIINPUT_BUILD_REVISION)
     set(PIINPUT_BUILD_REVISION "source")
 endif()
 set(PIINPUT_BUILD_ID "${PROJECT_VERSION}+${PIINPUT_BUILD_REVISION}")
+string(TIMESTAMP PIINPUT_BUILD_TIME_UTC "%Y-%m-%d %H:%M:%S UTC" UTC)
+set(PIINPUT_CONTACT "https://github.com/yakoye/PiInput")
 message(STATUS "PiInput exact build id: ${PIINPUT_BUILD_ID}")
+message(STATUS "PiInput commit id: ${PIINPUT_GIT_COMMIT_ID}")
+message(STATUS "PiInput build time: ${PIINPUT_BUILD_TIME_UTC}")
 
 set(PIINPUT_BUNDLED_LEXICON "")
 if(PIINPUT_TESTDATA_DIR AND EXISTS "${PIINPUT_TESTDATA_DIR}/cache/piinput-base.lex")
@@ -247,7 +264,11 @@ if(WIN32)
         platform/windows/installer
     )
     target_compile_definitions(PiInputTSF PRIVATE
-        PIINPUT_VERSION="${PROJECT_VERSION}")
+        PIINPUT_VERSION="${PROJECT_VERSION}"
+        PIINPUT_BUILD_ID="${PIINPUT_BUILD_ID}"
+        PIINPUT_BUILD_TIME_UTC="${PIINPUT_BUILD_TIME_UTC}"
+        PIINPUT_GIT_COMMIT_ID="${PIINPUT_GIT_COMMIT_ID}"
+        PIINPUT_CONTACT="${PIINPUT_CONTACT}")
     target_link_libraries(PiInputTSF PRIVATE
         piinput_host_protocol
         ole32

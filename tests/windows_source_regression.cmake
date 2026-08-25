@@ -1313,6 +1313,15 @@ if(NOT settings_main_text MATCHES "中文时使用英文标点")
     message(FATAL_ERROR
         "PiInput Settings must expose the Chinese-input English-punctuation option")
 endif()
+if(NOT cmake_text MATCHES "PIINPUT_BUILD_TIME_UTC" OR
+   NOT cmake_text MATCHES "PIINPUT_GIT_COMMIT_ID" OR
+   NOT stable_text_service_text MATCHES "构建时间：" OR
+   NOT stable_text_service_text MATCHES "Git Commit：" OR
+   NOT stable_text_service_text MATCHES "联系方式：" OR
+   NOT stable_text_service_text MATCHES "PIINPUT_CONTACT")
+    message(FATAL_ERROR
+        "PiInput About must expose build time, exact Git commit id, and contact information")
+endif()
 if(NOT stable_text_service_header_text MATCHES "smart_punctuation_enabled_" OR
    NOT stable_text_service_text MATCHES "punctuation_mode != \"english\"" OR
    NOT stable_text_service_text MATCHES "punctuation_mode != \"programmer\"" OR

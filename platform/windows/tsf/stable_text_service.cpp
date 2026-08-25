@@ -2015,9 +2015,16 @@ void TextService::on_lang_bar_command(const LangBarCommand command) noexcept {
         return;
     }
     case LangBarCommand::about: {
-        const std::string version(PIINPUT_VERSION);
+        const auto widen_ascii = [](const char* const value) {
+            const std::string text(value);
+            return std::wstring(text.begin(), text.end());
+        };
         const std::wstring about =
-            L"PiInput " + std::wstring(version.begin(), version.end()) + L"\n\n"
+            L"PiInput " + widen_ascii(PIINPUT_VERSION) + L"\n\n"
+            L"构建标识：" + widen_ascii(PIINPUT_BUILD_ID) + L"\n"
+            L"构建时间：" + widen_ascii(PIINPUT_BUILD_TIME_UTC) + L"\n"
+            L"Git Commit：" + widen_ascii(PIINPUT_GIT_COMMIT_ID) + L"\n"
+            L"联系方式：" + widen_ascii(PIINPUT_CONTACT) + L"\n\n"
             L"轻量、快速、纯离线的中文输入法。\n"
             L"不含 AI、语音、广告与云端联想。";
         MessageBoxW(nullptr, about.c_str(), L"关于 PiInput", MB_OK | MB_ICONINFORMATION);
