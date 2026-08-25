@@ -3,6 +3,7 @@ if(NOT DEFINED PIINPUT_SOURCE_DIR)
 endif()
 
 file(READ "${PIINPUT_SOURCE_DIR}/CMakeLists.txt" cmake_text)
+file(READ "${PIINPUT_SOURCE_DIR}/.gitattributes" gitattributes_text)
 file(READ "${PIINPUT_SOURCE_DIR}/build.ps1" build_script_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/profile_tool.cpp" profile_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/profile_registration.h" registration_text)
@@ -43,6 +44,28 @@ file(READ "${PIINPUT_SOURCE_DIR}/src/host_session.cpp" host_session_text)
 file(READ "${PIINPUT_SOURCE_DIR}/src/engine.cpp" engine_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/diagnostics/main.cpp" diagnostics_main_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/settings/main.cpp" settings_main_text)
+
+foreach(required_portable_checkout_rule IN ITEMS
+        "* text=auto eol=lf"
+        "*.bat text eol=crlf"
+        "*.cmd text eol=crlf")
+    string(FIND "${gitattributes_text}" "${required_portable_checkout_rule}"
+        portable_checkout_rule_position)
+    if(portable_checkout_rule_position EQUAL -1)
+        message(FATAL_ERROR
+            "Portable checkout rule is missing: ${required_portable_checkout_rule}")
+    endif()
+endforeach()
+foreach(required_utf8_test_shell_marker IN ITEMS
+        "find_program(PIINPUT_POWERSHELL_EXECUTABLE NAMES pwsh)"
+        "if(NOT PIINPUT_POWERSHELL_EXECUTABLE)")
+    string(FIND "${cmake_text}" "${required_utf8_test_shell_marker}"
+        utf8_test_shell_marker_position)
+    if(utf8_test_shell_marker_position EQUAL -1)
+        message(FATAL_ERROR
+            "UTF-8 test shell marker is missing: ${required_utf8_test_shell_marker}")
+    endif()
+endforeach()
 
 if(NOT diagnostics_main_text MATCHES "CoInitializeEx" OR
    NOT diagnostics_main_text MATCHES "CoUninitialize")

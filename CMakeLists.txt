@@ -833,14 +833,20 @@ if(PIINPUT_BUILD_TESTS)
             -P ${CMAKE_SOURCE_DIR}/tests/release_metadata_regression.cmake
     )
     if(WIN32)
+        # The test suite contains UTF-8 source and fixtures. Prefer PowerShell 7,
+        # whose script/input defaults are UTF-8, and retain Windows PowerShell
+        # only as a fallback for developer machines that do not have pwsh.
+        find_program(PIINPUT_POWERSHELL_EXECUTABLE NAMES pwsh)
         set(
             PIINPUT_SYSTEM_POWERSHELL
             "$ENV{SystemRoot}/System32/WindowsPowerShell/v1.0/powershell.exe"
         )
-        if(EXISTS "${PIINPUT_SYSTEM_POWERSHELL}")
-            set(PIINPUT_POWERSHELL_EXECUTABLE "${PIINPUT_SYSTEM_POWERSHELL}")
-        else()
-            find_program(PIINPUT_POWERSHELL_EXECUTABLE NAMES pwsh powershell REQUIRED)
+        if(NOT PIINPUT_POWERSHELL_EXECUTABLE)
+            if(EXISTS "${PIINPUT_SYSTEM_POWERSHELL}")
+                set(PIINPUT_POWERSHELL_EXECUTABLE "${PIINPUT_SYSTEM_POWERSHELL}")
+            else()
+                find_program(PIINPUT_POWERSHELL_EXECUTABLE NAMES powershell REQUIRED)
+            endif()
         endif()
         set(PIINPUT_HOST_PERFORMANCE_ARGS)
         if(EXISTS "${PIINPUT_TESTDATA_DIR}/cache/piinput-base.lex")
