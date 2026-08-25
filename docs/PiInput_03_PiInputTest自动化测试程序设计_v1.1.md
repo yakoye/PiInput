@@ -1,7 +1,7 @@
 # PiInputTest 自动化测试程序设计
 
-> Automation Harness Design · v1.2
-> 更新日期：2026-08-25
+> Automation Harness Design · v1.3
+> 更新日期：2026-08-26
 
 ## 修改记录
 
@@ -10,6 +10,7 @@
 | v1.0 | 初版，提出独立自动化框架 | 2026-08-23 |
 | v1.1 | 改为增量建设：复用现有 CTest、Host fixture、PowerShell 回归、诊断和发布脚本；补充 Smart Punctuation、包闭环、资源曲线与真实宿主分层 | 2026-08-23 |
 | v1.2 | 将候选启动动作、设置往返、异步 edit 时序和随包工具资产纳入现有测试层 | 2026-08-25 |
+| v1.3 | 增加动态快捷表、英文动作候选、旧配置迁移、模板数据和参数化 Shell 启动测试 | 2026-08-26 |
 
 ## 1. 设计结论
 
@@ -169,6 +170,9 @@ L1/L3 需要验证：
 - 下一数字与标点原子有序；
 - Backspace/Esc/focus/context destroy 清理正确；
 - 不修改不属于 PiInput 的已提交 range。
+- 英文候选开启时注入动作候选但保持 typed candidate 第一；关闭时 Host 与 Shim 继续使用逐键直提交通道，不为别名增加等待窗口。
+- 配置回归生成 0、1、6、64 行和旧三槽样本，验证 `count`、图标 UTF-8、逗号别名、删除后 stale key、非法位置及最大容量。
+- 设置源码回归检查 ListView 五列、添加/编辑/删除、96 项模板、Everything 非分发边界和 `shell:program|arguments` 启动协议。
 
 ### 8.3 真实宿主
 

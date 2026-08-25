@@ -117,6 +117,12 @@ void test_defaults_and_round_trip() {
         "default command hotkey avoids the VS Code terminal shortcut");
     check(!defaults.commands.middle_dot_alias,
         "middle-dot command aliases are opt-in");
+    check(defaults.custom_shortcuts.size() == 6U &&
+            defaults.custom_shortcuts[0].aliases == "fh,fuhao,fuh,fuhc" &&
+            defaults.custom_shortcuts[0].icon == "Ω" &&
+            defaults.custom_shortcuts[3].target == "system:calculator" &&
+            defaults.custom_shortcuts[5].target == "system:mspaint",
+        "default shortcut table exposes all built-in tools as editable rows");
     check(defaults.punctuation == piinput::PunctuationMode::chinese, "default punctuation mode");
     check(defaults.punctuation_bracket_style == piinput::PunctuationBracketStyle::sogou,
         "default Chinese bracket style follows Sogou");
@@ -168,8 +174,10 @@ void test_valid_values_and_boundaries() {
         "hotkey=ctrl_grave\n"
         "middle_dot_alias=true\n"
         "[shortcuts]\n"
+        "count=1\n"
         "aliases_1=git, github\n"
         "position_1=4\n"
+        "icon_1=🌐\n"
         "name_1=GitHub\n"
         "target_1=https://github.com\n"
         "[punctuation]\n"
@@ -213,6 +221,7 @@ void test_valid_values_and_boundaries() {
         "middle-dot aliases can be explicitly enabled");
     check(parsed.settings.custom_shortcuts[0].aliases == "git, github" &&
             parsed.settings.custom_shortcuts[0].position == 4U &&
+            parsed.settings.custom_shortcuts[0].icon == "🌐" &&
             parsed.settings.custom_shortcuts[0].name == "GitHub" &&
             parsed.settings.custom_shortcuts[0].target == "https://github.com",
         "custom shortcut aliases, position, name, and target parse together");
@@ -234,11 +243,30 @@ void test_valid_values_and_boundaries() {
         "removed programmer punctuation migrates to its identical English behavior");
 
     const auto invalid_shortcut = piinput::parse_settings_text(
-        "[shortcuts]\naliases_1=bad!alias\nposition_1=10\n", previous);
+        "[shortcuts]\ncount=1\naliases_1=bad!alias\nposition_1=10\n", previous);
     check(invalid_shortcut.errors.size() == 2U &&
             invalid_shortcut.settings.custom_shortcuts[0] ==
                 previous.custom_shortcuts[0],
         "invalid shortcut aliases and candidate positions retain prior values");
+
+    const auto legacy_shortcut = piinput::parse_settings_text(
+        "[shortcuts]\n"
+        "aliases_1=github,gh\n"
+        "position_1=4\n"
+        "name_1=GitHub\n"
+        "target_1=https://github.com\n",
+        previous);
+    check(legacy_shortcut.errors.empty() &&
+            legacy_shortcut.settings.custom_shortcuts.size() == 7U &&
+            legacy_shortcut.settings.custom_shortcuts.back().aliases == "github,gh" &&
+            legacy_shortcut.settings.custom_shortcuts.back().target == "https://github.com",
+        "legacy three-slot settings append user rows after the new built-in table");
+
+    const auto cleared_shortcuts = piinput::parse_settings_text(
+        "[shortcuts]\ncount=0\n", previous);
+    check(cleared_shortcuts.errors.empty() &&
+            cleared_shortcuts.settings.custom_shortcuts.empty(),
+        "an explicit zero count keeps a user-deleted shortcut table empty");
 
     const auto minimum_visuals = piinput::parse_settings_text(
         "[candidates]\nfont_size=10\nwindow_height=20\n", previous);

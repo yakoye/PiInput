@@ -30,3 +30,9 @@ PiInput 不提取或重新分发已安装商业输入法的内部基础词库。
 本体采用 MIT License。其嵌入的 Twemoji 图形采用 CC BY 4.0，Unicode/CLDR
 数据适用 Unicode License，完整许可证、第三方声明和来源哈希位于
 `bin/licenses/YeSymbol/`。
+
+`PiInput-Settings.exe` 中的 Windows 系统工具模板库改编自用户提供的
+YeTool `yetool-dev` 模板数据。YeTool 采用 MIT License，原版权声明为
+`Copyright (c) 2026 PathCopy contributors`。PiInput 仅复用模板的分类、名称、
+目标和参数数据，并将其转换为可编辑的快捷调用条目；不会随包分发 YeTool 或
+Everything 程序本体。

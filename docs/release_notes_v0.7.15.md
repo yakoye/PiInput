@@ -22,7 +22,10 @@ v0.7.15 汇总 v0.7.12 之后完成的输入可靠性、Windows 系统宿主、�
 - `fh/fuhao/fuh/fuhc`、`bq/biaoqing/biaoq/bnqk/bnq`、`shizhi/uevi/sz/shiz/uev` 的候选 2 分别打开符号、表情和设置。
 - `jisuanqi/jisrqi/jsq/jisrq/calc/reg` 的候选 2 打开 Windows 计算器，候选 3 打开随包程序员计算器。
 - `hxtu/ht/huatu/mspaint/msp` 的候选 2 打开 Windows 画图。“快捷/kuaijie”不是触发码。
-- 设置新增 3 组自定义快捷调用，可设置多个字母触发码、候选位置、名称以及 EXE、HTML、文件、URL 或 `cmd:` 命令目标。
+- “快捷调用”改为可增删表格，统一显示触发码、候选位置、图标、名称和调用程序；现有符号、表情、设置、两个计算器及画图入口均作为默认行可见、可编辑、可删除，最多 64 项。
+- 多个触发码使用逗号分隔。开启英文候选时，原始英文保持候选 1，快捷动作按表格位置出现；关闭英文候选时完全直输，需要调用快捷项可按 Shift 切回中文。
+- 设置内置可搜索、可按分类筛选的 Windows 工具模板库：95 项系统入口及 Everything。模板不会自动加入候选，导入后先填写触发码，再成为普通可编辑行；不随包分发 Everything 本体。
+- 调用目标支持 EXE、HTML、普通文件、URL、`ms-settings:`、环境变量路径、`cmd:` 命令以及带独立参数的 `shell:程序|参数`。
 - `RegCalc64Tool.html`、`shared-ui.css`、`shared-ui.js` 随包直接安装到活动版本 `bin`。
 
 ## 安装与诊断

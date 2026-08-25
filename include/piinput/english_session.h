@@ -20,7 +20,8 @@ public:
     explicit EnglishSession(
         EnglishLexicon& lexicon,
         std::size_t candidate_limit = 90U,
-        bool learning_enabled = true);
+        bool learning_enabled = true,
+        std::vector<CustomShortcutSettings> shortcuts = {});
 
     [[nodiscard]] static bool should_start(
         bool english_mode,
@@ -39,6 +40,7 @@ public:
     [[nodiscard]] const EnglishSessionSnapshot& snapshot() const noexcept;
     [[nodiscard]] const std::string& raw_input() const noexcept;
     [[nodiscard]] std::optional<std::string> candidate(std::size_t index) const;
+    [[nodiscard]] std::optional<std::string> action_target(std::size_t index) const;
     [[nodiscard]] std::optional<std::string> choose(std::size_t index);
     void restore(EnglishSessionSnapshot snapshot);
 
@@ -48,6 +50,7 @@ private:
     EnglishLexicon* lexicon_{};
     std::size_t candidate_limit_{90U};
     bool learning_enabled_{true};
+    std::vector<CustomShortcutSettings> shortcuts_;
     EnglishSessionSnapshot snapshot_;
 };
 

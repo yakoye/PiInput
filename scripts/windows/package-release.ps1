@@ -38,6 +38,7 @@ foreach ($required in @(
     (Join-Path $Dist "bin/licenses/YeSymbol/LICENSE"),
     (Join-Path $Dist "bin/licenses/YeSymbol/THIRD_PARTY_NOTICES.md"),
     (Join-Path $Dist "bin/licenses/YeSymbol/PROVENANCE.md"),
+    (Join-Path $Dist "bin/licenses/YeTool/LICENSE"),
     (Join-Path $Dist "bin/RegCalc64Tool.html"),
     (Join-Path $Dist "bin/shared-ui.css"),
     (Join-Path $Dist "bin/shared-ui.js"),

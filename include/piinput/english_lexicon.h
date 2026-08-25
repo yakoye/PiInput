@@ -27,6 +27,8 @@ struct EnglishCandidate {
     std::uint64_t learning_count{};
     bool user_entry{};
     std::uint32_t flags{};
+    // Non-empty only for a settings-defined shortcut candidate.
+    std::string action_target;
 
     bool operator==(const EnglishCandidate&) const = default;
 };

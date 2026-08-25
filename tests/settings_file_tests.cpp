@@ -185,7 +185,7 @@ void test_every_option_round_trips_without_disturbing_the_file() {
     loaded.english.items_per_row = 7U;
     loaded.general.symbol_tool = "D:/tools/yesymbol.exe";
     loaded.custom_shortcuts[0] = {
-        "calc,jsq", 3U, "My calculator", "D:/tools/calc.html"};
+        "calc,jsq", 3U, "🧮", "My calculator", "D:/tools/calc.html"};
     check(piinput::windows::save_all_settings_atomic(path, loaded, error),
         "every option saves");
 
@@ -210,7 +210,7 @@ void test_every_option_round_trips_without_disturbing_the_file() {
     check(reloaded.general.symbol_tool == "D:/tools/yesymbol.exe",
         "the tray's symbol tool path round trips");
     check(reloaded.custom_shortcuts[0] == loaded.custom_shortcuts[0],
-        "custom shortcut aliases, position, name, and target round trip");
+        "shortcut aliases, position, icon, name, and target round trip");
 
     const auto text = read_text(path);
     check(text.find("# a comment the user wrote") != std::string::npos,
@@ -220,8 +220,18 @@ void test_every_option_round_trips_without_disturbing_the_file() {
     check(text.find("[punctuation]") != std::string::npos,
         "a section the file never had is appended");
     check(text.find("[shortcuts]") != std::string::npos &&
+            text.find("count=6") != std::string::npos &&
+            text.find("icon_1=🧮") != std::string::npos &&
             text.find("target_1=D:/tools/calc.html") != std::string::npos,
         "custom shortcut section is appended with its launch target");
+
+    auto shortened = reloaded;
+    shortened.custom_shortcuts.resize(2U);
+    check(piinput::windows::save_all_settings_atomic(path, shortened, error),
+        "a shortened shortcut table saves");
+    const auto shortened_reload = piinput::windows::load_all_settings(path, error);
+    check(shortened_reload.custom_shortcuts.size() == 2U,
+        "shortcut count ignores stale indexed keys after rows are deleted");
     std::filesystem::remove_all(directory);
 }
 

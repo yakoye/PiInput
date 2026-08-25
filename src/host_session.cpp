@@ -85,7 +85,8 @@ HostSession::HostSession(
         : HostInputMode::chinese;
     if (english_lexicon_ != nullptr && settings_.english.enabled) {
         english_ = std::make_unique<EnglishSession>(
-            *english_lexicon_, settings_.candidates.max_items, settings_.english.user_learning);
+            *english_lexicon_, settings_.candidates.max_items,
+            settings_.english.user_learning, settings_.custom_shortcuts);
     }
 }
 
@@ -532,6 +533,18 @@ HostReply HostSession::choose(const std::uint64_t candidate_id) {
         return reply(true, HostAction::commit, text);
     }
     if (mode_ == HostInputMode::english && english_ != nullptr) {
+        const auto action_target = english_->action_target(index);
+        if (action_target.has_value()) {
+            english_->clear();
+            advance_generation(true);
+            if (*action_target == "system:settings") {
+                return reply(true, HostAction::launch_settings);
+            }
+            if (*action_target == "system:symbol_tool") {
+                return reply(true, HostAction::launch_symbol_tool);
+            }
+            return reply(true, HostAction::launch_program, *action_target);
+        }
         chosen = english_->choose(index);
     } else if (symbol_index_ != nullptr &&
                symbol_request_for_input(chinese_.snapshot().input)) {
@@ -560,6 +573,12 @@ HostReply HostSession::choose(const std::uint64_t candidate_id) {
                 chinese_.clear();
                 advance_generation(true);
                 if (kind == CandidateKind::launch_action) {
+                    if (launch_target == "system:settings") {
+                        return reply(true, HostAction::launch_settings);
+                    }
+                    if (launch_target == "system:symbol_tool") {
+                        return reply(true, HostAction::launch_symbol_tool);
+                    }
                     return reply(true, HostAction::launch_program, launch_target);
                 }
                 return reply(true,

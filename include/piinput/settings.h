@@ -2,7 +2,6 @@
 
 #include "piinput/punctuation.h"
 
-#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -92,12 +91,14 @@ struct CommandSettings final {
     bool operator==(const CommandSettings&) const = default;
 };
 
-inline constexpr std::size_t custom_shortcut_count = 3U;
+inline constexpr std::size_t max_custom_shortcuts = 64U;
 
 struct CustomShortcutSettings final {
     // Comma-separated Latin aliases, for example "git,github".
     std::string aliases;
     std::uint32_t position{2U};
+    // Optional text/emoji displayed before the candidate name.
+    std::string icon;
     std::string name;
     // A file, URL or executable opened by Windows. Prefix with "cmd:" to run
     // an explicit command through cmd.exe.
@@ -113,7 +114,7 @@ struct SettingsSnapshot {
     CandidateSettings candidates;
     EnglishSettings english;
     CommandSettings commands;
-    std::array<CustomShortcutSettings, custom_shortcut_count> custom_shortcuts;
+    std::vector<CustomShortcutSettings> custom_shortcuts;
     PunctuationMode punctuation{PunctuationMode::chinese};
     PunctuationBracketStyle punctuation_bracket_style{PunctuationBracketStyle::sogou};
 
@@ -127,6 +128,14 @@ struct SettingsParseResult {
 };
 
 [[nodiscard]] SettingsSnapshot default_settings();
+[[nodiscard]] std::vector<CustomShortcutSettings> default_custom_shortcuts();
+[[nodiscard]] bool shortcut_alias_matches(
+    std::string_view aliases,
+    std::string_view key) noexcept;
+[[nodiscard]] std::string shortcut_candidate_label(
+    const CustomShortcutSettings& shortcut);
+[[nodiscard]] std::string shortcut_action_target(
+    const CustomShortcutSettings& shortcut);
 [[nodiscard]] SettingsParseResult parse_settings_text(
     std::string_view text,
     const SettingsSnapshot& previous);

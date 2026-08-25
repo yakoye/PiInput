@@ -49,6 +49,10 @@ if(NOT cmake_text MATCHES "PIINPUT_YESYMBOL_DIR" OR
    NOT windows_package_text MATCHES "bin/licenses/YeSymbol/THIRD_PARTY_NOTICES\\.md")
     message(FATAL_ERROR "Windows release must require the pinned YeSymbol runtime and its notices")
 endif()
+if(NOT cmake_text MATCHES "third_party/YeTool/LICENSE" OR
+   NOT windows_package_text MATCHES "bin/licenses/YeTool/LICENSE")
+    message(FATAL_ERROR "Windows release must retain the MIT notice for adapted YeTool templates")
+endif()
 if(NOT build_text MATCHES "PiInput-Install\\.exe")
     message(FATAL_ERROR "Build artifact verification must require PiInput-Install.exe")
 endif()

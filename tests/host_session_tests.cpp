@@ -1272,6 +1272,21 @@ void test_optional_english_session_uses_the_same_host_boundary() {
             snapshot.candidates[1].text == "really" &&
             snapshot.candidates[2].text == "remember",
         "English prefix candidates cross the same process-independent boundary");
+    (void)session.apply({.kind = piinput::HostKeyKind::escape});
+    type(session, "calc");
+    const auto shortcuts = session.snapshot();
+    check(shortcuts.candidates.size() >= 3U &&
+            shortcuts.candidates[0].text == "calc" &&
+            shortcuts.candidates[1].text == "🖩计算器" &&
+            shortcuts.candidates[2].text == "🖩程序员计算器",
+        "enabled English candidates keep typed text first and expose configured shortcuts");
+    const auto calculator = session.apply({
+        .kind = piinput::HostKeyKind::select_digit,
+        .character = '2',
+    });
+    check(calculator.accepted && calculator.action == piinput::HostAction::launch_program &&
+            calculator.text == "system:calculator" && calculator.snapshot.raw.empty(),
+        "English shortcut selection launches without committing its label");
     std::filesystem::remove(english_path);
 }
 
@@ -1462,7 +1477,7 @@ void test_candidate_two_launches_tools_without_committing_the_label() {
 
     auto custom_settings = piinput::default_settings();
     custom_settings.custom_shortcuts[0] = {
-        "github,gh", 2U, "🌐GitHub", "https://github.com"};
+        "github,gh", 2U, "🌐", "GitHub", "https://github.com"};
     piinput::HostSession custom_session(engine, nullptr, custom_settings, "full");
     type(custom_session, "github");
     const auto custom = custom_session.apply({

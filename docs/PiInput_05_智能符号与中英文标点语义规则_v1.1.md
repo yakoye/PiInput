@@ -1,8 +1,8 @@
 # PiInput 智能符号与中英文标点语义规则
 
-> Smart Punctuation & Semantic Disambiguation Specification · v1.2
+> Smart Punctuation & Semantic Disambiguation Specification · v1.3
 > 状态：产品与实现规范  
-> 更新日期：2026-08-25
+> 更新日期：2026-08-26
 
 ## 修改记录
 
@@ -11,6 +11,7 @@
 | v1.0 | 初版，定义中文/ASCII 标点的混合语义 | 2026-08-23 |
 | v1.1 | 结合现有 TSF/Host 实现重写；定义临时判定状态、跨宿主约束、隐私边界、实现分层、规则编号和发布用例 | 2026-08-23 |
 | v1.2 | 增加候选工具动作、自定义快捷调用和随包程序员计算器边界 | 2026-08-25 |
+| v1.3 | 将内置动作纳入统一快捷表，增加英文候选调用和 Windows 工具模板边界 | 2026-08-26 |
 
 ## 1. 规范结论
 
@@ -58,7 +59,9 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 | 决策 reason code 与结构化日志 | 已实现 | `smart_context_source`、`smart_context`、`smart_punctuation`、`smart_resolution` 已进入隔离 trace |
 | 多真实宿主语义矩阵 | 部分完成 | Notepad++ 已完成；ChatGPT、浏览器、Windows 搜索、Office、VS Code 仍需加载同一新 Shim 验收；Windows 搜索另要求 HKLM COM 可见 |
 | 符号/表情/设置功能候选 | 已实现组件层，真实宿主待验收 | 全拼与小鹤原始别名的候选 2 分别显示 `Ω符号`、`😜表情`、`⚙️设置`；选择后先完成 TSF cancel edit，再启动 `yesymbol.exe` 或设置程序，失败时不抢焦点也不丢组合 |
-| 计算器/画图/自定义调用候选 | 已实现组件层，真实宿主待验收 | 计算器候选 2/3、画图候选 2 和 3 个自定义设置槽共用 launch action；只有 cancel edit 成功后才启动；随包 RegCalc 三项资产进入包门禁 |
+| 统一快捷调用候选 | 已实现组件层，真实宿主待验收 | 6 个内置入口与 0～64 行用户配置共用 launch action；表格保存触发码、位置、图标、名称和目标；只有 cancel edit 成功后才启动；随包 RegCalc 三项资产进入包门禁 |
+| 英文模式快捷调用 | 已实现组件层，真实宿主待验收 | 仅在英文候选开启时注入，typed candidate 固定第一；关闭英文候选时不截获字母，用户按 Shift 切中文调用 |
+| Windows 工具模板 | 已实现设置层，真实启动待验收 | 95 个系统模板和 Everything 作为可选库，导入后才成为普通行；程序和参数分离；不分发第三方程序本体 |
 
 已实现能力可以按组件和 Notepad++ 证据写为通过，但在跨宿主矩阵完成前不得把整个 Smart Punctuation Gate 写成通过。
 

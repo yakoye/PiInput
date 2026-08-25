@@ -28,10 +28,12 @@ namespace {
 EnglishSession::EnglishSession(
     EnglishLexicon& lexicon,
     const std::size_t candidate_limit,
-    const bool learning_enabled)
+    const bool learning_enabled,
+    std::vector<CustomShortcutSettings> shortcuts)
     : lexicon_(&lexicon),
       candidate_limit_(candidate_limit),
-      learning_enabled_(learning_enabled) {}
+      learning_enabled_(learning_enabled),
+      shortcuts_(std::move(shortcuts)) {}
 
 bool EnglishSession::should_start(
     const bool english_mode,
@@ -128,12 +130,20 @@ std::optional<std::string> EnglishSession::candidate(const std::size_t index) co
     return snapshot_.candidates[index].word;
 }
 
+std::optional<std::string> EnglishSession::action_target(const std::size_t index) const {
+    if (index >= snapshot_.candidates.size() ||
+        snapshot_.candidates[index].action_target.empty()) {
+        return std::nullopt;
+    }
+    return snapshot_.candidates[index].action_target;
+}
+
 std::optional<std::string> EnglishSession::choose(const std::size_t index) {
     if (index >= snapshot_.candidates.size()) {
         return std::nullopt;
     }
     const std::string result = snapshot_.candidates[index].word;
-    if (learning_enabled_) {
+    if (learning_enabled_ && snapshot_.candidates[index].action_target.empty()) {
         const bool recorded = lexicon_->record_selection(result);
         (void)recorded;
     }
@@ -159,6 +169,7 @@ void EnglishSession::refresh() {
         0U,
         false,
         static_cast<std::uint32_t>(EnglishCandidateFlag::typed),
+        {},
     };
     const auto exact = std::find_if(candidates.begin(), candidates.end(), [&](const auto& item) {
         return ascii_case_equal(item.word, snapshot_.input);
@@ -171,6 +182,37 @@ void EnglishSession::refresh() {
         candidates.erase(exact);
     }
     candidates.insert(candidates.begin(), std::move(typed));
+    struct MatchedShortcut final {
+        std::size_t position{};
+        std::size_t order{};
+        EnglishCandidate candidate;
+    };
+    std::vector<MatchedShortcut> matched;
+    for (std::size_t index = 0U; index < shortcuts_.size(); ++index) {
+        const auto& shortcut = shortcuts_[index];
+        if (shortcut.aliases.empty() || shortcut.name.empty() || shortcut.target.empty() ||
+            !shortcut_alias_matches(shortcut.aliases, snapshot_.input)) {
+            continue;
+        }
+        EnglishCandidate action;
+        action.word = shortcut_candidate_label(shortcut);
+        action.base_weight = (std::numeric_limits<std::uint64_t>::max)();
+        action.action_target = shortcut_action_target(shortcut);
+        matched.push_back({static_cast<std::size_t>(shortcut.position), index,
+            std::move(action)});
+    }
+    std::stable_sort(matched.begin(), matched.end(), [](const auto& left, const auto& right) {
+        if (left.position != right.position) return left.position < right.position;
+        return left.order < right.order;
+    });
+    for (auto iterator = matched.rbegin(); iterator != matched.rend(); ++iterator) {
+        auto& action = *iterator;
+        if (action.position == 0U || action.position > candidate_limit_) continue;
+        if (candidates.size() >= candidate_limit_) candidates.pop_back();
+        const std::size_t at = (std::min)(action.position - 1U, candidates.size());
+        candidates.insert(candidates.begin() + static_cast<std::ptrdiff_t>(at),
+            std::move(action.candidate));
+    }
     if (candidates.size() > candidate_limit_) {
         candidates.resize(candidate_limit_);
     }

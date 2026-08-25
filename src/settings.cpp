@@ -423,54 +423,179 @@ void parse_commands(
     });
 }
 
+struct ShortcutAssignment final {
+    bool touched{};
+    std::optional<std::string> aliases;
+    std::optional<std::uint32_t> position;
+    std::optional<std::string> icon;
+    std::optional<std::string> name;
+    std::optional<std::string> target;
+};
+
+struct ShortcutAssignments final {
+    std::optional<std::size_t> count;
+    bool saw_indexed_key{};
+    std::array<ShortcutAssignment, max_custom_shortcuts> rows;
+};
+
 void parse_shortcuts(
     SettingsParseResult& result,
     const std::string_view key,
     const std::string_view value,
-    const std::size_t line) {
-    for (std::size_t index = 0U; index < custom_shortcut_count; ++index) {
-        const std::string suffix = "_" + std::to_string(index + 1U);
-        auto& shortcut = result.settings.custom_shortcuts[index];
-        if (key == "aliases" + suffix) {
-            if (!valid_shortcut_aliases(value)) {
-                add_error(result, line, "shortcuts", key, "invalid aliases");
-            } else {
-                shortcut.aliases = std::string(value);
-            }
-            return;
+    const std::size_t line,
+    ShortcutAssignments& assignments) {
+    if (key == "count") {
+        const auto parsed = parse_integer(value);
+        if (!parsed || *parsed > max_custom_shortcuts) {
+            add_error(result, line, "shortcuts", key, "count must be 0 through 64");
+        } else {
+            assignments.count = static_cast<std::size_t>(*parsed);
         }
-        if (key == "position" + suffix) {
-            const auto parsed = parse_integer(value);
-            if (!parsed || *parsed < 2U || *parsed > 9U) {
-                add_error(result, line, "shortcuts", key, "position must be 2 through 9");
-            } else {
-                shortcut.position = *parsed;
-            }
-            return;
+        return;
+    }
+
+    const auto separator = key.rfind('_');
+    if (separator == std::string_view::npos || separator + 1U == key.size()) return;
+    const auto parsed_index = parse_integer(key.substr(separator + 1U));
+    if (!parsed_index || *parsed_index == 0U || *parsed_index > max_custom_shortcuts) {
+        add_error(result, line, "shortcuts", key, "shortcut index must be 1 through 64");
+        return;
+    }
+    const std::string_view field = key.substr(0U, separator);
+    auto& row = assignments.rows[static_cast<std::size_t>(*parsed_index - 1U)];
+    assignments.saw_indexed_key = true;
+    row.touched = true;
+    if (field == "aliases") {
+        if (!valid_shortcut_aliases(value)) {
+            add_error(result, line, "shortcuts", key, "invalid aliases");
+        } else {
+            row.aliases = std::string(value);
         }
-        if (key == "name" + suffix) {
-            if (value.size() > 96U) {
-                add_error(result, line, "shortcuts", key, "name is too long");
-            } else {
-                shortcut.name = std::string(value);
-            }
-            return;
+    } else if (field == "position") {
+        const auto parsed = parse_integer(value);
+        if (!parsed || *parsed < 2U || *parsed > 9U) {
+            add_error(result, line, "shortcuts", key, "position must be 2 through 9");
+        } else {
+            row.position = *parsed;
         }
-        if (key == "target" + suffix) {
-            if (value.size() > 2048U) {
-                add_error(result, line, "shortcuts", key, "target is too long");
-            } else {
-                shortcut.target = std::string(value);
-            }
-            return;
+    } else if (field == "icon") {
+        if (value.size() > 32U) {
+            add_error(result, line, "shortcuts", key, "icon is too long");
+        } else {
+            row.icon = std::string(value);
+        }
+    } else if (field == "name") {
+        if (value.size() > 96U) {
+            add_error(result, line, "shortcuts", key, "name is too long");
+        } else {
+            row.name = std::string(value);
+        }
+    } else if (field == "target") {
+        if (value.size() > 2048U) {
+            add_error(result, line, "shortcuts", key, "target is too long");
+        } else {
+            row.target = std::string(value);
         }
     }
 }
 
+void apply_shortcut_assignments(
+    SettingsParseResult& result,
+    const SettingsSnapshot& previous,
+    const ShortcutAssignments& assignments) {
+    if (!assignments.count.has_value() && !assignments.saw_indexed_key) return;
+
+    std::vector<CustomShortcutSettings> rows;
+    if (assignments.count.has_value()) {
+        rows.resize(*assignments.count);
+        for (std::size_t index = 0U; index < rows.size(); ++index) {
+            if (index < previous.custom_shortcuts.size()) {
+                rows[index] = previous.custom_shortcuts[index];
+            }
+        }
+    } else {
+        // v0.7.14 and v0.7.15 stored three user-only slots without a count.
+        // Preserve the new built-in rows and append every non-empty legacy row.
+        rows = default_custom_shortcuts();
+    }
+
+    const std::size_t limit = assignments.count.value_or(max_custom_shortcuts);
+    for (std::size_t index = 0U; index < limit; ++index) {
+        const auto& source = assignments.rows[index];
+        if (!source.touched) continue;
+        CustomShortcutSettings value;
+        if (assignments.count.has_value()) value = rows[index];
+        if (source.aliases) value.aliases = *source.aliases;
+        if (source.position) value.position = *source.position;
+        if (source.icon) value.icon = *source.icon;
+        if (source.name) value.name = *source.name;
+        if (source.target) value.target = *source.target;
+        if (assignments.count.has_value()) {
+            rows[index] = std::move(value);
+        } else if (!value.aliases.empty() || !value.icon.empty() ||
+                   !value.name.empty() || !value.target.empty()) {
+            if (rows.size() < max_custom_shortcuts) rows.push_back(std::move(value));
+        }
+    }
+    result.settings.custom_shortcuts = std::move(rows);
+}
+
 }  // namespace
 
+std::vector<CustomShortcutSettings> default_custom_shortcuts() {
+    return {
+        {"fh,fuhao,fuh,fuhc", 2U, "Ω", "符号", "system:symbol_tool"},
+        {"bq,biaoqing,biaoq,bnqk,bnq", 2U, "😜", "表情", "system:symbol_tool"},
+        {"shizhi,uevi,sz,shiz,uev", 2U, "⚙️", "设置", "system:settings"},
+        {"jisuanqi,jisrqi,jsq,jisrq,calc,reg", 2U, "🖩", "计算器",
+            "system:calculator"},
+        {"jisuanqi,jisrqi,jsq,jisrq,calc,reg", 3U, "🖩", "程序员计算器",
+            "package:regcalc64"},
+        {"hxtu,ht,huatu,mspaint,msp", 2U, "🎨", "画图", "system:mspaint"},
+    };
+}
+
+bool shortcut_alias_matches(
+    const std::string_view aliases,
+    const std::string_view key) noexcept {
+    std::string normalized_key(key);
+    std::transform(normalized_key.begin(), normalized_key.end(), normalized_key.begin(),
+        [](const unsigned char ch) {
+            return static_cast<char>(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch);
+        });
+    std::size_t offset = 0U;
+    while (offset < aliases.size()) {
+        const auto separator = aliases.find_first_of(",; \t", offset);
+        std::string alias(aliases.substr(offset,
+            separator == std::string_view::npos
+                ? std::string_view::npos : separator - offset));
+        std::transform(alias.begin(), alias.end(), alias.begin(), [](const unsigned char ch) {
+            return static_cast<char>(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch);
+        });
+        if (alias == normalized_key) return true;
+        if (separator == std::string_view::npos) break;
+        offset = separator + 1U;
+    }
+    return false;
+}
+
+std::string shortcut_candidate_label(const CustomShortcutSettings& shortcut) {
+    return shortcut.icon + shortcut.name;
+}
+
+std::string shortcut_action_target(const CustomShortcutSettings& shortcut) {
+    if (shortcut.target.starts_with("system:") ||
+        shortcut.target.starts_with("package:") ||
+        shortcut.target.starts_with("custom:")) {
+        return shortcut.target;
+    }
+    return "custom:" + shortcut.target;
+}
+
 SettingsSnapshot default_settings() {
-    return {};
+    SettingsSnapshot result;
+    result.custom_shortcuts = default_custom_shortcuts();
+    return result;
 }
 
 SettingsParseResult parse_settings_text(
@@ -492,6 +617,7 @@ SettingsParseResult parse_settings_text(
         {previous.candidates.visible_rows, std::nullopt},
         {previous.candidates.max_items, std::nullopt},
     }};
+    ShortcutAssignments shortcut_assignments;
     std::size_t line_number = 0U;
     while (!text.empty()) {
         ++line_number;
@@ -552,7 +678,7 @@ SettingsParseResult parse_settings_text(
         } else if (section == "commands") {
             parse_commands(result, key, value, line_number);
         } else if (section == "shortcuts") {
-            parse_shortcuts(result, key, value, line_number);
+            parse_shortcuts(result, key, value, line_number, shortcut_assignments);
         } else if (section == "punctuation" && key == "mode") {
             assign_parsed(
                 result, result.settings.punctuation, parse_punctuation, value, line_number, "punctuation", key);
@@ -565,12 +691,13 @@ SettingsParseResult parse_settings_text(
         result.settings = previous;
     } else {
         enforce_candidate_screen_size(result, candidate_assignments);
+        apply_shortcut_assignments(result, previous, shortcut_assignments);
     }
     return result;
 }
 
 std::string serialize_default_settings() {
-    return
+    std::string text =
         "[general]\n"
         "schema=flypy\n"
         "default_language=chinese\n"
@@ -604,22 +731,22 @@ std::string serialize_default_settings() {
         "enabled=true\n"
         "hotkey=ctrl_alt_grave\n"
         "middle_dot_alias=false\n"
-        "[shortcuts]\n"
-        "aliases_1=\n"
-        "position_1=2\n"
-        "name_1=\n"
-        "target_1=\n"
-        "aliases_2=\n"
-        "position_2=2\n"
-        "name_2=\n"
-        "target_2=\n"
-        "aliases_3=\n"
-        "position_3=2\n"
-        "name_3=\n"
-        "target_3=\n"
+        "[shortcuts]\n";
+    const auto shortcuts = default_custom_shortcuts();
+    text += "count=" + std::to_string(shortcuts.size()) + "\n";
+    for (std::size_t index = 0U; index < shortcuts.size(); ++index) {
+        const std::string suffix = std::to_string(index + 1U);
+        text += "aliases_" + suffix + "=" + shortcuts[index].aliases + "\n";
+        text += "position_" + suffix + "=" + std::to_string(shortcuts[index].position) + "\n";
+        text += "icon_" + suffix + "=" + shortcuts[index].icon + "\n";
+        text += "name_" + suffix + "=" + shortcuts[index].name + "\n";
+        text += "target_" + suffix + "=" + shortcuts[index].target + "\n";
+    }
+    text +=
         "[punctuation]\n"
         "mode=chinese\n"
         "bracket_style=sogou\n";
+    return text;
 }
 
 }  // namespace piinput

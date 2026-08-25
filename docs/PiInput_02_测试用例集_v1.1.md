@@ -1,7 +1,7 @@
 # PiInput 测试用例集
 
-> Manual + Automated Test Cases · v1.2
-> 更新日期：2026-08-25
+> Manual + Automated Test Cases · v1.3
+> 更新日期：2026-08-26
 
 ## 修改记录
 
@@ -10,6 +10,7 @@
 | v1.0 | 初版 | 2026-08-23 |
 | v1.1 | 按当前自动化能力重分状态；增加智能标点、敏感输入、构建身份、内存映射、签名包闭环和 8h 曲线用例 | 2026-08-23 |
 | v1.2 | 增加计算器、画图、自定义快捷调用、动作时序和随包运行时资产用例 | 2026-08-25 |
+| v1.3 | 增加快捷表、英文候选动作、旧配置迁移、Windows 工具模板和 Everything 边界 | 2026-08-26 |
 
 ## 1. 使用规则
 
@@ -242,8 +243,11 @@
 | IME-EDGE-009 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | 宿主拒绝/延迟最终 cancel edit 时选择功能候选 | 清除失败则恢复原始编码且不启动程序；异步清除成功后才启动；L1 已通过，真实拒绝型宿主待验收 |
 | IME-EDGE-010 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `jisuanqi/jisrqi/jsq/jisrq/calc/reg` | 候选 2 为 Windows 计算器、候选 3 为随包程序员计算器；`kuaijie` 不产生动作；L0/L1 已通过，真实启动待验收 |
 | IME-EDGE-011 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `hxtu/ht/huatu/mspaint/msp` | 候选 2 为 Windows 画图；L0/L1 已通过，真实启动待验收 |
-| IME-EDGE-012 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 设置 3 组触发码、候选位置、名称和 EXE/HTML/URL/`cmd:` 目标 | 设置往返不丢字段；新组合出现动作候选；标签不上屏；失败不清空组合 |
+| IME-EDGE-012 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 在表格添加/编辑/删除 0～64 行“触发码、候选位置、图标、名称、调用程序”；覆盖 EXE/HTML/URL/`ms-settings:`/`cmd:`/`shell:` | 五字段和顺序往返不丢失；删除后 stale key 不复活；动作标签不上屏；失败不清空组合 |
 | IME-EDGE-013 | P1 | AUTO | L1/L2 | IMPLEMENTED | 安装/解包发布候选 | `bin/RegCalc64Tool.html`、`shared-ui.css`、`shared-ui.js` 同时存在并进入包白名单；任一缺失则失败 |
+| IME-EDGE-014 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 开启英文候选输入 `calc`，再关闭英文候选输入相同字母 | 开启时 `calc` 为候选 1、动作位于 2/3；关闭时逐键直输且不被快捷逻辑延迟 |
+| IME-EDGE-015 | P1 | AUTO+MANUAL | L1/L3 | PARTIAL | 搜索/分类选择 Windows 工具或 Everything 模板，填写触发码并保存 | 模板未导入前不污染候选；导入后为普通可编辑行；带参数目标正确启动；Everything 缺失时不崩溃且不随包分发本体 |
+| IME-EDGE-016 | P1 | AUTO | L0/L1 | IMPLEMENTED | 用无 `count` 的旧三槽配置升级，再删除缩短表格 | 旧用户项追加在内置 6 行之后；显式 `count` 决定真实行数，旧索引键不能复活已删除行 |
 
 ## 16. 回归集合
 

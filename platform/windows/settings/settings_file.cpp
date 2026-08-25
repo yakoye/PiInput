@@ -383,6 +383,10 @@ bool save_all_settings_atomic(
     const SettingsSnapshot& settings,
     std::string& error) noexcept {
     error.clear();
+    if (settings.custom_shortcuts.size() > max_custom_shortcuts) {
+        error = "Too many shortcut rows.";
+        return false;
+    }
     const auto boolean = [](const bool value) -> std::string {
         return value ? "true" : "false";
     };
@@ -452,13 +456,15 @@ bool save_all_settings_atomic(
         {"english", "user_learning", boolean(settings.english.user_learning)},
         {"english", "items_per_row", std::to_string(settings.english.items_per_row)},
     };
-    const std::array<std::string_view, custom_shortcut_count> suffixes{"1", "2", "3"};
-    for (std::size_t index = 0U; index < custom_shortcut_count; ++index) {
+    assignments.push_back(
+        {"shortcuts", "count", std::to_string(settings.custom_shortcuts.size())});
+    for (std::size_t index = 0U; index < settings.custom_shortcuts.size(); ++index) {
         const auto& shortcut = settings.custom_shortcuts[index];
-        const std::string suffix(suffixes[index]);
+        const std::string suffix = std::to_string(index + 1U);
         assignments.push_back({"shortcuts", "aliases_" + suffix, shortcut.aliases});
         assignments.push_back(
             {"shortcuts", "position_" + suffix, std::to_string(shortcut.position)});
+        assignments.push_back({"shortcuts", "icon_" + suffix, shortcut.icon});
         assignments.push_back({"shortcuts", "name_" + suffix, shortcut.name});
         assignments.push_back({"shortcuts", "target_" + suffix, shortcut.target});
     }

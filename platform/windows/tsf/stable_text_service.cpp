@@ -1967,6 +1967,27 @@ void TextService::launch_program(const std::string_view target) noexcept {
         (void)ShellExecuteW(nullptr, L"open", L"mspaint.exe", nullptr, nullptr, SW_SHOWNORMAL);
         return;
     }
+    if (target == "system:everything") {
+        const std::array<std::wstring, 3U> candidates{
+            L"%ProgramFiles%\\Everything\\Everything.exe",
+            L"%ProgramFiles(x86)%\\Everything\\Everything.exe",
+            L"%LOCALAPPDATA%\\Everything\\Everything.exe",
+        };
+        for (const auto& candidate : candidates) {
+            std::wstring expanded(32768U, L'\0');
+            const DWORD length = ExpandEnvironmentStringsW(
+                candidate.c_str(), expanded.data(), static_cast<DWORD>(expanded.size()));
+            if (length == 0U || length > expanded.size()) continue;
+            expanded.resize(length - 1U);
+            if (!std::filesystem::is_regular_file(expanded)) continue;
+            (void)ShellExecuteW(nullptr, L"open", expanded.c_str(), nullptr,
+                std::filesystem::path(expanded).parent_path().c_str(), SW_SHOWNORMAL);
+            return;
+        }
+        (void)ShellExecuteW(nullptr, L"open", L"Everything.exe", nullptr,
+            nullptr, SW_SHOWNORMAL);
+        return;
+    }
     if (target == "package:regcalc64") {
         const auto page = transport_ != nullptr
             ? transport_->resolve_program_path(L"RegCalc64Tool.html")
@@ -1996,6 +2017,19 @@ void TextService::launch_program(const std::string_view target) noexcept {
         const std::wstring arguments = L"/d /s /c \"" + command + L"\"";
         (void)ShellExecuteW(nullptr, L"open", L"cmd.exe", arguments.c_str(),
             nullptr, SW_SHOWNORMAL);
+        return;
+    }
+    constexpr std::wstring_view shell_prefix = L"shell:";
+    if (configured.starts_with(shell_prefix)) {
+        configured.erase(0U, shell_prefix.size());
+        const auto separator = configured.find(L'|');
+        const std::wstring program = configured.substr(0U, separator);
+        const std::wstring arguments = separator == std::wstring::npos
+            ? std::wstring{} : configured.substr(separator + 1U);
+        if (!program.empty()) {
+            (void)ShellExecuteW(nullptr, L"open", program.c_str(),
+                arguments.empty() ? nullptr : arguments.c_str(), nullptr, SW_SHOWNORMAL);
+        }
         return;
     }
     (void)ShellExecuteW(nullptr, L"open", configured.c_str(), nullptr,

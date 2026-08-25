@@ -238,6 +238,7 @@ if(WIN32)
     add_executable(PiInput-Settings WIN32
         platform/windows/settings/main.cpp
         platform/windows/settings/settings_file.cpp
+        platform/windows/settings/windows_tool_templates.cpp
     )
     target_include_directories(PiInput-Settings PRIVATE platform/windows/settings)
     target_link_libraries(PiInput-Settings PRIVATE piinput_core comctl32 shell32 user32)
@@ -379,6 +380,7 @@ if(WIN32)
         "${PIINPUT_YESYMBOL_DIR}/PROVENANCE.md"
         DESTINATION bin/licenses/YeSymbol
     )
+    install(FILES third_party/YeTool/LICENSE DESTINATION bin/licenses/YeTool)
     # The bundled programmer calculator is self-contained apart from these two
     # adjacent UI assets. Keep all three beside PiInputHost.exe so the installed
     # path is stable in both per-user and machine layouts.

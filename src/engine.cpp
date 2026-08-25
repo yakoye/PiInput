@@ -27,13 +27,6 @@ enum class DatetimeShortcutKind {
     time,
 };
 
-enum class CandidateShortcutKind {
-    none,
-    symbol_tool,
-    emoji_tool,
-    settings,
-};
-
 struct LaunchShortcut final {
     std::string label;
     std::string reading;
@@ -41,94 +34,6 @@ struct LaunchShortcut final {
     std::string fallback_text;
     std::size_t position{};  // one-based candidate number
 };
-
-[[nodiscard]] bool calculator_shortcut(const std::string_view key) noexcept {
-    return key == "jisuanqi" || key == "jisrqi" || key == "jsq" ||
-        key == "jisrq" || key == "calc" || key == "reg";
-}
-
-[[nodiscard]] bool paint_shortcut(const std::string_view key) noexcept {
-    return key == "hxtu" || key == "ht" || key == "huatu" ||
-        key == "mspaint" || key == "msp";
-}
-
-[[nodiscard]] bool configured_alias_matches(
-    const std::string_view aliases,
-    const std::string_view key) noexcept {
-    std::size_t offset = 0U;
-    while (offset < aliases.size()) {
-        const auto separator = aliases.find_first_of(",; \t", offset);
-        std::string alias(aliases.substr(offset,
-            separator == std::string_view::npos ? std::string_view::npos : separator - offset));
-        std::transform(alias.begin(), alias.end(), alias.begin(), [](const unsigned char ch) {
-            return static_cast<char>(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch);
-        });
-        if (alias == key) return true;
-        if (separator == std::string_view::npos) break;
-        offset = separator + 1U;
-    }
-    return false;
-}
-
-[[nodiscard]] CandidateShortcutKind candidate_shortcut_kind(
-    const std::string_view key) noexcept {
-    if (key == "fh" || key == "fuhao" || key == "fuh" || key == "fuhc") {
-        return CandidateShortcutKind::symbol_tool;
-    }
-    if (key == "bq" || key == "biaoqing" || key == "biaoq" ||
-        key == "bnqk" || key == "bnq") {
-        return CandidateShortcutKind::emoji_tool;
-    }
-    if (key == "shizhi" || key == "uevi" || key == "sz" ||
-        key == "shiz" || key == "uev") {
-        return CandidateShortcutKind::settings;
-    }
-    return CandidateShortcutKind::none;
-}
-
-[[nodiscard]] std::string_view candidate_shortcut_label(
-    const CandidateShortcutKind kind) noexcept {
-    switch (kind) {
-    case CandidateShortcutKind::symbol_tool: return "Ω符号";
-    case CandidateShortcutKind::emoji_tool: return "😜表情";
-    case CandidateShortcutKind::settings: return "⚙️设置";
-    case CandidateShortcutKind::none: return {};
-    }
-    return {};
-}
-
-[[nodiscard]] std::string_view candidate_shortcut_text(
-    const CandidateShortcutKind kind) noexcept {
-    switch (kind) {
-    case CandidateShortcutKind::symbol_tool: return "符号";
-    case CandidateShortcutKind::emoji_tool: return "表情";
-    case CandidateShortcutKind::settings: return "设置";
-    case CandidateShortcutKind::none: return {};
-    }
-    return {};
-}
-
-[[nodiscard]] std::string_view candidate_shortcut_pinyin(
-    const CandidateShortcutKind kind) noexcept {
-    switch (kind) {
-    case CandidateShortcutKind::symbol_tool: return "fu'hao";
-    case CandidateShortcutKind::emoji_tool: return "biao'qing";
-    case CandidateShortcutKind::settings: return "she'zhi";
-    case CandidateShortcutKind::none: return {};
-    }
-    return {};
-}
-
-[[nodiscard]] CandidateKind candidate_shortcut_evidence(
-    const CandidateShortcutKind kind) noexcept {
-    switch (kind) {
-    case CandidateShortcutKind::symbol_tool: return CandidateKind::symbol_tool_action;
-    case CandidateShortcutKind::emoji_tool: return CandidateKind::emoji_tool_action;
-    case CandidateShortcutKind::settings: return CandidateKind::settings_action;
-    case CandidateShortcutKind::none: return CandidateKind::decoded_sentence;
-    }
-    return CandidateKind::decoded_sentence;
-}
 
 [[nodiscard]] DatetimeShortcutKind datetime_shortcut_kind(
     const std::string_view key) noexcept {
@@ -779,8 +684,6 @@ void Engine::splice_symbol_shortcuts(
     // which is what every other input method does with them.
     std::string datetime_reading;
     std::string datetime_label;
-    CandidateShortcutKind action_kind{CandidateShortcutKind::none};
-    std::string action_reading;
     std::vector<LaunchShortcut> launch_shortcuts;
     const auto add_launch = [&](LaunchShortcut shortcut) {
         const bool exists = std::any_of(launch_shortcuts.begin(), launch_shortcuts.end(),
@@ -799,24 +702,14 @@ void Engine::splice_symbol_shortcuts(
             datetime_label = datetime_group_label(
                 datetime_shortcut_kind(key) == DatetimeShortcutKind::date);
         }
-        if (action_kind == CandidateShortcutKind::none) {
-            action_kind = candidate_shortcut_kind(key);
-            if (action_kind != CandidateShortcutKind::none) action_reading = key;
-        }
-        if (calculator_shortcut(key)) {
-            add_launch({"🖩计算器", key, "system:calculator", "计算器", 2U});
-            add_launch({"🖩程序员计算器", key, "package:regcalc64", "计算器", 3U});
-        }
-        if (paint_shortcut(key)) {
-            add_launch({"🎨画图", key, "system:mspaint", "画图", 2U});
-        }
         for (const auto& shortcut : settings.custom_shortcuts) {
             if (shortcut.aliases.empty() || shortcut.name.empty() || shortcut.target.empty() ||
-                !configured_alias_matches(shortcut.aliases, key)) {
+                !shortcut_alias_matches(shortcut.aliases, key)) {
                 continue;
             }
-            add_launch({shortcut.name, key, "custom:" + shortcut.target,
-                "快捷调用", static_cast<std::size_t>(shortcut.position)});
+            add_launch({shortcut_candidate_label(shortcut), key,
+                shortcut_action_target(shortcut), shortcut.name,
+                static_cast<std::size_t>(shortcut.position)});
         }
         const auto found = symbol_shortcuts_.find(key);
         if (found == symbol_shortcuts_.end()) return;
@@ -828,8 +721,7 @@ void Engine::splice_symbol_shortcuts(
     };
     collect(reading);
     if (input != reading) collect(input);
-    if (wanted.empty() && datetime_label.empty() &&
-        action_kind == CandidateShortcutKind::none && launch_shortcuts.empty()) return;
+    if (wanted.empty() && datetime_label.empty() && launch_shortcuts.empty()) return;
 
     // A symbol the dictionary already offered stays where the ranking put it.
     std::erase_if(wanted, [&](const std::string& symbol) {
@@ -861,24 +753,6 @@ void Engine::splice_symbol_shortcuts(
         group.pinyin = datetime_reading;
         group.evidence.kind = CandidateKind::datetime_group;
         inline_candidates.push_back(std::move(group));
-    }
-    if (action_kind != CandidateShortcutKind::none &&
-        (!results.empty() || result_limit >= 2U)) {
-        // The command is deliberately candidate 2. A raw alias can be useful
-        // even when it is not valid in the active schema (for example uevi in
-        // full pinyin), so provide the corresponding ordinary word when the
-        // dictionary has no first candidate rather than moving the command to
-        // digit 1 and making the shortcut depend on schema parsing.
-        if (results.empty() && result_limit >= 2U) {
-            EngineCandidate text = make(std::string(candidate_shortcut_text(action_kind)));
-            text.pinyin = candidate_shortcut_pinyin(action_kind);
-            text.evidence.kind = CandidateKind::exact_lexicon;
-            results.push_back(std::move(text));
-        }
-        EngineCandidate action = make(std::string(candidate_shortcut_label(action_kind)));
-        action.pinyin = action_reading;
-        action.evidence.kind = candidate_shortcut_evidence(action_kind);
-        inline_candidates.push_back(std::move(action));
     }
     for (const auto& text : wanted) {
         if (utf8_codepoint_count(text) <= inline_candidate_codepoints) {
@@ -922,7 +796,11 @@ void Engine::splice_symbol_shortcuts(
         [](const LaunchShortcut& left, const LaunchShortcut& right) {
             return left.position < right.position;
         });
-    for (const auto& shortcut : launch_shortcuts) {
+    // Insert from the farthest/later row back towards the front. When two
+    // entries request the same position this preserves their table order.
+    for (auto iterator = launch_shortcuts.rbegin();
+         iterator != launch_shortcuts.rend(); ++iterator) {
+        const auto& shortcut = *iterator;
         if (shortcut.position == 0U || shortcut.position > result_limit) continue;
         EngineCandidate action = make(shortcut.label);
         action.pinyin = shortcut.reading;

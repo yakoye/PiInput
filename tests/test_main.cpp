@@ -668,20 +668,20 @@ void test_tool_shortcuts_are_always_candidate_two() {
         piinput::CandidateKind kind;
     };
     const ShortcutCase cases[]{
-        {"fh", "full", "Ω符号", piinput::CandidateKind::symbol_tool_action},
-        {"fuhao", "full", "Ω符号", piinput::CandidateKind::symbol_tool_action},
-        {"fuh", "full", "Ω符号", piinput::CandidateKind::symbol_tool_action},
-        {"fuhc", "flypy", "Ω符号", piinput::CandidateKind::symbol_tool_action},
-        {"bq", "full", "😜表情", piinput::CandidateKind::emoji_tool_action},
-        {"biaoqing", "full", "😜表情", piinput::CandidateKind::emoji_tool_action},
-        {"biaoq", "full", "😜表情", piinput::CandidateKind::emoji_tool_action},
-        {"bnqk", "flypy", "😜表情", piinput::CandidateKind::emoji_tool_action},
-        {"bnq", "flypy", "😜表情", piinput::CandidateKind::emoji_tool_action},
-        {"shizhi", "full", "⚙️设置", piinput::CandidateKind::settings_action},
-        {"uevi", "flypy", "⚙️设置", piinput::CandidateKind::settings_action},
-        {"sz", "full", "⚙️设置", piinput::CandidateKind::settings_action},
-        {"shiz", "full", "⚙️设置", piinput::CandidateKind::settings_action},
-        {"uev", "flypy", "⚙️设置", piinput::CandidateKind::settings_action},
+        {"fh", "full", "Ω符号", piinput::CandidateKind::launch_action},
+        {"fuhao", "full", "Ω符号", piinput::CandidateKind::launch_action},
+        {"fuh", "full", "Ω符号", piinput::CandidateKind::launch_action},
+        {"fuhc", "flypy", "Ω符号", piinput::CandidateKind::launch_action},
+        {"bq", "full", "😜表情", piinput::CandidateKind::launch_action},
+        {"biaoqing", "full", "😜表情", piinput::CandidateKind::launch_action},
+        {"biaoq", "full", "😜表情", piinput::CandidateKind::launch_action},
+        {"bnqk", "flypy", "😜表情", piinput::CandidateKind::launch_action},
+        {"bnq", "flypy", "😜表情", piinput::CandidateKind::launch_action},
+        {"shizhi", "full", "⚙️设置", piinput::CandidateKind::launch_action},
+        {"uevi", "flypy", "⚙️设置", piinput::CandidateKind::launch_action},
+        {"sz", "full", "⚙️设置", piinput::CandidateKind::launch_action},
+        {"shiz", "full", "⚙️设置", piinput::CandidateKind::launch_action},
+        {"uev", "flypy", "⚙️设置", piinput::CandidateKind::launch_action},
     };
     for (const auto& shortcut : cases) {
         const auto candidates = engine.query(shortcut.input, shortcut.schema, 8U);
@@ -726,7 +726,7 @@ void test_tool_shortcuts_are_always_candidate_two() {
 
     auto configured = piinput::default_settings();
     configured.custom_shortcuts[0] = {
-        "gongju,gj", 4U, "🌐GitHub", "https://github.com"};
+        "gongju,gj", 4U, "🌐", "GitHub", "https://github.com"};
     const auto custom = engine.query("gongju", "full", 8U, configured);
     check(custom.size() >= 4U && custom[3U].word == "🌐GitHub" &&
             custom[3U].evidence.kind == piinput::CandidateKind::launch_action &&

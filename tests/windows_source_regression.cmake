@@ -44,6 +44,7 @@ file(READ "${PIINPUT_SOURCE_DIR}/src/host_session.cpp" host_session_text)
 file(READ "${PIINPUT_SOURCE_DIR}/src/engine.cpp" engine_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/diagnostics/main.cpp" diagnostics_main_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/settings/main.cpp" settings_main_text)
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/settings/windows_tool_templates.cpp" tool_templates_text)
 
 foreach(required_portable_checkout_rule IN ITEMS
         "* text=auto eol=lf"
@@ -1379,6 +1380,8 @@ foreach(required_launch_token IN ITEMS
         "system:calculator"
         "package:regcalc64"
         "system:mspaint"
+        "system:everything"
+        "shell:"
         "custom:"
         "RegCalc64Tool.html")
     string(FIND "${engine_text}${stable_text_service_text}"
@@ -1400,10 +1403,24 @@ foreach(required_regcalc_asset IN ITEMS
     endif()
 endforeach()
 if(NOT settings_main_text MATCHES "快捷调用" OR
+   NOT settings_main_text MATCHES "触发码" OR
    NOT settings_main_text MATCHES "候选位置" OR
-   NOT settings_main_text MATCHES "调用程序")
+   NOT settings_main_text MATCHES "图标" OR
+   NOT settings_main_text MATCHES "调用程序" OR
+   NOT settings_main_text MATCHES "LVS_REPORT" OR
+   NOT settings_main_text MATCHES "kShortcutAdd" OR
+   NOT settings_main_text MATCHES "kShortcutEdit" OR
+   NOT settings_main_text MATCHES "kShortcutDelete")
     message(FATAL_ERROR
-        "PiInput Settings must expose configurable launch shortcuts")
+        "PiInput Settings must expose the editable shortcut table")
+endif()
+if(NOT settings_main_text MATCHES "Windows 工具模板" OR
+   NOT settings_main_text MATCHES "fill_tool_templates" OR
+   NOT tool_templates_text MATCHES "Everything 文件搜索" OR
+   NOT tool_templates_text MATCHES "SystemPropertiesAdvanced\.exe" OR
+   NOT tool_templates_text MATCHES "ms-settings:windowsupdate")
+    message(FATAL_ERROR
+        "PiInput Settings must expose its own searchable Windows tool template library")
 endif()
 string(FIND "${host_session_text}"
     "if (event.kind == HostKeyKind::switch_to_english)" shift_english_branch)

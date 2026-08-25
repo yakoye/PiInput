@@ -359,6 +359,8 @@ platform/windows/preview/main.cpp
 platform/windows/settings/main.cpp
 platform/windows/settings/settings_file.cpp
 platform/windows/settings/settings_file.h
+platform/windows/settings/windows_tool_templates.cpp
+platform/windows/settings/windows_tool_templates.h
 platform/windows/tsf/candidate_ui_element.cpp
 platform/windows/tsf/candidate_ui_element.h
 platform/windows/tsf/candidate_window.cpp
@@ -631,6 +633,7 @@ tests/user_model_persistence_tests.cpp
 tests/user_model_tests.cpp
 tests/user_phrase_performance_tests.cpp
 tests/windows_source_regression.cmake
+third_party/YeTool/LICENSE
 tools/benchmark/main.cpp
 tools/caret_demo/main.cpp
 tools/dictionary_builder/main.cpp
