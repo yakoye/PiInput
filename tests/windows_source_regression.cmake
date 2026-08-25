@@ -93,6 +93,18 @@ foreach(search_candidate_token IN ITEMS
             "Stable TSF Shim is missing Windows Search candidate integration: ${search_candidate_token}")
     endif()
 endforeach()
+string(FIND "${stable_text_service_text}"
+    "ui_element_manager_->BeginUIElement(" search_begin_ui_position)
+string(FIND "${stable_text_service_text}"
+    "candidate_ui_->update(snapshot);" search_initial_snapshot_position)
+string(FIND "${stable_text_service_text}"
+    "ui_element_manager_->UpdateUIElement(candidate_ui_id_)" search_update_ui_position)
+if(search_begin_ui_position LESS 0 OR
+   search_initial_snapshot_position LESS search_begin_ui_position OR
+   search_update_ui_position LESS search_initial_snapshot_position)
+    message(FATAL_ERROR
+        "Windows Search must receive the initial candidate snapshot and UpdateUIElement after BeginUIElement")
+endif()
 foreach(search_ui_element_token IN ITEMS
         "ITfCandidateListUIElementBehavior"
         "ITfIntegratableCandidateListUIElement"

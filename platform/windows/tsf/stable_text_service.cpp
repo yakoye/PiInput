@@ -2049,7 +2049,6 @@ bool TextService::update_candidate_ui(
             show_custom_candidate_ui_ = true;
             return true;
         }
-        candidate_ui_->update(snapshot);
         BOOL show = TRUE;
         DWORD id = static_cast<DWORD>(-1);
         const HRESULT begun = ui_element_manager_->BeginUIElement(
@@ -2062,6 +2061,14 @@ bool TextService::update_candidate_ui(
         }
         candidate_ui_id_ = id;
         show_custom_candidate_ui_ = show != FALSE;
+        // BeginUIElement only registers the object with the sink.  In
+        // particular, Windows Search's integrated candidate surface waits for
+        // the first UpdateUIElement notification before it queries strings and
+        // paints a row.  Publish the initial snapshot after Begin, matching the
+        // lifecycle used by Microsoft's SampleIME; otherwise the system asks
+        // us to hide our popup but never renders the replacement UI.
+        candidate_ui_->update(snapshot);
+        (void)ui_element_manager_->UpdateUIElement(candidate_ui_id_);
         return show_custom_candidate_ui_;
     }
     candidate_ui_->update(snapshot);

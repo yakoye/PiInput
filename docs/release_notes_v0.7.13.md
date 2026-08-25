@@ -26,6 +26,7 @@ v0.7.13 是词库覆盖、发布工程和长时间运行质量的收口版本。
 
 - 修复快速 XAML 宿主中 caret 结果先于候选快照到达时，Host 永久等待候选定位消息的问题。
 - Host 协议升级到 v5：普通桌面程序继续用文本视图顶层 HWND 绑定外部候选 popup；Windows 搜索等集成式宿主改由 Shim 发布标准 TSF `ITfCandidateListUIElementBehavior`/搜索框集成接口。宿主接管显示时 Host 主动隐藏外部窗，由系统候选行呈现，解决“文字可提交但候选框不出现”。
+- 修正 UIElement 首帧通知顺序：`BeginUIElement` 成功后再写入首批候选并立即调用 `UpdateUIElement`，避免系统已接管显示、Host 已隐藏外部窗，但系统候选行从未收到首批数据通知。
 - Shim 实现 `ITfTextInputProcessorEx::ActivateEx`，使注册的 `IMMERSIVESUPPORT` 能力与实际激活契约一致。
 - owner 切换、窗口销毁和句柄失效都会触发普通桌面候选窗重建；受控 TSF smoke 同时验证可见候选窗的真实 `GW_OWNER`。
 
