@@ -54,6 +54,23 @@ function Get-Sha256([string]$Path) {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
+function Invoke-BoundedProcess(
+    [string]$FilePath,
+    [string]$ArgumentList,
+    [string]$Label,
+    [int]$TimeoutSeconds = 180
+) {
+    $process = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -PassThru
+    if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        throw "$Label timed out after $TimeoutSeconds seconds. A hidden UAC prompt or stuck child process is likely."
+    }
+    if ($process.ExitCode -ne 0) {
+        throw "$Label failed with exit code $($process.ExitCode)."
+    }
+    return $process
+}
+
 function Get-ExecutableFromCommandLine([string]$CommandLine) {
     $expanded = [Environment]::ExpandEnvironmentVariables($CommandLine).Trim()
     if ([string]::IsNullOrWhiteSpace($expanded)) { return "" }
@@ -247,10 +264,7 @@ try {
             if (-not (Test-Path -LiteralPath $previousInstaller -PathType Leaf)) {
                 throw "Previous package installer is missing."
             }
-            $previousProcess = Start-Process -FilePath $previousInstaller -ArgumentList "--silent" -Wait -PassThru
-            if ($previousProcess.ExitCode -ne 0) {
-                throw "Previous package installer failed with exit code $($previousProcess.ExitCode)."
-            }
+            $previousProcess = Invoke-BoundedProcess $previousInstaller "--silent" "Previous package installer"
             $previousEntry = Get-ItemProperty -LiteralPath $uninstallKey
             $previousVersion = [string]$previousEntry.DisplayVersion
             if ([string]::IsNullOrWhiteSpace($previousVersion) -or $previousVersion -eq $ExpectedVersion) {
@@ -263,8 +277,7 @@ try {
         }
         foreach ($pass in 1..2) {
             $closureStage = "install-pass-$pass"
-            $process = Start-Process -FilePath $installer -ArgumentList "--silent" -Wait -PassThru
-            if ($process.ExitCode -ne 0) { throw "Installer pass $pass failed with exit code $($process.ExitCode)." }
+            $process = Invoke-BoundedProcess $installer "--silent" "Installer pass $pass"
             $installedEvidence = Assert-InstalledState "install-pass-$pass"
             if (-not [string]::IsNullOrWhiteSpace($preservationSentinel) -and
                 -not (Test-Path -LiteralPath $preservationSentinel -PathType Leaf)) {
@@ -298,8 +311,7 @@ try {
         }
         $uninstallArguments = if ($hadExistingInstall) { "--silent" } else { "--silent --remove-user-data" }
         $closureStage = "silent-uninstall"
-        $uninstall = Start-Process -FilePath $installedUninstaller -ArgumentList $uninstallArguments -Wait -PassThru
-        if ($uninstall.ExitCode -ne 0) { throw "Uninstaller launcher failed with exit code $($uninstall.ExitCode)." }
+        $uninstall = Invoke-BoundedProcess $installedUninstaller $uninstallArguments "Uninstaller launcher"
         $removed = $false
         foreach ($attempt in 1..100) {
             if (-not (Test-Path -LiteralPath $uninstallKey)) { $removed = $true; break }
@@ -320,8 +332,7 @@ try {
         }
         if ($hadExistingInstall -or $LeaveInstalled) {
             $closureStage = "final-reinstall"
-            $finalInstall = Start-Process -FilePath $installer -ArgumentList "--silent" -Wait -PassThru
-            if ($finalInstall.ExitCode -ne 0) { throw "Final reinstall failed with exit code $($finalInstall.ExitCode)." }
+            $finalInstall = Invoke-BoundedProcess $installer "--silent" "Final reinstall"
             $installedEvidence = Assert-InstalledState "final-reinstall"
             $installState = if ($upgradeState -eq "passed") {
                 "previous-upgrade-reinstall-uninstall-final-reinstall-passed"

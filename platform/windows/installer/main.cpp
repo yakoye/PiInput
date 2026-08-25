@@ -463,6 +463,18 @@ void retire_previous_tsf_identities() noexcept {
     return checked != FALSE && member != FALSE;
 }
 
+[[nodiscard]] HRESULT register_machine_profile_current_process(
+    const std::filesystem::path& dll) {
+    const auto destination = machine_shim_path(program_files());
+    const StableShimRefreshResult refreshed =
+        refresh_stable_shim(dll, destination, build_id());
+    if (!refreshed.exact_bytes) {
+        return HRESULT_FROM_WIN32(
+            refreshed.error == ERROR_SUCCESS ? ERROR_WRITE_FAULT : refreshed.error);
+    }
+    return register_machine_tsf(destination.wstring()).result;
+}
+
 [[nodiscard]] HRESULT run_elevated_machine_action(
     const std::wstring& arguments) {
     const auto program = executable_path();
@@ -488,6 +500,13 @@ void retire_previous_tsf_identities() noexcept {
 
 [[nodiscard]] HRESULT register_machine_profile_elevated(
     const std::filesystem::path& dll) {
+    // GitHub-hosted and enterprise deployment runners may already execute
+    // under an elevated token. Asking for runas again in that state creates an
+    // invisible UAC prompt and waits forever. Normal desktop installs still
+    // take the runas path below.
+    if (process_is_elevated()) {
+        return register_machine_profile_current_process(dll);
+    }
     return run_elevated_machine_action(
         L"--machine-register " + quote_windows_argument(dll.wstring()) + L" --silent");
 }
@@ -842,14 +861,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
                 _wcsicmp(path.filename().c_str(), L"PiInputTSF.dll") != 0) {
                 return static_cast<int>(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
             }
-            const auto destination = machine_shim_path(program_files());
-            const StableShimRefreshResult refreshed =
-                refresh_stable_shim(path, destination, build_id());
-            if (!refreshed.exact_bytes) {
-                return static_cast<int>(HRESULT_FROM_WIN32(
-                    refreshed.error == ERROR_SUCCESS ? ERROR_WRITE_FAULT : refreshed.error));
-            }
-            return static_cast<int>(register_machine_tsf(destination.wstring()).result);
+            return static_cast<int>(register_machine_profile_current_process(path));
         }
         if (has_argument(L"--machine-unregister")) {
             if (!process_is_elevated()) return static_cast<int>(E_ACCESSDENIED);

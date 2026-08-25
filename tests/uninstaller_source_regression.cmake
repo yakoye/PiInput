@@ -26,6 +26,8 @@ foreach(required IN ITEMS
     "unregister_machine_tsf"
     "unregister_user_tsf"
     "--machine-unregister"
+    "process_is_elevated"
+    "unregister_machine_profile_current_process"
     "request_host_drain"
     "HostMessageType::drain"
     "host_mutex, 3000U"
@@ -41,6 +43,9 @@ endforeach()
 
 if(source_text MATCHES "TerminateProcess" OR source_text MATCHES "taskkill")
     message(FATAL_ERROR "Uninstaller must not terminate applications that may have loaded the TSF DLL")
+endif()
+if(NOT source_text MATCHES "if \\(!arguments\\.silent\\)")
+    message(FATAL_ERROR "Silent uninstall failures must return an error without opening a hidden dialog")
 endif()
 if(source_text MATCHES "LoadLibraryExW" OR source_text MATCHES "run_hidden" OR
    NOT source_text MATCHES "lpVerb = L\"runas\"")

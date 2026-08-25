@@ -81,6 +81,36 @@ struct Arguments {
     return buffer;
 }
 
+[[nodiscard]] bool process_is_elevated() noexcept {
+    SID_IDENTIFIER_AUTHORITY authority = SECURITY_NT_AUTHORITY;
+    PSID administrators = nullptr;
+    if (AllocateAndInitializeSid(&authority, 2U,
+            SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
+            0U, 0U, 0U, 0U, 0U, 0U, &administrators) == FALSE) {
+        return false;
+    }
+    BOOL member = FALSE;
+    const BOOL checked = CheckTokenMembership(nullptr, administrators, &member);
+    FreeSid(administrators);
+    return checked != FALSE && member != FALSE;
+}
+
+[[nodiscard]] HRESULT unregister_machine_profile_current_process() noexcept {
+    const HRESULT result = unregister_machine_tsf().result;
+    if (FAILED(result)) return result;
+    try {
+        const auto program_files = known_folder(FOLDERID_ProgramFiles);
+        const auto machine_root = machine_runtime_root(program_files);
+        if (!is_safe_machine_runtime_root(machine_root, program_files)) {
+            return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+        }
+        remove_or_schedule_legacy_runtime(machine_root);
+        return S_OK;
+    } catch (...) {
+        return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);
+    }
+}
+
 [[nodiscard]] Arguments parse_arguments() {
     Arguments result;
     int count = 0;
@@ -306,22 +336,27 @@ void launch_worker(const Arguments& arguments) {
     // narrow action from the installed executable, wait for it, then let the
     // original user's normal-token worker remove HKCU state and LocalAppData.
     // This remains correct when UAC credentials belong to a different account.
-    SHELLEXECUTEINFOW privileged{};
-    privileged.cbSize = sizeof(privileged);
-    privileged.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
-    privileged.hwnd = GetForegroundWindow();
-    privileged.lpVerb = L"runas";
-    privileged.lpFile = source.c_str();
-    privileged.lpParameters = L"--machine-unregister --silent";
-    privileged.lpDirectory = source.parent_path().c_str();
-    privileged.nShow = SW_SHOWNORMAL;
-    if (ShellExecuteExW(&privileged) == FALSE || privileged.hProcess == nullptr) {
-        throw std::runtime_error("Administrator permission is required to remove the TSF profile");
-    }
-    (void)WaitForSingleObject(privileged.hProcess, INFINITE);
     DWORD privileged_exit = static_cast<DWORD>(E_FAIL);
-    (void)GetExitCodeProcess(privileged.hProcess, &privileged_exit);
-    CloseHandle(privileged.hProcess);
+    if (process_is_elevated()) {
+        privileged_exit = static_cast<DWORD>(
+            unregister_machine_profile_current_process());
+    } else {
+        SHELLEXECUTEINFOW privileged{};
+        privileged.cbSize = sizeof(privileged);
+        privileged.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
+        privileged.hwnd = GetForegroundWindow();
+        privileged.lpVerb = L"runas";
+        privileged.lpFile = source.c_str();
+        privileged.lpParameters = L"--machine-unregister --silent";
+        privileged.lpDirectory = source.parent_path().c_str();
+        privileged.nShow = SW_SHOWNORMAL;
+        if (ShellExecuteExW(&privileged) == FALSE || privileged.hProcess == nullptr) {
+            throw std::runtime_error("Administrator permission is required to remove the TSF profile");
+        }
+        (void)WaitForSingleObject(privileged.hProcess, INFINITE);
+        (void)GetExitCodeProcess(privileged.hProcess, &privileged_exit);
+        CloseHandle(privileged.hProcess);
+    }
     if (FAILED(static_cast<HRESULT>(privileged_exit))) {
         throw std::runtime_error("Machine-wide TSF profile cleanup failed");
     }
@@ -365,39 +400,18 @@ void launch_worker(const Arguments& arguments) {
 }  // namespace
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
+    Arguments arguments;
     try {
         ScopedComApartment com;
         if (FAILED(com.result()) && com.result() != RPC_E_CHANGED_MODE) {
             throw std::runtime_error("Cannot initialize COM for PiInput uninstall");
         }
-        auto arguments = parse_arguments();
+        arguments = parse_arguments();
         if (arguments.machine_unregister) {
-            SID_IDENTIFIER_AUTHORITY authority = SECURITY_NT_AUTHORITY;
-            PSID administrators = nullptr;
-            BOOL member = FALSE;
-            const BOOL allocated = AllocateAndInitializeSid(&authority, 2U,
-                SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS,
-                0U, 0U, 0U, 0U, 0U, 0U, &administrators);
-            const BOOL checked = allocated != FALSE
-                ? CheckTokenMembership(nullptr, administrators, &member)
-                : FALSE;
-            if (administrators != nullptr) FreeSid(administrators);
-            if (checked == FALSE || member == FALSE) {
+            if (!process_is_elevated()) {
                 return static_cast<int>(E_ACCESSDENIED);
             }
-            const HRESULT result = unregister_machine_tsf().result;
-            if (FAILED(result)) return static_cast<int>(result);
-            const auto program_files = known_folder(FOLDERID_ProgramFiles);
-            const auto machine_root = machine_runtime_root(program_files);
-            if (!is_safe_machine_runtime_root(machine_root, program_files)) {
-                return static_cast<int>(HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER));
-            }
-            try {
-                remove_or_schedule_legacy_runtime(machine_root);
-            } catch (...) {
-                return static_cast<int>(HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED));
-            }
-            return 0;
+            return static_cast<int>(unregister_machine_profile_current_process());
         }
         if (arguments.worker) {
             const auto problems = run_worker(arguments);
@@ -427,9 +441,11 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         launch_worker(arguments);
         return 0;
     } catch (const std::exception& error) {
-        const auto detail = widen_error(error);
-        MessageBoxW(nullptr, (L"PiInput 卸载失败：\n" + detail).c_str(),
-            L"PiInput 卸载失败", MB_OK | MB_ICONERROR | kForegroundMessageBox);
+        if (!arguments.silent) {
+            const auto detail = widen_error(error);
+            MessageBoxW(nullptr, (L"PiInput 卸载失败：\n" + detail).c_str(),
+                L"PiInput 卸载失败", MB_OK | MB_ICONERROR | kForegroundMessageBox);
+        }
         return 1;
     }
 }

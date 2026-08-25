@@ -489,6 +489,8 @@ foreach(required_closure_token IN ITEMS
         "Registered Host path mismatch"
         "Installed PE hash mismatch"
         "Get-ExecutableFromCommandLine"
+        "Invoke-BoundedProcess"
+        "timed out after $TimeoutSeconds seconds"
         "status = \"failed\""
         "stage = $closureStage"
         "build_id"
@@ -1513,7 +1515,9 @@ endif()
 if(installer_text MATCHES "LoadLibraryExW\\(new_dll" OR
    NOT installer_text MATCHES "lpVerb = L\"runas\"" OR
    NOT installer_text MATCHES "--machine-register" OR
-   NOT installer_text MATCHES "process_is_elevated")
+   NOT installer_text MATCHES "process_is_elevated" OR
+   NOT installer_text MATCHES "register_machine_profile_current_process" OR
+   NOT installer_text MATCHES "if \\(process_is_elevated\\(\\)\\)")
     message(FATAL_ERROR "Installer must elevate only machine-wide TSF registration and keep per-user work in the original token")
 endif()
 if(NOT installer_text MATCHES "unregister_machine_profile_elevated")
