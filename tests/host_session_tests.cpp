@@ -190,6 +190,52 @@ void test_punctuation_is_transformed_and_committed_by_host() {
     std::filesystem::remove(lexicon_path);
 }
 
+void test_chinese_input_can_use_english_punctuation() {
+    piinput::Engine engine;
+    const auto lexicon_path = write_chinese_lexicon();
+    engine.load_lexicon(lexicon_path);
+    auto settings = piinput::default_settings();
+    settings.punctuation = piinput::PunctuationMode::english;
+    piinput::HostSession session(engine, nullptr, settings, "full");
+
+    check(session.snapshot().mode == piinput::HostInputMode::chinese,
+        "English punctuation does not switch Chinese input or candidates to English");
+
+    struct PunctuationCase {
+        char key;
+        bool shifted;
+        const char* expected;
+    };
+    const std::vector<PunctuationCase> cases{
+        {'.', false, "."}, {',', false, ","}, {';', false, ";"},
+        {';', true, ":"}, {'/', false, "/"}, {'/', true, "?"},
+        {'[', false, "["}, {'[', true, "{"}, {'\\', false, "\\"},
+        {'\\', true, "|"}, {'\'', false, "'"}, {'\'', true, "\""},
+        {'-', false, "-"}, {'-', true, "_"}, {'=', false, "="},
+        {'=', true, "+"}, {'`', false, "`"}, {'`', true, "~"},
+    };
+    for (const auto& current : cases) {
+        const auto reply = session.apply({
+            .kind = piinput::HostKeyKind::punctuation,
+            .character = current.key,
+            .shifted = current.shifted,
+        });
+        check(reply.accepted && reply.action == piinput::HostAction::commit &&
+                reply.text == current.expected,
+            "Chinese-input English punctuation emits the physical ASCII symbol");
+    }
+
+    type(session, "wo");
+    const auto composed = session.apply({
+        .kind = piinput::HostKeyKind::punctuation,
+        .character = '.',
+    });
+    check(composed.accepted && composed.action == piinput::HostAction::commit &&
+            composed.text == "我.",
+        "English punctuation commits a Chinese candidate and ASCII punctuation atomically");
+    std::filesystem::remove(lexicon_path);
+}
+
 std::filesystem::path write_english_lexicon() {
     const auto path = std::filesystem::temp_directory_path() / "piinput-host-english.tsv";
     std::ofstream output(path, std::ios::binary | std::ios::trunc);
@@ -1419,6 +1465,7 @@ int main() {
     test_optional_english_session_uses_the_same_host_boundary();
     test_space_and_digits_are_resolved_by_current_host_state();
     test_punctuation_is_transformed_and_committed_by_host();
+    test_chinese_input_can_use_english_punctuation();
     test_symbol_center_and_semicolon_routing();
     test_candidate_two_launches_tools_without_committing_the_label();
     std::cout << "PiInput host session tests passed.\n";

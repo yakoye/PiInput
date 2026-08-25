@@ -39,6 +39,8 @@ namespace {
 
 std::atomic<std::uint64_t> next_session_id{1U};
 
+[[nodiscard]] std::string settings_value(const std::string& key);
+
 class InputScopeQuerySession final : public ITfEditSession {
 public:
     explicit InputScopeQuerySession(ITfContext* const context) : context_(context) {
@@ -869,6 +871,11 @@ STDMETHODIMP TextService::OnKeyDown(
         shift_toggle_.on_shift_down(has_disallowed_modifier());
         return S_OK;
     }
+    if (!english_mode_ && mirror_.raw().empty() && !has_pending_key_request()) {
+        const std::string punctuation_mode = settings_value("mode");
+        smart_punctuation_enabled_ = punctuation_mode != "english" &&
+            punctuation_mode != "programmer";
+    }
     if (provisional_punctuation_.has_value() &&
         resolve_smart_punctuation_key(context, wparam)) {
         return S_OK;
@@ -1110,6 +1117,13 @@ bool TextService::handle_smart_punctuation_key(
     const WPARAM wparam) {
     const char symbol = smart_punctuation_symbol(wparam);
     if (symbol == '\0' || context == nullptr) return false;
+
+    // English/programmer punctuation is an explicit user choice even while the
+    // input language remains Chinese.  Do not let the TSF smart-punctuation
+    // preview pre-empt that setting; fall through to the Host, which applies
+    // the configured ASCII punctuation table while retaining Chinese
+    // composition and candidates.
+    if (!smart_punctuation_enabled_) return false;
 
     const bool composing = !mirror_.raw().empty() || has_pending_key_request();
     std::string left;

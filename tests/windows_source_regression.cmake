@@ -1309,6 +1309,17 @@ foreach(settings_field IN ITEMS
         message(FATAL_ERROR "PiInput Settings must expose ${settings_field}")
     endif()
 endforeach()
+if(NOT settings_main_text MATCHES "中文时使用英文标点")
+    message(FATAL_ERROR
+        "PiInput Settings must expose the Chinese-input English-punctuation option")
+endif()
+if(NOT stable_text_service_header_text MATCHES "smart_punctuation_enabled_" OR
+   NOT stable_text_service_text MATCHES "punctuation_mode != \"english\"" OR
+   NOT stable_text_service_text MATCHES "punctuation_mode != \"programmer\"" OR
+   NOT stable_text_service_text MATCHES "if \\(!smart_punctuation_enabled_\\) return false")
+    message(FATAL_ERROR
+        "TSF smart punctuation must defer at composition boundaries to explicit English/programmer settings")
+endif()
 if(NOT settings_main_text MATCHES "SS_OWNERDRAW" OR
    NOT settings_main_text MATCHES "WM_DRAWITEM" OR
    NOT settings_main_text MATCHES "DT_VCENTER")

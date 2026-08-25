@@ -210,6 +210,13 @@ void test_valid_values_and_boundaries() {
     check(parsed.settings.punctuation_bracket_style == piinput::PunctuationBracketStyle::wechat,
         "WeChat Chinese bracket style parses");
 
+    const auto english_punctuation = piinput::parse_settings_text(
+        "[punctuation]\nmode=english\n", previous);
+    check(english_punctuation.errors.empty(),
+        "Chinese-input English punctuation setting parses without errors");
+    check(english_punctuation.settings.punctuation == piinput::PunctuationMode::english,
+        "English punctuation can be selected without changing the input language");
+
     const auto minimum_visuals = piinput::parse_settings_text(
         "[candidates]\nfont_size=10\nwindow_height=20\n", previous);
     check(minimum_visuals.errors.empty(), "minimum candidate visual settings parse");

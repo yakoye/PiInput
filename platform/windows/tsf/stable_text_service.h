@@ -240,6 +240,10 @@ private:
     DeferredUpdateQueue deferred_updates_;
     FinalEditKeyQueue final_edit_keys_;
     SmartPunctuationEngine smart_punctuation_engine_;
+    // Refreshed only at a composition boundary, in lockstep with the Host's
+    // SettingsManager, so saving settings cannot split one composition across
+    // two punctuation policies.
+    bool smart_punctuation_enabled_{true};
     std::optional<ProvisionalPunctuation> provisional_punctuation_;
     std::optional<HostKeyEvent> smart_replay_event_;
     WPARAM smart_replay_virtual_key_{};
