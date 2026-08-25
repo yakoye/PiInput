@@ -33,6 +33,9 @@ struct HostCaretUpdate final {
     // out-of-process Host uses it as the candidate popup owner so immersive
     // surfaces such as Windows Search keep the popup in their z-order group.
     std::uint64_t owner_window{};
+    // False when the application accepted the TSF UIElement and will render
+    // the candidate list itself (notably the Windows Search integration).
+    bool show_candidate_window{true};
 
     bool operator==(const HostCaretUpdate&) const = default;
 };

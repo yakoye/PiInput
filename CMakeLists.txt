@@ -232,6 +232,7 @@ if(WIN32)
         platform/windows/tsf/lang_bar_item.cpp
         platform/windows/tsf/mode_indicator.cpp
         platform/windows/tsf/client_identity.cpp
+        platform/windows/tsf/candidate_ui_element.cpp
         platform/windows/tsf/stable_text_service.cpp
         src/smart_punctuation.cpp
         platform/windows/tsf/composition_mirror.cpp
@@ -253,6 +254,7 @@ if(WIN32)
         shell32
         user32
         advapi32
+        oleaut32
         uuid
     )
     set_target_properties(PiInputTSF PROPERTIES PREFIX "" OUTPUT_NAME "PiInputTSF")
@@ -587,6 +589,17 @@ if(PIINPUT_BUILD_TESTS)
         target_link_libraries(piinput-candidate-presenter-tests PRIVATE piinput_core user32 gdi32)
         piinput_enable_warnings(piinput-candidate-presenter-tests)
 
+        add_executable(piinput-candidate-ui-element-tests
+            tests/candidate_ui_element_tests.cpp
+            platform/windows/tsf/candidate_ui_element.cpp
+        )
+        target_include_directories(piinput-candidate-ui-element-tests PRIVATE
+            platform/windows/tsf
+        )
+        target_link_libraries(piinput-candidate-ui-element-tests PRIVATE
+            piinput_core ole32 oleaut32 uuid)
+        piinput_enable_warnings(piinput-candidate-ui-element-tests)
+
         add_executable(piinput-mode-indicator-tests
             tests/mode_indicator_tests.cpp
             platform/windows/tsf/mode_indicator.cpp
@@ -751,6 +764,7 @@ if(PIINPUT_BUILD_TESTS)
         add_test(NAME piinput-session-manager COMMAND piinput-session-manager-tests)
         add_test(NAME piinput-host-runtime COMMAND piinput-host-runtime-tests)
         add_test(NAME piinput-candidate-presenter COMMAND piinput-candidate-presenter-tests)
+        add_test(NAME piinput-candidate-ui-element COMMAND piinput-candidate-ui-element-tests)
         add_test(NAME piinput-mode-indicator COMMAND piinput-mode-indicator-tests)
         add_test(NAME piinput-settings-file COMMAND piinput-settings-file-tests)
         add_test(NAME piinput-pipe-security COMMAND piinput-pipe-security-tests)

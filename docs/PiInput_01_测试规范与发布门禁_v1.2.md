@@ -38,7 +38,7 @@
 | 敏感输入 | 已实现，待扩大真人验收 | `GUID_PROP_INPUTSCOPE`/`ITfInputScope` 策略测试；Controlled TSF Host 已显式发布 Password/Numeric PIN scope，真实配置 smoke 已包含旁路 Oracle | 当前候选 DLL 的受控 smoke 实跑；浏览器、WinUI、凭据框实测矩阵 |
 | 结构化语料 | 已实现 | 313 条结构化语料，其中专业词 59 条 | 固定版本产物的最终报告归档 |
 | 大词库内存映射 | 已实现，8h 运行中 | `.lex` 只读映射；Host health 报告 `lexicon_storage=mmap` 和映射字节；短时稳态回归通过 | 完整 8h/24h 曲线与大词库多宿主运行 |
-| 智能标点 | 核心交付子集完成，完整规范未完 | 纯规则引擎、临时 composition、Scintilla 文档真值和 reason code 已实现；严格 token、技术符号、千位三位 provisional 及 Backspace/Esc/context 销毁 Oracle 已加入；新 DLL 在 Notepad++ 通过基础矩阵 | 当前候选 DLL 的 Controlled TSF smoke/生命周期实跑；更多边界；ChatGPT/Chromium/Office/VS Code 同构建矩阵 |
+| 智能标点 | 核心交付子集完成，完整规范未完 | 纯规则引擎、临时 composition、Scintilla 文档真值和 reason code 已实现；数字后第一点立即 ASCII、第二点中文的确定规则已有 L0/物理键 Oracle；严格 token、技术符号、千位三位 provisional 及 Backspace/Esc/context 销毁 Oracle 已加入 | 当前候选 DLL 的 Controlled TSF smoke/生命周期实跑；`1.文本`/`1.。` 跨宿主复验；更多边界；ChatGPT/Chromium/Office/VS Code 同构建矩阵 |
 | Windows CI | 脚本与 workflow 已存在 | Windows build/CTest、JUnit、固定词库、tag/VERSION/clean 检查、可选签名、失败证据上传、包闭环阶段化失败 summary、统一 `result.json`/artifact manifest 和公开资产回下载哈希步骤已写 | GitHub 在线执行记录及失败恢复验证 |
 | 代码签名 | 工具链已写，证据缺失 | `sign-binaries.ps1` 使用 SHA-256/RFC3161；逐 PE 验证签名和时间戳证书，并记录签名者/时间戳指纹与文件哈希；PFX/密码仅暴露给单个签名步骤并在 `finally` 删除临时文件 | 正式证书、tag 构建签名结果、证书链复核 |
 | 安装包闭环 | 分权架构完成，真实闭环待跑 | 主安装/卸载进程保持 `asInvoker`，负责当前用户文件、设置、键盘列表与 Host；窄范围 UAC 子步骤把只读 Shim 部署到 Program Files，注册机器 profile/category 与 SearchHost 可见的 HKLM COM；HKCU COM 指向同一受保护 Shim，不在管理员账户下处理用户数据；所有交互框置顶 | 用受信任签名候选在标准用户和启用应用控制的干净机器执行安装×2、Windows 搜索、卸载和重装闭环 |
@@ -110,7 +110,7 @@
 ### G4 智能标点
 
 - `SP-MIX-*`、`SP-STATE-*`、`SP-PRIV-*` 用例通过。
-- `1. 第一项`、`12:23`、`2/3`、`v1.0.1。`、`白色/黑色，白色、黑色。` 可在中文模式连续输入。
+- `1. 第一项`、`1.文本`、`1.。`、`12:23`、`2/3`、`白色/黑色，白色、黑色。` 可在中文模式连续输入。
 - 规则不依赖直通键之后的 `OnKeyDown`。
 - 快速输入中标点和下一数字顺序不乱。
 - Notepad++ 与 ChatGPT 的结果一致。
@@ -132,7 +132,7 @@
 
 “某个旧进程仍加载旧 DLL 且好用”不能证明新安装包在该宿主通过；必须记录 PID、加载模块身份或重启边界。
 
-候选窗口还必须覆盖 100/125/150/200% DPI、混合 DPI 多屏、屏幕边缘避让、系统输入指示器和可访问性；不能只验证最终文本。对 Windows 搜索、开始菜单等系统表面，还必须记录可见候选窗的 `GW_OWNER`，断言它等于 `ITfContextView::GetWnd`/焦点窗口归一后的顶层宿主；“拼音字母可见、空格能提交汉字”不能替代候选 UI 验收。
+候选窗口还必须覆盖 100/125/150/200% DPI、混合 DPI 多屏、屏幕边缘避让、系统输入指示器和可访问性；不能只验证最终文本。普通桌面宿主必须核对外部候选 popup 的 `GW_OWNER`；Windows 搜索、开始菜单等 UI-less/集成式系统表面必须核对 Shim 发布了 `ITfCandidateListUIElementBehavior` 与 `ITfIntegratableCandidateListUIElement`，宿主接管时 Host 外部窗被抑制且系统候选行可见。“拼音字母可见、空格能提交汉字”不能替代候选 UI 验收。
 
 ### G6 性能与资源
 

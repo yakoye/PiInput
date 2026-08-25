@@ -647,8 +647,10 @@ TextService::~TextService() {
 STDMETHODIMP TextService::QueryInterface(REFIID iid, void** object) {
     if (object == nullptr) return E_POINTER;
     *object = nullptr;
-    if (IsEqualIID(iid, IID_IUnknown) || IsEqualIID(iid, IID_ITfTextInputProcessor)) {
-        *object = static_cast<ITfTextInputProcessor*>(this);
+    if (IsEqualIID(iid, IID_IUnknown) ||
+        IsEqualIID(iid, IID_ITfTextInputProcessor) ||
+        IsEqualIID(iid, IID_ITfTextInputProcessorEx)) {
+        *object = static_cast<ITfTextInputProcessorEx*>(this);
     } else if (IsEqualIID(iid, IID_ITfKeyEventSink)) {
         *object = static_cast<ITfKeyEventSink*>(this);
     } else if (IsEqualIID(iid, IID_ITfCompositionSink)) {
@@ -739,7 +741,17 @@ STDMETHODIMP TextService::Activate(
     return S_OK;
 }
 
+STDMETHODIMP TextService::ActivateEx(
+    ITfThreadMgr* const thread_manager,
+    const TfClientId client_id,
+    const DWORD flags) {
+    const HRESULT result = Activate(thread_manager, client_id);
+    if (SUCCEEDED(result)) activation_flags_ = flags;
+    return result;
+}
+
 STDMETHODIMP TextService::Deactivate() {
+    end_candidate_ui();
     mode_indicator_.destroy();
     if (pipe_client_ != nullptr) pipe_client_->stop();
     pipe_client_.reset();
@@ -778,6 +790,7 @@ STDMETHODIMP TextService::Deactivate() {
         thread_manager_ = nullptr;
     }
     client_id_ = TF_CLIENTID_NULL;
+    activation_flags_ = 0U;
     english_mode_ = false;
     sensitive_context_ = false;
     english_direct_ = false;
@@ -1343,9 +1356,11 @@ void TextService::handle_reply(HostEnvelope envelope) noexcept {
                 reply->snapshot.raw.empty() && reply->text.size() == 1U &&
                 (reply->text.front() >= 'A' && reply->text.front() <= 'z');
             if (reply->action == HostAction::update) {
+                (void)update_candidate_ui(context, reply->snapshot);
                 (void)request_update_edit(
                     context, request, mirror_.composition_text(), mirror_.caret());
             } else if (reply->action == HostAction::commit) {
+                end_candidate_ui();
                 // A final edit owns the composition boundary.  Any asynchronous
                 // update accepted for the just-finished raw input must never be
                 // replayed into the next word after this commit completes.
@@ -1369,6 +1384,7 @@ void TextService::handle_reply(HostEnvelope envelope) noexcept {
                     next_replayed_key = final_edit_keys_.complete_final_edit();
                 }
             } else if (reply->action == HostAction::cancel) {
+                end_candidate_ui();
                 clear_deferred_updates();
                 if (replayed_key) {
                     (void)final_edit_keys_.complete_replayed_reply(true);
@@ -1495,6 +1511,7 @@ bool TextService::bind_context(ITfContext* const context) {
         (void)pipe_client_->send_focus(focus_request, false);
     }
     release_pending_contexts();
+    end_candidate_ui();
     clear_deferred_updates();
     final_edit_keys_.clear();
     clear_smart_punctuation();
@@ -1985,6 +2002,7 @@ void TextService::on_lang_bar_command(const LangBarCommand command) noexcept {
 }
 
 void TextService::cancel_from_host_ui() noexcept {
+    end_candidate_ui();
     mirror_.discard_composition();
     clear_deferred_updates();
     final_edit_keys_.clear();
@@ -2003,12 +2021,78 @@ void TextService::select_candidate_from_host_ui(const std::uint64_t candidate_id
     (void)dispatch(active_context_, std::move(event));
 }
 
+bool TextService::update_candidate_ui(
+    ITfContext* const context,
+    const HostSnapshot& snapshot) noexcept {
+    if (context == nullptr || snapshot.raw.empty() || snapshot.candidates.empty()) {
+        end_candidate_ui();
+        return true;
+    }
+    if (ui_element_manager_ == nullptr && thread_manager_ != nullptr) {
+        (void)thread_manager_->QueryInterface(IID_PPV_ARGS(&ui_element_manager_));
+    }
+    if (ui_element_manager_ == nullptr) {
+        show_custom_candidate_ui_ = true;
+        return true;
+    }
+    if (candidate_ui_ == nullptr) {
+        ITfDocumentMgr* document_manager = nullptr;
+        (void)context->GetDocumentMgr(&document_manager);
+        candidate_ui_ = new (std::nothrow) CandidateUiElement(
+            document_manager,
+            [this](const std::uint64_t candidate_id) {
+                select_candidate_from_host_ui(candidate_id);
+            },
+            [this] { cancel_from_host_ui(); });
+        if (document_manager != nullptr) document_manager->Release();
+        if (candidate_ui_ == nullptr) {
+            show_custom_candidate_ui_ = true;
+            return true;
+        }
+        candidate_ui_->update(snapshot);
+        BOOL show = TRUE;
+        DWORD id = static_cast<DWORD>(-1);
+        const HRESULT begun = ui_element_manager_->BeginUIElement(
+            candidate_ui_, &show, &id);
+        if (FAILED(begun)) {
+            candidate_ui_->Release();
+            candidate_ui_ = nullptr;
+            show_custom_candidate_ui_ = true;
+            return true;
+        }
+        candidate_ui_id_ = id;
+        show_custom_candidate_ui_ = show != FALSE;
+        return show_custom_candidate_ui_;
+    }
+    candidate_ui_->update(snapshot);
+    (void)ui_element_manager_->UpdateUIElement(candidate_ui_id_);
+    return show_custom_candidate_ui_;
+}
+
+void TextService::end_candidate_ui() noexcept {
+    if (ui_element_manager_ != nullptr &&
+        candidate_ui_id_ != static_cast<DWORD>(-1)) {
+        (void)ui_element_manager_->EndUIElement(candidate_ui_id_);
+    }
+    candidate_ui_id_ = static_cast<DWORD>(-1);
+    if (candidate_ui_ != nullptr) {
+        candidate_ui_->Release();
+        candidate_ui_ = nullptr;
+    }
+    if (ui_element_manager_ != nullptr) {
+        ui_element_manager_->Release();
+        ui_element_manager_ = nullptr;
+    }
+    show_custom_candidate_ui_ = true;
+}
+
 void TextService::capture_composition_caret(
     ITfContext* const context,
     const TfEditCookie edit_cookie,
     HostCaretUpdate& update) const noexcept {
     update.has_text_caret = false;
     update.owner_window = 0U;
+    update.show_candidate_window = show_custom_candidate_ui_;
     if (context == nullptr) return;
     ITfContextView* view = nullptr;
     if (FAILED(context->GetActiveView(&view)) || view == nullptr) {

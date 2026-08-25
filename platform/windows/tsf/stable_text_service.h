@@ -1,6 +1,7 @@
 #pragma once
 
 #include "composition_mirror.h"
+#include "candidate_ui_element.h"
 #include "deferred_update_queue.h"
 #include "final_edit_key_queue.h"
 #include "pipe_client.h"
@@ -30,7 +31,7 @@ enum class EditRequestResult {
     pending,
 };
 
-class TextService final : public ITfTextInputProcessor, public ITfKeyEventSink, public ITfCompositionSink {
+class TextService final : public ITfTextInputProcessorEx, public ITfKeyEventSink, public ITfCompositionSink {
 public:
     explicit TextService(HINSTANCE module);
     TextService(const TextService&) = delete;
@@ -41,6 +42,10 @@ public:
     STDMETHODIMP_(ULONG) Release() override;
 
     STDMETHODIMP Activate(ITfThreadMgr* thread_manager, TfClientId client_id) override;
+    STDMETHODIMP ActivateEx(
+        ITfThreadMgr* thread_manager,
+        TfClientId client_id,
+        DWORD flags) override;
     STDMETHODIMP Deactivate() override;
 
     STDMETHODIMP OnSetFocus(BOOL foreground) override;
@@ -187,6 +192,10 @@ private:
     // A candidate the user clicked in the host's candidate window. Replayed
     // through the ordinary selection path so it commits exactly like a digit.
     void select_candidate_from_host_ui(std::uint64_t candidate_id) noexcept;
+    [[nodiscard]] bool update_candidate_ui(
+        ITfContext* context,
+        const HostSnapshot& snapshot) noexcept;
+    void end_candidate_ui() noexcept;
 
     static LRESULT CALLBACK callback_window_proc(
         HWND window,
@@ -204,6 +213,7 @@ private:
     std::wstring composition_written_;
     ITfContext* active_context_{};
     TfClientId client_id_{TF_CLIENTID_NULL};
+    DWORD activation_flags_{};
     bool key_sink_advised_{};
     bool foreground_{true};
     // Password, private and PIN scopes bypass PiInput completely: no Host
@@ -234,6 +244,10 @@ private:
     std::unique_ptr<ShimPipeTransport> transport_;
     std::unique_ptr<PipeClient> pipe_client_;
     std::unordered_map<std::uint64_t, PendingContext> pending_contexts_;
+    ITfUIElementMgr* ui_element_manager_{};
+    CandidateUiElement* candidate_ui_{};
+    DWORD candidate_ui_id_{static_cast<DWORD>(-1)};
+    bool show_custom_candidate_ui_{true};
 };
 
 extern std::atomic<long> g_object_count;

@@ -362,6 +362,14 @@ bool CandidatePresenter::show_at(
         window_.hide();
         return true;
     }
+    if (!update.show_candidate_window) {
+        // The application accepted the Shim's ITfCandidateListUIElement and
+        // owns rendering (Windows Search is the primary case). A second,
+        // cross-process popup would either be hidden behind the shell surface
+        // or duplicate the integrated candidate row.
+        window_.hide();
+        return true;
+    }
     const auto& candidates = wide_candidates(session_id, *snapshot);
     const std::size_t selected = snapshot->view.active_row *
         (std::max)(snapshot->view.items_per_row, std::size_t{1U}) +

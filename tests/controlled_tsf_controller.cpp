@@ -465,7 +465,8 @@ int wmain(const int argc, wchar_t** const argv) {
         const std::wstring version_initial = L"版本是 v1.0.1";
         const bool version_sentence = time && run_text_case(
             window, edit_a, version_initial, static_cast<DWORD>(version_initial.size()),
-            {{VK_OEM_PERIOD, false}, {VK_SPACE, false}}, L"版本是 v1.0.1。 ");
+            {{VK_OEM_PERIOD, false}, {VK_OEM_PERIOD, false}, {VK_SPACE, false}},
+            L"版本是 v1.0.1.。 ");
 
         const std::wstring grouped_initial = L"1";
         const bool grouped = version_sentence && run_text_case(

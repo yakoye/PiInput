@@ -107,6 +107,7 @@ void test_caret_update_round_trip_preserves_text_geometry_and_fallback() {
         .right = 102,
         .bottom = 224,
         .owner_window = 0x12345678U,
+        .show_candidate_window = false,
     };
     const auto decoded_primary = piinput::decode_host_caret_update(
         piinput::encode_host_caret_update(primary), error);
@@ -118,8 +119,17 @@ void test_caret_update_round_trip_preserves_text_geometry_and_fallback() {
         error,
         piinput::host_protocol_v3);
     check(legacy_primary.has_value() && legacy_primary->owner_window == 0U &&
+            legacy_primary->show_candidate_window &&
             legacy_primary->left == primary.left && legacy_primary->bottom == primary.bottom,
         "protocol v3 caret geometry remains compatible without a popup owner");
+
+    const auto owner_only = piinput::decode_host_caret_update(
+        piinput::encode_host_caret_update(primary, piinput::host_protocol_v4),
+        error,
+        piinput::host_protocol_v4);
+    check(owner_only.has_value() && owner_only->owner_window == primary.owner_window &&
+            owner_only->show_candidate_window,
+        "protocol v4 owned caret defaults to the legacy custom candidate window");
 
     const piinput::HostCaretUpdate negative_monitor{
         .generation = 74U,
@@ -178,6 +188,12 @@ void test_caret_update_decoder_rejects_invalid_flags_rectangles_and_lengths() {
     check(!piinput::decode_host_caret_update(unknown_flags, error).has_value() &&
             error == piinput::HostPayloadError::unknown_value,
         "caret update rejects unknown availability flags");
+
+    auto unknown_visibility = piinput::encode_host_caret_update(valid);
+    unknown_visibility[36] = std::byte{0x02};
+    check(!piinput::decode_host_caret_update(unknown_visibility, error).has_value() &&
+            error == piinput::HostPayloadError::unknown_value,
+        "caret update rejects unknown integrated-candidate visibility values");
 
     auto reversed_horizontal = piinput::encode_host_caret_update(valid);
     reversed_horizontal[20] = std::byte{0x1d};

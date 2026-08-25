@@ -14,7 +14,7 @@ foreach ($name in @(
         throw "Diagnostics JSON is missing $name"
     }
 }
-if ($status.protocol_version -ne 4) { throw "Unexpected protocol version" }
+if ($status.protocol_version -ne 5) { throw "Unexpected protocol version" }
 if ($status.legacy_module_scan -ne "not_performed") {
     throw "Diagnostics must not pretend to know legacy loaded-module state"
 }

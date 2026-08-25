@@ -153,7 +153,7 @@ monotonic_timestamp
 PunctuationContext -> PunctuationDecision
 ```
 
-规范目标覆盖：确定性数字、序号、技术 token、URL/path、中文正文、已有右侧文本和歧义进入临时状态。当前表驱动实现已覆盖 `/` 字面输入、严格小数/版本/IPv4/时间/比例/千位、URL/Email/Path/File、技术中缀/边界/前缀/引号、方括号/圆括号/下划线、行首数字序号、普通中文标点及数字后 provisional 解析；Controlled TSF lifecycle Oracle 已写，当前候选实跑和跨真实宿主仍不能写成已覆盖。
+规范目标覆盖：确定性数字、序号、技术 token、URL/path、中文正文、已有右侧文本和歧义进入临时状态。当前表驱动实现已覆盖 `/` 字面输入、严格小数/版本/IPv4/时间/比例/千位、URL/Email/Path/File、技术中缀/边界/前缀/引号、方括号/圆括号/下划线、行首数字序号和普通中文标点；数字后句号改为第一下立即 ASCII、第二下中文，provisional 只保留冒号与千位逗号。Controlled TSF lifecycle Oracle 已写，当前候选实跑和跨真实宿主仍不能写成已覆盖。
 
 ### 8.2 TSF Adapter
 
@@ -173,7 +173,7 @@ L1/L3 需要验证：
 
 Notepad++ 是 Smart Punctuation 的 P0 首要宿主，因为它已经暴露出“直通键只有 `OnTestKeyDown`”的差异。ChatGPT Windows App 作为另一种宿主模型同时验证，不能用其中一个替代另一个。
 
-Windows 搜索必须单列为打包系统宿主：除了 profile/category、`IMMERSIVESUPPORT` 和 DLL 的 `ALL APPLICATION PACKAGES` 读取执行权限，还要核对 64 位 HKLM COM 入口。HKCU/HKLM 都必须指向 Program Files 下仅管理员可写的同一 Shim；绝不能让机器 COM 指向用户可写的 LocalAppData。只存在 HKCU `InprocServer32` 时，普通桌面应用可以加载，而 SearchHost 看不到该类；测试必须记录 SearchHost PID、实际模块路径和中文最终文本。候选 UI 另有独立断言：Shim 必须在 edit session 内取得 `ITfContextView::GetWnd`，失败时回退当前焦点，转换为顶层 HWND 后随 caret 消息传给 Host；Controller 枚举可见 `PiInputTsfCandidateWindow` 并断言 `GetWindow(candidate, GW_OWNER)` 等于测试宿主。还要销毁宿主后再输入，验证 Host 不复用失效 HWND。
+Windows 搜索必须单列为打包系统宿主：除了 profile/category、`IMMERSIVESUPPORT` 和 DLL 的 `ALL APPLICATION PACKAGES` 读取执行权限，还要核对 64 位 HKLM COM 入口。HKCU/HKLM 都必须指向 Program Files 下仅管理员可写的同一 Shim；绝不能让机器 COM 指向用户可写的 LocalAppData。测试必须记录 SearchHost PID、实际模块路径和中文最终文本。候选 UI 分两路断言：普通桌面宿主继续检查 `ITfContextView::GetWnd` 归一后的 `GW_OWNER`；SearchHost 必须让 `BeginUIElement` 返回宿主接管显示，枚举 `ITfCandidateListUIElementBehavior`/`ITfIntegratableCandidateListUIElement` 的候选、分页、选择和取消，并确认协议 v5 的 `show_candidate_window=false` 抑制外部 popup。两路都要验证 context/宿主销毁后不复用旧状态。
 
 ## 9. Controlled TSF TestHost
 

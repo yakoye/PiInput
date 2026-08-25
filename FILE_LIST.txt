@@ -351,6 +351,8 @@ platform/windows/preview/main.cpp
 platform/windows/settings/main.cpp
 platform/windows/settings/settings_file.cpp
 platform/windows/settings/settings_file.h
+platform/windows/tsf/candidate_ui_element.cpp
+platform/windows/tsf/candidate_ui_element.h
 platform/windows/tsf/candidate_window.cpp
 platform/windows/tsf/candidate_window.h
 platform/windows/tsf/client_identity.cpp
@@ -473,6 +475,7 @@ tests/brand_regression.cmake
 tests/candidate_grid_tests.cpp
 tests/candidate_presenter_tests.cpp
 tests/candidate_settings_script_regression.ps1
+tests/candidate_ui_element_tests.cpp
 tests/character_coverage_tests.cpp
 tests/composition_mirror_tests.cpp
 tests/controlled_tsf_controller.cpp

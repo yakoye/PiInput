@@ -924,9 +924,12 @@ void test_smart_punctuation() {
         "PUNC-EMAIL", "EMAIL", "An email domain dot stays ASCII");
     expect('.', "路径C:/folder/file", "txt", piinput::SmartPunctuationAction::literal,
         "PUNC-PATH", "PATH", "A path dot stays ASCII");
-    expect('.', "版本v1.0.1", {}, piinput::SmartPunctuationAction::provisional,
-        "PUNC-NUMERIC-PENDING", "AMBIGUOUS",
-        "Version-final dot waits so Chinese prose can resolve it");
+    expect('.', "版本v1.0.1", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-DOT-AFTER-DIGIT", "SEQUENCE",
+        "The first period after a digit remains ASCII immediately");
+    expect('.', "1.", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT",
+        "The second period after a numeric ASCII dot becomes a Chinese full stop");
     expect('.', "已有1.", "2", piinput::SmartPunctuationAction::transform,
         "PUNC-NUMERIC-INVALID", "CHINESE_TEXT", "Malformed numeric punctuation is not protected");
 
@@ -1004,8 +1007,8 @@ void test_smart_punctuation() {
 
     check(decide('.', "1", {}, true).action == piinput::SmartPunctuationAction::transform,
         "Active pinyin composition remains owned by the Host punctuation path");
-    check(decide('.', "版本v1").chinese_text == "。",
-        "Provisional period carries its Chinese resolution");
+    check(decide('.', "版本v1").action == piinput::SmartPunctuationAction::literal,
+        "A trailing digit makes the first period immediately ASCII");
     check(decide(':', "12").chinese_text == "：",
         "Provisional colon carries its Chinese resolution");
     check(engine.resolve_provisional('.', '0', "PUNC-NUMERIC-PENDING").keep_ascii,

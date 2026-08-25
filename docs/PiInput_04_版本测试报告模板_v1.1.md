@@ -165,7 +165,7 @@ p0_real_host_matrix=NOT_RUN
 | 序列 | Notepad | Notepad++ | ChatGPT | Chrome/Edge | VS Code |
 |---|---|---|---|---|---|
 | `1. 第一项。` |  |  |  |  |  |
-| `v1.0.1。` |  |  |  |  |  |
+| `1.文本` 不被回写，`1..` 得到 `1.。` |  |  |  |  |  |
 | `12:23。` |  |  |  |  |  |
 | `2/3。` |  |  |  |  |  |
 
@@ -311,7 +311,8 @@ p0_real_host_matrix=NOT_RUN
 | 注册 TSF/Host 固定路径 |  |  |
 | HKCU/HKLM `InprocServer32` 均指向安装后同一 TSF DLL |  |  |
 | SearchHost PID、实际加载 PiInputTSF.dll 路径及中文最终文本 |  |  |
-| Windows 搜索首字母候选窗可见，`GW_OWNER` 为文本宿主顶层窗口 |  |  |
+| Windows 搜索首字母系统候选行可见；`BeginUIElement` 由宿主接管，外部 popup 被抑制 |  |  |
+| 普通桌面宿主外部候选窗可见，`GW_OWNER` 为文本宿主顶层窗口 |  |  |
 | 包内/安装后 Host 与 TSF 哈希对应 |  |  |
 | Controlled TSF 实际加载 DLL + 物理键 smoke |  |  |
 | 公开 Release ZIP 回下载与本地/sidecar 哈希 |  |  |

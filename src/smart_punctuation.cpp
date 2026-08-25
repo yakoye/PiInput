@@ -485,12 +485,22 @@ SmartPunctuationDecision SmartPunctuationEngine::decide(
         return {SmartPunctuationAction::transform, "PUNC-NUMERIC-INVALID", chinese, "CHINESE_TEXT"};
     }
 
-    if (context.symbol == '.' && is_decimal_list_prefix(context.left_text)) {
-        return {SmartPunctuationAction::literal, "PUNC-DECIMAL-LIST", chinese, "SEQUENCE"};
+    // The user's explicit two-key rule: the first period immediately after a
+    // digit is ASCII; pressing period again produces the Chinese full stop.
+    // Do not leave the first period provisional and rewrite it when prose is
+    // typed next -- that is exactly how `1.文本` regressed into `1。文本`.
+    if (context.symbol == '.' &&
+        is_ascii_digit_local(last_byte(context.left_text)) &&
+        context.right_text.empty()) {
+        return {SmartPunctuationAction::literal,
+            is_decimal_list_prefix(context.left_text)
+                ? "PUNC-DECIMAL-LIST"
+                : "PUNC-DOT-AFTER-DIGIT",
+            chinese, "SEQUENCE"};
     }
 
     const bool numeric_provisional_symbol =
-        context.symbol == '.' || context.symbol == ':' || context.symbol == ',';
+        context.symbol == ':' || context.symbol == ',';
     if (numeric_provisional_symbol &&
         is_ascii_digit_local(last_byte(context.left_text)) && context.right_text.empty()) {
         return {SmartPunctuationAction::provisional,

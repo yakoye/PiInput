@@ -34,6 +34,8 @@ file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.cpp" t
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.h" text_service_header_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/candidate_window.cpp" candidate_window_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/candidate_window.h" candidate_window_header_text)
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/candidate_ui_element.cpp" candidate_ui_element_text)
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/candidate_ui_element.h" candidate_ui_element_header_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/pipe_server.cpp" host_pipe_server_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/candidate_presenter.cpp" candidate_presenter_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/main.cpp" host_main_text)
@@ -77,6 +79,39 @@ file(READ "${PIINPUT_SOURCE_DIR}/src/smart_punctuation.cpp" smart_punctuation_te
 file(READ "${PIINPUT_SOURCE_DIR}/tests/controlled_tsf_host.cpp" controlled_tsf_host_text)
 file(READ "${PIINPUT_SOURCE_DIR}/tests/controlled_tsf_controller.cpp" controlled_tsf_controller_text)
 file(READ "${PIINPUT_SOURCE_DIR}/tests/tsf_app_soak_tests.ps1" tsf_app_soak_text)
+foreach(search_candidate_token IN ITEMS
+        "ITfTextInputProcessorEx"
+        "ActivateEx"
+        "BeginUIElement"
+        "UpdateUIElement"
+        "EndUIElement"
+        "show_custom_candidate_ui_")
+    string(FIND "${stable_text_service_header_text}${stable_text_service_text}"
+        "${search_candidate_token}" search_candidate_position)
+    if(search_candidate_position LESS 0)
+        message(FATAL_ERROR
+            "Stable TSF Shim is missing Windows Search candidate integration: ${search_candidate_token}")
+    endif()
+endforeach()
+foreach(search_ui_element_token IN ITEMS
+        "ITfCandidateListUIElementBehavior"
+        "ITfIntegratableCandidateListUIElement"
+        "kSearchBoxIntegrationStyle"
+        "GetString"
+        "SetSelection"
+        "Finalize")
+    string(FIND "${candidate_ui_element_header_text}${candidate_ui_element_text}"
+        "${search_ui_element_token}" search_ui_element_position)
+    if(search_ui_element_position LESS 0)
+        message(FATAL_ERROR
+            "Windows Search UIElement contract is missing ${search_ui_element_token}")
+    endif()
+endforeach()
+if(NOT candidate_presenter_text MATCHES "show_candidate_window" OR
+   NOT candidate_presenter_text MATCHES "window_\\.hide")
+    message(FATAL_ERROR
+        "Out-of-process candidate UI must hide when an immersive TSF host accepts the UIElement")
+endif()
 foreach(required_token_exit_oracle IN ITEMS
         "token_exit_url"
         "token_exit_email"

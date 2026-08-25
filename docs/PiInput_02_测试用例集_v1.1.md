@@ -113,7 +113,7 @@
 |---|---|---|---|---|---|---|
 | SP-MIX-001 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | `1.明天干嘛。`；组件和 Notepad++ 的 `1.` 已通过，整句同构建矩阵待验收 | 同句出现序号 ASCII `.` 与中文 `。` |
 | SP-MIX-002 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | `这个是2/3，那么我们选白色/黑色，白色、黑色。` | 分数/选项 `/`、列举 `、` 和中文标点共存 |
-| SP-MIX-003 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | `会议时间：12:23，版本是v1.2.3。`；L0 另断言 `版本1？/！` 不进入数字 provisional | 中文冒号、时间冒号、版本点与句号共存；数字不污染其他中文标点 |
+| SP-MIX-003 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | 输入 `会议时间：12:23，版本是v1.2.3..`；另断言 `1.文本` 不回写、`版本1？/！` 不进入数字 provisional | 上屏 `会议时间：12:23，版本是v1.2.3.。`；第一点 ASCII、第二点中文，数字不污染其他中文标点 |
 | SP-MIX-004 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | `价格是1,299.50元，折扣为80%。`；`折扣80%，` 连续物理键 Oracle 已编译，待当前候选实跑 | 千位逗号、小数点、百分号与中文标点共存 |
 | SP-MIX-005 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | `服务器是192.168.1.1，端口是8080。` | IPv4 内部点 ASCII，句末中文 |
 | SP-MIX-006 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | 技术方括号/圆括号/下划线、位域冒号的 L0 规则和 Controlled TSF Oracle 已加入，当前候选实跑待完成 | 技术方括号/冒号不中文化 |
@@ -170,7 +170,7 @@
 | IME-APP-008 | P0 | ChatGPT Windows App | MANUAL |
 | IME-APP-009 | P1 | Windows Terminal | MANUAL |
 | IME-APP-010 | P1 | PowerShell/CMD | MANUAL |
-| IME-APP-011 | P0 | Windows 设置/搜索/WinUI | PARTIAL；HKLM COM 修复后 `0.7.13+ed980905fcb4` 已由 SearchHost 加载并可空格提交汉字；候选 UI 又定位出两层根因：caret 先于快照的竞态，以及外部候选窗没有绑定文本宿主。协议 v4 已传递 `GetWnd`/`GetFocus` 归一后的顶层 HWND，Host 以它作为 popup owner 并在 owner 变化/失效时重建；L2/Controlled Host 增加 wire、`GW_OWNER` 与宿主销毁回归。新构建仍须在 SearchHost 看到首字母候选窗后才可 PASS |
+| IME-APP-011 | P0 | Windows 设置/搜索/WinUI | PARTIAL；SearchHost 已加载 Shim 且可提交汉字，但协议 v4 的跨进程 owned popup 实机仍不可见。根因继续下钻为能力声明与实现不一致：已注册 `UIELEMENTENABLED/IMMERSIVESUPPORT`，Shim 却未实现 UIElement/`ITfTextInputProcessorEx`。当前协议 v5 已补齐 `ITfCandidateListUIElementBehavior`、搜索框集成接口与 `ActivateEx`；宿主接管时抑制 Host 外部窗，普通桌面宿主继续走 owned popup。L0/L2 已覆盖候选数据、分页、选择/取消、v4 兼容与显示通道标志；新构建仍须在 SearchHost 看到系统候选行后才可 PASS |
 | IME-APP-012 | P1 | WPF 控件 | MANUAL/PLANNED HOST |
 | IME-APP-013 | P1 | Qt 控件 | MANUAL/PLANNED HOST |
 | IME-APP-014 | P0 | Windows 远程桌面连接地址框 | MANUAL；增加空闲状态连续数字完全透传回归 |

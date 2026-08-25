@@ -58,7 +58,7 @@ Word v1.0/v1.1 文件作为初稿归档；上述 Markdown 是后续工程执行�
 | 结构化语料/专业词 | 已实现 | 313 条总语料，59 条专业词；13 个缺口已补数据 | 固定候选构建报告归档 |
 | 敏感输入 | 组件级完成 | InputScope 策略与 TSF 旁路已实现；Controlled TSF Host 显式发布 Password/Numeric PIN，真实 profile Oracle 已写 | 当前候选受控实跑及浏览器/WinUI/凭据矩阵 |
 | 大词库 mmap | 已实现，Host 8h 运行中 | Host/benchmark 可报告映射状态；短时稳态通过 | 完整 8h/24h 曲线与真实 TSF soak |
-| Smart Punctuation | 核心实现继续完善 | 严格数值、URL/Email/Path/File、技术中缀/边界、千位三位 provisional，Scintilla 文档真值、reason code、受控物理键夹具和 Notepad++ 基础矩阵已落地 | 当前候选 Controlled TSF smoke/直接 lifecycle、引号与单位等剩余规则及跨宿主同构建矩阵 |
+| Smart Punctuation | 核心实现继续完善 | 严格数值、URL/Email/Path/File、技术中缀/边界、千位三位 provisional，数字后第一点立即 ASCII/第二点中文，Scintilla 文档真值、reason code 与受控物理键夹具已落地 | 当前候选 Controlled TSF smoke/直接 lifecycle、`1.文本`/`1.。` 真实宿主复验、引号与单位等剩余规则及跨宿主同构建矩阵 |
 | Windows CI | 配置存在 | build/CTest + JUnit/词库、tag/clean 身份、签名、失败证据、包闭环、统一 `result.json`/artifact manifest、Release 回下载 workflow 已写；安装/卸载改为普通用户 `asInvoker` 并加入无辅助产品进程与置顶窗口门禁 | 标准用户和应用控制环境的在线 run 成功并保存 artifacts |
 | 签名 | 工具存在、外部阻塞 | 可签名并逐 PE 验证 RFC3161 时间戳，输出 signer/timestamper 指纹与文件哈希；当前无正式证书 | 正式证书 + tag 构建验证 |
 | 包闭环 | 静态闭环通过 | 哈希、身份、payload、源码泄漏已实跑；tag 前版下载/哈希、覆盖升级与 UserData 哨兵、安装×2、HKCU/HKLM TSF 与 Host 路径、安装后哈希、受控实际 DLL、卸载残留和可选重装已写 | 受信任签名后在干净用户、Windows 搜索和升级路径实际通过 |
@@ -195,7 +195,7 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 
 1. 纯决策引擎、真实 context 快照、单符号 provisional composition、`/`/`、` 物理键策略和 reason code 已落地；严格数值、URL/Email/Path/File 和技术中缀的 L0 分类也已补齐，不再回到“上一键是数字”的回调状态补丁。
 2. Notepad++ 新 DLL 核心矩阵已通过；它只证明该宿主和该子集，不能代替完整 `SP-MIX-*` 或其他宿主。
-3. Controlled TSF Host 的物理扫描码、焦点/context Oracle 已通过；真实 PiInput profile、实际 DLL 身份、千位/技术符号、数字后中文问号、token 退出恢复中文、百分号后中文逗号、Backspace/Esc、跨 context/销毁和 Password/PIN smoke 已实现但尚未用当前候选安装执行。数字 provisional 已限制为 `.`/`:`/`,`，不会再吞掉普通 `？/！`；技术括号也不再仅凭相邻数字误判。下一边界是执行并修复该 lifecycle smoke、扩展边界和跨宿主验收。
+3. Controlled TSF Host 的物理扫描码、焦点/context Oracle 已通过；真实 PiInput profile、实际 DLL 身份、千位/技术符号、数字后中文问号、token 退出恢复中文、百分号后中文逗号、Backspace/Esc、跨 context/销毁和 Password/PIN smoke 已实现但尚未用当前候选安装执行。句号不再 provisional：第一下立即 ASCII，第二下中文；数字 provisional 仅保留 `:`/`,`，不会吞掉普通 `？/！`。下一边界是执行 lifecycle smoke、`1.文本`/`1.。` 与跨宿主验收。
 4. Notepad++、ChatGPT、Chromium、Office、VS Code 必须加载同一 build identity；旧进程加载旧 DLL 的表现不计入候选结果。
 5. 只有 05 的完整 P0 规则族、状态/隐私用例和跨宿主矩阵全部通过，G4 才能从 `BLOCKED` 改为 `PASS`。
 
@@ -218,7 +218,7 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 - PFX Base64/密码 secret 只暴露给单个签名步骤，不进入 job 级环境；临时 PFX 在该步骤 `finally` 删除且绝不上传。
 - `RequireSigned` 由 tag/final policy 决定，不能由开发者为通过测试随意关闭。
 - 正式资产必须再次验证每个 PE 签名和 ZIP SHA-256。
-- 安装闭环必须核对 HKCU 与 SearchHost 可见的 HKLM TSF 路径、Host 路径、包内/安装后 Host 与 TSF 哈希，并用 Controlled TSF Host 证明实际加载 DLL；系统表面还必须看到首字母候选窗，并核对候选 popup 的 `GW_OWNER` 是文本宿主顶层窗口，不能只用最终汉字上屏代替 UI 证据；tag 发布后再次下载 ZIP，与 sidecar 和本地 SHA-256 三方比对。
+- 安装闭环必须核对 HKCU 与 SearchHost 可见的 HKLM TSF 路径、Host 路径、包内/安装后 Host 与 TSF 哈希，并用 Controlled TSF Host 证明实际加载 DLL；普通桌面宿主核对 popup `GW_OWNER`，Windows 搜索核对 UIElement 候选由宿主集成显示且外部窗被抑制，不能只用最终汉字上屏代替 UI 证据；tag 发布后再次下载 ZIP，与 sidecar 和本地 SHA-256 三方比对。
 - CI 失败也必须保存证据：CTest 输出 JUnit，package closure 在最早的哈希失败到安装/卸载失败之间都写出 `status=failed`、`stage` 和错误原因。
 - CI 的 `always()` 收尾使用 `compose-test-result.ps1` 生成 schema v1 统一结果和 SHA-256 manifest；非法状态、重复 Case ID 或声明证据缺失必须失败，`BLOCKED/NOT_RUN/N/A` 只单独计数，不进入 executed pass rate。
 - 正式 tag 在任何构建/签名前先执行 `verify-release-evidence.ps1`；Host-only 8h、TSF/App 8h、P0 真实宿主矩阵必须在对应版本验证记录中全部标为 `PASS`，否则流水线 fail-closed。

@@ -17,9 +17,9 @@ PiInput 的中文模式不是“所有标点都全角化”。同一段文字必
 
 ```text
 1. 第一项明天处理。
-会议时间：12:23，版本是 v1.0.1。
+会议时间：12:23，版本是 v1.0.1，准备发布。
 这个值是 2/3，支持 Windows/Linux/macOS。
-服务器是 192.168.1.1，端口是 8080。
+服务器是 192.168.1.1，端口是 8080，状态正常。
 BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 ```
 
@@ -28,8 +28,8 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 1. 数值、序号、版本、IP、域名、路径和技术 token 内部使用 ASCII 符号。
 2. 普通中文句子继续使用 `，。！？：；“”（）` 等中文标点。
 3. 不允许仅凭“前一个按键是数字”决定标点；直通键是否进入 `OnKeyDown` 取决于宿主，Notepad++ 等应用不会为未吃掉的键保证该回调。
-4. 不允许只看左侧一个字符就把数字后的句号永久判成 `.`；否则 `版本是 v1.0.1。` 无法成立。
-5. 无法立即消歧时，使用可撤销的临时标点 composition；不得先提交再修改已经确认的远端文本。
+4. 数字后句号采用用户明确指定的双击语义：第一下立即输出 ASCII `.`，不得被后续文字改写；紧接着第二下输出中文 `。`，所以 `1..` 得到 `1.。`。
+5. 冒号、千位逗号等仍无法立即消歧时，使用可撤销的临时标点 composition；不得先提交再修改已经确认的远端文本。
 6. 敏感输入范围完全旁路 Smart Punctuation，不读取上下文、不进入 Host、不记录文本。
 
 ## 2. 状态与证据口径
@@ -50,7 +50,7 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 | 中/英/程序员标点模式 | 已实现 | `PunctuationTransformer` 和设置页已有三种模式 |
 | 基础中文标点、单双引号、括号样式 | 已实现 | 核心表驱动测试和 Host session 测试覆盖 |
 | Shim 向 Host 传递普通/字面标点 | 已实现 | `HostKeyKind::punctuation` / `literal_punctuation` |
-| 数字后句号 | 已实现，跨宿主待验收 | 真实左右文本决策和临时单符号 composition 已落地；Notepad++ 新 DLL 已通过 `1.` 与 `v1.0.1。` |
+| 数字后句号 | 已实现，跨宿主待验收 | 第一下一律立即保留 ASCII `.`，第二下回到中文 `。`；L0 已覆盖 `1.`、`1.。` 和 `v1.0.1.`，不再把 `1.文本` 回写成 `1。文本` |
 | 时间冒号、分数/日期斜杠 | 已实现核心子集 | `/` 固定保留 ASCII；数字两侧的 `:` 保留 ASCII；`12:23`、`2/3` 与中文冒号/顿号在 Notepad++ 新 DLL 通过；时间范围和扩展 token 语义仍待补充 |
 | 临时标点 composition 与右侧前瞻 | 已实现 | 后续数字保留 ASCII，否则解析为中文；焦点/异步完成按 context 与 session 校验 |
 | 决策 reason code 与结构化日志 | 已实现 | `smart_context_source`、`smart_context`、`smart_punctuation`、`smart_resolution` 已进入隔离 trace |
@@ -66,7 +66,7 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 |---|---|---|---|
 | `/` 与 `、` | 已实现 | `PUNC-SLASH-ASCII`；物理 `\` 继续由基础映射输出 `、`；Notepad++ 已验收 | 其他宿主同构建矩阵 |
 | 句号：行首数字序号 | 已实现核心 | `PUNC-DECIMAL-LIST` | `1)`、`(1)`、中文序号等更完整序号分类 |
-| 句号：数字中缀/数字后歧义 | 已实现 L0/核心运行时 | `PUNC-DOT-DECIMAL/VERSION/IPV4`、`PUNC-NUMERIC-PENDING`、`PUNC-PENDING-DIGIT/CHINESE` | 新细分 reason code 的 TSF/真实宿主整句验收 |
+| 句号：数字中缀/数字后双击语义 | 已实现 L0/核心运行时 | `PUNC-DOT-DECIMAL/VERSION/IPV4`、`PUNC-DECIMAL-LIST`、`PUNC-DOT-AFTER-DIGIT`；第二个点走 `PUNC-CHINESE` | TSF/真实宿主整句验收 |
 | 冒号：数字中缀/数字后歧义 | 已实现 L0/核心运行时 | `PUNC-COLON-TIME/RATIO`、`PUNC-TECHNICAL-INFIX`、`PUNC-URL/PATH`；Notepad++ `12:23` 已验收 | 连续 URL/config token 和跨宿主验收 |
 | 逗号：千位/代码/中文 | 已实现核心 | `PUNC-COMMA-THOUSANDS`、`PUNC-COMMA-GROUP-PENDING`、`PUNC-PENDING-GROUP-*`、`PUNC-TECHNICAL-INFIX`、`PUNC-NUMERIC-INVALID` | 当前候选的多字符 provisional 真实宿主整句 |
 | 中文正文 `，。：！？` | 已实现核心 | `PUNC-CHINESE` 或 provisional 的中文解析；URL `?`/`!` 单独保护；退出 URL/Email/Path/Code 后的中文 `。？！` L0 反例已通过 | 分号等剩余符号的 token 正反例和跨宿主验证 |
@@ -80,7 +80,7 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 
 ## 3. 不可回避的歧义
 
-用户在数字后按 `.` 时，仅凭当下左侧文本无法知道其最终意图：
+数字后按 `.` 原本存在自然语言歧义：
 
 - `1. 第一项`：序号点，应为 ASCII。
 - `3.14`：小数点，应为 ASCII。
@@ -92,14 +92,16 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 - `12:23`、`16:9`：ASCII 冒号。
 - `共有 12 项：`：中文冒号。
 
-因此以下算法被明确禁止：
+本产品不再尝试根据“下一个字符”回写第一个句点，而采用确定的两击规则：
 
 ```text
-if previous_character_is_digit:
-    output_ascii_symbol()
+if key == '.' and previous_character_is_digit:
+    output_ascii('.')
+else if key == '.' and previous_character_is_ascii_dot:
+    output_chinese('。')
 ```
 
-它只能解决数值内部符号，却会永久消灭数字后的中文句号和中文冒号。
+因此 `1.` 后继续输入文字必须保持 `1.文本`；需要数字后的中文句号时再按一次句点，得到 `1.。`。冒号与千位逗号仍按右侧数字和 token 结构消歧，不套用此句号规则。
 
 ## 4. 上下文模型
 
@@ -219,7 +221,8 @@ Idle
 | `SP-DOT-SEQUENCE` | 行首或列表边界后的整数序号 | `.` |
 | `SP-DOT-ASCII-TOKEN` | 域名、文件名、扩展名、英文技术 token 内 | `.` |
 | `SP-DOT-CN-SENTENCE` | 中文正文句末 | `。` |
-| `SP-DOT-PROVISIONAL` | 左侧为数字但右侧尚不存在 | 临时 `.`，等待后续输入或边界 |
+| `SP-DOT-AFTER-DIGIT` | 左侧最后一个字符为数字，右侧为空 | 立即提交 `.`，后续文字不得回写 |
+| `SP-DOT-SECOND` | 左侧最后一个字符已经是上述 ASCII `.` | 输出 `。`，即 `1..` 得到 `1.。` |
 
 ### 7.2 必须成立的示例
 
@@ -230,11 +233,11 @@ v1.0.1
 192.168.1.1
 README.md
 PCIe 6.0
-版本是 v1.0.1。
-共有 12 项。
+版本是 v1.0.1，准备发布。
+共有 12 项，已经完成。
 ```
 
-`1. 第一项` 的序号规则优先于“下一输入是中文”的句末推断。
+`1. 第一项` 的序号点立即提交；`1.文本` 不得回写成 `1。文本`。数字后需要中文句号时连续按两次句点，例如 `1..` 上屏为 `1.。`。
 
 ## 8. 冒号 `:` / `：`
 
@@ -373,9 +376,9 @@ elapsed_us
 示例：
 
 ```text
-KEY=. LEFT=INTEGER RIGHT=PENDING CONTEXT=AMBIGUOUS RULE=PUNC-NUMERIC-PENDING DECISION=BEGIN_PROVISIONAL
-KEY=0 LEFT=DOT_PROVISIONAL RIGHT=DIGIT CONTEXT=NUMERIC RULE=PUNC-PENDING-DIGIT DECISION=COMMIT_ASCII
-KEY=a LEFT=DOT_PROVISIONAL RIGHT=PROSE CONTEXT=CHINESE_TEXT RULE=PUNC-PENDING-CHINESE DECISION=COMMIT_CHINESE
+KEY=. LEFT=INTEGER RIGHT=EMPTY CONTEXT=SEQUENCE RULE=PUNC-DOT-AFTER-DIGIT DECISION=COMMIT_ASCII
+KEY=. LEFT=ASCII_DOT RIGHT=EMPTY CONTEXT=CHINESE_TEXT RULE=PUNC-CHINESE DECISION=COMMIT_CHINESE
+KEY=: LEFT=INTEGER RIGHT=PENDING CONTEXT=AMBIGUOUS RULE=PUNC-NUMERIC-PENDING DECISION=BEGIN_PROVISIONAL
 ```
 
 ## 14. P0 自动化用例
@@ -384,14 +387,14 @@ KEY=a LEFT=DOT_PROVISIONAL RIGHT=PROSE CONTEXT=CHINESE_TEXT RULE=PUNC-PENDING-CH
 |---|---|---|
 | `SP-MIX-001` | `1.明天干嘛。` | 同句出现序号 ASCII `.` 与中文 `。` |
 | `SP-MIX-002` | `这个是2/3，那么我们选白色/黑色，白色、黑色。` | 分数/选项 `/`、列举 `、` 与中文标点共存 |
-| `SP-MIX-003` | `会议时间：12:23，版本是v1.2.3。` | 中文冒号、时间冒号、版本点和句号均正确 |
+| `SP-MIX-003` | 输入 `会议时间：12:23，版本是v1.2.3..` | 上屏 `会议时间：12:23，版本是v1.2.3.。`；第一点 ASCII，第二点中文 |
 | `SP-MIX-004` | `价格是1,299.50元，折扣为80%。` | 千位、小数、百分号与中文标点共存 |
 | `SP-MIX-005` | `服务器是192.168.1.1，端口是8080。` | IPv4 内部点 ASCII，句末中文 |
 | `SP-MIX-006` | `BIT[31:16]表示高16bit，BIT[15:0]表示低16bit。` | 技术方括号/冒号不中文化 |
 | `SP-MIX-007` | `支持Windows/Linux/macOS，选择是/否即可。` | 中文句子中的 `/` 保持本义 |
 | `SP-MIX-008` | `访问https://example.com?a=1&b=2，然后继续输入中文。` | URL 全 ASCII，退出 token 后恢复中文 |
 | `SP-MIX-009` | `文件是PiInput-v0.8.0.zip，请打开。` | 文件名/版本符号保护，随后恢复中文 |
-| `SP-STATE-001` | 数字、句点、数字快速连打 | 顺序正确，Lost/Duplicate=0 |
+| `SP-STATE-001` | `1.`、`1.文本`、`1..` 快速输入 | 分别得到 `1.`、`1.文本`、`1.。`，Lost/Duplicate=0 |
 | `SP-STATE-002` | 临时符号后 Backspace/Esc | 只取消临时符号，不伤及左侧文本 |
 | `SP-STATE-003` | 临时符号时 Alt+Tab/切输入框 | 无幽灵 composition，无跨 context 回写 |
 | `SP-STATE-004` | 在已有文本中间插入数值符号 | 使用真实左右文本立即判定 |
@@ -422,8 +425,8 @@ Smart Punctuation 只有同时满足以下条件才可标记为完成：
 2. 已落地纯 `SmartPunctuationEngine`、严格数值与 URL/Email/Path/File/技术中缀及边界表驱动测试、TSF/Scintilla 局部快照、单符号 provisional composition、有序下一键处理、`/`/`、` 物理键策略、URL `?`/`!` 路由和隐私安全 reason code；`BIT[31:16]`、`func(x)`、`file_name` 与中文括号/叹号反例均有 L0 覆盖。
 3. 千位分组已使用三位 provisional：前两位继续等待，第三位才提交 ASCII；非数字边界转中文且保留数字，Backspace 逐位回退，Esc 只撤销逗号。
 4. Controlled TSF Host、物理扫描码 Controller、焦点/context Oracle 与真实 PiInput profile/DLL 身份 smoke 已实现；场景覆盖三位千分位、非完整分组、Backspace/Esc、跨输入框、context 销毁、技术符号及 Password/PIN，并可持续循环供 TSF/App soak 采样。非 PiInput 夹具模式已通过；包闭环已接入 `--expected-tsf`，会拒绝加载旧 DLL 或错误注册路径，当前候选模式待安装后执行。
-5. Notepad++ 新 DLL 已实机通过 `1.`、`12:23`、`2/3`、`v1.0.1。`、中文冒号和反斜杠顿号核心矩阵。
-6. 数字 provisional 已收窄到 `.`、`:`、`,`；数字后的 `？/！` 不再被误判为数值符号。命令前缀 `!flag` 只有存在右侧 ASCII token 时保留 ASCII，行首独立 `！` 仍可直接获得。技术括号还必须看到英文字母、下划线或技术分隔符，`BIT[31:16]`/`func(x)` 保持 ASCII，而 `第1（测试）` 不再被单个数字误判；对应 L0 反例已通过，当前候选物理键 Oracle 已加入数字后中文问号。
+5. Notepad++ 旧候选曾实机通过 `1.`、`12:23`、`2/3`、中文冒号和反斜杠顿号；本次已按用户确认恢复历史双击语义，须用新候选复验 `1.文本` 与 `1.。`。
+6. 句号不再使用 provisional；数字后的第一点直接 ASCII、第二点中文。数字 provisional 仅保留 `:`、`,`；数字后的 `？/！` 不会被误判为数值符号。命令前缀 `!flag` 只有存在右侧 ASCII token 时保留 ASCII，行首独立 `！` 仍可直接获得。技术括号还必须看到英文字母、下划线或技术分隔符，`BIT[31:16]`/`func(x)` 保持 ASCII，而 `第1（测试）` 不再被单个数字误判；对应 L0 反例已通过，当前候选物理键 Oracle 已加入数字后中文问号。
 7. URL、Email、Path、Code token 退出边界的 L0 正反例已通过；Controlled TSF smoke 已加入四类 token 后恢复中文标点及 `折扣80%，` 连续物理键 Oracle。控制器已重新编译，真实 PiInput profile 分支须随冻结候选执行后才能记为通过。
 
 剩余工作按以下顺序实施：
@@ -444,4 +447,4 @@ Smart Punctuation 只有同时满足以下条件才可标记为完成：
 - 宿主回调差异不改变结果；
 - 所有临时状态可取消、可追踪、不会跨 context 泄漏。
 
-`1. 第一项`、`12:23`、`2/3`、`v1.0.1。` 和 `白色/黑色，白色、黑色。` 必须在同一个中文输入模式中自然成立。
+`1. 第一项`、`1.文本`、`1.。`、`12:23`、`2/3` 和 `白色/黑色，白色、黑色。` 必须在同一个中文输入模式中自然成立。
