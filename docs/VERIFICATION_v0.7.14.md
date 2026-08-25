@@ -31,4 +31,13 @@ p0_real_host_matrix=NOT_RUN
 
 ## 包闭环记录
 
-打包完成后以包内 `PiInputHost.exe --version`、`--build-id`、ZIP SHA-256 sidecar、运行时白名单和静态包闭环报告为准。未执行安装冒烟时，不得把静态包校验写成安装闭环通过。
+冻结实现提交：`dd63bb9837875fe47cd1539d25c5da4f4e6e5413`。
+
+- 精确 build ID：`0.7.14+dd63bb983787`；
+- 提交后重新构建的 Release 回归：66/66 PASS；
+- ZIP：`artifacts/PiInput-v0.7.14-windows-x64.zip`，38 个文件，22.17 MB；
+- SHA-256：`ffe4d28dc0333ce54fd4ade0054dd66a7597b2985591fea7bf7adcf63e6ed9f3`；
+- 静态包闭环：PASS，报告位于 `artifacts/package-closure-v0.7.14-dd63bb983787/summary.json`；
+- 包内 `bin` 已核对 `RegCalc64Tool.html`（161403 bytes）、`shared-ui.css`（31016 bytes）和 `shared-ui.js`（2468 bytes）。
+
+本次没有运行安装冒烟、升级/卸载闭环、Controlled TSF 真实 profile 或桌面程序启动，因此 `install_closure=not-run`，签名仍为未要求的本地开发策略。上述静态 PASS 不代表安装闭环或正式签名发布通过。
