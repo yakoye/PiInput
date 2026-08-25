@@ -302,16 +302,25 @@ std::vector<EngineCandidate> Engine::compose_full_coverage_unlocked(
     // input is that word plus one more syllable.
     constexpr std::size_t anchor_syllables = 2U;
     constexpr std::size_t max_span_syllables = 8U;
-    constexpr std::size_t max_words = 4U;
-    constexpr std::size_t beam_width = 4U;
+    // Four words cover the short joins this fallback was introduced for, but
+    // ordinary sentences quickly need a fifth or sixth real word. Keep the
+    // bound proportional to the input and capped, rather than making every long
+    // composition explore an unbounded character graph.
+    const std::size_t max_words = (std::min)(
+        std::size_t{8U}, (std::max)(std::size_t{4U}, (syllables.size() + 2U) / 2U));
+    constexpr std::size_t beam_width = 16U;
     constexpr std::size_t entries_per_span = 4U;
     // Finishing the last syllable needs a wider look than an exact span: the
     // completion pool is ordered by raw frequency, so the character that
     // actually continues the phrase can sit behind several common ones.
     constexpr std::size_t completion_entries = 12U;
-    // One single character may close a join -- that is what a half-typed
-    // phrase looks like. Two or more would be chaining characters together.
-    constexpr std::size_t max_single_character_links = 1U;
+    // A few non-adjacent high-frequency characters are legitimate words inside
+    // a sentence (的、去、着, for example). Bound their count and reject adjacent
+    // character chains so this remains word composition rather than an
+    // unrestricted character-by-character sentence generator.
+    const std::size_t max_single_character_links = (std::min)(
+        std::size_t{3U}, (std::max)(std::size_t{1U}, syllables.size() / 4U));
+    constexpr std::uint32_t min_middle_single_weight = 100000U;
     const std::size_t count = syllables.size();
     const bool completing = !trailing_prefix.empty() && !canonical_prefix.empty() &&
         scan_limit != 0U;
@@ -325,6 +334,7 @@ std::vector<EngineCandidate> Engine::compose_full_coverage_unlocked(
         std::string pinyin;
         std::size_t word_count{};
         std::size_t single_characters{};
+        bool ends_with_single_character{};
         bool contextual{};
         std::uint32_t weakest_weight{};
         std::uint64_t total_weight{};
@@ -338,7 +348,22 @@ std::vector<EngineCandidate> Engine::compose_full_coverage_unlocked(
         // A continuation the dictionary itself vouches for beats a merely
         // frequent character that nothing connects to what was typed.
         if (left.contextual != right.contextual) return left.contextual;
-        // A join made only of real words beats one leaning on a character.
+        // Treat a single-character link as a soft fourfold confidence penalty.
+        // A very common grammatical word can still rescue 促使/我们/去/思考
+        // from the rare 去死 fragment, while 链路/状态机 stays ahead of
+        // 链路/状态/级 when their lexical weights are merely close.
+        const auto adjusted_weakest = [](const ComposedPath& path) {
+            std::uint32_t adjusted = path.weakest_weight;
+            for (std::size_t index = 0U; index < path.single_characters; ++index) {
+                adjusted /= 4U;
+            }
+            return adjusted;
+        };
+        const auto left_adjusted = adjusted_weakest(left);
+        const auto right_adjusted = adjusted_weakest(right);
+        if (left_adjusted != right_adjusted) {
+            return left_adjusted > right_adjusted;
+        }
         if (left.single_characters != right.single_characters) {
             return left.single_characters < right.single_characters;
         }
@@ -359,16 +384,19 @@ std::vector<EngineCandidate> Engine::compose_full_coverage_unlocked(
                             const bool contextual = false) -> std::optional<ComposedPath> {
         if (base.word_count >= max_words) return std::nullopt;
         if (utf8_codepoint_count(word.word) < 2U) {
-            // No character may lead a join, sit in its middle, or follow
-            // another character. Those are the shapes that chain characters
-            // into a sentence the user never picked.
-            if (base.word_count == 0U || !closes_input) return std::nullopt;
+            if (base.word_count == 0U || base.ends_with_single_character) {
+                return std::nullopt;
+            }
             if (base.single_characters >= max_single_character_links) return std::nullopt;
+            if (!closes_input && word.weight < min_middle_single_weight) {
+                return std::nullopt;
+            }
             return ComposedPath{
                 base.word + word.word,
                 base.pinyin.empty() ? word.pinyin : base.pinyin + "'" + word.pinyin,
                 base.word_count + 1U,
                 base.single_characters + 1U,
+                true,
                 base.contextual || contextual,
                 (std::min)(base.weakest_weight, word.weight),
                 base.total_weight + word.weight,
@@ -379,6 +407,7 @@ std::vector<EngineCandidate> Engine::compose_full_coverage_unlocked(
             base.pinyin.empty() ? word.pinyin : base.pinyin + "'" + word.pinyin,
             base.word_count + 1U,
             base.single_characters,
+            false,
             base.contextual || contextual,
             base.word_count == 0U ? word.weight
                                   : (std::min)(base.weakest_weight, word.weight),
@@ -392,11 +421,10 @@ std::vector<EngineCandidate> Engine::compose_full_coverage_unlocked(
         if (states[position].empty()) continue;
         const std::size_t longest =
             (std::min)(max_span_syllables, count - position);
-        // A one-syllable span can only be a single character, which the rules
-        // above accept just at the end of the input. When a trailing prefix is
-        // present that end has not been typed yet, so it is handled below.
-        const std::size_t shortest =
-            !completing && position + 1U == count ? 1U : anchor_syllables;
+        // The extender rejects a leading, adjacent, excessive, or rare middle
+        // character. Visit one-syllable spans here so legitimate grammatical
+        // words are not discarded before those bounded checks can run.
+        constexpr std::size_t shortest = 1U;
         for (std::size_t length = shortest; length <= longest; ++length) {
             std::string canonical;
             for (std::size_t index = 0U; index < length; ++index) {
@@ -481,11 +509,11 @@ std::vector<EngineCandidate> Engine::compose_full_coverage_unlocked(
         if (completed.size() > beam_width) completed.resize(beam_width);
     }
 
-    // Joins must stay few enough that ordinary dictionary words keep their
-    // place on the first row.
-    // Two joins is the quiet default; while a syllable is unfinished the
-    // contextual reading and the frequent one both deserve a slot.
-    const std::size_t max_results = completing ? 3U : 2U;
+    // Keep a bounded second page of complete joins. Homophones at more than one
+    // word boundary can otherwise consume the first few paths and make a valid
+    // full-coverage sentence disappear even though the beam retained it.
+    const std::size_t max_results =
+        completing || count < 8U ? std::size_t{6U} : std::size_t{12U};
     if (!completing) {
         std::stable_sort(states[count].begin(), states[count].end(), stronger);
     }

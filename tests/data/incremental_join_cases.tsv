@@ -23,3 +23,12 @@ full	woxian	wo'xiang	我想	6
 full	woxianza	wo'xian'zai	我现在	6
 full	jintia	jin'tian	今天	6
 full	jintianwansha	jin'tian'wan'shang	今天晚上	6
+# 标准全拼音节序列是候选基准；小鹤只负责转换到同一序列。长句必须完整覆盖，
+# 不能在增加一个音节后退回首词。河上/和尚与船/传是双重同音，没有语言模型时
+# 只要求目标保留在有界第二页，不用词频硬造一个虚假的唯一首选。
+full	cu'shi'wo'men'qu'si'kao	cu'shi'wo'men'qu'si'kao	促使我们去思考	6
+flypy	cuuiwomfqusikc	cu'shi'wo'men'qu'si'kao	促使我们去思考	6
+full	kan'jian'he'shang'de'na'sou'chuan	kan'jian'he'shang'de'na'sou'chuan	看见河上的那艘船	12
+flypy	kjjmheuhdenaszir	kan'jian'he'shang'de'na'sou'chuan	看见河上的那艘船	12
+full	wo'men'jiu'ba'zhe'ge'ti'yan'zuo'wei'ji'yi'chu'cun'qi'lai	wo'men'jiu'ba'zhe'ge'ti'yan'zuo'wei'ji'yi'chu'cun'qi'lai	我们就把这个体验作为记忆储存起来	6
+flypy	womfjqbavegetiyjzowwjiyiiucyqild	wo'men'jiu'ba'zhe'ge'ti'yan'zuo'wei'ji'yi'chu'cun'qi'lai	我们就把这个体验作为记忆储存起来	6

@@ -345,17 +345,24 @@ void test_real_words_fill_multiple_rows_before_single_characters() {
     // is what the user typed and what nothing in the dictionary spans on its
     // own. A chain with no real word under it -- 非/常/快 assembled character
     // by character -- is still refused; the rule is that a multi-character
-    // entry must anchor the join and at most one character may close it.
+    // entry must anchor the join and at most one character may close this
+    // three-syllable input.
     check(initial.candidates.size() > 11U && initial.candidates.front().text == "非常快",
         "the join covering every typed syllable begins the normal candidate list");
-    check(initial.candidates[2U].text == "非常",
-        "the longest real prefix follows the joins that cover the whole input");
-    for (std::size_t index = 0U; index < 11U; ++index) {
+    const auto longest_prefix = std::find_if(initial.candidates.begin(), initial.candidates.end(),
+        [](const piinput::HostCandidate& candidate) { return candidate.text == "非常"; });
+    const auto first_character = std::find_if(initial.candidates.begin(), initial.candidates.end(),
+        [](const piinput::HostCandidate& candidate) { return candidate.text == "非"; });
+    check(longest_prefix != initial.candidates.end() &&
+            first_character != initial.candidates.end() && longest_prefix < first_character,
+        "the longest real prefix follows complete joins and precedes single characters");
+    const auto first_character_index = first_character == initial.candidates.end()
+        ? std::size_t{0U}
+        : static_cast<std::size_t>(std::distance(initial.candidates.begin(), first_character));
+    for (std::size_t index = 0U; index < first_character_index; ++index) {
         check(initial.candidates[index].text.size() > std::string("非").size(),
             "all real multi-character words remain ahead of single characters");
     }
-    check(initial.candidates[11U].text == "非",
-        "the first single character follows all real words");
     const auto expanded = session.apply({.kind = piinput::HostKeyKind::expand_next_row});
     check(expanded.accepted && expanded.snapshot.view.active_row == 1U &&
             expanded.snapshot.view.mode == piinput::HostCandidateMode::normal,

@@ -324,14 +324,19 @@ void verify_core_input_cases(piinput::Engine& engine) {
         const auto candidates = engine.query(row[2], row[1], max_rank);
         if (row[6].ends_with("sentence") || row[6] == "disambiguation") {
             check(!candidates.empty(), row[1] + " long input keeps lexical candidates available");
-            // Joining real words is allowed; chaining single characters is not.
+            // A bounded number of non-adjacent high-frequency characters may
+            // connect real words (促使我们去思考, for example). The evidence
+            // count remains below the number of lexical tokens, which excludes
+            // an unrestricted character-by-character sentence fallback.
             check(std::all_of(candidates.begin(), candidates.end(), [](const auto& candidate) {
                     return candidate.evidence.kind != piinput::CandidateKind::decoded_sentence ||
-                        (candidate.evidence.single_character_tokens == 0U &&
+                        (candidate.evidence.single_character_tokens <= 3U &&
+                            candidate.evidence.single_character_tokens <
+                                candidate.evidence.word_count &&
                             candidate.evidence.word_count >= 2U &&
                             candidate.evidence.covers_all_input);
                 }),
-                row[1] + " long input only joins real words that cover the whole input");
+                row[1] + " long input uses bounded word composition covering all input");
             continue;
         }
         const auto found = std::find_if(candidates.begin(), candidates.end(), [&](const auto& candidate) {
@@ -731,6 +736,68 @@ void test_engine() {
                 candidate.evidence.word_count >= 2U &&
                 candidate.evidence.covers_all_input);
     }), "Joins use only real multi-character words and always cover the input");
+
+    std::filesystem::remove(path);
+}
+
+void test_long_sentence_composition_uses_canonical_pinyin_for_every_schema() {
+    const auto path =
+        std::filesystem::temp_directory_path() / "piinput-long-sentence-composition.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n"
+               << "促使\tcu'shi\t305195\n"
+               << "我们\two'men\t509405\n"
+               << "去\tqu\t7182400\n"
+               << "去死\tqu'si\t25955\n"
+               << "思考\tsi'kao\t500379\n"
+               << "靠\tkao\t100000\n"
+               << "考\tkao\t90000\n"
+               << "看见\tkan'jian\t500334\n"
+               << "和尚\the'shang\t208485\n"
+               << "合上\the'shang\t30635\n"
+               << "河上\the'shang\t26930\n"
+               << "的\tde\t76938354\n"
+               << "那艘\tna'sou\t2222\n"
+               << "传\tchuan\t1034638\n"
+               << "穿\tchuan\t634742\n"
+               << "船\tchuan\t345686\n"
+               << "我们就\two'men'jiu\t393235\n"
+               << "把这个\tba'zhe'ge\t105570\n"
+               << "体验\tti'yan\t500407\n"
+               << "作为\tzuo'wei\t502525\n"
+               << "作为家\tzuo'wei'jia\t236\n"
+               << "记忆\tji'yi\t500274\n"
+               << "储存起来\tchu'cun'qi'lai\t4040\n";
+    }
+
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+    const auto verify = [&](const std::string& full, const std::string& flypy,
+                            const std::string& canonical, const std::string& target) {
+        check(contains_canonical(engine.decode(full, "full", 32U), canonical),
+            "standard full pinyin retains the declared sentence reading");
+        check(contains_canonical(engine.decode(flypy, "flypy", 32U), canonical),
+            "Flypy converts to the same canonical sentence reading");
+        for (const auto& [input, schema] :
+             {std::pair{full, std::string{"full"}},
+              std::pair{flypy, std::string{"flypy"}}}) {
+            const auto candidates = engine.query(input, schema, 30U);
+            check(std::any_of(candidates.begin(), candidates.end(), [&](const auto& candidate) {
+                    return candidate.word == target && candidate.evidence.covers_all_input;
+                }),
+                schema + " keeps the complete sentence candidate: " + target);
+        }
+    };
+
+    verify("cu'shi'wo'men'qu'si'kao", "cuuiwomfqusikc",
+        "cu'shi'wo'men'qu'si'kao", "促使我们去思考");
+    verify("kan'jian'he'shang'de'na'sou'chuan", "kjjmheuhdenaszir",
+        "kan'jian'he'shang'de'na'sou'chuan", "看见河上的那艘船");
+    verify("wo'men'jiu'ba'zhe'ge'ti'yan'zuo'wei'ji'yi'chu'cun'qi'lai",
+        "womfjqbavegetiyjzowwjiyiiucyqild",
+        "wo'men'jiu'ba'zhe'ge'ti'yan'zuo'wei'ji'yi'chu'cun'qi'lai",
+        "我们就把这个体验作为记忆储存起来");
 
     std::filesystem::remove(path);
 }
@@ -1154,6 +1221,7 @@ int run(const std::vector<std::string>& arguments) {
         test_pinyin();
         test_shuangpin();
         test_engine();
+        test_long_sentence_composition_uses_canonical_pinyin_for_every_schema();
         test_candidate_order_is_deterministic();
         test_exact_phrase_beats_character_composition();
         test_builtin_base_lexicon();
