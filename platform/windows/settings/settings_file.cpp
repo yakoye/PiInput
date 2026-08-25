@@ -402,7 +402,6 @@ bool save_all_settings_atomic(
     const auto punctuation_name = [](const PunctuationMode mode) -> std::string {
         switch (mode) {
         case PunctuationMode::english: return "english";
-        case PunctuationMode::programmer: return "programmer";
         case PunctuationMode::chinese: break;
         }
         return "chinese";

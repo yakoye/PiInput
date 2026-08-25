@@ -1311,9 +1311,9 @@ foreach(settings_field IN ITEMS
     endif()
 endforeach()
 if(NOT settings_main_text MATCHES "L\"中文输入时的标点\"" OR
-   NOT settings_main_text MATCHES "L\"中文标点\", L\"英文标点\", L\"程序员标点\"")
+   NOT settings_main_text MATCHES "L\"中文标点\", L\"英文标点\", nullptr")
     message(FATAL_ERROR
-        "PiInput Settings must expose concise Chinese, English, and programmer punctuation choices")
+        "PiInput Settings must expose only concise Chinese and English punctuation choices")
 endif()
 if(NOT cmake_text MATCHES "PIINPUT_BUILD_TIME_UTC" OR
    NOT cmake_text MATCHES "PIINPUT_GIT_COMMIT_ID" OR
@@ -1329,7 +1329,18 @@ if(NOT stable_text_service_header_text MATCHES "smart_punctuation_enabled_" OR
    NOT stable_text_service_text MATCHES "punctuation_mode != \"programmer\"" OR
    NOT stable_text_service_text MATCHES "if \\(!smart_punctuation_enabled_\\) return false")
     message(FATAL_ERROR
-        "TSF smart punctuation must defer at composition boundaries to explicit English/programmer settings")
+        "TSF smart punctuation must defer to English punctuation and its legacy programmer alias")
+endif()
+string(FIND "${shim_transport_text}" "resolve_program_path" installed_program_resolver)
+string(FIND "${stable_text_service_text}"
+    "transport_->resolve_program_path(L\"yesymbol.exe\")" installed_symbol_launch)
+string(FIND "${stable_text_service_text}"
+    "transport_->resolve_program_path(L\"PiInput-Settings.exe\")" installed_settings_launch)
+if(installed_program_resolver LESS 0 OR
+   installed_symbol_launch LESS 0 OR
+   installed_settings_launch LESS 0)
+    message(FATAL_ERROR
+        "Candidate actions must resolve installed tools beside CurrentHostPath, not beside the permanent Shim")
 endif()
 string(FIND "${host_session_text}"
     "if (event.kind == HostKeyKind::switch_to_english)" shift_english_branch)

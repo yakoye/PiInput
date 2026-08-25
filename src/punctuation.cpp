@@ -40,7 +40,7 @@ std::string PunctuationTransformer::transform(
     const PunctuationMode mode,
     const bool shift,
     const PunctuationBracketStyle bracket_style) const {
-    if (mode == PunctuationMode::english || mode == PunctuationMode::programmer) {
+    if (mode == PunctuationMode::english) {
         return ascii_symbol(key, shift);
     }
 

@@ -177,7 +177,7 @@ void test_every_option_round_trips_without_disturbing_the_file() {
     loaded.pinyin.accept_u_colon = false;
     loaded.candidates.horizontal = false;
     loaded.candidates.up_key = piinput::RowNavigationAction::next_row;
-    loaded.punctuation = piinput::PunctuationMode::programmer;
+    loaded.punctuation = piinput::PunctuationMode::english;
     loaded.punctuation_bracket_style = piinput::PunctuationBracketStyle::wechat;
     loaded.commands.hotkey = piinput::CommandHotkey::disabled;
     loaded.commands.middle_dot_alias = true;
@@ -196,7 +196,7 @@ void test_every_option_round_trips_without_disturbing_the_file() {
     check(!reloaded.candidates.horizontal, "horizontal round trips");
     check(reloaded.candidates.up_key == piinput::RowNavigationAction::next_row,
         "up_key round trips");
-    check(reloaded.punctuation == piinput::PunctuationMode::programmer,
+    check(reloaded.punctuation == piinput::PunctuationMode::english,
         "punctuation mode round trips");
     check(reloaded.punctuation_bracket_style == piinput::PunctuationBracketStyle::wechat,
         "bracket style round trips");

@@ -155,6 +155,11 @@ bool ShimPipeTransport::start_host() const noexcept {
     return true;
 }
 
+std::filesystem::path ShimPipeTransport::resolve_program_path(
+    const std::wstring_view name) const noexcept {
+    return program_beside_host(resolve_host_path(), name);
+}
+
 std::filesystem::path ShimPipeTransport::resolve_host_path() const noexcept {
     constexpr wchar_t key[] = L"Software\\PiInput\\Runtime";
     constexpr wchar_t value_name[] = L"CurrentHostPath";

@@ -130,8 +130,10 @@ namespace {
     if (value == "english") {
         return PunctuationMode::english;
     }
+    // Migrate the removed v0.7.14 preview value without breaking an existing
+    // settings.ini. It never differed from English punctuation.
     if (value == "programmer") {
-        return PunctuationMode::programmer;
+        return PunctuationMode::english;
     }
     return std::nullopt;
 }

@@ -8,7 +8,6 @@ namespace piinput {
 enum class PunctuationMode {
     chinese,
     english,
-    programmer,
 };
 
 enum class PunctuationBracketStyle {

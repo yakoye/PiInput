@@ -84,7 +84,7 @@ constexpr std::array<Row, 31U> kRows{{
     {1, Kind::choice, Field::up_key, L"↑ 键", kRowKeys, 0U, 0U},
 
     {2, Kind::choice, Field::punctuation_mode, L"中文输入时的标点",
-        {L"中文标点", L"英文标点", L"程序员标点", nullptr, nullptr}, 0U, 0U},
+        {L"中文标点", L"英文标点", nullptr, nullptr, nullptr}, 0U, 0U},
     {2, Kind::choice, Field::bracket_style, L"Shift+[ 和 Shift+]",
         {L"{ }", L"「 」", nullptr, nullptr, nullptr}, 0U, 0U},
     {2, Kind::choice, Field::command_hotkey, L"符号面板快捷键",
@@ -428,8 +428,7 @@ void load_into_controls(AppState& state) {
         case Field::down_key: choose(index, row_index(settings.candidates.down_key)); break;
         case Field::up_key: choose(index, row_index(settings.candidates.up_key)); break;
         case Field::punctuation_mode:
-            choose(index, settings.punctuation == piinput::PunctuationMode::english ? 1
-                : settings.punctuation == piinput::PunctuationMode::programmer ? 2 : 0);
+            choose(index, settings.punctuation == piinput::PunctuationMode::english ? 1 : 0);
             break;
         case Field::bracket_style:
             choose(index, settings.punctuation_bracket_style ==
@@ -499,8 +498,7 @@ void store_from_controls(AppState& state) {
         case Field::up_key: settings.candidates.up_key = row_action(choice(index)); break;
         case Field::punctuation_mode:
             settings.punctuation = choice(index) == 1 ? piinput::PunctuationMode::english
-                : choice(index) == 2 ? piinput::PunctuationMode::programmer
-                                     : piinput::PunctuationMode::chinese;
+                                                      : piinput::PunctuationMode::chinese;
             break;
         case Field::bracket_style:
             settings.punctuation_bracket_style = choice(index) == 1

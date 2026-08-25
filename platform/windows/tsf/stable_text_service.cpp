@@ -1118,11 +1118,9 @@ bool TextService::handle_smart_punctuation_key(
     const char symbol = smart_punctuation_symbol(wparam);
     if (symbol == '\0' || context == nullptr) return false;
 
-    // English/programmer punctuation is an explicit user choice even while the
-    // input language remains Chinese.  Do not let the TSF smart-punctuation
-    // preview pre-empt that setting; fall through to the Host, which applies
-    // the configured ASCII punctuation table while retaining Chinese
-    // composition and candidates.
+    // English punctuation is an explicit user choice even while the input
+    // language remains Chinese. "programmer" remains only as a compatibility
+    // alias written by older builds; both bypass the smart preview.
     if (!smart_punctuation_enabled_) return false;
 
     const bool composing = !mirror_.raw().empty() || has_pending_key_request();
@@ -1932,7 +1930,9 @@ void TextService::set_english_mode(const bool english) noexcept {
 void TextService::launch_symbol_tool() noexcept {
     const auto configured = settings_value("symbol_tool");
     std::filesystem::path tool = configured.empty()
-        ? sibling_program(module_, L"yesymbol.exe")
+        ? (transport_ != nullptr
+                ? transport_->resolve_program_path(L"yesymbol.exe")
+                : sibling_program(module_, L"yesymbol.exe"))
         : std::filesystem::path(utf8_to_wide_local(configured));
     if (std::filesystem::is_regular_file(tool)) {
         (void)ShellExecuteW(nullptr, L"open", tool.c_str(), nullptr,
@@ -1947,7 +1947,9 @@ void TextService::launch_symbol_tool() noexcept {
 }
 
 void TextService::launch_settings() noexcept {
-    const auto settings = sibling_program(module_, L"PiInput-Settings.exe");
+    const auto settings = transport_ != nullptr
+        ? transport_->resolve_program_path(L"PiInput-Settings.exe")
+        : sibling_program(module_, L"PiInput-Settings.exe");
     if (std::filesystem::is_regular_file(settings)) {
         (void)ShellExecuteW(nullptr, L"open", settings.c_str(), nullptr,
             settings.parent_path().c_str(), SW_SHOWNORMAL);

@@ -984,9 +984,6 @@ void test_punctuation() {
         transformer.reset_quotes();
         check(transformer.transform(key, piinput::PunctuationMode::english, shift) == row[3],
             "English punctuation passthrough for " + row[0] + (shift ? " shifted" : ""));
-        transformer.reset_quotes();
-        check(transformer.transform(key, piinput::PunctuationMode::programmer, shift) == row[3],
-            "Programmer punctuation passthrough for " + row[0] + (shift ? " shifted" : ""));
     }
     transformer.reset_quotes();
     check(transformer.transform('\'', piinput::PunctuationMode::chinese, true) == "“", "Opening double quote");

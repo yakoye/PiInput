@@ -47,7 +47,7 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 
 | 能力 | 状态 | 当前证据与限制 |
 |---|---|---|
-| 中文标点/英文标点/程序员标点模式 | 已实现 | `PunctuationTransformer` 和设置页共用三态配置；选择英文标点不改变中文输入模式；当前程序员标点与英文标点均逐键输出 ASCII，尚无行为差异 |
+| 中文标点/英文标点模式 | 已实现 | `PunctuationTransformer` 和设置页共用两态配置；选择英文标点不改变中文输入模式；已删除行为重复的程序员标点，旧值兼容迁移为英文标点 |
 | 中文输入时强制英文标点 | 已实现组件层，真实宿主待验收 | TSF 智能标点在 English/Programmer 标点模式下完整旁路，Host 仍保留中文候选并按 ASCII 表提交 |
 | 基础中文标点、单双引号、括号样式 | 已实现 | 核心表驱动测试和 Host session 测试覆盖 |
 | Shim 向 Host 传递普通/字面标点 | 已实现 | `HostKeyKind::punctuation` / `literal_punctuation` |

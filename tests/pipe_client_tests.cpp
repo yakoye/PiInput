@@ -1,5 +1,6 @@
 #include "pipe_client.h"
 #include "shim_connection_policy.h"
+#include "shim_pipe_transport.h"
 
 #include "piinput/host_messages.h"
 
@@ -214,6 +215,17 @@ void test_disconnected_host_waits_once_then_fails_fast_during_cooldown() {
         "a successful connection resets the circuit for a later independent outage");
 }
 
+void test_installed_tools_resolve_beside_the_active_host_not_the_shim() {
+    const std::filesystem::path active_host =
+        L"C:/Users/test/AppData/Local/PiInput/bin/PiInputHost.exe";
+    check(piinput::windows::program_beside_host(active_host, L"yesymbol.exe") ==
+            active_host.parent_path() / L"yesymbol.exe",
+        "symbol tool resolves beside CurrentHostPath");
+    check(piinput::windows::program_beside_host(active_host, L"PiInput-Settings.exe") ==
+            active_host.parent_path() / L"PiInput-Settings.exe",
+        "settings resolves beside CurrentHostPath");
+}
+
 }  // namespace
 
 int main() {
@@ -222,6 +234,7 @@ int main() {
     test_caret_update_uses_reserved_message_type_and_preserves_identity();
     test_focus_update_is_ordered_and_preserves_the_session_identity();
     test_disconnected_host_waits_once_then_fails_fast_during_cooldown();
+    test_installed_tools_resolve_beside_the_active_host_not_the_shim();
     std::cout << "PiInput pipe client tests passed.\n";
     return 0;
 }

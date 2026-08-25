@@ -8,9 +8,16 @@
 #include <cstddef>
 #include <filesystem>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 namespace piinput::windows {
+
+[[nodiscard]] inline std::filesystem::path program_beside_host(
+    const std::filesystem::path& host,
+    const std::wstring_view name) {
+    return host.empty() ? std::filesystem::path{} : host.parent_path() / name;
+}
 
 class ShimPipeTransport final {
 public:
@@ -28,6 +35,12 @@ public:
     // a cold disk. Those keys fall through as Latin letters, which reads as the
     // input method not working at all for the first few seconds.
     void warm_up() const noexcept;
+
+    // Installed tools live beside the active Host, while the permanent TSF
+    // Shim lives in a different machine-wide directory. Resolve through the
+    // same CurrentHostPath source used for keystroke transport.
+    [[nodiscard]] std::filesystem::path resolve_program_path(
+        std::wstring_view name) const noexcept;
 
 private:
     [[nodiscard]] bool start_host() const noexcept;

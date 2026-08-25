@@ -168,7 +168,7 @@ void test_valid_values_and_boundaries() {
         "hotkey=ctrl_grave\n"
         "middle_dot_alias=true\n"
         "[punctuation]\n"
-        "mode=programmer\n"
+        "mode=english\n"
         "bracket_style=wechat\n",
         previous);
     check(parsed.errors.empty(), "valid boundary settings parse");
@@ -206,7 +206,7 @@ void test_valid_values_and_boundaries() {
         "configured command hotkey parses");
     check(parsed.settings.commands.middle_dot_alias,
         "middle-dot aliases can be explicitly enabled");
-    check(parsed.settings.punctuation == piinput::PunctuationMode::programmer, "programmer punctuation");
+    check(parsed.settings.punctuation == piinput::PunctuationMode::english, "English punctuation");
     check(parsed.settings.punctuation_bracket_style == piinput::PunctuationBracketStyle::wechat,
         "WeChat Chinese bracket style parses");
 
@@ -216,6 +216,12 @@ void test_valid_values_and_boundaries() {
         "Chinese-input English punctuation setting parses without errors");
     check(english_punctuation.settings.punctuation == piinput::PunctuationMode::english,
         "English punctuation can be selected without changing the input language");
+
+    const auto migrated_programmer = piinput::parse_settings_text(
+        "[punctuation]\nmode=programmer\n", previous);
+    check(migrated_programmer.errors.empty() &&
+            migrated_programmer.settings.punctuation == piinput::PunctuationMode::english,
+        "removed programmer punctuation migrates to its identical English behavior");
 
     const auto minimum_visuals = piinput::parse_settings_text(
         "[candidates]\nfont_size=10\nwindow_height=20\n", previous);
