@@ -462,6 +462,8 @@ if(NOT package_text MATCHES "PiInput-Uninstall.exe")
 endif()
 if(NOT package_text MATCHES "PiInputHost.exe" OR
    NOT package_text MATCHES "PiInput-Settings.exe" OR
+   NOT package_text MATCHES "yesymbol.exe" OR
+   NOT package_text MATCHES "licenses/YeSymbol" OR
    NOT package_text MATCHES "piinput-diagnostics.exe" OR
    NOT package_text MATCHES "host_protocol.json" OR
    NOT package_text MATCHES "稳定入口与无重启升级说明.md")
@@ -510,6 +512,7 @@ foreach(required_ci_token IN ITEMS
         "signed=$($signed.ToString().ToLowerInvariant())"
         "ControlledTsfController"
         "RUNNER_ENVIRONMENT"
+        "New-Item -ItemType Directory -Force -Path $closure.ReportDirectory"
         "controlled-tsf-capability.json"
         "IME-TSF-001"
         "Download previous verified package for upgrade smoke"
@@ -644,6 +647,7 @@ if(missing_artifact_result EQUAL 0 OR EXISTS "${missing_artifact_result_path}")
     message(FATAL_ERROR
         "Unified result composer must fail before writing a result when evidence is missing")
 endif()
+file(REMOVE_RECURSE "${result_fixture_dir}")
 if(NOT build_script_text MATCHES "TestReportPath" OR
    NOT build_script_text MATCHES "--output-junit" OR
    NOT windows_release_workflow_text MATCHES "artifacts/test-results")

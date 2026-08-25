@@ -133,6 +133,7 @@ jobs:
             InstallSmoke = $true
             ReportDirectory = './artifacts/package-closure'
           }
+          New-Item -ItemType Directory -Force -Path $closure.ReportDirectory | Out-Null
           $controlledTsfCapability = if ($env:RUNNER_ENVIRONMENT -eq 'github-hosted') {
             [ordered]@{
               status = 'BLOCKED'

@@ -106,6 +106,8 @@ try {
     foreach ($required in @(
         "PiInput-Install.exe", "PiInput-Uninstall.exe", "PiInput-Test.exe",
         "bin/PiInputTSF.dll", "bin/PiInputHost.exe", "bin/PiInput-Settings.exe",
+        "bin/yesymbol.exe", "bin/licenses/YeSymbol/LICENSE",
+        "bin/licenses/YeSymbol/THIRD_PARTY_NOTICES.md", "bin/licenses/YeSymbol/PROVENANCE.md",
         "bin/RegCalc64Tool.html", "bin/shared-ui.css", "bin/shared-ui.js",
         "bin/piinput-diagnostics.exe", "bin/piinput-profile.exe",
         "data/piinput-base.lex", "data/host_protocol.json", "LICENSE_NOTICE.md")) {

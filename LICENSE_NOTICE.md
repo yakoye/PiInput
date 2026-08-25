@@ -25,3 +25,8 @@ PiInput 尚未确定公开发布许可证。除非后续版本明确附带许可
   `https://creativecommons.org/licenses/by-sa/4.0/`。
 
 PiInput 不提取或重新分发已安装商业输入法的内部基础词库。
+
+随包 `bin/yesymbol.exe` 固定来自 YeTools `yesymbol-dev` 的 `v1.1.1`，YeSymbol
+本体采用 MIT License。其嵌入的 Twemoji 图形采用 CC BY 4.0，Unicode/CLDR
+数据适用 Unicode License，完整许可证、第三方声明和来源哈希位于
+`bin/licenses/YeSymbol/`。

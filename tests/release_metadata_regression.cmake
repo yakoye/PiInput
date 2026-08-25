@@ -43,6 +43,12 @@ string(FIND "${windows_package_text}" "安装、使用与测试.md" quick_guide_
 if(base_version_position LESS 0 OR base_version_suffix_position LESS 0 OR quick_guide_position LESS 0)
     message(FATAL_ERROR "Windows package script must derive the numeric Chinese quick-guide version")
 endif()
+if(NOT cmake_text MATCHES "PIINPUT_YESYMBOL_DIR" OR
+   NOT cmake_text MATCHES "yesymbol\\.exe" OR
+   NOT windows_package_text MATCHES "bin/yesymbol\\.exe" OR
+   NOT windows_package_text MATCHES "bin/licenses/YeSymbol/THIRD_PARTY_NOTICES\\.md")
+    message(FATAL_ERROR "Windows release must require the pinned YeSymbol runtime and its notices")
+endif()
 if(NOT build_text MATCHES "PiInput-Install\\.exe")
     message(FATAL_ERROR "Build artifact verification must require PiInput-Install.exe")
 endif()

@@ -641,3 +641,7 @@ tools/regcalc/shared-ui.css
 tools/regcalc/shared-ui.js
 tools/scel_converter/main.cpp
 VERSION
+yesymbol/LICENSE
+yesymbol/PROVENANCE.md
+yesymbol/THIRD_PARTY_NOTICES.md
+yesymbol/yesymbol.exe

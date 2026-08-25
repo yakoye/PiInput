@@ -368,9 +368,17 @@ if(WIN32)
     install(FILES platform/windows/tsf/piinput_icon.ico DESTINATION bin)
     # The symbol tool the language bar's 符号 entry launches. It ships beside the
     # other programs so a fresh install has one without any configuration.
-    if(EXISTS ${CMAKE_SOURCE_DIR}/yesymbol/yesymbol.exe)
-        install(PROGRAMS ${CMAKE_SOURCE_DIR}/yesymbol/yesymbol.exe DESTINATION bin)
+    set(PIINPUT_YESYMBOL_DIR "${CMAKE_SOURCE_DIR}/yesymbol")
+    if(NOT EXISTS "${PIINPUT_YESYMBOL_DIR}/yesymbol.exe")
+        message(FATAL_ERROR "The pinned YeSymbol runtime asset is missing")
     endif()
+    install(PROGRAMS "${PIINPUT_YESYMBOL_DIR}/yesymbol.exe" DESTINATION bin)
+    install(FILES
+        "${PIINPUT_YESYMBOL_DIR}/LICENSE"
+        "${PIINPUT_YESYMBOL_DIR}/THIRD_PARTY_NOTICES.md"
+        "${PIINPUT_YESYMBOL_DIR}/PROVENANCE.md"
+        DESTINATION bin/licenses/YeSymbol
+    )
     # The bundled programmer calculator is self-contained apart from these two
     # adjacent UI assets. Keep all three beside PiInputHost.exe so the installed
     # path is stable in both per-user and machine layouts.

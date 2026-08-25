@@ -1,16 +1,16 @@
-# PiInput v0.7.12 发布清单
+# PiInput v0.7.15 发布清单
 
 ## Windows x64 用户包
 
 ```text
-PiInput-v0.7.12-windows-x64.zip
-└── PiInput-v0.7.12-windows-x64/
+PiInput-v0.7.15-windows-x64.zip
+└── PiInput-v0.7.15-windows-x64/
     ├── PiInput-Test.exe
     ├── PiInput-Install.exe
     ├── PiInput-Uninstall.exe
     ├── 安装与使用指南.md
-    ├── v0.7.12安装、使用与测试.md
-    ├── 三个长文本打字测试_v0.7.12.md
+    ├── v0.7.15安装、使用与测试.md
+    ├── 三个长文本打字测试_v0.7.15.md
     ├── 词库查询与分段取字.md
     ├── 词库更新说明.md
     ├── 稳定入口与无重启升级说明.md
@@ -20,6 +20,11 @@ PiInput-v0.7.12-windows-x64.zip
     │   ├── PiInputTSF.dll
     │   ├── PiInputHost.exe
     │   ├── PiInput-Settings.exe
+    │   ├── yesymbol.exe
+    │   ├── RegCalc64Tool.html
+    │   ├── shared-ui.css
+    │   ├── shared-ui.js
+    │   ├── licenses/YeSymbol/
     │   ├── piinput-diagnostics.exe
     │   ├── PiInput-Install.exe
     │   ├── PiInput-Uninstall.exe
@@ -53,7 +58,7 @@ PiInput-v0.7.12-windows-x64.zip
 ## 发布门禁
 
 - Windows Release 全目标构建；
-- 全量 63 项 CTest；
+- 全量 66 项 CTest；
 - 独立测试台同时验证中文候选、英文候选和自由多行文本编辑，且不加载 TSF DLL；
 - 407 个全拼音节和 786 条结构化语料校验，其中 313 条真实执行引擎查询；
 - 全拼、小鹤双拼、增量前缀、长句和专业词汇回归；
