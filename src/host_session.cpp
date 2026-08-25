@@ -18,18 +18,10 @@ struct SymbolRequest final {
 
 [[nodiscard]] std::optional<SymbolRequest> symbol_request_for_input(
     const std::string_view input) {
-    constexpr std::string_view semicolon_command = ";;f";
     constexpr std::string_view grave_command = "``f";
-    if (input.starts_with(semicolon_command)) {
-        return SymbolRequest{std::string(input.substr(semicolon_command.size())),
-            input.size() == semicolon_command.size()};
-    }
     if (input.starts_with(grave_command)) {
         return SymbolRequest{std::string(input.substr(grave_command.size())),
             input.size() == grave_command.size()};
-    }
-    if (input.starts_with(';') && !input.starts_with(";;")) {
-        return SymbolRequest{std::string(input.substr(1U)), false};
     }
     return std::nullopt;
 }
@@ -102,7 +94,7 @@ HostReply HostSession::apply(const HostKeyEvent& event) {
         if (symbol_index_ == nullptr) return reply(false, HostAction::none);
         if (english_ != nullptr) english_->clear();
         mode_ = HostInputMode::chinese;
-        chinese_.set_input(";;f");
+        chinese_.set_input("``f");
         advance_generation(true);
         return reply(true, HostAction::update);
     }
@@ -269,10 +261,9 @@ HostReply HostSession::apply(const HostKeyEvent& event) {
             return choose(candidate_id_at(index));
         }
         if (mode_ == HostInputMode::chinese &&
-            (current_raw() == ";" || current_raw().starts_with(";;") ||
-             current_raw().starts_with('`'))) {
+            current_raw().starts_with('`')) {
             std::string literal = current_raw();
-            if (literal == "`" || literal == ";") {
+            if (literal == "`") {
                 literal = punctuation_.transform(literal.front(), settings_.punctuation, false,
                     settings_.punctuation_bracket_style);
             }

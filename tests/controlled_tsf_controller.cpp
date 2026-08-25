@@ -443,7 +443,12 @@ int wmain(const int argc, wchar_t** const argv) {
         const std::filesystem::path loaded = loaded_tsf_module(child.information.dwProcessId);
         const bool module_identity = same_path(loaded, expected_tsf);
         const bool chinese_mode = module_identity && ensure_chinese_mode(window, edit_a);
-        const bool candidate_owned = chinese_mode &&
+        const std::wstring semicolon_initial = L"以万物为刍狗";
+        const bool semicolon_direct = chinese_mode && run_text_case(
+            window, edit_a, semicolon_initial,
+            static_cast<DWORD>(semicolon_initial.size()),
+            {{VK_OEM_1, false}}, L"以万物为刍狗；");
+        const bool candidate_owned = semicolon_direct &&
             prepare_case(window, edit_a, {}, 0U) &&
             send_sequence(std::array<WORD, 2U>{'N', 'I'}) &&
             wait_for_owned_candidate(window) != nullptr;
@@ -583,7 +588,8 @@ int wmain(const int argc, wchar_t** const argv) {
             {{'1', false}, {'2', false}, {VK_OEM_1, true}, {'2', false}, {'3', false}},
             L"12:23");
 
-        bool passed = controls && list_dot && module_identity && chinese_mode && candidate_owned &&
+        bool passed = controls && list_dot && module_identity && chinese_mode &&
+            semicolon_direct && candidate_owned &&
             decimal && time &&
             version_sentence && grouped && incomplete_group && grouped_backspace &&
             grouped_escape && invalid_group && filename &&

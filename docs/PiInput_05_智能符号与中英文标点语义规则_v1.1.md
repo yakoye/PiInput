@@ -69,7 +69,7 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 | 句号：数字中缀/数字后双击语义 | 已实现 L0/核心运行时 | `PUNC-DOT-DECIMAL/VERSION/IPV4`、`PUNC-DECIMAL-LIST`、`PUNC-DOT-AFTER-DIGIT`；第二个点走 `PUNC-CHINESE` | TSF/真实宿主整句验收 |
 | 冒号：数字中缀/数字后歧义 | 已实现 L0/核心运行时 | `PUNC-COLON-TIME/RATIO`、`PUNC-TECHNICAL-INFIX`、`PUNC-URL/PATH`；Notepad++ `12:23` 已验收 | 连续 URL/config token 和跨宿主验收 |
 | 逗号：千位/代码/中文 | 已实现核心 | `PUNC-COMMA-THOUSANDS`、`PUNC-COMMA-GROUP-PENDING`、`PUNC-PENDING-GROUP-*`、`PUNC-TECHNICAL-INFIX`、`PUNC-NUMERIC-INVALID` | 当前候选的多字符 provisional 真实宿主整句 |
-| 中文正文 `，。：！？` | 已实现核心 | `PUNC-CHINESE` 或 provisional 的中文解析；URL `?`/`!` 单独保护；退出 URL/Email/Path/Code 后的中文 `。？！` L0 反例已通过 | 分号等剩余符号的 token 正反例和跨宿主验证 |
+| 中文正文 `，。：！？；` | 已实现核心 | `PUNC-CHINESE` 或 provisional 的中文解析；分号按一次直接上屏 `；`，不再进入 `;;f/;;u/;关键词` 命令；URL `?`/`!` 单独保护；退出 URL/Email/Path/Code 后的中文 `。？！` L0 反例已通过 | 当前候选 Controlled TSF 与跨宿主验证 |
 | URL/Email/Path/File/Code | L0 分类与 TSF 路由已扩展 | `PUNC-URL/EMAIL/PATH/FILENAME/TECHNICAL-INFIX/BOUNDARY/QUOTE/PREFIX`；四类 token 退出后立即恢复中文的 L0 已通过，Controlled TSF Oracle 已编译 | 当前候选真实 profile 执行 Oracle，确认不引入跨键状态 |
 | 连字符、百分号、单位 | 基础本义已满足 | `-`、`%` 和 `/` 在中文模式本来就是 ASCII，已有表驱动映射；Shift+- 保留显式中文破折号；`折扣80%，` 连续物理键 Oracle 已编译 | 当前候选实跑和更多工程单位整句/跨宿主验收，不增加无必要的猜测状态 |
 | 技术括号/引号/问号/感叹号 | 核心上下文已实现 | `BIT[31:16]`、`func(x)`、`file_name`、赋值引号、`!flag`、URL `?`/`!` 与中文反例已有 L0；Controller Oracle 已写 | 当前候选真实 profile 实跑及更多 JSON/shell/Markdown 边界 |

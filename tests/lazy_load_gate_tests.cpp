@@ -26,7 +26,7 @@ void test_only_relevant_chinese_input_requests_the_large_engine() {
         "a Chinese-mode letter initializes the engine");
     check(piinput::should_initialize_chinese_engine(
               false, false, false, LazyLoadKeyKind::symbol_trigger),
-        "the first semicolon preserves offline symbol search");
+        "an explicit symbol-center trigger may initialize packaged symbols");
     check(!piinput::should_initialize_chinese_engine(
               true, false, false, LazyLoadKeyKind::letter),
         "English direct input never expands the Chinese dictionary");

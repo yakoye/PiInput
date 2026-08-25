@@ -204,7 +204,7 @@ void update_candidates(AppState& state) {
                 std::to_wstring(state.english_entry_count) + L" 条本地英文词条。";
             SetWindowTextW(state.status, status.c_str());
         } else {
-            SetWindowTextW(state.status, L"中文候选：输入拼音后按空格、Enter 或数字键上屏；以分号开头可搜索符号，例如 ;sheshidu");
+            SetWindowTextW(state.status, L"中文候选：输入拼音后按空格、Enter 或数字键上屏；符号中心请使用工具栏或设置的快捷键");
         }
         return;
     }
@@ -227,15 +227,6 @@ void update_candidates(AppState& state) {
                 std::to_string(index + 1U) + ". " + candidate.word);
             SendMessageW(state.candidates, LB_ADDSTRING, 0U,
                 reinterpret_cast<LPARAM>(line.c_str()));
-        }
-    } else if (input.front() == ';') {
-        const auto results = state.symbols.search(input.substr(1U), 20U);
-        for (std::size_t index = 0; index < results.size(); ++index) {
-            const auto& result = results[index];
-            state.values.push_back({result.symbol, {}});
-            const std::wstring line = piinput::utf8_to_wide(
-                std::to_string(index + 1U) + ". " + result.symbol + "    " + result.name + "    [" + result.category + "]");
-            SendMessageW(state.candidates, LB_ADDSTRING, 0U, reinterpret_cast<LPARAM>(line.c_str()));
         }
     } else {
         const auto results = state.engine.query(input, selected_schema(state), 20U);
@@ -461,8 +452,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show_command) {
         state.lexicon_path = find_lexicon();
         state.user_model_path = local_app_data() / L"PiInput" / L"UserData" / L"user_model.tsv";
         state.engine.load_lexicon(state.lexicon_path);
-        state.engine.load_user_model(state.user_model_path);
         state.symbols.load_tsv(find_packaged_data_file(L"symbols.tsv"));
+        state.engine.load_user_model(state.user_model_path);
         state.english_entry_count = load_english_resources(state);
 
         WNDCLASSEXW window_class{};

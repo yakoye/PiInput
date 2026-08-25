@@ -63,13 +63,11 @@ try {
     $results.Add("dictionary_benchmark=PASS")
     $results.Add("dictionary_benchmark_wall_ms=$($timer.ElapsedMilliseconds)")
 
-    $results.Add("symbol_command_;;f=PASS")
+    $results.Add("semicolon_commands=REMOVED")
     $results.Add("symbol_command_double_grave_f=PASS")
     $results.Add("markdown_single_grave=PASS")
     $results.Add("markdown_inline_code=PASS")
     $results.Add("markdown_triple_grave=PASS")
-    $results.Add("help_command_;;h=NOT_IMPLEMENTED")
-    $results.Add("decomposition_command_;;u=NOT_IMPLEMENTED")
     $results.Add("real_app_notepad4=DEFERRED_UNTIL_CLEAN_TSF_INSTALL")
     $results.Add("real_app_notepadplusplus=DEFERRED_UNTIL_CLEAN_TSF_INSTALL")
     $results.Add("real_app_word=DEFERRED_UNTIL_CLEAN_TSF_INSTALL")
@@ -85,4 +83,3 @@ Write-Host "Portable tests completed. Report: $reportPath" -ForegroundColor Gree
 if (-not $SkipGui) {
     Start-Process -FilePath (Join-Path $PackageRoot "PiInput-Test.exe") -WorkingDirectory $PackageRoot
 }
-

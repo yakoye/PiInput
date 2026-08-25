@@ -1062,12 +1062,6 @@ HostKeyEvent TextService::map_key(const WPARAM wparam) const noexcept {
         event.character = '\'';
         return event;
     }
-    if (!english_mode_ && !shifted && wparam == VK_OEM_1 &&
-        (mirror_.raw().empty() || mirror_.raw().front() == ';')) {
-        event.kind = HostKeyKind::text;
-        event.character = ';';
-        return event;
-    }
     if (!english_mode_ && !shifted && wparam == VK_OEM_3 &&
         (mirror_.raw().empty() || mirror_.raw().front() == '`')) {
         event.kind = HostKeyKind::text;

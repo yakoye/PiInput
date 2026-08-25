@@ -677,7 +677,7 @@ int main(const int argc, char** const argv) {
         piinput::HostPayloadError probe_error = piinput::HostPayloadError::none;
         const auto probe = piinput::decode_host_reply(
             probe_response->payload, probe_error, probe_response->version);
-        if (!probe.has_value() || probe->snapshot.raw != ";;f") return 12;
+        if (!probe.has_value() || probe->snapshot.raw != "``f") return 12;
         std::cout << "toolbar_ack=yes\n";
         std::cout << "toolbar_symbols=yes\n";
     }

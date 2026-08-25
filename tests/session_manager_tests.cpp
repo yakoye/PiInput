@@ -140,7 +140,7 @@ void test_toolbar_symbol_action_targets_the_exact_client_session() {
     check(manager.dispatch(key_envelope(2U, 10U, 1U, 'b')).has_value(),
         "same numeric session id in another client remains distinct");
     const auto opened = manager.open_symbol_center(2U, 10U);
-    check(opened.has_value() && opened->snapshot.raw == ";;f" &&
+    check(opened.has_value() && opened->snapshot.raw == "``f" &&
             !opened->snapshot.candidates.empty() &&
             opened->snapshot.candidates.front().text == "℃",
         "toolbar action opens symbols in the exact client/session pair");

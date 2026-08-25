@@ -92,7 +92,6 @@ Add-Action "paste" (Clip-Text (Pick-Line $groups[2]) 21) 2 "粘贴后立即继�
 Add-Action "type_chinese" (Clip-Text (Pick-Line $groups[3]) 11) 3 "粘贴后的追加输入"
 Add-Action "backspace" "" 0 "组合中与正文中分别删除 1 到 4 次"
 Add-Action "delete" "" 0 "正文中删除 1 到 3 次"
-Add-Action "symbol_command" ";;f" 0 "中文半角命令，打开符号中心"
 Add-Action "symbol_command" "````f" 0 "反引号命令；单个和三个反引号仍须原样输入"
 
 $scenario = [ordered]@{

@@ -76,7 +76,9 @@ try {
     }
 
     $commands = @($scenario.actions | Where-Object type -eq "symbol_command" | ForEach-Object text)
-    if ($commands -notcontains ";;f") { throw "Scenario is missing the semicolon symbol command." }
+    if (@($commands | Where-Object { $_.StartsWith(";") }).Count -ne 0) {
+        throw "Scenario must not reserve semicolon-prefixed commands."
+    }
     if ($commands -notcontains "````f") { throw "Scenario must preserve the two-backtick symbol command." }
 
     foreach ($action in @($scenario.actions | Where-Object { $_.type -in @("type_chinese", "type_english") })) {

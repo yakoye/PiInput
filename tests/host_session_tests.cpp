@@ -1273,7 +1273,7 @@ void test_shift_enters_direct_english_when_candidates_are_disabled() {
         "a second standalone Shift returns to Chinese mode");
 }
 
-void test_symbol_search_is_owned_by_host() {
+void test_symbol_center_and_semicolon_routing() {
     piinput::Engine engine;
     const auto lexicon_path = write_chinese_lexicon();
     engine.load_lexicon(lexicon_path);
@@ -1284,20 +1284,17 @@ void test_symbol_search_is_owned_by_host() {
     piinput::HostSession session(engine, nullptr, &symbols, settings, "full");
 
     type(session, ";sheshidu");
-    const auto snapshot = session.snapshot();
-    check(snapshot.raw == ";sheshidu" && !snapshot.candidates.empty() &&
-            snapshot.candidates.front().text == "℃",
-        "Host searches the packaged symbol index for a semicolon query");
-    const auto committed = session.apply({.kind = piinput::HostKeyKind::space});
-    check(committed.accepted && committed.action == piinput::HostAction::commit &&
-            committed.text == "℃" && committed.snapshot.raw.empty(),
-        "Host commits the selected symbol and clears the query");
+    const auto retired_semicolon_query = session.snapshot();
+    check(retired_semicolon_query.raw == ";sheshidu" &&
+            retired_semicolon_query.candidates.empty(),
+        "semicolon text no longer enters symbol search");
+    (void)session.apply({.kind = piinput::HostKeyKind::escape});
 
-    type(session, ";;f");
-    const auto semicolon_menu = session.snapshot();
-    check(semicolon_menu.raw == ";;f" && semicolon_menu.candidates.size() == 2U &&
-            semicolon_menu.candidates.front().text == "℃",
-        "double-semicolon f opens the complete symbol menu");
+    type(session, "``f");
+    const auto grave_menu = session.snapshot();
+    check(grave_menu.raw == "``f" && grave_menu.candidates.size() == 2U &&
+            grave_menu.candidates.front().text == "℃",
+        "double-grave f opens the complete symbol menu");
     (void)session.apply({.kind = piinput::HostKeyKind::escape});
 
     type(session, "abc");
@@ -1305,17 +1302,10 @@ void test_symbol_search_is_owned_by_host() {
         .kind = piinput::HostKeyKind::open_symbol_center,
     });
     check(toolbar_menu.accepted && toolbar_menu.action == piinput::HostAction::update &&
-            toolbar_menu.snapshot.raw == ";;f" &&
+            toolbar_menu.snapshot.raw == "``f" &&
             toolbar_menu.snapshot.candidates.size() == 2U &&
             toolbar_menu.snapshot.candidates.front().text == "℃",
         "the toolbar opens the symbol center directly without committing command text");
-    (void)session.apply({.kind = piinput::HostKeyKind::escape});
-
-    type(session, "``f");
-    const auto grave_menu = session.snapshot();
-    check(grave_menu.raw == "``f" && grave_menu.candidates.size() == 2U &&
-            grave_menu.candidates.front().text == "℃",
-        "double-grave f opens the same complete symbol menu");
     (void)session.apply({.kind = piinput::HostKeyKind::escape});
 
     type(session, "```");
@@ -1339,18 +1329,24 @@ void test_symbol_search_is_owned_by_host() {
             inline_code.text == "`code`",
         "Markdown inline code stays literal instead of becoming a command");
 
-    type(session, ";");
-    const auto chinese_semicolon = session.apply({.kind = piinput::HostKeyKind::space});
+    const auto chinese_semicolon = session.apply({
+        .kind = piinput::HostKeyKind::punctuation,
+        .character = ';',
+    });
     check(chinese_semicolon.accepted &&
             chinese_semicolon.action == piinput::HostAction::commit &&
             chinese_semicolon.text == "；",
-        "a single semicolon can still commit the configured Chinese punctuation");
+        "a single semicolon immediately commits configured Chinese punctuation");
 
-    type(session, ";;x");
-    const auto unknown = session.apply({.kind = piinput::HostKeyKind::space});
-    check(unknown.accepted && unknown.action == piinput::HostAction::commit &&
-            unknown.text == ";;x",
-        "an unknown double-semicolon command is preserved instead of swallowing keys");
+    type(session, "wo");
+    const auto composed_semicolon = session.apply({
+        .kind = piinput::HostKeyKind::punctuation,
+        .character = ';',
+    });
+    check(composed_semicolon.accepted &&
+            composed_semicolon.action == piinput::HostAction::commit &&
+            composed_semicolon.text == "我；",
+        "semicolon commits the active Chinese candidate and punctuation atomically");
 
     std::filesystem::remove(symbol_path);
     std::filesystem::remove(lexicon_path);
@@ -1388,7 +1384,7 @@ int main() {
     test_optional_english_session_uses_the_same_host_boundary();
     test_space_and_digits_are_resolved_by_current_host_state();
     test_punctuation_is_transformed_and_committed_by_host();
-    test_symbol_search_is_owned_by_host();
+    test_symbol_center_and_semicolon_routing();
     std::cout << "PiInput host session tests passed.\n";
     return 0;
 }
