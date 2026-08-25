@@ -95,7 +95,7 @@ bool known_key_kind(const HostKeyKind kind) noexcept {
 }
 
 bool known_action(const HostAction action) noexcept {
-    return action >= HostAction::none && action <= HostAction::launch_settings;
+    return action >= HostAction::none && action <= HostAction::launch_program;
 }
 
 bool known_mode(const HostInputMode mode) noexcept {

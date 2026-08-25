@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 namespace piinput {
 
@@ -23,6 +24,7 @@ enum class CandidateKind : std::uint8_t {
     symbol_tool_action,
     emoji_tool_action,
     settings_action,
+    launch_action,
 };
 
 struct CandidateEvidence {
@@ -31,6 +33,9 @@ struct CandidateEvidence {
     std::size_t word_count{};
     std::size_t single_character_tokens{};
     bool covers_all_input{};
+    // Non-empty only for launch_action. It is carried to the TSF after the
+    // composition has been cleared successfully.
+    std::string action_target;
 };
 
 }  // namespace piinput

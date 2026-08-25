@@ -654,6 +654,9 @@ void test_tool_shortcuts_are_always_candidate_two() {
         output << "符号\tfu'hao\t9000\n";
         output << "表情\tbiao'qing\t9000\n";
         output << "设置\tshe'zhi\t9000\n";
+        output << "工具\tgong'ju\t9000\n";
+        output << "共聚\tgong'ju\t8000\n";
+        output << "公举\tgong'ju\t7000\n";
     }
     piinput::Engine engine;
     engine.load_lexicon(path);
@@ -694,6 +697,41 @@ void test_tool_shortcuts_are_always_candidate_two() {
     const auto one_slot = engine.query("uevi", "full", 1U);
     check(one_slot.empty() || one_slot.front().word != "⚙️设置",
         "只有一个候选槽位时功能入口不能悄悄移到候选 1");
+
+    for (const std::string input : {
+             "jisuanqi", "jisrqi", "jsq", "jisrq", "calc", "reg"}) {
+        const auto calculators = engine.query(input, "full", 8U);
+        check(calculators.size() >= 3U &&
+                calculators[1U].word == "🖩计算器" &&
+                calculators[1U].evidence.kind == piinput::CandidateKind::launch_action &&
+                calculators[1U].evidence.action_target == "system:calculator" &&
+                calculators[2U].word == "🖩程序员计算器" &&
+                calculators[2U].evidence.action_target == "package:regcalc64",
+            "calculator aliases expose system and bundled calculators at candidates 2 and 3");
+    }
+    const auto mistyped_shortcut = engine.query("kuaijie", "full", 8U);
+    check(std::none_of(mistyped_shortcut.begin(), mistyped_shortcut.end(),
+              [](const piinput::EngineCandidate& candidate) {
+                  return candidate.evidence.kind == piinput::CandidateKind::launch_action;
+              }),
+        "the accidentally supplied kuaijie alias must not launch a tool");
+
+    for (const std::string input : {"hxtu", "ht", "huatu", "mspaint", "msp"}) {
+        const auto paint = engine.query(input, "full", 8U);
+        check(paint.size() >= 2U && paint[1U].word == "🎨画图" &&
+                paint[1U].evidence.kind == piinput::CandidateKind::launch_action &&
+                paint[1U].evidence.action_target == "system:mspaint",
+            "paint aliases expose Windows Paint at candidate 2");
+    }
+
+    auto configured = piinput::default_settings();
+    configured.custom_shortcuts[0] = {
+        "gongju,gj", 4U, "🌐GitHub", "https://github.com"};
+    const auto custom = engine.query("gongju", "full", 8U, configured);
+    check(custom.size() >= 4U && custom[3U].word == "🌐GitHub" &&
+            custom[3U].evidence.kind == piinput::CandidateKind::launch_action &&
+            custom[3U].evidence.action_target == "custom:https://github.com",
+        "configured shortcut keeps its requested candidate position and launch target");
     std::filesystem::remove(path);
 }
 

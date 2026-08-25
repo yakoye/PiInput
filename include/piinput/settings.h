@@ -2,6 +2,8 @@
 
 #include "piinput/punctuation.h"
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -90,6 +92,20 @@ struct CommandSettings final {
     bool operator==(const CommandSettings&) const = default;
 };
 
+inline constexpr std::size_t custom_shortcut_count = 3U;
+
+struct CustomShortcutSettings final {
+    // Comma-separated Latin aliases, for example "git,github".
+    std::string aliases;
+    std::uint32_t position{2U};
+    std::string name;
+    // A file, URL or executable opened by Windows. Prefix with "cmd:" to run
+    // an explicit command through cmd.exe.
+    std::string target;
+
+    bool operator==(const CustomShortcutSettings&) const = default;
+};
+
 struct SettingsSnapshot {
     std::uint64_t generation{0U};
     GeneralSettings general;
@@ -97,6 +113,7 @@ struct SettingsSnapshot {
     CandidateSettings candidates;
     EnglishSettings english;
     CommandSettings commands;
+    std::array<CustomShortcutSettings, custom_shortcut_count> custom_shortcuts;
     PunctuationMode punctuation{PunctuationMode::chinese};
     PunctuationBracketStyle punctuation_bracket_style{PunctuationBracketStyle::sogou};
 

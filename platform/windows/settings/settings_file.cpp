@@ -165,8 +165,8 @@ std::uint32_t step_numeric_setting(
 // comment, a hand-added key, a section this build does not know -- survives a
 // save untouched.
 struct Assignment final {
-    std::string_view section;
-    std::string_view key;
+    std::string section;
+    std::string key;
     std::string value;
 };
 
@@ -415,7 +415,7 @@ bool save_all_settings_atomic(
         return "ctrl_alt_grave";
     };
 
-    const std::vector<Assignment> assignments{
+    std::vector<Assignment> assignments{
         {"general", "schema", schema_name(settings.general.schema)},
         {"general", "default_language",
             settings.general.default_language == DefaultInputLanguage::english
@@ -452,6 +452,16 @@ bool save_all_settings_atomic(
         {"english", "user_learning", boolean(settings.english.user_learning)},
         {"english", "items_per_row", std::to_string(settings.english.items_per_row)},
     };
+    const std::array<std::string_view, custom_shortcut_count> suffixes{"1", "2", "3"};
+    for (std::size_t index = 0U; index < custom_shortcut_count; ++index) {
+        const auto& shortcut = settings.custom_shortcuts[index];
+        const std::string suffix(suffixes[index]);
+        assignments.push_back({"shortcuts", "aliases_" + suffix, shortcut.aliases});
+        assignments.push_back(
+            {"shortcuts", "position_" + suffix, std::to_string(shortcut.position)});
+        assignments.push_back({"shortcuts", "name_" + suffix, shortcut.name});
+        assignments.push_back({"shortcuts", "target_" + suffix, shortcut.target});
+    }
 
     try {
         std::filesystem::create_directories(path.parent_path());

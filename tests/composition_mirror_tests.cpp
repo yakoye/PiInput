@@ -214,6 +214,20 @@ void test_tool_action_waits_for_the_cancel_edit() {
         "tool action can be selected again after recovery");
     check(!mirror.complete_edit(true).has_value() && mirror.raw().empty(),
         "successful cancellation accepts the cleared Host snapshot");
+
+    check(mirror.confirm(mirror.begin_request(), update_reply(4U, "jsq", 3U)),
+        "calculator shortcut composition is mirrored");
+    piinput::HostReply program;
+    program.accepted = true;
+    program.action = piinput::HostAction::launch_program;
+    program.text = "package:regcalc64";
+    program.snapshot.generation = 5U;
+    check(mirror.confirm(mirror.begin_request(), program) &&
+            mirror.pending_action() == piinput::HostAction::launch_program &&
+            mirror.pending_commit() == "package:regcalc64",
+        "generic launch target remains pending until the cancel edit succeeds");
+    check(!mirror.complete_edit(true).has_value() && mirror.pending_commit().empty(),
+        "successful cancellation consumes the generic launch target exactly once");
 }
 
 void test_late_commit_completion_cannot_erase_the_next_composition() {

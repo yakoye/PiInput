@@ -1,6 +1,7 @@
 #include "piinput/settings.h"
 
 #include <array>
+#include <algorithm>
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
@@ -415,6 +416,57 @@ void parse_commands(
     }
 }
 
+[[nodiscard]] bool valid_shortcut_aliases(const std::string_view value) noexcept {
+    return value.size() <= 256U && std::all_of(value.begin(), value.end(), [](const char ch) {
+        return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+            ch == ',' || ch == ';' || ch == ' ' || ch == '\t';
+    });
+}
+
+void parse_shortcuts(
+    SettingsParseResult& result,
+    const std::string_view key,
+    const std::string_view value,
+    const std::size_t line) {
+    for (std::size_t index = 0U; index < custom_shortcut_count; ++index) {
+        const std::string suffix = "_" + std::to_string(index + 1U);
+        auto& shortcut = result.settings.custom_shortcuts[index];
+        if (key == "aliases" + suffix) {
+            if (!valid_shortcut_aliases(value)) {
+                add_error(result, line, "shortcuts", key, "invalid aliases");
+            } else {
+                shortcut.aliases = std::string(value);
+            }
+            return;
+        }
+        if (key == "position" + suffix) {
+            const auto parsed = parse_integer(value);
+            if (!parsed || *parsed < 2U || *parsed > 9U) {
+                add_error(result, line, "shortcuts", key, "position must be 2 through 9");
+            } else {
+                shortcut.position = *parsed;
+            }
+            return;
+        }
+        if (key == "name" + suffix) {
+            if (value.size() > 96U) {
+                add_error(result, line, "shortcuts", key, "name is too long");
+            } else {
+                shortcut.name = std::string(value);
+            }
+            return;
+        }
+        if (key == "target" + suffix) {
+            if (value.size() > 2048U) {
+                add_error(result, line, "shortcuts", key, "target is too long");
+            } else {
+                shortcut.target = std::string(value);
+            }
+            return;
+        }
+    }
+}
+
 }  // namespace
 
 SettingsSnapshot default_settings() {
@@ -464,7 +516,8 @@ SettingsParseResult parse_settings_text(
             }
             if (parsed_section == "general" || parsed_section == "pinyin" ||
                 parsed_section == "candidates" || parsed_section == "english" ||
-                parsed_section == "commands" || parsed_section == "punctuation") {
+                parsed_section == "commands" || parsed_section == "punctuation" ||
+                parsed_section == "shortcuts") {
                 section.assign(parsed_section);
             } else {
                 section = "<unknown-section>";
@@ -498,6 +551,8 @@ SettingsParseResult parse_settings_text(
             parse_english(result, key, value, line_number);
         } else if (section == "commands") {
             parse_commands(result, key, value, line_number);
+        } else if (section == "shortcuts") {
+            parse_shortcuts(result, key, value, line_number);
         } else if (section == "punctuation" && key == "mode") {
             assign_parsed(
                 result, result.settings.punctuation, parse_punctuation, value, line_number, "punctuation", key);
@@ -549,6 +604,19 @@ std::string serialize_default_settings() {
         "enabled=true\n"
         "hotkey=ctrl_alt_grave\n"
         "middle_dot_alias=false\n"
+        "[shortcuts]\n"
+        "aliases_1=\n"
+        "position_1=2\n"
+        "name_1=\n"
+        "target_1=\n"
+        "aliases_2=\n"
+        "position_2=2\n"
+        "name_2=\n"
+        "target_2=\n"
+        "aliases_3=\n"
+        "position_3=2\n"
+        "name_3=\n"
+        "target_3=\n"
         "[punctuation]\n"
         "mode=chinese\n"
         "bracket_style=sogou\n";

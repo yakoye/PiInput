@@ -167,6 +167,11 @@ void test_valid_values_and_boundaries() {
         "enabled=false\n"
         "hotkey=ctrl_grave\n"
         "middle_dot_alias=true\n"
+        "[shortcuts]\n"
+        "aliases_1=git, github\n"
+        "position_1=4\n"
+        "name_1=GitHub\n"
+        "target_1=https://github.com\n"
         "[punctuation]\n"
         "mode=english\n"
         "bracket_style=wechat\n",
@@ -206,6 +211,11 @@ void test_valid_values_and_boundaries() {
         "configured command hotkey parses");
     check(parsed.settings.commands.middle_dot_alias,
         "middle-dot aliases can be explicitly enabled");
+    check(parsed.settings.custom_shortcuts[0].aliases == "git, github" &&
+            parsed.settings.custom_shortcuts[0].position == 4U &&
+            parsed.settings.custom_shortcuts[0].name == "GitHub" &&
+            parsed.settings.custom_shortcuts[0].target == "https://github.com",
+        "custom shortcut aliases, position, name, and target parse together");
     check(parsed.settings.punctuation == piinput::PunctuationMode::english, "English punctuation");
     check(parsed.settings.punctuation_bracket_style == piinput::PunctuationBracketStyle::wechat,
         "WeChat Chinese bracket style parses");
@@ -222,6 +232,13 @@ void test_valid_values_and_boundaries() {
     check(migrated_programmer.errors.empty() &&
             migrated_programmer.settings.punctuation == piinput::PunctuationMode::english,
         "removed programmer punctuation migrates to its identical English behavior");
+
+    const auto invalid_shortcut = piinput::parse_settings_text(
+        "[shortcuts]\naliases_1=bad!alias\nposition_1=10\n", previous);
+    check(invalid_shortcut.errors.size() == 2U &&
+            invalid_shortcut.settings.custom_shortcuts[0] ==
+                previous.custom_shortcuts[0],
+        "invalid shortcut aliases and candidate positions retain prior values");
 
     const auto minimum_visuals = piinput::parse_settings_text(
         "[candidates]\nfont_size=10\nwindow_height=20\n", previous);

@@ -40,6 +40,7 @@ file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/pipe_server.cpp" host_pip
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/candidate_presenter.cpp" candidate_presenter_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/main.cpp" host_main_text)
 file(READ "${PIINPUT_SOURCE_DIR}/src/host_session.cpp" host_session_text)
+file(READ "${PIINPUT_SOURCE_DIR}/src/engine.cpp" engine_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/diagnostics/main.cpp" diagnostics_main_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/settings/main.cpp" settings_main_text)
 
@@ -1341,6 +1342,36 @@ if(installed_program_resolver LESS 0 OR
    installed_settings_launch LESS 0)
     message(FATAL_ERROR
         "Candidate actions must resolve installed tools beside CurrentHostPath, not beside the permanent Shim")
+endif()
+foreach(required_launch_token IN ITEMS
+        "system:calculator"
+        "package:regcalc64"
+        "system:mspaint"
+        "custom:"
+        "RegCalc64Tool.html")
+    string(FIND "${engine_text}${stable_text_service_text}"
+        "${required_launch_token}" launch_token_position)
+    if(launch_token_position LESS 0)
+        message(FATAL_ERROR
+            "Candidate launch integration is missing: ${required_launch_token}")
+    endif()
+endforeach()
+foreach(required_regcalc_asset IN ITEMS
+        "tools/regcalc/RegCalc64Tool.html"
+        "tools/regcalc/shared-ui.css"
+        "tools/regcalc/shared-ui.js")
+    string(FIND "${cmake_text}${package_text}${package_closure_text}"
+        "${required_regcalc_asset}" regcalc_asset_position)
+    if(regcalc_asset_position LESS 0)
+        message(FATAL_ERROR
+            "Bundled programmer calculator asset is not covered by build and package gates: ${required_regcalc_asset}")
+    endif()
+endforeach()
+if(NOT settings_main_text MATCHES "快捷调用" OR
+   NOT settings_main_text MATCHES "候选位置" OR
+   NOT settings_main_text MATCHES "调用程序")
+    message(FATAL_ERROR
+        "PiInput Settings must expose configurable launch shortcuts")
 endif()
 string(FIND "${host_session_text}"
     "if (event.kind == HostKeyKind::switch_to_english)" shift_english_branch)

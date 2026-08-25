@@ -23,6 +23,15 @@ v0.7.14 主要完善中文输入状态下的标点选择和常用工具入口。
 - `shizhi/uevi/sz/shiz/uev` 的候选 2 为 `⚙️设置`，选择后打开设置程序。
 - 修复正式安装布局下候选 2 不启动程序：永久 TSF Shim 在 Program Files，而工具位于当前 Host 同目录；现在通过注册的 `CurrentHostPath` 解析活动版本目录，不再误按 DLL 同目录查找。
 
+## 计算器、画图与自定义快捷调用
+
+- `jisuanqi/jisrqi/jsq/jisrq/calc/reg` 的候选 2 为 `🖩计算器`，选择后打开 Windows 计算器；候选 3 为 `🖩程序员计算器`，选择后打开随 PiInput 发布的 `RegCalc64Tool.html`。
+- `hxtu/ht/huatu/mspaint/msp` 的候选 2 为 `🎨画图`，选择后打开 Windows 画图。
+- 误输入的“快捷”不属于计算器触发码，也没有加入任何内置入口。
+- 设置新增“快捷调用”页，可配置 3 组“触发码、候选位置、名称、调用程序”。触发码可用逗号、分号或空格分隔；调用目标支持 EXE、HTML、普通文件、URL 和环境变量路径，显式命令使用 `cmd:` 前缀。
+- 自定义入口和内置入口使用同一候选动作协议：选择后先安全结束当前组合，只有 TSF 编辑成功才调用目标，入口标签不会上屏。
+- `RegCalc64Tool.html`、`shared-ui.css`、`shared-ui.js` 直接安装到活动版本的 `bin`，并加入构建、打包和包闭环必需文件检查。
+
 ## 发布边界
 
 “关于 PiInput”现在显示版本、精确构建标识、UTC 构建时间、完整 Git Commit ID 和项目联系方式，便于截图或远程反馈时确认实际加载的 DLL 身份。

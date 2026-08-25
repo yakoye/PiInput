@@ -1,0 +1,4063 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RegCalc64</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "PingFang SC", Arial, sans-serif;
+            background: #f9f9f9;
+            margin:0;
+            color: #222;
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-text-size-adjust: 100%;
+            text-rendering: optimizeLegibility;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        .tab-bar {
+            display: flex;
+            border-bottom: 2px solid #dedede;
+            background: #ededed;
+            height: 34px;
+            align-items: flex-end;
+            padding-left: 24px;
+        }
+        .tab {
+            padding: 5px 28px 6px 28px;
+            margin-right: 4px;
+            border: 1px solid #dedede;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            background: #e5e5e5;
+            cursor: pointer;
+            color: #888;
+            font-size: 15px;
+            font-weight: 600;
+            position: relative;
+            top: 2px;
+            transition: all 0.2s;
+        }
+        .tab.active {
+            background: #fff;
+            color: #222;
+            border-bottom: 2px solid #fff;
+            z-index: 2;
+        }
+        .tab-content {
+            display: none;
+            background: #fff;
+            border: 1.5px solid #dedede;
+            border-radius: 0 0 8px 8px;
+            /* 第一个值 5px - 设置上下方向的内边距为 5 像素
+               第二个值 24px - 设置左右方向的内边距为 24 像素
+               等效：
+                padding-top: 5px;
+                padding-right: 24px;
+                padding-bottom: 5px;
+                padding-left: 24px;
+            */
+            margin: 0 24px 24px 24px;
+            padding: 5px 24px;
+            min-height: 400px;
+            box-sizing: border-box;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #regcalc-ui {
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        #regcalc-ui table {
+            --regcalc-field-width: 280px;
+            --regcalc-gap: 3px;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+        #regcalc-ui > table {
+            max-width: 100%;
+        }
+        /* RegCalc指定样式（防止干扰） */
+        #regcalc-ui table input[type="text"], #regcalc-ui table textarea {
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+            font-size: 14px;
+            line-height: 1.35;
+            padding: 3px 5px;
+            border: 1px solid #999;
+            margin: 3px 0;
+        }
+        #regcalc-ui table input[type="button"], #regcalc-ui table button {
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+        #regcalc-ui .regcalc-title-table {
+            margin: 4px auto 5px;
+        }
+        #regcalc-ui .regcalc-title-table td {
+            line-height: 1.1;
+        }
+        #regcalc-ui .regcalc-bit-table {
+            border-spacing: 1px 0;
+            font-size: 14px;
+        }
+        #regcalc-ui .regcalc-bit-table td {
+            padding: 0 1px;
+            line-height: 1;
+            vertical-align: bottom;
+        }
+        #regcalc-ui .regcalc-bit-label td {
+            padding-top: 0;
+            padding-bottom: 1px;
+        }
+        #regcalc-ui .regcalc-bit-label-small-gap td {
+            padding-top: 4px;
+        }
+        #regcalc-ui .regcalc-bit-label-mid-gap td {
+            padding-top: 12px;
+        }
+        #regcalc-ui .regcalc-bit-button td {
+            padding-top: 0;
+            padding-bottom: 0;
+            vertical-align: top;
+        }
+        #regcalc-ui .regcalc-bit-table input[type="button"] {
+            margin-top: 0;
+            padding-top: 1px;
+            padding-bottom: 1px;
+        }
+        #regcalc-ui .regcalc-bit-spacer td {
+            height: 0;
+            padding: 0;
+            line-height: 0;
+            font-size: 0;
+        }
+        #regcalc-ui .regcalc-form-table {
+            border-spacing: 3px 3px;
+        }
+        #regcalc-ui .regcalc-label {
+            width: 86px;
+            padding-right: 5px;
+            text-align: right;
+            white-space: nowrap;
+        }
+        #regcalc-ui .regcalc-control {
+            text-align: left;
+            white-space: nowrap;
+        }
+        #regcalc-ui .regcalc-actions {
+            text-align: left;
+            white-space: nowrap;
+            padding-left: 2px;
+            width: 1%;
+        }
+        #regcalc-ui .regcalc-control input,
+        #regcalc-ui .regcalc-control textarea,
+        #regcalc-ui .regcalc-actions button,
+        #regcalc-ui .regcalc-actions input {
+            margin-right: var(--regcalc-gap);
+        }
+        #regcalc-ui #regcalc_hex,
+        #regcalc-ui #regcalc_dec,
+        #regcalc-ui #regcalc_calcInput,
+        #regcalc-ui #regcalc_calcResult {
+            width: var(--regcalc-field-width) !important;
+        }
+        #regcalc-ui #regcalc_human {
+            width: 66px !important;
+        }
+        #regcalc-ui .regcalc-bit-range {
+            width: 54px !important;
+        }
+        #regcalc-ui .regcalc-sub-hex {
+            width: 86px !important;
+        }
+        #regcalc-ui .regcalc-sub-dec {
+            width: calc(var(--regcalc-field-width) - 54px - 86px - (var(--regcalc-gap) * 2)) !important;
+        }
+        #regcalc-ui .regcalc-bitfield-buttons {
+            white-space: nowrap;
+        }
+        #regcalc-ui .regcalc-bitfield-buttons button {
+            min-width: 24px;
+            padding: 3px 5px;
+        }
+        #regcalc-ui #regcalc_bin {
+            width: var(--regcalc-field-width) !important;
+            font-size: 13px !important;
+            line-height: 1.25 !important;
+            min-height: calc(1.35em + 8px);
+            max-height: calc((1.25em * 2) + 12px);
+            resize: none;
+            white-space: pre-wrap;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            overflow-wrap: normal;
+            word-break: normal;
+        }
+        #regcalc-ui #regcalc_calcInput {
+            min-height: calc(1.35em + 10px);
+            max-height: calc((1.35em * 3) + 10px);
+            resize: none;
+            white-space: pre-wrap;
+            overflow-x: hidden;
+            overflow-y: hidden;
+            overflow-wrap: anywhere;
+            word-break: break-all;
+        }
+        #regcalc-ui .regcalc-spacer td {
+            height: 5px;
+            padding: 0;
+            line-height: 0;
+        }
+        #regcalc-ui .regcalc-footer-actions {
+            padding-top: 4px;
+            text-align: center;
+        }
+        #regcalc-ui .regcalc-footer-actions a,
+        #regcalc-ui .regcalc-footer-actions input {
+            margin: 0 5px;
+        }
+        #regcalc-ui table textarea {
+            vertical-align: top;
+        }
+        /* TextConvert 指定样式（命名前缀隔离） */
+        #textconvert-ui {
+            max-width: 1040px;
+            margin: 0 auto;
+        }
+        #textconvert-ui .container {
+            display: flex;    /* 启用 flex 布局 */
+            gap: 5px;        /* 设置子元素之间的间距为 5px */
+            width: 100%;
+        }
+        /* TextConvert 文本框的宽度和高度 */
+        #textconvert-ui textarea {
+            flex: 1 1 0;
+            min-width: 0;
+            height: 300px;
+            padding: 10px;
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+            font-size: 14px;
+            line-height: 1.45;
+            box-sizing: border-box;
+        }
+        #textconvert-ui .swap-btn {
+            align-self: center;      /* 在 flex 容器中垂直居中对齐 */
+            padding: 10px;           /* 内边距：上下左右都是10px */
+            margin: 0 0px;           /* 外边距：上下0，左右0px */
+            background: #f0f0f0;     /* 浅灰色背景 */
+            border: 1px solid #ccc;  /* 浅灰色边框，1像素宽度 */
+            cursor: pointer;         /* 鼠标悬停时显示手型指针 */
+        }
+        #textconvert-ui .buttons {
+            margin: 10px 0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: flex-start;
+        }
+        /* 下拉折叠按钮组 */
+        #textconvert-ui .tc-dropdown {
+            position: relative;
+            display: inline-flex;
+        }
+        #textconvert-ui .tc-btn {
+            white-space: nowrap;
+            border: 1px solid #c8c8c8;
+            border-radius: 4px;
+            background: #f5f5f5;
+            color: #333;
+            font-weight: 600;
+            transition: background .15s, border-color .15s;
+        }
+        #textconvert-ui .tc-btn:hover {
+            background: #ececec;
+            border-color: #adadad;
+        }
+        /* 清洗类：常规灰色次要按钮 */
+        #textconvert-ui .tc-btn.tc-clean {
+            background: #f3f3f3;
+            border-color: #cfcfcf;
+            color: #444;
+        }
+        #textconvert-ui .tc-btn.tc-clean:hover {
+            background: #e7e7e7;
+            border-color: #b0b0b0;
+        }
+        /* 大小写/命名类：浅蓝 */
+        #textconvert-ui .tc-btn.tc-case {
+            background: #eef4fb;
+            border-color: #b9d3ee;
+            color: #1f4e79;
+        }
+        #textconvert-ui .tc-btn.tc-case:hover {
+            background: #dfeafa;
+            border-color: #8fbbe6;
+        }
+        /* 编码/格式化类：蓝色主题色 */
+        #textconvert-ui .tc-btn.tc-encode {
+            background: #2f6fb0;
+            border-color: #2a629c;
+            color: #fff;
+        }
+        #textconvert-ui .tc-btn.tc-encode:hover {
+            background: #285f97;
+            border-color: #224f7f;
+        }
+        /* Hex 转换类：极客感代码绿边框 */
+        #textconvert-ui .tc-btn.tc-hex {
+            background: #f1f8f2;
+            border: 1px solid #2e8b57;
+            color: #1b5e34;
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+        }
+        #textconvert-ui .tc-btn.tc-hex:hover {
+            background: #e2f1e6;
+            border-color: #20693f;
+        }
+        /* 下拉展开时主按钮高亮 */
+        #textconvert-ui .tc-dropdown.tc-open .tc-dropdown-toggle {
+            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+            filter: brightness(0.97);
+        }
+        /* 下拉浮层菜单 */
+        #textconvert-ui .tc-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            z-index: 50;
+            display: none;
+            flex-direction: column;
+            min-width: 180px;
+            max-height: 320px;
+            overflow-y: auto;
+            padding: 5px;
+            gap: 4px;
+            background: #fff;
+            border: 1px solid #c8c8c8;
+            border-radius: 6px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+        }
+        #textconvert-ui .tc-dropdown.tc-open .tc-dropdown-menu {
+            display: flex;
+        }
+        #textconvert-ui .tc-dropdown-menu button {
+            width: 100%;
+            text-align: left;
+            white-space: nowrap;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            background: #f7f7f7;
+            color: #333;
+        }
+        #textconvert-ui .tc-dropdown-menu button:hover {
+            background: #eaf0f6;
+            border-color: #b9d3ee;
+        }
+        /* 各分类菜单内按钮的颜色提示（左侧色条） */
+        #textconvert-ui .tc-menu-clean button { border-left: 3px solid #c0c0c0; }
+        #textconvert-ui .tc-menu-case button { border-left: 3px solid #8fbbe6; }
+        #textconvert-ui .tc-menu-encode button { border-left: 3px solid #2f6fb0; }
+        #textconvert-ui .tc-dropdown-menu-hex button {
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+            border-left: 3px solid #2e8b57;
+        }
+        /* 悬浮提示 (Tooltip) */
+        #textconvert-ui [data-tip] {
+            position: relative;
+        }
+        #textconvert-ui [data-tip]:hover::after {
+            content: attr(data-tip);
+            position: absolute;
+            left: 0;
+            top: calc(100% + 6px);
+            z-index: 70;
+            max-width: 300px;
+            width: max-content;
+            padding: 6px 9px;
+            background: #1f1f1f;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 400;
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+            line-height: 1.45;
+            border-radius: 4px;
+            white-space: normal;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            pointer-events: none;
+        }
+        /* 触屏设备隐藏 hover tooltip，避免点击残留 */
+        @media (hover: none) {
+            #textconvert-ui [data-tip]:hover::after {
+                display: none;
+            }
+        }
+        #textconvert-ui .textconvert-controls-panel {
+            overflow: visible;
+            border: 1px solid #d8d8d8;
+            padding: 10px;
+            margin: 10px 0;
+            background: #fff;
+        }
+        #textconvert-ui .textconvert-controls-panel .buttons {
+            margin: 0;
+        }
+
+        #textconvert-ui .textconvert-controls-panel .sequence-section {
+            border: 0;
+            border-top: 1px solid #e2e2e2;
+            padding: 10px 0 0;
+            margin: 10px 0 0;
+        }
+        #textconvert-ui button {
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.25;
+            min-height: 24px;
+            padding: 3px 5px;
+            cursor: pointer;
+        }
+        #textconvert-ui .buttons button {
+            width: 100%;
+            white-space: normal;
+        }
+        /* 主按钮（下拉触发 + 清空）保持内容宽度，覆盖上面的 100% 规则 */
+        #textconvert-ui .buttons .tc-btn {
+            width: auto;
+            white-space: nowrap;
+        }
+        #textconvert-ui .sequence-section .tool-section-title {
+
+            margin-bottom: 6px;
+        }
+        #textconvert-ui .sequence-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: end;
+        }
+        #textconvert-ui .sequence-grid .tool-field {
+            flex: 0 0 auto;
+        }
+        #textconvert-ui .sequence-range-field {
+            width: 92px;
+        }
+        #textconvert-ui .sequence-width-field {
+            width: 58px;
+        }
+        #textconvert-ui .sequence-count-field {
+            width: 112px;
+        }
+        #textconvert-ui .sequence-order-field {
+            width: 72px;
+        }
+        #textconvert-ui .sequence-separator-mode-field {
+            width: 100px;
+        }
+        #textconvert-ui .sequence-separator-custom-field {
+            width: 84px;
+        }
+        #textconvert-ui .sequence-actions {
+            display: flex;
+            gap: 8px;
+            align-items: end;
+        }
+        #textconvert-ui .sequence-actions button {
+            min-width: 96px;
+        }
+        #textconvert-ui button.clear-btn {
+            background: #f0f0f0;
+            border-color: #238625;
+            color: #000000;
+        }
+        #textconvert-ui button.clear-btn:hover {
+            background: #f7fbcc;
+            border-color: #22ca24;
+        }
+        .tool-panel {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        #timecalc-ui,
+        #password-ui {
+            max-width: 500px;
+        }
+        #timecalc-ui .timecalc-form-row {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        #timecalc-ui .timecalc-form-row:last-child {
+            margin-bottom: 0;
+        }
+        #timecalc-ui .timecalc-one-col {
+            grid-template-columns: 1fr;
+        }
+        #timecalc-ui .timecalc-three-col {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        #timecalc-ui .timecalc-inline-field {
+            display: grid;
+            grid-template-columns: 78px minmax(0, 1fr);
+            gap: 4px;
+            align-items: center;
+            font-size: 13px;
+        }
+        #timecalc-ui .timecalc-inline-field input {
+            width: 100%;
+            max-width: 180px;
+            min-height: 28px;
+            padding: 1px 3px;
+            border: 1px solid #999;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        #timecalc-ui .timecalc-base-row {
+            grid-template-columns: minmax(0, max-content) auto;
+            gap: 6px;
+            align-items: end;
+        }
+        #timecalc-ui .timecalc-base-row .timecalc-inline-field {
+            grid-template-columns: 78px 180px;
+        }
+        #timecalc-ui .timecalc-convert-toggle {
+            min-height: 28px;
+            min-width: 64px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            white-space: nowrap;
+            font-size: 13px;
+        }
+        #timecalc-ui .timecalc-convert-toggle input {
+            margin: 0;
+        }
+        #timecalc-ui .timecalc-convert-text {
+            line-height: 1.1;
+        }
+        @media (max-width: 420px) {
+            #timecalc-ui .timecalc-base-row {
+                grid-template-columns: minmax(0, max-content) 44px;
+                gap: 4px;
+            }
+            #timecalc-ui .timecalc-convert-toggle {
+                min-width: 44px;
+                white-space: normal;
+            }
+            #timecalc-ui .timecalc-convert-text {
+                width: 2em;
+            }
+        }
+        #password-ui .password-list {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 100%;
+            min-height: 180px;
+            margin-top: 8px;
+            padding: 7px;
+            border: 1px solid #999;
+            background: #fff;
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+            font-size: 14px;
+        }
+        #password-ui .password-row {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 24px;
+            gap: 6px;
+            align-items: center;
+            min-height: 28px;
+            padding: 3px 5px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background-color 0.12s ease, border-color 0.12s ease;
+        }
+        #password-ui .password-row:hover {
+            border-color: #c8d6c8;
+            background: #f5fbf5;
+        }
+        #password-ui .password-row:active {
+            background: #edf7ed;
+        }
+        #password-ui .password-row.is-editing {
+            cursor: default;
+            background: #fff;
+            border-color: #238625;
+        }
+        #password-ui .password-text {
+            overflow-wrap: anywhere;
+            user-select: text;
+            line-height: 1.35;
+        }
+        #password-ui .password-edit-input {
+            width: 100%;
+            min-height: 24px;
+            padding: 2px 4px;
+            border: 1px solid #999;
+            font: inherit;
+        }
+        #password-ui .password-edit-btn {
+            width: 22px;
+            min-width: 22px;
+            height: 22px;
+            padding: 0;
+            line-height: 1;
+            font-size: 13px;
+        }
+        #password-ui .password-toast {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            padding: 3px 8px;
+            border: 1px solid #b9d8b9;
+            background: #f5fbf5;
+            color: #2f5f38;
+            font-family: inherit;
+            font-size: 13px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+        #password-ui .password-toast.show {
+            opacity: 1;
+        }
+        #hash-ui {
+            max-width: 1000px;
+        }
+        .hash-frame {
+            display: block;
+            width: 100%;
+            min-height: calc(100vh - 58px);
+            border: 0;
+            background: #f8f8f8;
+        }
+        .tool-panel h3 {
+            margin: 8px 0 12px;
+        }
+        .tool-section {
+            border: 1px solid #d8d8d8;
+            padding: 10px;
+            margin: 10px 0;
+            background: #fff;
+        }
+        .tool-section-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .tool-note {
+            margin: -4px 0 8px;
+            padding: 7px 8px;
+            border: 1px solid #d8e6d8;
+            background: #f5fbf5;
+            color: #2f5f38;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+        .tool-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 8px;
+            align-items: end;
+        }
+        .tool-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 13px;
+        }
+        .tool-field input,
+        .tool-field select,
+        .tool-field textarea {
+            width: 100%;
+            min-height: 24px;
+            padding: 3px 5px;
+            border: 1px solid #999;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        .tool-field textarea {
+            min-height: 80px;
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+        }
+        .tool-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .tool-actions button,
+        .tool-action-btn {
+            min-height: 24px;
+            padding: 3px 5px;
+            cursor: pointer;
+        }
+        .tool-output {
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #d0d0d0;
+            background: #fafafa;
+            white-space: pre-wrap;
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+            font-size: 14px;
+            min-height: 40px;
+        }
+        .checkbox-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 14px;
+            align-items: center;
+        }
+        .checkbox-row label {
+            white-space: nowrap;
+        }
+        .external-links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+        }
+        .external-links-subtitle {
+            grid-column: 1 / -1;
+            margin: 8px 0 0;
+            padding: 6px 0 2px;
+            border-bottom: 1px solid #e4e4e4;
+            color: #333;
+            font-weight: 700;
+        }
+        .external-links-subtitle:first-child {
+            margin-top: 0;
+        }
+        .external-tool-link {
+            display: block;
+            padding: 10px;
+            border: 1px solid #d8d8d8;
+            color: #222;
+            text-decoration: none;
+            background: #fff;
+        }
+        .external-tool-link:hover {
+            background: #f7fbff;
+            border-color: #88b7e8;
+        }
+        .external-tool-link b {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .external-tool-link span {
+            color: #555;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+
+        #about-ui {
+            max-width: 900px;
+        }
+        #about-ui h3 {
+            margin: 8px 0 12px;
+        }
+        #about-ui h4 {
+            margin: 8px 0 6px;
+        }
+        #about-ui h5 {
+            margin: 8px 0 4px;
+        }
+        #about-ui ul {
+            margin: 4px 0 10px 20px;
+            padding: 0;
+        }
+        .about-release-note {
+            margin: 6px 0 0;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            background: #fafafa;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            word-break: break-word;
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        @media (max-width:700px) {
+            body {
+                background: #fff;
+                font-size: 14px;
+            }
+            .tab-bar {
+                height: auto;
+                padding-left: 0;
+                align-items: stretch;
+                position: sticky;
+                top: 0;
+                z-index: 20;
+            }
+            .tab {
+                flex: 1 1 0;
+                min-width: 0;
+                margin-right: 0;
+                padding: 4px 6px;
+                text-align: center;
+                font-size: 0;
+                line-height: 1.15;
+                border-radius: 0;
+                top: 0;
+                overflow: hidden;
+                white-space: nowrap;
+            }
+            .tab::after {
+                content: attr(data-mobile-label);
+                display: block;
+                font-size: 13px;
+                line-height: 1.15;
+            }
+            .tab-content {
+                margin: 0;
+                padding: 6px;
+                border-left: 0;
+                border-right: 0;
+                border-radius: 0;
+                min-height: calc(100vh - 30px);
+            }
+            #regcalc-ui {
+                width: max-content;
+                max-width: none;
+                padding-bottom: 8px;
+                overflow: visible;
+                transform-origin: left top;
+            }
+            #regcalc-ui > table {
+                max-width: none;
+            }
+            #regcalc-ui table {
+                border-spacing: 2px;
+            }
+            #regcalc-ui table input[type="text"],
+            #regcalc-ui table textarea {
+                max-width: 100%;
+            }
+            #textconvert-ui h3 {
+                margin: 6px 0 12px;
+                font-size: 18px;
+            }
+            #textconvert-ui .buttons {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            /* 手机端下拉主按钮平铺成两列，菜单仍为浮层 */
+            #textconvert-ui .buttons > .tc-dropdown,
+            #textconvert-ui .buttons > .tc-btn {
+                flex: 1 1 calc(50% - 6px);
+            }
+            #textconvert-ui .buttons > .tc-dropdown .tc-dropdown-toggle {
+                width: 100%;
+            }
+            #textconvert-ui .textconvert-controls-panel {
+                padding: 8px;
+            }
+            #textconvert-ui button {
+                min-height: 24px;
+                padding: 3px 5px;
+                font-size: 14px;
+            }
+            #textconvert-ui .buttons button {
+                width: 100%;
+                white-space: normal;
+            }
+            /* 手机端下拉菜单自适应宽度 */
+            #textconvert-ui .tc-dropdown-menu {
+                min-width: 60vw;
+                max-height: 50vh;
+            }
+
+            #textconvert-ui .container {
+                gap: 8px;
+            }
+            #textconvert-ui textarea {
+                min-height: 160px;
+                font-size: 16px;
+            }
+            #textconvert-ui .swap-btn {
+                width: 100%;
+                align-self: stretch;
+            }
+            .tool-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            #timecalc-ui .timecalc-three-col {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            #textconvert-ui .sequence-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            #textconvert-ui .sequence-range-field,
+            #textconvert-ui .sequence-width-field,
+            #textconvert-ui .sequence-count-field,
+            #textconvert-ui .sequence-order-field,
+            #textconvert-ui .sequence-separator-mode-field,
+            #textconvert-ui .sequence-separator-custom-field {
+                width: auto;
+            }
+            #textconvert-ui .sequence-actions {
+                grid-column: 1 / -1;
+            }
+            #textconvert-ui .sequence-actions button {
+                flex: 1 1 0;
+                min-width: 0;
+            }
+            .tool-section {
+                padding: 8px;
+            }
+            .external-links-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width:380px) {
+            .tab {
+                font-size: 14px;
+            }
+            .tab-content {
+                padding: 8px;
+            }
+        }
+
+        @media (max-width:1100px) {
+            #textconvert-ui .container {
+                flex-direction: column;
+            }
+            #textconvert-ui textarea {
+                flex: none;
+                width: 100%;
+                height: 160px;
+            }
+        }
+    
+body { margin: 0; padding: 8px; background: #f8f8f8; }
+.tab-content { display: block !important; margin: 0; border-radius: 0; min-height: auto; }
+</style>
+    <style>
+        body {
+            background:
+                radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.92), transparent 30%),
+                radial-gradient(circle at 82% 0%, rgba(224, 232, 244, 0.72), transparent 34%),
+                linear-gradient(145deg, #f7f9fc 0%, #eef3f8 48%, #f9fbfd 100%) !important;
+            color: #18212f !important;
+        }
+
+        .tab-content#regcalc {
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            padding: 10px !important;
+        }
+
+        #regcalc-ui {
+            --regcalc-field-width: 260px;
+            --regcalc-gap: 3px;
+            max-width: 528px;
+            height: 600px;
+            margin: 0 auto;
+            overflow-x: visible;
+            overflow-y: visible;
+        }
+
+        #regcalc-ui > table {
+            width: 508px !important;
+            max-width: 508px;
+            min-height: 600px;
+            aspect-ratio: 508 / 600;
+            border: 1px solid rgba(203, 213, 225, 0.72) !important;
+            border-radius: 26px !important;
+            border-spacing: 0 !important;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.82), rgba(247, 250, 253, 0.58)) !important;
+            backdrop-filter: blur(22px) saturate(1.25);
+            -webkit-backdrop-filter: blur(22px) saturate(1.25);
+            box-shadow: 0 24px 70px rgba(71, 85, 105, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.92) !important;
+            overflow: hidden;
+            transform: scale(0.9586);
+            transform-origin: top center;
+        }
+
+        #regcalc-ui > table > tbody > tr > td {
+            border: 0 !important;
+            padding: 0 14px 9px;
+        }
+
+        #regcalc-ui > table > tbody > tr:first-child > td {
+            padding-top: 10px;
+            padding-bottom: 5px;
+        }
+
+        #regcalc-ui .regcalc-title-table {
+            width: 100%;
+            margin: 0 auto 5px;
+        }
+
+        #regcalc-ui .regcalc-title-table td {
+            padding: 4px 8px 7px;
+            color: #111827;
+            font-size: 16px;
+            letter-spacing: 0;
+        }
+
+        #regcalc-ui .regcalc-bit-grid {
+            display: grid;
+            grid-template-columns: repeat(16, minmax(0, 1fr));
+            column-gap: 2px;
+            row-gap: 5px;
+            width: 100%;
+            padding: 8px;
+            border: 1px solid rgba(203, 213, 225, 0.58);
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.44);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+        }
+
+        #regcalc-ui .regcalc-bit-cell {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 1px 0;
+            border-right: 1px solid transparent;
+        }
+
+        #regcalc-ui .regcalc-bit-cell.regcalc-group-end:not(.regcalc-row-end) {
+            border-right-color: rgba(148, 163, 184, 0.26);
+        }
+
+        #regcalc-ui .regcalc-bit-cell.regcalc-major-gap {
+            margin-top: 6px;
+        }
+
+        #regcalc-ui .regcalc-bit-index {
+            height: 15px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 15px;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+
+        #regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle {
+            width: calc(100% - 5px) !important;
+            min-width: 0 !important;
+            height: 21px !important;
+            min-height: 21px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 1px solid rgba(148, 163, 184, 0.5) !important;
+            border-radius: 8px !important;
+            background: rgba(255, 255, 255, 0.68) !important;
+            color: #334155 !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 5px 12px rgba(15, 23, 42, 0.06);
+            font-family: "Cascadia Mono", "Consolas", "SFMono-Regular", "Menlo", monospace !important;
+            font-size: 12px !important;
+            font-weight: 700;
+            line-height: 1 !important;
+        }
+
+        #regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle:hover {
+            background: rgba(248, 250, 252, 0.95) !important;
+            border-color: rgba(100, 116, 139, 0.75) !important;
+            color: #0f172a !important;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.96);
+        }
+
+        #regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle.is-one {
+            background: linear-gradient(180deg, rgba(232, 245, 237, 0.98), rgba(190, 224, 202, 0.92)) !important;
+            border-color: rgba(47, 143, 87, 0.78) !important;
+            color: #17663b !important;
+            box-shadow: 0 0 0 2px rgba(47, 143, 87, 0.12), 0 8px 18px rgba(47, 143, 87, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+        }
+
+        #regcalc-ui .regcalc-form-table {
+            width: auto;
+            max-width: 470px;
+            margin: 3px auto 0;
+            border-spacing: 5px 5px;
+        }
+
+        #regcalc-ui .regcalc-label {
+            color: #475569;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        #regcalc-ui table input[type="text"],
+        #regcalc-ui table textarea,
+        #regcalc-ui table input[type="button"],
+        #regcalc-ui table button {
+            border-color: rgba(148, 163, 184, 0.52) !important;
+            border-radius: 10px !important;
+            background: rgba(255, 255, 255, 0.68) !important;
+            color: #18212f !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84), 0 4px 13px rgba(15, 23, 42, 0.045);
+        }
+
+        #regcalc-ui table input[type="text"],
+        #regcalc-ui table textarea {
+            padding: 4px 8px !important;
+        }
+
+        #regcalc-ui table input[type="button"],
+        #regcalc-ui table button {
+            min-height: 27px;
+            padding: 4px 7px !important;
+            font-weight: 700;
+        }
+
+        #regcalc-ui .regcalc-actions button {
+            width: 30px;
+            min-width: 30px;
+            height: 28px;
+            min-height: 28px;
+            padding-left: 7px !important;
+            padding-right: 7px !important;
+            text-align: center;
+        }
+
+        #regcalc-ui table input[type="text"]:focus,
+        #regcalc-ui table textarea:focus {
+            border-color: rgba(71, 85, 105, 0.78) !important;
+            box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.88) !important;
+        }
+
+        #regcalc-ui table input[type="button"]:hover,
+        #regcalc-ui table button:hover {
+            background: rgba(248, 250, 252, 0.94) !important;
+            border-color: rgba(100, 116, 139, 0.75) !important;
+            color: #0f172a !important;
+        }
+
+        #regcalc-ui #regcalc_calcResult {
+            background: rgba(248, 250, 252, 0.82) !important;
+            font-weight: 700;
+        }
+
+        #regcalc-ui #regcalc_syncResultToHex,
+        #regcalc-ui #regcalc_calc,
+        #regcalc-ui .regcalc-actions button {
+            background: rgba(255, 255, 255, 0.72) !important;
+            border-color: rgba(148, 163, 184, 0.55) !important;
+            color: #18212f !important;
+        }
+
+        #regcalc-ui #regcalc_clean {
+            width: auto !important;
+            min-width: 86px;
+            padding-left: 15px !important;
+            padding-right: 15px !important;
+        }
+
+        #regcalc-ui .regcalc-footer-actions a {
+            color: #64748b !important;
+            text-decoration-color: rgba(100, 116, 139, 0.45);
+        }
+
+        @media (max-width: 700px) {
+            .tab-content#regcalc {
+                padding: 5px !important;
+            }
+
+            #regcalc-ui > table > tbody > tr > td {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            #regcalc-ui,
+            #regcalc-ui > table {
+                max-width: none;
+            }
+
+            #regcalc-ui {
+                height: auto;
+            }
+
+            #regcalc-ui > table {
+                width: 100% !important;
+                min-height: 0;
+                aspect-ratio: auto;
+                transform: none;
+            }
+
+            #regcalc-ui .regcalc-title-table td {
+                font-size: 18px;
+            }
+
+            #regcalc-ui .regcalc-bit-grid {
+                column-gap: 2px;
+                row-gap: 6px;
+                padding: 8px;
+            }
+
+            #regcalc-ui .regcalc-bit-index {
+                font-size: 12px;
+            }
+
+            #regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle {
+                width: calc(100% - 4px) !important;
+                height: 22px !important;
+                min-height: 22px !important;
+                border-radius: 7px !important;
+            }
+        }
+    </style>
+
+
+<link rel="stylesheet" href="shared-ui.css">
+<style id="regcalc-v023-source-ui-style">
+:root {
+  --regcalc-scale: 1;
+  --regcalc-content-width: 560px;
+  --regcalc-page-padding: 14px;
+  --regcalc-bit-min-width: 520px;
+  --regcalc-accent: #22c55e;
+  --regcalc-accent-dark: #16a34a;
+  --regcalc-accent-soft: #86efac;
+  --regcalc-page: #f0f4f8;
+  --regcalc-card: #ffffff;
+  --regcalc-line: #e2e8f0;
+  --regcalc-text: #1e293b;
+  --regcalc-muted: #64748b;
+  --regcalc-muted-2: #94a3b8;
+}
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: fit-content !important;
+  height: fit-content !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  background: transparent !important;
+}
+body { display: inline-block !important; color: var(--regcalc-text) !important; }
+.tab-content#regcalc {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: fit-content !important;
+  height: fit-content !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#regcalc-ui {
+  display: block !important;
+  width: fit-content !important;
+  max-width: none !important;
+  height: fit-content !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  font-family: "JetBrains Mono", "Cascadia Mono", "Consolas", "Microsoft YaHei UI", "Microsoft YaHei", monospace !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#regcalc-ui input[type="text"], #regcalc-ui textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Natural canvas = source design 560px content + 14px page padding on both sides. */
+#regcalc-ui > .regcalc-modern-shell {
+  width: 588px !important;
+  max-width: 588px !important;
+  min-width: 588px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  border: 1px solid rgba(203, 213, 225, 0.72) !important;
+  border-radius: 18px !important;
+  border-spacing: 0 !important;
+  background: var(--regcalc-page) !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255,255,255,.9) !important;
+  overflow: hidden !important;
+  transform: none !important;
+  transform-origin: top left !important;
+  zoom: var(--regcalc-scale) !important;
+}
+#regcalc-ui > .regcalc-modern-shell > tbody > tr > td { border: 0 !important; }
+#regcalc-ui > .regcalc-modern-shell > tbody > tr:first-child > td {
+  padding: 14px 14px 10px !important;
+}
+#regcalc-ui > .regcalc-modern-shell > tbody > tr:nth-child(2) > td {
+  padding: 0 14px 3px !important;
+}
+#regcalc-ui > .regcalc-modern-shell > tbody > tr:nth-child(3) > td {
+  padding: 0 14px 14px !important;
+}
+
+/* Header from the provided source UI. */
+#regcalc-ui .regcalc-title-table { width: 100%; margin: 0 !important; border-spacing: 0 !important; }
+#regcalc-ui .regcalc-title-table td {
+  width: var(--regcalc-content-width);
+  padding: 0 !important;
+  display: flex;
+  align-items: baseline;
+  min-height: 20px;
+  line-height: 1 !important;
+  white-space: nowrap;
+  cursor: move;
+}
+#regcalc-ui .regcalc-brand {
+  color: var(--regcalc-accent-dark);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+#regcalc-ui .regcalc-brand-64 { color: var(--regcalc-accent-soft); }
+#regcalc-ui .regcalc-subtitle {
+  margin-left: 8px;
+  color: var(--regcalc-muted-2);
+  font-size: 10px;
+  font-weight: 500;
+}
+#regcalc-ui .regcalc-help-button {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  margin: 0 0 0 7px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--regcalc-muted-2) !important;
+  font: 700 12px/20px "JetBrains Mono", "Cascadia Mono", "Consolas", "Microsoft YaHei UI", "Microsoft YaHei", monospace !important;
+  cursor: pointer !important;
+}
+#regcalc-ui .regcalc-help-button:hover { color: var(--regcalc-accent-dark) !important; background: transparent !important; }
+
+/* 64-bit card: exact source structure — 4 rows × 4 nibbles × 4 bits. */
+#regcalc-ui .regcalc-bit-grid {
+  display:block;
+  width:560px !important;
+  max-width:560px !important;
+  min-width:var(--regcalc-bit-min-width) !important;
+  box-sizing:border-box;
+  margin:0 !important;
+  padding:10px 10px 6px !important;
+  border:1.5px solid var(--regcalc-line) !important;
+  border-radius:12px !important;
+  background:var(--regcalc-card) !important;
+  box-shadow:0 1px 4px rgba(0,0,0,.05) !important;
+}
+#regcalc-ui .regcalc-bit-row {
+  display:flex;
+  gap:4px;
+  margin:0 0 4px;
+}
+#regcalc-ui .regcalc-bit-row:last-child { margin-bottom:0; }
+#regcalc-ui .regcalc-bit-separator {
+  height:1px;
+  margin:3px 2px 6px;
+  background:#e8edf3;
+}
+#regcalc-ui .regcalc-bit-nibble {
+  flex:1 1 0;
+  min-width:0;
+  display:flex;
+  gap:2px;
+  padding:3px 2px;
+  border-radius:7px;
+}
+#regcalc-ui .regcalc-bit-nibble:nth-child(odd) { background:#f8fafc; }
+#regcalc-ui .regcalc-bit-nibble:nth-child(even) { background:#eef2f7; }
+#regcalc-ui .regcalc-bit-cell {
+  flex:1 1 0;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:1px;
+  padding:0 !important;
+  border:0 !important;
+  background:transparent !important;
+  border-radius:0 !important;
+}
+#regcalc-ui .regcalc-bit-index {
+  height:auto !important;
+  color:var(--regcalc-muted-2) !important;
+  font-size:9px !important;
+  line-height:1 !important;
+  font-weight:500 !important;
+}
+#regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle {
+  width:90% !important;
+  min-width:0 !important;
+  height:28px !important;
+  min-height:28px !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:1.5px solid #dde3ed !important;
+  border-radius:5px !important;
+  background:#fff !important;
+  color:#b0bec5 !important;
+  box-shadow:0 1px 2px rgba(0,0,0,.04) !important;
+  font-size:12px !important;
+  font-weight:700 !important;
+  line-height:1 !important;
+  font-family:"JetBrains Mono","Cascadia Mono","Consolas","Microsoft YaHei UI","Microsoft YaHei",monospace !important;
+  cursor:pointer;
+  transition:transform .08s ease,box-shadow .12s ease,border-color .12s ease,background .12s ease;
+}
+#regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle:hover {
+  transform:translateY(-1px);
+  background:#f0fdf4 !important;
+  border-color:#86efac !important;
+  color:#16a34a !important;
+  box-shadow:0 2px 5px rgba(34,197,94,.10) !important;
+}
+#regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle:active { transform:translateY(0) scale(.96); }
+#regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle.is-one {
+  border-color:#16a34a !important;
+  background:linear-gradient(180deg,#4ade80,#22c55e) !important;
+  color:#fff !important;
+  box-shadow:0 2px 6px rgba(34,197,94,.22) !important;
+}
+#regcalc-ui .regcalc-bit-grid .regcalc-bit-toggle.is-one:hover {
+  background:linear-gradient(180deg,#6ee7b7,#34d399) !important;
+  border-color:#16a34a !important;
+  color:#fff !important;
+}
+
+/* Source card/input rhythm. */
+.regcalc-new-form { margin-top: 3px; }
+.regcalc-ui-card {
+  margin: 0 0 3px;
+  padding: 10px 13px;
+  border: 1.5px solid var(--regcalc-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.regcalc-ui-row { display:flex; align-items:center; gap:7px; }
+.regcalc-ui-row-top { align-items:flex-start; }
+.regcalc-ui-label {
+  width:max-content;
+  flex:0 0 auto;
+  color:var(--regcalc-muted);
+  font-size:11px;
+  font-weight:600;
+  text-align:left;
+  white-space:nowrap;
+}
+.regcalc-ui-row-top .regcalc-ui-label { padding-top:5px; }
+.regcalc-value-card {
+  display:grid;
+  grid-template-columns:max-content minmax(0,1fr) 68px;
+  grid-template-rows:auto auto auto;
+  column-gap:7px;
+  row-gap:7px;
+}
+.regcalc-value-card .regcalc-ui-row { display:contents; }
+.regcalc-value-card .regcalc-ui-label { grid-column:1; align-self:center; }
+.regcalc-value-card .regcalc-value-row-hex > input,
+.regcalc-value-card .regcalc-value-row-dec > input,
+.regcalc-value-card .regcalc-value-row-bin > textarea { grid-column:2; }
+.regcalc-value-row-hex > .regcalc-ui-label, .regcalc-value-row-hex > input { grid-row:1; }
+.regcalc-value-row-dec > .regcalc-ui-label, .regcalc-value-row-dec > input { grid-row:2; }
+.regcalc-value-row-bin > .regcalc-ui-label, .regcalc-value-row-bin > textarea { grid-row:3; }
+.regcalc-value-row-bin > .regcalc-ui-label { align-self:start; padding-top:5px; }
+.regcalc-value-actions {
+  grid-column:3;
+  grid-row:1 / 4;
+  display:grid;
+  grid-template-columns:68px;
+  grid-template-rows:30px minmax(0,1fr);
+  gap:7px;
+  width:68px;
+  min-width:68px;
+  justify-self:end;
+}
+#regcalc-ui .regcalc-value-actions #regcalc_human {
+  grid-column:1 !important;
+  grid-row:1 !important;
+  width:68px !important;
+  min-width:68px !important;
+  max-width:68px !important;
+  height:30px;
+  box-sizing:border-box;
+}
+#regcalc-ui #regcalc_clean.regcalc-clear-all-side {
+  width:68px !important;
+  min-width:68px !important;
+  min-height:0 !important;
+  padding:4px 5px !important;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  line-height:1.05 !important;
+}
+#regcalc-ui .regcalc-clear-all-side span { display:block; }
+#regcalc-ui .regcalc-clear-all-side:hover {
+  background:#fee2e2 !important;
+  border-color:#fca5a5 !important;
+  color:#dc2626 !important;
+}
+.regcalc-expr-card {
+  display:grid;
+  grid-template-columns:max-content minmax(0,1fr) 36px 36px 36px 36px;
+  grid-template-rows:auto auto;
+  column-gap:7px;
+  row-gap:7px;
+}
+.regcalc-expr-card .regcalc-ui-row { display:contents; }
+.regcalc-expr-card .regcalc-ui-label { grid-column:1; align-self:center; }
+.regcalc-expr-row > .regcalc-ui-label, .regcalc-expr-row > textarea, .regcalc-expr-row > .regcalc-row-actions { grid-row:1; }
+.regcalc-result-row > .regcalc-ui-label, .regcalc-result-row > input, .regcalc-result-row > .regcalc-row-actions { grid-row:2; }
+.regcalc-expr-row > textarea { grid-column:2 / 5; }
+.regcalc-result-row > input { grid-column:2; }
+.regcalc-expr-row > .regcalc-row-actions {
+  grid-column:5 / 7;
+  justify-self:stretch;
+  justify-content:flex-end;
+}
+.regcalc-result-row > .regcalc-row-actions {
+  grid-column:3 / 7;
+  justify-self:stretch;
+  justify-content:flex-end;
+}
+.regcalc-row-actions {
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+
+#regcalc-ui .regcalc-new-form input[type=text],
+#regcalc-ui .regcalc-new-form textarea {
+  min-width:0;
+  min-height:30px;
+  margin:0 !important;
+  padding:4px 8px !important;
+  border:1.5px solid var(--regcalc-line) !important;
+  border-radius:7px !important;
+  outline:none;
+  background:#fff !important;
+  color:var(--regcalc-text) !important;
+  box-shadow:none !important;
+  font-size:13px !important;
+  line-height:1.4 !important;
+  font-family:"JetBrains Mono","Cascadia Mono","Consolas","Microsoft YaHei UI","Microsoft YaHei",monospace !important;
+  box-sizing:border-box;
+  transition:border-color .12s ease,box-shadow .12s ease,background .12s ease;
+}
+#regcalc-ui .regcalc-new-form input[type=text]:focus,
+#regcalc-ui .regcalc-new-form textarea:focus {
+  border-color:var(--regcalc-accent) !important;
+  box-shadow:0 0 0 2px rgba(34,197,94,.10) !important;
+}
+#regcalc_hex,#regcalc_dec,#regcalc_bin,#regcalc_calcInput,#regcalc_calcResult { flex:1 1 auto; width:auto !important; }
+#regcalc_bin,#regcalc_calcInput { resize:none !important; overflow-x:hidden !important; overflow-y:hidden !important; }
+#regcalc_calcResult { background:#f8fafc !important; color:#16a34a !important; font-weight:600; }
+
+#regcalc-ui .regcalc-ui-btn {
+  font-family:"JetBrains Mono","Cascadia Mono","Consolas","Microsoft YaHei UI","Microsoft YaHei",monospace !important;
+  min-height:30px;
+  padding:4px 11px !important;
+  border:1.5px solid var(--regcalc-line) !important;
+  border-radius:7px !important;
+  background:#f8fafc !important;
+  color:#475569 !important;
+  box-shadow:none !important;
+  font-size:12px !important;
+  font-weight:600 !important;
+  line-height:1 !important;
+  white-space:nowrap;
+  cursor:pointer;
+  transition:transform .08s ease,background .12s ease,border-color .12s ease,box-shadow .12s ease;
+}
+#regcalc-ui .regcalc-ui-btn:hover { transform:translateY(-1px); background:#f1f5f9 !important; border-color:#cbd5e1 !important; box-shadow:0 2px 6px rgba(15,23,42,.06) !important; }
+#regcalc-ui .regcalc-ui-btn:active { transform:translateY(0) scale(.97); }
+#regcalc-ui .regcalc-ui-btn-primary { background:#22c55e !important; border-color:#22c55e !important; color:#fff !important; font-size:14px !important; font-weight:700 !important; }
+#regcalc-ui .regcalc-equals-btn {
+  background:#f8fafc !important;
+  border-color:var(--regcalc-line) !important;
+  color:#475569 !important;
+  font-size:14px !important;
+  font-weight:700 !important;
+}
+#regcalc-ui .regcalc-equals-btn:hover {
+  background:#f0fdf4 !important;
+  border-color:#86efac !important;
+  color:#166534 !important;
+}
+#regcalc-ui .regcalc-ui-btn-danger { background:#fff5f5 !important; border-color:#fecaca !important; color:#ef4444 !important; }
+#regcalc-ui .regcalc-ui-btn-danger:hover { background:#fee2e2 !important; border-color:#fca5a5 !important; color:#dc2626 !important; }
+#regcalc-ui .regcalc-ui-square { width:36px; min-width:36px; padding:0 !important; }
+#regcalc-ui .regcalc-format-btn { min-width:34px; padding:4px 8px !important; font-size:11px !important; }
+#regcalc-ui .regcalc-format-btn.is-active { color:#16a34a !important; border-color:#22c55e !important; background:#f0fdf4 !important; }
+#regcalc-ui .regcalc-format-btn.is-active:hover { color:#166534 !important; border-color:#86efac !important; background:#dcfce7 !important; }
+
+.regcalc-ops-card { display:flex; align-items:center; gap:6px; padding-top:9px; padding-bottom:9px; }
+.regcalc-ops-left { display:flex; flex:1 1 auto; flex-wrap:nowrap; align-items:center; gap:6px; }
+#regcalc-ui .regcalc-shift-shared { width:34px !important; min-width:34px; padding:4px !important; text-align:center; }
+#regcalc-ui .regcalc-shift-symbol { width:38px; min-width:38px; height:30px; min-height:30px; padding:0 !important; font-size:13px !important; font-weight:700 !important; }
+.regcalc-op-divider { width:1px; height:20px; margin:0 2px; background:var(--regcalc-line); }
+.regcalc-mask-label { color:var(--regcalc-muted-2); font-size:11px; }
+#regcalc-ui .regcalc-mask-input { width:118px !important; min-width:100px; flex:1 1 118px; padding:4px 8px !important; }
+#regcalc-ui .regcalc-op-or { color:#475569 !important; border-color:#dcfce7 !important; background:#f0fdf4 !important; }
+#regcalc-ui .regcalc-op-or:hover { background:#dcfce7 !important; border-color:#86efac !important; }
+#regcalc-ui .regcalc-op-and { color:#475569 !important; border-color:#dbeafe !important; background:#eff6ff !important; }
+#regcalc-ui .regcalc-op-and:hover { background:#dbeafe !important; border-color:#bfdbfe !important; }
+#regcalc-ui .regcalc-op-not { color:#475569 !important; border-color:#fef3c7 !important; background:#fffbeb !important; }
+#regcalc-ui .regcalc-op-not:hover { background:#fef3c7 !important; border-color:#fde68a !important; }
+#regcalc-ui .regcalc-op-xor { color:#475569 !important; border-color:#f3e8ff !important; background:#faf5ff !important; }
+#regcalc-ui .regcalc-op-xor:hover { background:#f3e8ff !important; border-color:#e9d5ff !important; }
+
+.regcalc-bitfield-header,.regcalc-bitfield-row {
+  display:grid;
+  grid-template-columns:72px 24px 76px 68px 1fr 40px;
+  align-items:center;
+  gap:0;
+}
+.regcalc-bitfield-header { padding:0 0 4px; margin-bottom:2px; border-bottom:1.5px solid var(--regcalc-line); }
+.regcalc-bitfield-header span { padding:0 4px; color:var(--regcalc-muted-2); font-size:10px; font-weight:700; text-align:left; }
+.regcalc-bitfield-header .regcalc-center { text-align:center; }
+.regcalc-bitfield-row { min-height:29px; border-bottom:1px solid #f1f5f9; }
+.regcalc-bitfield-row:last-child { border-bottom:0; }
+#regcalc-ui .regcalc-new-form .regcalc-bitfield-row input[type="text"] {
+  width:100% !important;
+  min-height:27px;
+  padding:4px !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  font-size:12px !important;
+}
+#regcalc-ui .regcalc-new-form .regcalc-bitfield-row input[type="text"]:hover { background:#f8fafc !important; }
+#regcalc-ui .regcalc-new-form .regcalc-bitfield-row input[type="text"]:focus { background:#f0fdf4 !important; box-shadow:inset 0 -1px 0 #22c55e !important; }
+#regcalc-ui .regcalc-sub-hex { color:#22c55e !important; }
+#regcalc-ui .regcalc-sub-dec { color:#64748b !important; }
+#regcalc-ui .regcalc-sub-bin { color:#94a3b8 !important; font-size:11px !important; }
+.regcalc-bit-width { color:#94a3b8; font-size:11px; text-align:center; }
+.regcalc-bitfield-buttons { display:flex; align-items:center; justify-content:flex-end; gap:1px; padding:0 3px; }
+#regcalc-ui .regcalc-bitfield-buttons button { width:20px; min-width:20px; height:20px; min-height:20px; padding:0 !important; border:0 !important; border-radius:4px !important; background:transparent !important; box-shadow:none !important; font-size:16px !important; line-height:20px !important; cursor:pointer; }
+#regcalc-ui .regcalc-bitfield-buttons button:first-child { color:#22c55e !important; font-weight:700 !important; }
+#regcalc-ui .regcalc-bitfield-buttons button:first-child:hover { background:#f0fdf4 !important; color:#16a34a !important; }
+#regcalc-ui .regcalc-bitfield-buttons button:last-child { color:#fca5a5 !important; }
+#regcalc-ui .regcalc-bitfield-buttons button:last-child:hover { background:#fff1f2 !important; color:#ef4444 !important; }
+#regcalc-ui .regcalc-bitfield-buttons button:disabled { visibility:hidden; opacity:0; cursor:default; pointer-events:none; }
+#regcalc-ui .regcalc-bitfield-clear-all {
+  justify-self:end;
+  width:20px !important;
+  min-width:20px !important;
+  height:20px !important;
+  min-height:20px !important;
+  padding:0 !important;
+  margin:0 3px 0 0 !important;
+  border:0 !important;
+  border-radius:4px !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  color:#94a3b8 !important;
+  font:700 14px/20px "JetBrains Mono","Cascadia Mono","Consolas",monospace !important;
+  cursor:pointer !important;
+}
+#regcalc-ui .regcalc-bitfield-clear-all:hover { background:#fff1f2 !important; color:#ef4444 !important; }
+
+
+/* v0.2.8 layout correction:
+   legacy ID-width rules must not override the new grid columns. */
+#regcalc-ui .regcalc-value-card #regcalc_hex,
+#regcalc-ui .regcalc-value-card #regcalc_dec,
+#regcalc-ui .regcalc-value-card #regcalc_bin {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  justify-self: stretch;
+}
+
+#regcalc-ui .regcalc-expr-card #regcalc_calcInput,
+#regcalc-ui .regcalc-expr-card #regcalc_calcResult {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  justify-self: stretch;
+}
+
+</style>
+
+
+<style id="regcalc-v030-selection-style">
+/* v0.3.0 bit-range drag selection.  Selection is distinct from bit=1 state. */
+#regcalc-ui .regcalc-bit-cell.regcalc-selection-active .regcalc-bit-index,
+#regcalc-ui .regcalc-bit-index.regcalc-selection-index-active {
+  color: #16a34a !important;
+  font-weight: 800 !important;
+}
+#regcalc-ui .regcalc-bit-cell.regcalc-selection-active .regcalc-bit-toggle:not(.is-one) {
+  background: #f0fdf4 !important;
+  border-color: #22c55e !important;
+  color: #16a34a !important;
+  box-shadow: 0 0 0 1px rgba(34,197,94,.10), inset 0 1px 0 rgba(255,255,255,.92) !important;
+}
+#regcalc-ui .regcalc-bit-cell.regcalc-selection-active .regcalc-bit-toggle.is-one {
+  box-shadow: 0 0 0 2px rgba(34,197,94,.34), 0 3px 9px rgba(34,197,94,.16), inset 0 1px 0 rgba(255,255,255,.38) !important;
+}
+#regcalc-ui .regcalc-bit-selection-bar {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 31px;
+  margin-top: 7px;
+  padding: 4px 8px 4px 10px;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #475569;
+  font-family: "JetBrains Mono", "Cascadia Mono", "Consolas", "Microsoft YaHei UI", monospace;
+  font-size: 11px;
+  line-height: 1.25;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+#regcalc-ui .regcalc-bit-selection-bar.is-visible { display: flex; }
+#regcalc-ui .regcalc-selection-range {
+  color: #15803d;
+  font-weight: 700;
+}
+#regcalc-ui .regcalc-selection-sep,
+#regcalc-ui .regcalc-selection-width {
+  color: #94a3b8;
+}
+#regcalc-ui .regcalc-selection-edit {
+  width: auto !important;
+  min-width: 4ch !important;
+  max-width: 20ch !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  margin: 0 !important;
+  padding: 1px 3px !important;
+  border: 0 !important;
+  border-bottom: 1px solid transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  font: inherit !important;
+  font-weight: 700 !important;
+  outline: none !important;
+}
+#regcalc-ui #regcalc-selection-hex { width: 9ch !important; }
+#regcalc-ui #regcalc-selection-dec { width: 11ch !important; }
+#regcalc-ui .regcalc-selection-edit:hover {
+  background: #dcfce7 !important;
+}
+#regcalc-ui .regcalc-selection-edit:focus {
+  border-bottom-color: #22c55e !important;
+  background: #dcfce7 !important;
+}
+#regcalc-ui .regcalc-selection-edit.is-invalid {
+  border-bottom-color: #ef4444 !important;
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+}
+#regcalc-ui .regcalc-selection-close {
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 5px !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  box-shadow: none !important;
+  font: 700 13px/20px "JetBrains Mono", "Cascadia Mono", "Consolas", monospace !important;
+  cursor: pointer;
+}
+#regcalc-ui .regcalc-selection-close:hover {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+</style>
+
+<style id="regcalc64-web-host-style">
+html.regcalc64-web-host,
+html.regcalc64-web-host body {
+  width: 100% !important;
+  height: auto !important;
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+html.regcalc64-web-host body {
+  display: block !important;
+}
+html.regcalc64-web-host .tab-content#regcalc {
+  width: 100% !important;
+}
+html.regcalc64-web-host #regcalc-ui {
+  width: 100% !important;
+  overflow: hidden !important;
+}
+html.regcalc64-web-host #regcalc-ui > .regcalc-modern-shell {
+  height: auto !important;
+  aspect-ratio: auto !important;
+  margin-right: auto !important;
+  margin-left: auto !important;
+}
+html.regcalc64-web-host #regcalc-ui > .regcalc-modern-shell > tbody > tr > td {
+  vertical-align: top !important;
+}
+html.regcalc64-web-host #regcalc-ui .regcalc-title-table td {
+  margin: 0 !important;
+}
+html.regcalc64-web-host #regcalc-ui .regcalc-help-button {
+  margin-left: auto !important;
+}
+</style>
+<script defer src="shared-ui.js"></script>
+<script id="regcalc64-web-host-adapter">
+(function () {
+  document.documentElement.classList.add('regcalc64-web-host');
+
+  function syncWebScale() {
+    var viewportWidth = document.documentElement.clientWidth || window.innerWidth || 588;
+    var chromeDefaultScale = 560 / 588;
+    var scale = Math.min(chromeDefaultScale, Math.max(0.25, (viewportWidth - 4) / 588));
+    document.documentElement.style.setProperty('--regcalc-scale', String(scale));
+  }
+
+  function installWebHelpButton() {
+    var titleCell = document.querySelector('#regcalc-ui .regcalc-title-table td');
+    if (!titleCell || document.getElementById('regcalc64_web_help')) return;
+    var button = document.createElement('button');
+    button.id = 'regcalc64_web_help';
+    button.className = 'regcalc-help-button';
+    button.type = 'button';
+    button.title = 'Help / About';
+    button.setAttribute('aria-label', 'Help / About');
+    button.textContent = '?';
+    button.addEventListener('click', function () {
+      if (typeof window.regcalc_showHelp === 'function') window.regcalc_showHelp();
+    });
+    titleCell.appendChild(button);
+    window.postMessage({
+      type: 'REGCALC64_EXTENSION_META',
+      version: '0.3.1'
+    }, '*');
+  }
+
+  syncWebScale();
+  window.addEventListener('resize', syncWebScale);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncWebScale);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installWebHelpButton, { once: true });
+  } else {
+    installWebHelpButton();
+  }
+})();
+</script>
+</head>
+<body>
+<div class="tab-content active" id="regcalc">
+        <div id="regcalc-ui">
+            <!-- 只做ID隔离 -->
+            <!-- <br> -->
+            <table align="center" border="1" class="regcalc-modern-shell">
+                <tr>
+                    <td>
+                        <table align="center" class="regcalc-title-table">
+                            <tr align="center">
+                                <!-- <td><h3>64位寄存器计算 (RegCalc)</h3></td> -->
+                                <td><span class="regcalc-brand">RegCalc<span class="regcalc-brand-64">64</span></span><span class="regcalc-subtitle">64位寄存器计算</span></td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <!-- 位按钮区域（全原样保留） -->
+                        <table align="center" class="regcalc-bit-table">
+                            <tr align="center" class="regcalc-bit-label">
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>63</td>
+                                <td>62</td>
+                                <td>61</td>
+                                <td>60&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>59</td>
+                                <td>58</td>
+                                <td>57</td>
+                                <td>56&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>55</td>
+                                <td>54</td>
+                                <td>53</td>
+                                <td>52&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>51</td>
+                                <td>50</td>
+                                <td>49</td>
+                                <td>48</td>
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                            </tr>
+                            <tr align="center" class="regcalc-bit-button">
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '00')" id="regcalc_00"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '01')" id="regcalc_01"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '02')" id="regcalc_02"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '03')" id="regcalc_03">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '04')" id="regcalc_04"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '05')" id="regcalc_05"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '06')" id="regcalc_06"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '07')" id="regcalc_07">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '08')" id="regcalc_08"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '09')" id="regcalc_09"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '10')" id="regcalc_10"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '11')" id="regcalc_11">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '12')" id="regcalc_12"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '13')" id="regcalc_13"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '14')" id="regcalc_14"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '15')" id="regcalc_15"></td>
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                            </tr>
+                            <tr align="center" class="regcalc-bit-label regcalc-bit-label-small-gap">
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>47</td>
+                                <td>46</td>
+                                <td>45</td>
+                                <td>44&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>43</td>
+                                <td>42</td>
+                                <td>41</td>
+                                <td>40&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>39</td>
+                                <td>38</td>
+                                <td>37</td>
+                                <td>36&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>35</td>
+                                <td>34</td>
+                                <td>33</td>
+                                <td>32</td>
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                            </tr>
+                            <tr align="center" class="regcalc-bit-button">
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '16')" id="regcalc_16"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '17')" id="regcalc_17"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '18')" id="regcalc_18"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '19')" id="regcalc_19">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '20')" id="regcalc_20"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '21')" id="regcalc_21"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '22')" id="regcalc_22"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '23')" id="regcalc_23">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '24')" id="regcalc_24"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '25')" id="regcalc_25"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '26')" id="regcalc_26"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '27')" id="regcalc_27">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '28')" id="regcalc_28"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '29')" id="regcalc_29"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '30')" id="regcalc_30"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '31')" id="regcalc_31"></td>
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+							</tr>
+							<tr align="center" class="regcalc-bit-spacer">
+								<td></td>
+								<td></td>
+								<td></td>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+								<td></td>
+								<td></td>
+								<td></td>
+								<td></td>
+							</tr>
+                            <tr align="center" class="regcalc-bit-label regcalc-bit-label-mid-gap">
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>31</td>
+                                <td>30</td>
+                                <td>29</td>
+                                <td>28&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>27</td>
+                                <td>26</td>
+                                <td>25</td>
+                                <td>24&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>23</td>
+                                <td>22</td>
+                                <td>21</td>
+                                <td>20&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>19</td>
+                                <td>18</td>
+                                <td>17</td>
+                                <td>16</td>
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                            </tr>
+                            <tr align="center" class="regcalc-bit-button">
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '32')" id="regcalc_32"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '33')" id="regcalc_33"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '34')" id="regcalc_34"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '35')" id="regcalc_35">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '36')" id="regcalc_36"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '37')" id="regcalc_37"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '38')" id="regcalc_38"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '39')" id="regcalc_39">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '40')" id="regcalc_40"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '41')" id="regcalc_41"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '42')" id="regcalc_42"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '43')" id="regcalc_43">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '44')" id="regcalc_44"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '45')" id="regcalc_45"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '46')" id="regcalc_46"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '47')" id="regcalc_47"></td>
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                            </tr>
+                            <tr align="center" class="regcalc-bit-label regcalc-bit-label-small-gap">
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>15</td>
+                                <td>14</td>
+                                <td>13</td>
+                                <td>12&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>11</td>
+                                <td>10</td>
+                                <td>9</td>
+                                <td>8&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>7</td>
+                                <td>6</td>
+                                <td>5</td>
+                                <td>4&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td>3</td>
+                                <td>2</td>
+                                <td>1</td>
+                                <td>0</td>
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                            </tr>
+                            <tr align="center" class="regcalc-bit-button">
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '48')" id="regcalc_48"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '49')" id="regcalc_49"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '50')" id="regcalc_50"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '51')" id="regcalc_51">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '52')" id="regcalc_52"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '53')" id="regcalc_53"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '54')" id="regcalc_54"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '55')" id="regcalc_55">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '56')" id="regcalc_56"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '57')" id="regcalc_57"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '58')" id="regcalc_58"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '59')" id="regcalc_59">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '60')" id="regcalc_60"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '61')" id="regcalc_61"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '62')" id="regcalc_62"></td>
+                                <td><input type="button" value="0" onclick="regcalc_set_button_value( '63')" id="regcalc_63"></td>
+                                <td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+                            </tr>
+
+<!--                            <script>
+                                // 动态生成寄存器位区域（节约空间）
+                                document.write((()=>{
+                                    let html = '';
+                                    function row(titleStart, begin, end, segSize=4) {
+                                        html += '<tr align="center"><td>&nbsp;&nbsp;&nbsp;&nbsp;</td>';
+                                        for(let i = end; i >= begin; i--) {
+                                            html += `<td>${i}${(i%segSize==0? '&nbsp;&nbsp;&nbsp;&nbsp;' : '')}</td>`;
+                                        }
+                                        html += '<td>&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>';
+                                        html += '<tr align="center"><td>&nbsp;&nbsp;&nbsp;&nbsp;</td>';
+                                        for(let i = end; i >= begin; i--) {
+                                            let pad = i < 10 ? '0' : '';
+                                            html += `<td><input type="button" value="0" onclick="regcalc_set_button_value('${pad}${i}')" id="regcalc_${pad}${i}"></td>`;
+                                            if(i%segSize==0) html += '&nbsp;&nbsp;&nbsp;&nbsp;';
+                                        }
+                                        html += '<td>&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>';
+                                        html += '<td>&nbsp;&nbsp;&nbsp;&nbsp;</td></tr>';
+                                    }
+                                    // 第一行: 63-48
+                                    row(63,48,63);
+                                    // 第二行: 47-32
+                                    row(47,32,47);
+                                    // 第三行: 31-16
+                                    row(31,16,31);
+                                    // 第四行: 15-0
+                                    row(15,0,15);
+                                    return html;
+                                })());
+                            </script>-->
+                        </table>
+                        <script>
+                            (function regcalc_renderModernBitGrid() {
+                                const legacyTable = document.querySelector("#regcalc-ui .regcalc-bit-table");
+                                if (!legacyTable) return;
+
+                                const grid = document.createElement("div");
+                                grid.className = "regcalc-bit-grid";
+
+                                [63, 47, 31, 15].forEach(function (start, rowIndex) {
+                                    if (rowIndex === 2) {
+                                        const separator = document.createElement("div");
+                                        separator.className = "regcalc-bit-separator";
+                                        grid.appendChild(separator);
+                                    }
+
+                                    const row = document.createElement("div");
+                                    row.className = "regcalc-bit-row";
+
+                                    for (let nibbleIndex = 0; nibbleIndex < 4; nibbleIndex++) {
+                                        const nibble = document.createElement("div");
+                                        nibble.className = "regcalc-bit-nibble";
+
+                                        for (let bitIndexInNibble = 0; bitIndexInNibble < 4; bitIndexInNibble++) {
+                                            const label = start - nibbleIndex * 4 - bitIndexInNibble;
+                                            const idNumber = 63 - label;
+                                            const id = idNumber < 10 ? "0" + idNumber : "" + idNumber;
+
+                                            const cell = document.createElement("div");
+                                            cell.className = "regcalc-bit-cell";
+
+                                            const bitIndex = document.createElement("div");
+                                            bitIndex.className = "regcalc-bit-index";
+                                            bitIndex.textContent = String(label);
+
+                                            const button = document.createElement("input");
+                                            button.type = "button";
+                                            button.value = "0";
+                                            button.id = "regcalc_" + id;
+                                            button.className = "regcalc-bit-toggle";
+                                            button.onclick = function () { regcalc_set_button_value(id); };
+
+                                            cell.appendChild(bitIndex);
+                                            cell.appendChild(button);
+                                            nibble.appendChild(cell);
+                                        }
+                                        row.appendChild(nibble);
+                                    }
+                                    grid.appendChild(row);
+                                });
+
+                                legacyTable.replaceWith(grid);
+                            })();
+                        </script>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="regcalc-new-form">
+  <section class="regcalc-ui-card regcalc-value-card">
+    <div class="regcalc-ui-row regcalc-value-row-hex">
+      <label class="regcalc-ui-label" for="regcalc_hex">HEX <sub>16</sub></label>
+      <input type="text" name="hex" id="regcalc_hex" placeholder="0x0" oninput="regcalc_set_text_value('hex')">
+    </div>
+    <div class="regcalc-ui-row regcalc-value-row-dec">
+      <label class="regcalc-ui-label" for="regcalc_dec">DEC <sub>10</sub></label>
+      <input type="text" name="dec" id="regcalc_dec" value="0" placeholder="0" oninput="regcalc_set_text_value('dec')">
+    </div>
+    <div class="regcalc-ui-row regcalc-ui-row-top regcalc-value-row-bin">
+      <label class="regcalc-ui-label" for="regcalc_bin">BIN <sub>2</sub></label>
+      <textarea name="bin" id="regcalc_bin" rows="1" placeholder="0" oninput="regcalc_set_text_value('bin'); regcalc_resizeBinInput()"></textarea>
+    </div>
+    <div class="regcalc-value-actions">
+      <input type="text" name="human" id="regcalc_human" placeholder="Size" oninput="regcalc_set_text_value('human')" title="Show readable size automatically">
+      <button id="regcalc_clean" class="regcalc-ui-btn regcalc-ui-btn-danger regcalc-clear-all-side" type="button" onclick="regcalc_clearAllUi()" title="Clear All"><span>CLR</span><span>ALL</span></button>
+    </div>
+  </section>
+
+  <section class="regcalc-ui-card regcalc-expr-card">
+    <div class="regcalc-ui-row regcalc-expr-row">
+      <label class="regcalc-ui-label" for="regcalc_calcInput">Expr</label>
+      <textarea id="regcalc_calcInput" rows="1" title="Expression input" placeholder="0x43 + 10 | (1 << 5)" oninput="regcalc_resizeCalcInput()" onkeydown="regcalc_handleEnterKey(event)"></textarea>
+      <div class="regcalc-row-actions">
+        <button class="regcalc-ui-btn regcalc-equals-btn regcalc-ui-square" type="button" onclick="regcalc_calculate()">=</button>
+        <button class="regcalc-ui-btn regcalc-ui-btn-danger regcalc-ui-square" type="button" onclick="regcalc_clearCalculation()">C</button>
+      </div>
+    </div>
+    <div class="regcalc-ui-row regcalc-result-row">
+      <label class="regcalc-ui-label" for="regcalc_calcResult">Result</label>
+      <input type="text" id="regcalc_calcResult" readonly placeholder="—">
+      <div class="regcalc-row-actions">
+        <button class="regcalc-ui-btn regcalc-format-btn" data-result-format="hex" type="button" onclick="regcalc_setResultFormat('hex')">16</button>
+        <button class="regcalc-ui-btn regcalc-format-btn" data-result-format="dec" type="button" onclick="regcalc_setResultFormat('dec')">10</button>
+        <button class="regcalc-ui-btn regcalc-format-btn" data-result-format="bin" type="button" onclick="regcalc_setResultFormat('bin')">2</button>
+        <button class="regcalc-ui-btn regcalc-ui-square" type="button" onclick="regcalc_syncResultToHex()" title="Sync result to Hex">↑</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="regcalc-ui-card regcalc-ops-card">
+    <div class="regcalc-ops-left">
+      <input type="text" id="regcalc_shiftShared" class="regcalc-shift-shared" placeholder="n" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,''); regcalc_syncSharedShift()">
+      <input type="hidden" id="regcalc_shiftLeft" value="">
+      <input type="hidden" id="regcalc_shiftRight" value="">
+      <button class="regcalc-ui-btn regcalc-shift-symbol" type="button" onclick="regcalc_handleSharedShift('left')" title="Shift Left">&lt;&lt;</button>
+      <button class="regcalc-ui-btn regcalc-shift-symbol" type="button" onclick="regcalc_handleSharedShift('right')" title="Shift Right">&gt;&gt;</button>
+      <span class="regcalc-op-divider"></span>
+      <span class="regcalc-mask-label">Mask</span>
+      <input type="text" id="regcalc_logicMask" class="regcalc-mask-input" placeholder="0xFF">
+      <button class="regcalc-ui-btn regcalc-op-or" type="button" onclick="regcalc_applyLogic('or')">OR</button>
+      <button class="regcalc-ui-btn regcalc-op-and" type="button" onclick="regcalc_applyLogic('and')">AND</button>
+      <button class="regcalc-ui-btn regcalc-op-not" type="button" onclick="regcalc_applyLogic('not')">NOT</button>
+      <button class="regcalc-ui-btn regcalc-op-xor" type="button" onclick="regcalc_applyLogic('xor')">XOR</button>
+    </div>
+  </section>
+
+  <section class="regcalc-ui-card regcalc-bitfield-card">
+    <div class="regcalc-bitfield-header">
+      <span>Bit Range</span><span class="regcalc-center">W</span><span>Hex</span><span>Dec</span><span>Bin</span><button id="regcalc_bitfieldClearAll" class="regcalc-bitfield-clear-all" type="button" onclick="regcalc_clearAllBitFields()" title="Clear all bit fields" aria-label="Clear all bit fields">×</button>
+    </div>
+    <div id="regcalc_bitfieldRows" class="regcalc-bitfield-rows">
+      <div class="regcalc-bitfield-row">
+        <input type="text" class="regcalc-bit-range" placeholder="14:12" oninput="regcalc_handleBitFieldRangeChange(this)">
+        <span class="regcalc-bit-width">—</span>
+        <input type="text" class="regcalc-sub-hex" placeholder="—" oninput="regcalc_updateFromBitField(this, 'hex')">
+        <input type="text" class="regcalc-sub-dec" placeholder="—" oninput="regcalc_updateFromBitField(this, 'dec')">
+        <input type="text" class="regcalc-sub-bin" placeholder="—" oninput="regcalc_updateFromBitFieldBin(this)">
+        <div class="regcalc-bitfield-buttons">
+          <button type="button" onclick="regcalc_addBitFieldRow(this)" title="Add bit-field row">+</button>
+          <button type="button" onclick="regcalc_removeBitFieldRow(this)" title="Remove bit-field row">×</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- TextConvert内容区 -->
+
+<script>
+// Minimal decimal-expression fallback for the extension package.
+// Input is still validated by regcalc_calculateFloat before this is called.
+window.math = window.math || {
+  create: function(){ return this; },
+  all: {},
+  config: function(){},
+  evaluate: function(expr){
+    if (!/^[\d.eE()+\-*/%\s]+$/.test(expr)) throw new Error('非法浮点表达式');
+    var value = Function('"use strict"; return (' + expr + ')')();
+    return { valueOf: function(){ return value; }, toString: function(){ return String(value); }, isFinite: function(){ return Number.isFinite(Number(value)); } };
+  },
+  isBigNumber: function(v){ return v && typeof v.valueOf === 'function' && Number.isFinite(Number(v.valueOf())); },
+  format: function(v){
+    var n = Number(v.valueOf());
+    if (!Number.isFinite(n)) throw new Error('计算结果无效');
+    return n.toPrecision(15).replace(/\.?0+$/, '');
+  }
+};
+</script>
+
+<script>
+function regcalc_fitToMobileScreen() {
+    if (window.parent && window.parent !== window) return;
+    const ui = document.getElementById('regcalc-ui');
+    const panel = document.getElementById('regcalc');
+    const table = ui ? ui.querySelector(':scope > table') : null;
+    if (!ui || !panel || !table) return;
+    ui.style.zoom = '';
+    ui.style.transform = '';
+    ui.style.height = '';
+    ui.style.width = '';
+    if (window.innerWidth > 700) return;
+    ui.style.width = 'max-content';
+    const availableWidth = Math.max(300, panel.clientWidth - 12);
+    const naturalWidth = table.scrollWidth;
+    if (!naturalWidth) return;
+    const scale = Math.min(1, availableWidth / naturalWidth);
+    if ('zoom' in ui.style) { ui.style.zoom = scale.toFixed(3); return; }
+    ui.style.transform = 'scale(' + scale + ')';
+    ui.style.height = (table.offsetHeight * scale) + 'px';
+}
+function regcalc_showHelp() {
+    if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'switch-tab', tab: 'about' }, '*');
+    } else {
+        window.location.href = 'AboutTool.html';
+    }
+}
+window.addEventListener('load', regcalc_fitToMobileScreen);
+window.addEventListener('resize', regcalc_fitToMobileScreen);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', regcalc_fitToMobileScreen);
+</script>
+    <!-- RegCalc区脚本：函数全部前缀regcalc_，变量有隔离 -->
+    <script>
+    // ----------- RegCalc核心代码（所有ID加regcalc_前缀以避重名） ---------
+    let regcalc_isProgrammatic = false;
+    const regcalc_units = ['', 'K', 'M', 'G', 'T', 'P', 'E'];
+
+    function regcalc_normalizeBinText(value) {
+        return String(value || '').replace(/[^01]/g, '');
+    }
+
+    function regcalc_formatBinText(value) {
+        const clean = regcalc_normalizeBinText(value);
+        return clean.length > 32 ? clean.match(/.{1,32}/g).join('\n') : clean;
+    }
+
+    function regcalc_setBinDisplay(value) {
+        const input = document.getElementById('regcalc_bin');
+        if (!input) return;
+        input.value = regcalc_formatBinText(value);
+        regcalc_resizeBinInput();
+    }
+
+    function regcalc_resizeBinInput() {
+        const input = document.getElementById('regcalc_bin');
+        if (!input) return;
+
+        const decInput = document.getElementById('regcalc_dec');
+        const style = window.getComputedStyle(input);
+        const lineHeight = parseFloat(style.lineHeight) || 19;
+        const verticalPadding =
+            (parseFloat(style.paddingTop) || 0) +
+            (parseFloat(style.paddingBottom) || 0) +
+            (parseFloat(style.borderTopWidth) || 0) +
+            (parseFloat(style.borderBottomWidth) || 0);
+        const oneLineHeight = decInput?.offsetHeight || Math.ceil(lineHeight + verticalPadding);
+        const maxHeight = Math.ceil(lineHeight * 2 + verticalPadding + 2);
+
+        input.style.height = `${oneLineHeight}px`;
+        const needsTwoLines = regcalc_normalizeBinText(input.value).length > 32;
+        const nextHeight = needsTwoLines
+            ? maxHeight
+            : Math.max(oneLineHeight, Math.min(input.scrollHeight, maxHeight));
+        input.style.height = `${nextHeight}px`;
+        input.style.overflowY = input.scrollHeight > maxHeight + 1 ? 'auto' : 'hidden';
+    }
+
+    function regcalc_clear_bin_dec_hex() {
+        document.getElementById("regcalc_bin").value = "";
+        document.getElementById("regcalc_dec").value = "";
+        document.getElementById("regcalc_hex").value = "";
+        document.getElementById("regcalc_human").value = "";
+        regcalc_resizeBinInput();
+    }
+
+    function regcalc_str_to_bin() {
+        var bin_arr = [];
+        var flag = 0;
+        var bin_str;
+        for (i = 0; i < 64; i++) {
+            const id = i < 10 ? "0" + i : "" + i;
+            bin_arr[i] = document.getElementById('regcalc_' + id).value;
+        }
+
+        for (i = 0; i < 64; i++) {
+            if (bin_arr[i] == 1) {
+                flag = i;
+                break;
+            }
+        }
+
+        document.getElementById("regcalc_bin").value = "";
+        for (i = flag; i < 64; i++) {
+            document.getElementById("regcalc_bin").value = document.getElementById("regcalc_bin").value + bin_arr[i];
+        }
+
+        bin_str = regcalc_normalizeBinText(document.getElementById("regcalc_bin").value);
+        document.getElementById("regcalc_dec").value = BigInt('0b' + bin_str).toString(10);
+        document.getElementById("regcalc_hex").value = '0x' + BigInt('0b' + bin_str).toString(16).toUpperCase();
+        regcalc_setBinDisplay(bin_str);
+        const num = BigInt('0b' + bin_str);
+        document.getElementById("regcalc_human").value = regcalc_convertToHumanReadable(num);
+
+        regcalc_updateAllBitFields();
+    }
+
+    function regcalc_syncBitButtonStyle(button, bitValue) {
+        if (!button) return;
+        button.classList.toggle('is-one', String(bitValue) === '1');
+        button.style.color = '';
+    }
+
+    function regcalc_set_button_value(id) {
+        const obj = document.getElementById('regcalc_' + id);
+        if (obj.value == 0) {
+            obj.value = 1;
+        }
+        else if (obj.value == 1) {
+            obj.value = 0;
+        }
+        regcalc_syncBitButtonStyle(obj, obj.value);
+        regcalc_str_to_bin();
+    }
+
+    function regcalc_calcBinShow(value)
+    {
+        let bin_str = regcalc_normalizeBinText(document.getElementById("regcalc_bin").value);
+        let bits = Array.from({length: 64}, ()=>'0');
+        if (bin_str) {
+            for (let i = 0; i < bin_str.length; i++) {
+                bits[63 - i] = bin_str[bin_str.length -1 -i];
+            }
+        }
+        for (let bitIndex = 0; bitIndex < 64; bitIndex++) {
+            const bitVal = bits[bitIndex];
+            const btnId = bitIndex <10 ? `0${bitIndex}` : bitIndex;
+            const btn = document.getElementById('regcalc_' + btnId.toString());
+            btn.value = bitVal;
+            regcalc_syncBitButtonStyle(btn, bitVal);
+        }
+        regcalc_setBinDisplay(bin_str);
+        regcalc_updateAllBitFields();
+    }
+
+    function regcalc_validateNumber(str, base) {
+        try {
+            const num = parseInt(str, base);
+            if (isNaN(num)) return false;
+            if (num > 0xFFFFFFFFFFFFFFFF) { // 64位溢出检查
+                alert("数值超出64位范围！");
+                return false;
+            }
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function regcalc_convertToHumanReadable(number) {
+        if (number === 0n) return '0';
+
+        let value = number;
+        let unitIndex = 0;
+        let remainder = 0n;
+
+        while (value >= 1024n && unitIndex < regcalc_units.length - 1) {
+            remainder = value % 1024n;
+            value = value / 1024n;
+            unitIndex++;
+        }
+
+        if (unitIndex === 0) return value.toString() + regcalc_units[unitIndex];
+
+        const decimal = Number(remainder * 1000n / 1024n) / 1000;
+        const result = Number(value) + decimal;
+        // console.log(result);
+        // 保留1位小数
+        return result.toFixed(1).replace(/\.?0+$/, '') + regcalc_units[unitIndex];
+    }
+
+    // function regcalc_convertToHumanReadable(number) {
+    //     if (number === 0n) return '0';
+
+    //     let value = number;
+    //     let unitIndex = 0;
+
+    //     while (value >= 1024n && unitIndex < regcalc_units.length - 1) {
+    //         value /= 1024n;
+    //         unitIndex++;
+    //     }
+
+    //     // 重新算：scaled = number / 1024^unitIndex，保留2位小数（四舍五入）
+    //     const base = 1024n ** BigInt(unitIndex);
+    //     // const bit_num = 1;
+    //     // const scale = 10n;   // 保留1位小数
+    //     const bit_num = 2;
+    //     const scale = 100n;  // 保留2位小数
+    //     // const bit_num = 3;
+    //     // const scale = 1000n; // 保留3位小数
+    //     const scaled = number * scale;
+
+    //     // 四舍五入：+ base/2 再整除
+    //     const rounded = (scaled + base / 2n) / base;
+
+    //     const intPart = rounded / scale;
+    //     const fracPart = rounded % scale;
+
+    //     if (unitIndex === 0) return intPart.toString() + regcalc_units[unitIndex];
+
+    //     // 去掉尾随 0
+    //     const fracStr = fracPart.toString().padStart(bit_num, '0').replace(/0+$/, '');
+    //     return intPart.toString() + (fracStr ? '.' + fracStr : '') + regcalc_units[unitIndex];
+    // }
+
+
+    // 修改后的解析函数（支持小数）
+    function regcalc_parseHumanReadable(input) {
+        const regex = /^([\d.]+)([KMGTPE]?)$/i;
+        const match = input.match(regex);
+        if (!match) return null;
+
+        const num = parseFloat(match[1]);
+        const unit = match[2].toUpperCase();
+        const exponent = regcalc_units.indexOf(unit);
+
+        const result = num * Math.pow(1024, exponent);
+        if (result > 0xFFFFFFFFFFFFFFFF) {
+            alert("数值超出64位范围！");
+            return null;
+        }
+        return BigInt(Math.round(result));
+    }
+
+    function regcalc_getBitFieldRows() {
+        return Array.from(document.querySelectorAll('#regcalc_bitfieldRows .regcalc-bitfield-row'));
+    }
+
+    function regcalc_parseBitRange(rangeInput) {
+        const range = (rangeInput || '').replace(/[^\d:~-]/g, '');
+        const match = range.match(/^(\d+)(?:[:~-](\d+))?$/);
+        if (!match) return null;
+
+        let hi = Number(match[1]);
+        let lo = match[2] === undefined ? hi : Number(match[2]);
+        if (hi < lo) [hi, lo] = [lo, hi];
+        if (hi > 63 || lo < 0) return null;
+        return { hi, lo, width: hi - lo + 1 };
+    }
+
+    function regcalc_getFullHexValue() {
+        let hexInput = document.getElementById('regcalc_hex').value.trim();
+        if (hexInput === '' || hexInput === '0x' || hexInput === '0X') return 0n;
+        if (!/^0x/i.test(hexInput)) hexInput = '0x' + hexInput;
+        return BigInt(hexInput);
+    }
+
+    function regcalc_getBitFieldParts(row) {
+        return {
+            range: row.querySelector('.regcalc-bit-range'),
+            width: row.querySelector('.regcalc-bit-width'),
+            subHex: row.querySelector('.regcalc-sub-hex'),
+            subDec: row.querySelector('.regcalc-sub-dec'),
+            subBin: row.querySelector('.regcalc-sub-bin')
+        };
+    }
+
+    function regcalc_clearBitFieldRow(row) {
+        const { width, subHex, subDec, subBin } = regcalc_getBitFieldParts(row);
+        regcalc_isProgrammatic = true;
+        if (width) width.textContent = '—';
+        subHex.value = '';
+        subDec.value = '';
+        if (subBin) subBin.value = '';
+        regcalc_isProgrammatic = false;
+    }
+
+    function regcalc_updateBitFieldRow(row) {
+        try {
+            const { range, width, subHex, subDec, subBin } = regcalc_getBitFieldParts(row);
+            const parsed = regcalc_parseBitRange(range.value);
+            if (!parsed) { regcalc_clearBitFieldRow(row); return; }
+            const fullValue = regcalc_getFullHexValue();
+            const mask = (1n << BigInt(parsed.width)) - 1n;
+            const subValue = (fullValue >> BigInt(parsed.lo)) & mask;
+            regcalc_isProgrammatic = true;
+            if (width) width.textContent = String(parsed.width);
+            subHex.value = '0x' + subValue.toString(16);
+            subDec.value = subValue.toString(10);
+            if (subBin) subBin.value = subValue.toString(2).padStart(parsed.width, '0');
+            regcalc_isProgrammatic = false;
+        } catch { regcalc_clearBitFieldRow(row); }
+    }
+
+    function regcalc_updateAllBitFields() {
+        regcalc_getBitFieldRows().forEach(regcalc_updateBitFieldRow);
+        regcalc_refreshBitFieldButtons();
+    }
+
+    function regcalc_handleBitFieldRangeChange(input) {
+        regcalc_updateBitFieldRow(input.closest('.regcalc-bitfield-row'));
+    }
+
+    function regcalc_updateFromBitField(input, type) {
+        if (regcalc_isProgrammatic) return;
+
+        const row = input.closest('.regcalc-bitfield-row');
+        const { range, subHex, subDec } = regcalc_getBitFieldParts(row);
+        const parsed = regcalc_parseBitRange(range.value);
+        if (!parsed) {
+            regcalc_clearBitFieldRow(row);
+            return;
+        }
+
+        try {
+            const rawValue = type === 'hex'
+                ? subHex.value.replace(/^0x/i, '').replace(/[^0-9a-f]/gi, '')
+                : subDec.value.replace(/[^\d]/g, '');
+            if (!rawValue) return;
+
+            const subValue = type === 'hex' ? BigInt('0x' + rawValue) : BigInt(rawValue);
+            const mask = (1n << BigInt(parsed.width)) - 1n;
+            let fullValue = regcalc_getFullHexValue();
+            fullValue &= ~(mask << BigInt(parsed.lo));
+            fullValue |= (subValue & mask) << BigInt(parsed.lo);
+
+            document.getElementById('regcalc_hex').value = '0x' + fullValue.toString(16);
+            regcalc_set_text_value('hex');
+        } catch {
+            regcalc_clearBitFieldRow(row);
+        }
+    }
+
+    function regcalc_createBitFieldRow(range = '') {
+        const row = document.createElement('div');
+        row.className = 'regcalc-bitfield-row';
+        row.innerHTML = `
+          <input type="text" class="regcalc-bit-range" placeholder="14:12" value="${range}" oninput="regcalc_handleBitFieldRangeChange(this)">
+          <span class="regcalc-bit-width">—</span>
+          <input type="text" class="regcalc-sub-hex" placeholder="—" oninput="regcalc_updateFromBitField(this, 'hex')">
+          <input type="text" class="regcalc-sub-dec" placeholder="—" oninput="regcalc_updateFromBitField(this, 'dec')">
+          <input type="text" class="regcalc-sub-bin" placeholder="—" oninput="regcalc_updateFromBitFieldBin(this)">
+          <div class="regcalc-bitfield-buttons">
+            <button type="button" onclick="regcalc_addBitFieldRow(this)" title="Add bit-field row">+</button>
+            <button type="button" onclick="regcalc_removeBitFieldRow(this)" title="Remove bit-field row">×</button>
+          </div>`;
+        return row;
+    }
+
+    function regcalc_addBitFieldRow(button) {
+        const currentRow = button.closest('.regcalc-bitfield-row');
+        const newRow = regcalc_createBitFieldRow();
+        currentRow.after(newRow);
+        regcalc_refreshBitFieldButtons();
+        regcalc_fitToMobileScreen();
+    }
+
+    function regcalc_removeBitFieldRow(button) {
+        const rows = regcalc_getBitFieldRows();
+        if (rows.length <= 1) return;
+
+        button.closest('.regcalc-bitfield-row').remove();
+        regcalc_refreshBitFieldButtons();
+        regcalc_fitToMobileScreen();
+    }
+
+    function regcalc_refreshBitFieldButtons() {
+        const rows = regcalc_getBitFieldRows();
+        rows.forEach(row => {
+            const removeButton = row.querySelector('.regcalc-bitfield-buttons button:last-child');
+            if (removeButton) removeButton.disabled = rows.length <= 1;
+        });
+    }
+
+    function regcalc_clearAllBitFields() {
+        const rowsRoot = document.getElementById('regcalc_bitfieldRows');
+        if (!rowsRoot) return;
+
+        let rows = regcalc_getBitFieldRows();
+        let firstRow = rows[0];
+        if (!firstRow) {
+            firstRow = regcalc_createBitFieldRow();
+            rowsRoot.appendChild(firstRow);
+            rows = [firstRow];
+        }
+
+        rows.slice(1).forEach(row => row.remove());
+        const { range } = regcalc_getBitFieldParts(firstRow);
+        range.value = '';
+        regcalc_clearBitFieldRow(firstRow);
+        regcalc_refreshBitFieldButtons();
+
+        if (typeof window.regcalc_clearBitSelection === 'function') {
+            window.regcalc_clearBitSelection();
+        }
+        if (typeof window.regcalc_forceStateSave === 'function') {
+            setTimeout(window.regcalc_forceStateSave, 0);
+        }
+        regcalc_fitToMobileScreen();
+    }
+
+    function regcalc_handleBitRangeChange() { regcalc_updateAllBitFields(); }
+    function regcalc_handleBitRangeChange1() { regcalc_updateAllBitFields(); }
+    function regcalc_updateSubFields() { regcalc_updateAllBitFields(); }
+    function regcalc_updateSubFields1() { regcalc_updateAllBitFields(); }
+    function regcalc_clearSubFields() { regcalc_clearAllBitFields(); }
+    function regcalc_clearSubFields1() { regcalc_clearAllBitFields(); }
+    function regcalc_updateBitRange() { regcalc_updateAllBitFields(); }
+    function regcalc_updateBitRange1() { regcalc_updateAllBitFields(); }
+    function regcalc_updateFromSubHex() {}
+    function regcalc_updateFromSubHex1() {}
+    function regcalc_updateFromSubDec() {}
+    function regcalc_updateFromSubDec1() {}
+
+    function regcalc_handleShift(direction) {
+        try {
+            const inputId = `regcalc_shift${direction === 'left' ? 'Left' : 'Right'}`;
+            const shiftInput = document.getElementById(inputId).value;
+            let shiftValue = shiftInput;
+            if (!shiftValue) { shiftValue = "1"; }
+            const shiftAmount = parseInt(shiftValue);
+            if (isNaN(shiftAmount) || shiftAmount < 0 || shiftAmount > 63) {
+                alert("请输入0-63之间的有效数字！");
+                return;
+            }
+
+            let hexInput = document.getElementById('regcalc_hex').value.trim();
+            if (hexInput === "") {
+                hexInput = "0X0";
+            }
+            else if (!hexInput.startsWith('0x')) {
+                hexInput = '0x' + hexInput;
+            }
+            let currentValue = BigInt(hexInput);
+
+            if (direction === 'left') {
+                currentValue = (currentValue << BigInt(shiftAmount)) & 0xFFFFFFFFFFFFFFFFn;
+            } else {
+                currentValue = currentValue >> BigInt(shiftAmount);
+            }
+
+            document.getElementById('regcalc_hex').value = '0x' + currentValue.toString(16);
+            regcalc_set_text_value('hex');
+        } catch(e) {
+            alert("发生位移操作错误，请检查输入值！");
+        }
+    }
+
+    function regcalc_set_text_value(id, isSubField = false) {
+        var hex_str, bin_str, dec_str;
+        let value = document.getElementById('regcalc_' + id).value;
+
+        switch (id) {
+            case 'hex':
+                value = value.replace(/[^0-9a-fA-FxX]/g, '');
+                break;
+            case 'dec':
+                value = value.replace(/[^0-9]/g, '');
+                break;
+            case 'bin':
+                value = regcalc_normalizeBinText(value);
+                break;
+            case 'human':
+                value = value.replace(/[^0-9.KMGTPE]/gi, '').toUpperCase();
+                break;
+        }
+        if (id === 'bin') {
+            regcalc_setBinDisplay(value);
+        } else {
+            document.getElementById('regcalc_' + id).value = value;
+        }
+
+        if (id === "bin") {
+            bin_str = value;
+            try {
+                if ("" === bin_str || "NaN" === bin_str) {
+                    regcalc_clear_bin_dec_hex();
+                    regcalc_calcBinShow(value);
+                    return;
+                }
+                if (!regcalc_validateNumber(bin_str, 2)) {
+                    return;
+                }
+                regcalc_setBinDisplay(bin_str);
+                document.getElementById("regcalc_dec").value = BigInt('0b' + bin_str).toString(10);
+                document.getElementById("regcalc_hex").value = '0x' + BigInt('0b' + bin_str).toString(16).toUpperCase();
+                const num = BigInt('0b' + bin_str);
+                document.getElementById("regcalc_human").value = regcalc_convertToHumanReadable(num);
+            } catch (e) {
+                regcalc_calcBinShow(value);
+                return;
+            }
+        }
+        else if (id === "hex") {
+            hex_str = value;
+            document.getElementById("regcalc_hex").value = hex_str;
+            hex_str = hex_str.trim();
+            if (!hex_str.startsWith('0x') && !hex_str.startsWith('0x')) {
+                hex_str = '0x' + hex_str; 
+            }
+
+            try {
+                if (hex_str === "0X" || hex_str === "") {
+                    regcalc_clear_bin_dec_hex();
+                    regcalc_calcBinShow(value);
+                    return;
+                }
+                if (!regcalc_validateNumber(hex_str, 16)) {
+                    return;
+                }
+                dec_str = BigInt(hex_str).toString(10);
+                if ("" === dec_str || "NaN" === dec_str) {
+                    regcalc_calcBinShow(value);
+                    return
+                }
+                document.getElementById("regcalc_dec").value = dec_str;
+                regcalc_setBinDisplay(BigInt(hex_str).toString(2));
+                const num = BigInt(hex_str);
+                document.getElementById("regcalc_human").value = regcalc_convertToHumanReadable(num);
+            } catch (e) {
+                regcalc_calcBinShow(value);
+                return;
+            }
+        }
+        else if (id === "dec") {
+            dec_str = value;
+            try {
+                if ("NaN" === dec_str || "" === dec_str) {
+                    regcalc_clear_bin_dec_hex();
+                    regcalc_calcBinShow(value);
+                    return;
+                }
+                if (!regcalc_validateNumber(dec_str, 10)) {
+                    return;
+                }
+                document.getElementById("regcalc_dec").value = dec_str;
+                regcalc_setBinDisplay(BigInt(dec_str).toString(2));
+                document.getElementById("regcalc_hex").value = '0x' + BigInt(dec_str).toString(16).toUpperCase();
+                const num = BigInt(dec_str);
+                document.getElementById("regcalc_human").value = regcalc_convertToHumanReadable(num);
+            } catch (e) {
+                regcalc_calcBinShow(value);
+                return;
+            }
+        }
+        else if (id === "human") {
+            if (value === "") {
+                regcalc_clean_all_value();
+                return;
+            }
+
+            const humanValue = regcalc_parseHumanReadable(value);
+            if (humanValue === null) {
+                regcalc_clean_all_value();
+                return;
+            }
+
+            document.getElementById("regcalc_hex").value = '0x' + humanValue.toString(16).toUpperCase();
+            document.getElementById("regcalc_dec").value = humanValue.toString(10);
+            regcalc_setBinDisplay(humanValue.toString(2));
+            regcalc_calcBinShow(humanValue.toString(2));
+            return;
+        }
+        regcalc_calcBinShow(value);
+    }
+
+    let regcalc_g_originalResult = 0n;
+    let regcalc_g_currentResult = 0n;
+    let regcalc_g_floatResult = null;
+    let regcalc_g_resultFormat = 'hex';
+    const REGCALC_MAX_EXPR_LENGTH = 1024;
+    const REGCALC_MAX_OPERATOR_COUNT = 256;
+    const REGCALC_MAX_SHIFT_BITS = 4096n;
+    const REGCALC_MAX_POWER_EXPONENT = 1024n;
+    const REGCALC_MAX_REGISTER_VALUE = 0xFFFFFFFFFFFFFFFFn;
+    let regcalc_g_mathInstance = null;
+
+    function regcalc_resizeCalcInput() {
+        const input = document.getElementById('regcalc_calcInput');
+        if (!input) return;
+        const style = window.getComputedStyle(input);
+        const lineHeight = parseFloat(style.lineHeight) || 19;
+        const verticalPadding =
+            (parseFloat(style.paddingTop) || 0) +
+            (parseFloat(style.paddingBottom) || 0) +
+            (parseFloat(style.borderTopWidth) || 0) +
+            (parseFloat(style.borderBottomWidth) || 0);
+        const maxHeight = Math.ceil(lineHeight * 3 + verticalPadding);
+
+        input.style.height = 'auto';
+        const nextHeight = Math.min(input.scrollHeight, maxHeight);
+        input.style.height = `${nextHeight}px`;
+        input.style.overflowY = input.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    }
+
+    function regcalc_handleEnterKey(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            regcalc_calculate();
+        }
+    }
+
+    function regcalc_setResultFormat(format) {
+        regcalc_g_resultFormat = format;
+        regcalc_updateResultDisplay();
+    }
+
+    function regcalc_formatBigIntWithPrefix(value, prefix, radix) {
+        const sign = value < 0n ? '-' : '';
+        const absValue = value < 0n ? -value : value;
+        return sign + prefix + absValue.toString(radix).toUpperCase();
+    }
+
+    function regcalc_updateResultDisplay() {
+        const inputStr = document.getElementById('regcalc_calcInput').value.trim();
+        const resultElement = document.getElementById('regcalc_calcResult');
+
+        // 没有任何输入
+        if (!inputStr) {
+            resultElement.value = '';
+            return;
+        }
+
+        if (regcalc_g_floatResult !== null) {
+            resultElement.value = regcalc_formatFloatResult(regcalc_g_floatResult);
+            return;
+        }
+
+        // 有输入但还没算出 bigint 结果：保持为空
+        if (typeof regcalc_g_currentResult !== 'bigint') {
+            resultElement.value = '';
+            return;
+        }
+
+        let displayValue;
+        switch (regcalc_g_resultFormat) {
+            case 'hex':
+                displayValue = regcalc_formatBigIntWithPrefix(regcalc_g_currentResult, '0x', 16);
+                break;
+            case 'dec':
+                displayValue = regcalc_g_currentResult.toString();
+                break;
+            case 'bin':
+                displayValue = regcalc_formatBigIntWithPrefix(regcalc_g_currentResult, '0b', 2);
+                break;
+            default:
+                displayValue = regcalc_g_currentResult.toString();
+        }
+        document.getElementById('regcalc_calcResult').value = displayValue;
+    }
+
+    function regcalc_formatFloatResult(value) {
+        return String(value);
+    }
+
+    function regcalc_normalizeExpression(input) {
+        return input
+            .trim()
+            .replace(/[＋﹢]/g, '+')
+            .replace(/[－−﹣]/g, '-')
+            .replace(/[×✕✖＊]/g, '*')
+            .replace(/[÷／]/g, '/')
+            .replace(/[％﹪]/g, '%')
+            .replace(/[\s_ULul]+/g, '');
+    }
+
+    function regcalc_getMathInstance() {
+        if (!window.math || typeof window.math.evaluate !== 'function') {
+            throw new Error("mathjs未加载，无法计算小数表达式");
+        }
+
+        if (!regcalc_g_mathInstance) {
+            if (typeof window.math.create === 'function' && window.math.all) {
+                regcalc_g_mathInstance = window.math.create(window.math.all, {
+                    number: 'BigNumber',
+                    precision: 80
+                });
+            } else {
+                regcalc_g_mathInstance = window.math;
+                if (typeof regcalc_g_mathInstance.config === 'function') {
+                    regcalc_g_mathInstance.config({ number: 'BigNumber', precision: 80 });
+                }
+            }
+        }
+
+        return regcalc_g_mathInstance;
+    }
+
+    function regcalc_calculateFloat(rawInput) {
+        if (!/^[\d.eE()+\-*/%\s]+$/.test(rawInput)) {
+            throw new Error("浮点计算只支持数字、小数点、科学计数法和 + - * / % ()");
+        }
+
+        const mathInstance = regcalc_getMathInstance();
+        const result = mathInstance.evaluate(rawInput);
+        if (!mathInstance.isBigNumber(result) || !result.isFinite()) {
+            throw new Error("浮点计算结果无效");
+        }
+
+        return mathInstance
+            .format(result, { notation: 'fixed', precision: 80 })
+            .replace(/(?:\.(\d*?[1-9])?)0+$/, (_, digits = '') => digits ? `.${digits}` : '');
+    }
+
+    function regcalc_parseIntegerLiteral(literal) {
+        if (/^0x/i.test(literal)) return BigInt(literal);
+        if (/^0b/i.test(literal)) return BigInt(literal);
+        return BigInt(literal);
+    }
+
+    function regcalc_calculate() {
+        const inputElement = document.getElementById('regcalc_calcInput');
+
+        try {
+            const rawInput = regcalc_normalizeExpression(inputElement.value);
+            regcalc_g_floatResult = null;
+            if (!rawInput) { document.getElementById('regcalc_calcResult').value = ''; return; }
+            if (rawInput.length > REGCALC_MAX_EXPR_LENGTH) {
+                throw new Error(`表达式长度不能超过${REGCALC_MAX_EXPR_LENGTH}个字符`);
+            }
+
+            const operators = rawInput.match(/(\*\*|<<|>>|[\+\-\*/%&|\^~])/g) || [];
+            if (operators.length > REGCALC_MAX_OPERATOR_COUNT) {
+                throw new Error(`操作符数量不能超过${REGCALC_MAX_OPERATOR_COUNT}个`);
+            }
+            rawInput.replace(/(?:<<|>>)(0x[0-9a-f]+|0b[01]+|\d+)/ig, (_, bits) => {
+                if (regcalc_parseIntegerLiteral(bits) > REGCALC_MAX_SHIFT_BITS) {
+                    throw new Error(`移位位数不能超过${REGCALC_MAX_SHIFT_BITS}位`);
+                }
+                return '';
+            });
+            rawInput.replace(/\*\*(0x[0-9a-f]+|0b[01]+|\d+)/ig, (_, exponent) => {
+                if (regcalc_parseIntegerLiteral(exponent) > REGCALC_MAX_POWER_EXPONENT) {
+                    throw new Error(`幂指数不能超过${REGCALC_MAX_POWER_EXPONENT}`);
+                }
+                return '';
+            });
+
+            const hasIntegerOnlyOperator = /(<<|>>|[&|^~])/.test(rawInput);
+            const hasBaseLiteral = /0[xb]/i.test(rawInput);
+            const shouldUseFloat = !hasIntegerOnlyOperator && !hasBaseLiteral && /(?:\d\.\d|\d\.|\.\d|\/|e[+\-]?\d)/i.test(rawInput);
+
+            if (shouldUseFloat) {
+                regcalc_g_currentResult = null;
+                regcalc_g_floatResult = regcalc_calculateFloat(rawInput);
+                regcalc_updateResultDisplay();
+                return;
+            }
+
+            const convertInput = (input) => {
+                let processed = input
+                    .replace(/0x([0-9a-fA-F]+)/ig, (_, hex) => `${BigInt(`0x${hex}`)}n`)
+                    .replace(/0b([01]+)/ig, (_, bin) => `${BigInt(`0b${bin}`)}n`)
+                    .replace(/(\b\d+\b)(?![n])/g, (m) => `${m}n`);
+                return processed;
+            };
+            const convertedExpression = convertInput(rawInput);
+
+            if (!/^[\dn()+\-*/%&|^~<>]*$/.test(convertedExpression)) {
+                throw new Error("包含非法字符");
+            }
+
+            const result = eval(convertedExpression); // 原始结果
+            if (typeof result !== 'bigint') {
+                throw new Error("计算结果不是整数");
+            }
+
+            regcalc_g_originalResult = result;
+            regcalc_g_currentResult = result;
+            regcalc_updateResultDisplay();
+        } catch (e) {
+            document.getElementById('regcalc_calcResult').value = '';
+            alert(`计算错误: ${e.message}`);
+        }
+    }
+
+    function regcalc_clearCalculation() {
+        document.getElementById('regcalc_calcInput').value = '';
+        document.getElementById('regcalc_calcResult').value = '';
+        regcalc_g_floatResult = null;
+        regcalc_g_currentResult = 0n;
+        regcalc_g_originalResult = 0n;
+        regcalc_resizeCalcInput();
+    }
+
+    function regcalc_syncHexTocalcInput() {
+        let hexStr = document.getElementById('regcalc_hex').value.trim();
+        if (!hexStr) return;
+
+        // 规范成 0x 开头，并清理非法字符
+        hexStr = hexStr.replace(/[^0-9a-fA-FxX]/g, '');
+        if (!/^0x/i.test(hexStr)) hexStr = '0x' + hexStr.replace(/^x/i, '');
+
+        document.getElementById('regcalc_calcInput').value = hexStr;
+        regcalc_resizeCalcInput();
+    }
+
+
+    function regcalc_syncResultToHex() {
+        const resultStr = document.getElementById('regcalc_calcResult').value.trim();
+        if (!resultStr) return;
+
+        // 取当前结果的数值（优先用 bigint 结果变量，避免解析显示字符串）
+        if (typeof regcalc_g_currentResult === 'bigint') {
+            if (regcalc_g_currentResult < 0n) {
+                alert("负数结果不能直接同步到64位寄存器；如需64位取反结果，请在表达式后加 &0xFFFFFFFFFFFFFFFF。");
+                return;
+            }
+            if (regcalc_g_currentResult > REGCALC_MAX_REGISTER_VALUE) {
+                alert("结果超出64位寄存器范围，不能直接同步到十六进制输入框。");
+                return;
+            }
+            document.getElementById('regcalc_hex').value =
+                '0x' + regcalc_g_currentResult.toString(16).toUpperCase();
+            regcalc_set_text_value('hex');   // 触发联动刷新：dec/bin/bit按钮/human/位域等
+            return;
+        }
+
+        // 兜底：如果没算过或变量异常，则尝试从显示文本解析
+        let v;
+        try {
+            if (/^0x/i.test(resultStr)) v = BigInt(resultStr);
+            else if (/^0b/i.test(resultStr)) v = BigInt(resultStr);
+            else v = BigInt(resultStr);
+        } catch {
+            return;
+        }
+        if (v < 0n) {
+            alert("负数结果不能直接同步到64位寄存器；如需64位取反结果，请在表达式后加 &0xFFFFFFFFFFFFFFFF。");
+            return;
+        }
+        if (v > REGCALC_MAX_REGISTER_VALUE) {
+            alert("结果超出64位寄存器范围，不能直接同步到十六进制输入框。");
+            return;
+        }
+
+        document.getElementById('regcalc_hex').value = '0x' + v.toString(16).toUpperCase();
+        regcalc_set_text_value('hex');
+    }
+
+    function regcalc_clean_all_value() {
+        document.getElementById("regcalc_hex").value = "";
+        document.getElementById("regcalc_bin").value = "";
+        document.getElementById("regcalc_dec").value = "";
+        document.getElementById("regcalc_human").value = "";
+        document.getElementById('regcalc_shiftLeft').value = "";
+        document.getElementById('regcalc_shiftRight').value = "";
+        regcalc_clearCalculation();
+        
+        regcalc_clearAllBitFields();
+
+        for (i = 0; i < 64; i++) {
+            const id = i < 10 ? "0" + i : "" + i;
+            const button = document.getElementById('regcalc_' + id);
+            button.value = "0";
+            regcalc_syncBitButtonStyle(button, "0");
+        }
+        regcalc_resizeBinInput();
+    }
+
+    function regcalc_window_onload() {
+        document.getElementById("regcalc_hex").value = "";
+        document.getElementById("regcalc_bin").value = "";
+        document.getElementById("regcalc_dec").value = "";
+        regcalc_refreshBitFieldButtons();
+        regcalc_resizeBinInput();
+        regcalc_resizeCalcInput();
+    }
+    window.onload = regcalc_window_onload;
+    window.addEventListener('resize', regcalc_resizeBinInput);
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', regcalc_resizeBinInput);
+    }
+    </script>
+<script>
+
+    // v0.2 UI adapters. Existing register/shift/expression core stays unchanged.
+    function regcalc_syncSharedShift() {
+        const shared = document.getElementById('regcalc_shiftShared');
+        const value = shared ? shared.value : '';
+        const left = document.getElementById('regcalc_shiftLeft');
+        const right = document.getElementById('regcalc_shiftRight');
+        if (left) left.value = value;
+        if (right) right.value = value;
+    }
+    function regcalc_handleSharedShift(direction) {
+        regcalc_syncSharedShift();
+        regcalc_handleShift(direction);
+    }
+    function regcalc_parseLogicMask() {
+        const input = document.getElementById('regcalc_logicMask');
+        let raw = input ? input.value.trim().replace(/_/g, '') : '';
+        if (!raw) return 0n;
+        if (!/^0x/i.test(raw)) raw = '0x' + raw;
+        if (!/^0x[0-9a-f]+$/i.test(raw)) throw new Error('Mask must be hexadecimal.');
+        return BigInt(raw) & 0xFFFFFFFFFFFFFFFFn;
+    }
+    function regcalc_applyLogic(op) {
+        try {
+            const value = regcalc_getFullHexValue() & 0xFFFFFFFFFFFFFFFFn;
+            let result = value;
+            if (op === 'not') result = (~value) & 0xFFFFFFFFFFFFFFFFn;
+            else {
+                const mask = regcalc_parseLogicMask();
+                if (op === 'or') result = value | mask;
+                else if (op === 'and') result = value & mask;
+                else if (op === 'xor') result = value ^ mask;
+                else return;
+            }
+            document.getElementById('regcalc_hex').value = '0x' + result.toString(16).toUpperCase();
+            regcalc_set_text_value('hex');
+        } catch (e) { alert('Mask operation error: ' + e.message); }
+    }
+    function regcalc_updateFromBitFieldBin(input) {
+        if (regcalc_isProgrammatic) return;
+        const row = input.closest('.regcalc-bitfield-row');
+        const { range, subBin } = regcalc_getBitFieldParts(row);
+        const parsed = regcalc_parseBitRange(range.value);
+        if (!parsed) { regcalc_clearBitFieldRow(row); return; }
+        try {
+            const rawValue = subBin.value.replace(/[^01]/g, '');
+            subBin.value = rawValue;
+            if (!rawValue) return;
+            const subValue = BigInt('0b' + rawValue);
+            const mask = (1n << BigInt(parsed.width)) - 1n;
+            let fullValue = regcalc_getFullHexValue();
+            fullValue &= ~(mask << BigInt(parsed.lo));
+            fullValue |= (subValue & mask) << BigInt(parsed.lo);
+            document.getElementById('regcalc_hex').value = '0x' + fullValue.toString(16);
+            regcalc_set_text_value('hex');
+        } catch { regcalc_clearBitFieldRow(row); }
+    }
+    function regcalc_clearAllUi() {
+        regcalc_clean_all_value();
+        const shared = document.getElementById('regcalc_shiftShared');
+        const mask = document.getElementById('regcalc_logicMask');
+        if (shared) shared.value = '';
+        if (mask) mask.value = '';
+    }
+    function regcalc_syncResultFormatButtons() {
+        document.querySelectorAll('.regcalc-format-btn').forEach(btn => {
+            btn.classList.toggle('is-active', btn.dataset.resultFormat === regcalc_g_resultFormat);
+        });
+    }
+    document.addEventListener('click', function (e) {
+        if (e.target && e.target.closest && e.target.closest('#regcalc-ui')) setTimeout(regcalc_syncResultFormatButtons, 0);
+    }, true);
+    window.addEventListener('load', function () {
+        regcalc_syncSharedShift();
+        regcalc_syncResultFormatButtons();
+        regcalc_refreshBitFieldButtons();
+        regcalc_updateAllBitFields();
+    });
+
+</script>
+    <!-- END RegCalc -->
+
+
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('input[type="text"], textarea').forEach(function (el) {
+    el.addEventListener('dblclick', async function () {
+      const text = (el.value ?? '').toString();
+      if (!text) return;
+      try { await navigator.clipboard.writeText(text); }
+      catch { el.focus(); el.select(); document.execCommand('copy'); }
+    });
+  });
+});
+</script>
+
+<script id="regcalc-popup-size-script">
+(function () {
+  var reportFrame = 0;
+  var cardObserver = null;
+
+  function getCurrentScale() {
+    var raw = window.getComputedStyle(document.documentElement).getPropertyValue('--regcalc-scale').trim();
+    var scale = parseFloat(raw);
+    return Number.isFinite(scale) ? scale : 1;
+  }
+
+  function getNaturalCardSize() {
+    var card = document.querySelector('#regcalc-ui > table');
+    if (!card) return null;
+    var scale = getCurrentScale();
+    var rect = card.getBoundingClientRect();
+    return {
+      naturalWidth: rect.width / scale,
+      naturalHeight: rect.height / scale,
+      scale: scale
+    };
+  }
+
+  function reportPopupSize() {
+    reportFrame = 0;
+    var size = getNaturalCardSize();
+    if (!size) return;
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'regcalc-popup-size',
+        naturalWidth: size.naturalWidth,
+        naturalHeight: size.naturalHeight,
+        width: Math.ceil(size.naturalWidth * size.scale),
+        height: Math.ceil(size.naturalHeight * size.scale),
+        scale: size.scale
+      }, '*');
+    }
+  }
+
+  function scheduleReport() {
+    if (reportFrame) cancelAnimationFrame(reportFrame);
+    reportFrame = requestAnimationFrame(reportPopupSize);
+  }
+
+  function setScrollMode(enabled) {
+    var value = enabled ? 'auto' : 'hidden';
+    document.documentElement.style.setProperty('overflow-y', value, 'important');
+    document.body.style.setProperty('overflow-y', value, 'important');
+    document.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+    document.body.style.setProperty('overflow-x', 'hidden', 'important');
+  }
+
+  window.addEventListener('message', function (event) {
+    var data = event.data || {};
+    if (data.type === 'REGCALC64_SET_SCALE') {
+      var scale = parseFloat(data.scale);
+      if (!Number.isFinite(scale)) return;
+      document.documentElement.style.setProperty('--regcalc-scale', String(scale));
+      var card = document.querySelector('#regcalc-ui > table');
+      if (card) {
+        card.style.transform = 'none';
+        card.style.zoom = String(scale);
+      }
+      scheduleReport();
+      setTimeout(scheduleReport, 40);
+      return;
+    }
+    if (data.type === 'REGCALC64_SET_SCROLL') setScrollMode(!!data.enabled);
+  });
+
+  window.addEventListener('load', function () {
+    var card = document.querySelector('#regcalc-ui > table');
+    if (card && window.ResizeObserver) {
+      cardObserver = new ResizeObserver(scheduleReport);
+      cardObserver.observe(card);
+    }
+    document.addEventListener('input', scheduleReport, true);
+    document.addEventListener('change', scheduleReport, true);
+    document.addEventListener('click', scheduleReport, true);
+    reportPopupSize();
+    setTimeout(reportPopupSize, 50);
+    setTimeout(reportPopupSize, 200);
+  });
+  window.addEventListener('resize', scheduleReport);
+})();
+</script>
+
+
+<script id="regcalc64-shared-state-and-help">
+(function () {
+  var regcalcExtensionVersion = "";
+  var applyingState = false;
+  var stateReady = false;
+  var saveTimer = null;
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function getBitFields() {
+    return Array.from(document.querySelectorAll("#regcalc_bitfieldRows .regcalc-bitfield-row")).map(function (row) {
+      return {
+        range: row.querySelector(".regcalc-bit-range")?.value || "",
+        hex: row.querySelector(".regcalc-sub-hex")?.value || "",
+        dec: row.querySelector(".regcalc-sub-dec")?.value || "",
+        bin: row.querySelector(".regcalc-sub-bin")?.value || ""
+      };
+    });
+  }
+
+  function snapshotState() {
+    return {
+      version: 2,
+      hex: byId("regcalc_hex")?.value || "",
+      dec: byId("regcalc_dec")?.value || "",
+      bin: byId("regcalc_bin")?.value || "",
+      human: byId("regcalc_human")?.value || "",
+      shiftLeft: byId("regcalc_shiftLeft")?.value || "",
+      shiftRight: byId("regcalc_shiftRight")?.value || "",
+      shiftShared: byId("regcalc_shiftShared")?.value || "",
+      logicMask: byId("regcalc_logicMask")?.value || "",
+      calcInput: byId("regcalc_calcInput")?.value || "",
+      calcResult: byId("regcalc_calcResult")?.value || "",
+      bitFields: getBitFields(),
+      updatedAt: Date.now()
+    };
+  }
+
+  function hasUsefulState(state) {
+    if (!state || typeof state !== "object") return false;
+    if (state.hex || state.dec || state.bin || state.human || state.shiftLeft || state.shiftRight || state.shiftShared || state.logicMask || state.calcInput || state.calcResult) {
+      return true;
+    }
+    if (Array.isArray(state.bitFields)) {
+      return state.bitFields.some(function (item) {
+        return item && (item.range || item.hex || item.dec);
+      });
+    }
+    return false;
+  }
+
+  function postStateNow() {
+    if (applyingState || !stateReady) return;
+    var state = snapshotState();
+
+    // 防止新 Tab 的初始空白计算器把旧状态覆盖掉。
+    // Clear All 以后 hex/dec/bin 会有明确同步动作，因此仍可通过用户输入保存。
+    if (!hasUsefulState(state)) return;
+
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: "REGCALC64_STATE_CHANGED",
+        state: state
+      }, "*");
+    }
+  }
+
+  function schedulePostState() {
+    if (applyingState || !stateReady) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(postStateNow, 120);
+  }
+
+  function forcePostStateNow() {
+    if (applyingState || !stateReady) return;
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: "REGCALC64_STATE_CHANGED",
+        state: snapshotState()
+      }, "*");
+    }
+  }
+  window.regcalc_forceStateSave = forcePostStateNow;
+
+  function ensureBitFieldRows(count) {
+    var rowsRoot = byId("regcalc_bitfieldRows");
+    if (!rowsRoot) return;
+    count = Math.max(1, count || 1);
+    var rows = Array.from(rowsRoot.querySelectorAll(".regcalc-bitfield-row"));
+
+    while (rows.length < count) {
+      var last = rows[rows.length - 1];
+      var addBtn = last && last.querySelector(".regcalc-bitfield-buttons button");
+      if (typeof window.regcalc_addBitFieldRow === "function" && addBtn) {
+        window.regcalc_addBitFieldRow(addBtn);
+      } else if (last) {
+        rowsRoot.appendChild(last.cloneNode(true));
+      } else {
+        break;
+      }
+      rows = Array.from(rowsRoot.querySelectorAll(".regcalc-bitfield-row"));
+    }
+
+    while (rows.length > count) {
+      var lastRow = rows[rows.length - 1];
+      var removeBtn = lastRow && lastRow.querySelector(".regcalc-bitfield-buttons button:nth-child(2)");
+      if (typeof window.regcalc_removeBitFieldRow === "function" && removeBtn) {
+        window.regcalc_removeBitFieldRow(removeBtn);
+      } else if (lastRow) {
+        lastRow.remove();
+      } else {
+        break;
+      }
+      rows = Array.from(rowsRoot.querySelectorAll(".regcalc-bitfield-row"));
+    }
+  }
+
+  function setValue(id, value) {
+    var el = byId(id);
+    if (el) el.value = value || "";
+  }
+
+  function applyState(state) {
+    applyingState = true;
+
+    try {
+      if (hasUsefulState(state)) {
+        setValue("regcalc_hex", state.hex);
+        setValue("regcalc_dec", state.dec);
+        setValue("regcalc_bin", state.bin);
+        setValue("regcalc_human", state.human);
+        setValue("regcalc_shiftLeft", state.shiftLeft);
+        setValue("regcalc_shiftRight", state.shiftRight);
+        setValue("regcalc_shiftShared", state.shiftShared || state.shiftLeft || state.shiftRight);
+        setValue("regcalc_logicMask", state.logicMask);
+        setValue("regcalc_calcInput", state.calcInput);
+        setValue("regcalc_calcResult", state.calcResult);
+
+        var bitFields = Array.isArray(state.bitFields) ? state.bitFields : [];
+        ensureBitFieldRows(Math.max(1, bitFields.length || 1));
+        var rows = Array.from(document.querySelectorAll("#regcalc_bitfieldRows .regcalc-bitfield-row"));
+        rows.forEach(function (row, index) {
+          var item = bitFields[index] || {};
+          var range = row.querySelector(".regcalc-bit-range");
+          var hex = row.querySelector(".regcalc-sub-hex");
+          var dec = row.querySelector(".regcalc-sub-dec");
+          var bin = row.querySelector(".regcalc-sub-bin");
+          if (range) range.value = item.range || "";
+          if (hex) hex.value = item.hex || "";
+          if (dec) dec.value = item.dec || "";
+          if (bin) bin.value = item.bin || "";
+        });
+
+        if (state.hex && typeof window.regcalc_set_text_value === "function") {
+          window.regcalc_set_text_value("hex");
+        } else if (state.dec && typeof window.regcalc_set_text_value === "function") {
+          window.regcalc_set_text_value("dec");
+        } else if (state.bin && typeof window.regcalc_set_text_value === "function") {
+          window.regcalc_set_text_value("bin");
+        }
+
+        setValue("regcalc_calcInput", state.calcInput);
+        setValue("regcalc_calcResult", state.calcResult);
+
+        if (typeof window.regcalc_resizeBinInput === "function") window.regcalc_resizeBinInput();
+        if (typeof window.regcalc_resizeCalcInput === "function") window.regcalc_resizeCalcInput();
+        if (typeof window.regcalc_syncSharedShift === "function") window.regcalc_syncSharedShift();
+        if (typeof window.regcalc_updateAllBitFields === "function") window.regcalc_updateAllBitFields();
+        if (typeof window.regcalc_updateHeaderSummary === "function") window.regcalc_updateHeaderSummary();
+      }
+
+      // 收到父窗口状态以后才允许保存。即使状态为空，也说明初始化流程结束。
+      stateReady = true;
+    } finally {
+      setTimeout(function () { applyingState = false; }, 80);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    var data = event.data || {};
+    if (data.type === "REGCALC64_EXTENSION_META") {
+      regcalcExtensionVersion = String(data.version || "");
+      return;
+    }
+    if (data.type === "REGCALC64_APPLY_STATE") {
+      applyState(data.state || {});
+      return;
+    }
+    if (data.type === "REGCALC64_SHOW_HELP") {
+      if (typeof window.regcalc_showHelp === "function") window.regcalc_showHelp();
+    }
+  });
+
+  window.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("input", schedulePostState, true);
+    document.addEventListener("change", schedulePostState, true);
+    document.addEventListener("click", function (event) {
+      var target = event.target;
+      if (target && target.closest && target.closest("#regcalc-ui")) {
+        setTimeout(schedulePostState, 0);
+      }
+    }, true);
+  });
+
+  window.regcalc_showHelp = function () {
+    var old = document.getElementById("regcalc64_help_overlay");
+    if (old) old.remove();
+
+    var overlay = document.createElement("div");
+    overlay.id = "regcalc64_help_overlay";
+    var versionLabel = regcalcExtensionVersion ? "Chrome Extension v" + regcalcExtensionVersion : "Chrome Extension";
+    overlay.innerHTML = `
+      <div class="regcalc64-help-card">
+        <button class="regcalc64-help-close" type="button" title="Close">×</button>
+        <div class="regcalc64-help-body">
+          <h3>RegCalc64 Help <span class="regcalc64-help-version">${versionLabel}</span></h3>
+          <h4>Features</h4>
+          <ul>
+            <li>Convert 64-bit register values between Hex, Dec and Bin.</li>
+            <li>Click any bit button to toggle 0 / 1 and update the value instantly.</li>
+            <li>Drag across bit buttons to select a range; edit the selection Hex/Dec value directly and sync it to Bit Field.</li>
+            <li>Edit bit fields such as <code>14:12</code>; Width, Hex, Dec and Bin stay synchronized. Use the table-header × to clear all fields and keep one blank row.</li>
+            <li>Use the shared Shift value with &lt;&lt; / &gt;&gt; to shift the current register value.</li>
+            <li>Use Mask with OR / AND / NOT / XOR for quick 64-bit logic operations.</li>
+            <li><code>CLR ALL</code> is the original Clear All action and resets the calculator.</li>
+            <li>Use Expr to calculate expressions such as <code>0x43 + 10</code>, then sync the result back to Hex.</li>
+            <li>The floating calculator shares one state across tabs, like carrying one physical calculator between pages.</li>
+          </ul>
+          <h4>Usage Tips</h4>
+          <ul>
+            <li>Double-click an input box to copy its content.</li>
+            <li>Click the extension icon to show or hide the floating calculator.</li>
+            <li>Drag the title area to move the calculator. Its position will be remembered.</li>
+          </ul>
+
+          <h3>RegCalc64 使用说明</h3>
+          <h4>功能介绍</h4>
+          <ul>
+            <li>支持 64 位寄存器数值在 Hex、Dec、Bin 之间转换。</li>
+            <li>点击任意 bit 按钮，可在 0 / 1 之间切换，并实时更新数值。</li>
+            <li>按住鼠标拖过 bit 可选择连续位域；可直接编辑选区 Hex/Dec，并同步到 Bit Field。</li>
+            <li>支持位域编辑，例如 <code>14:12</code>，并同步显示 W、Hex、Dec、Bin；点击表头 × 可清空全部 Field，仅保留一条空白行。</li>
+            <li>使用同一个 Shift 数值配合 &lt;&lt; / &gt;&gt; 对当前寄存器值左移或右移。</li>
+            <li>Mask 配合 OR / AND / NOT / XOR 可快速执行 64 位逻辑运算。</li>
+            <li><code>CLR ALL</code> 就是原来的 Clear All，用于清空整个计算器现场。</li>
+            <li>Expr 可计算表达式，例如 <code>0x43 + 10</code>，结果可同步回 Hex。</li>
+            <li>悬浮计算器在不同 Tab 之间共享同一份现场，就像把一个实体计算器拿到不同桌面上使用。</li>
+          </ul>
+          <h4>使用提示</h4>
+          <ul>
+            <li>双击输入框可复制当前内容。</li>
+            <li>点击扩展图标可显示或隐藏悬浮计算器。</li>
+            <li>拖动标题区域可移动计算器，位置会自动记住。</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+    var style = document.createElement("style");
+    style.textContent = `
+      #regcalc64_help_overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 23, 42, 0.18);
+        font-family: "JetBrains Mono", "Cascadia Mono", "Consolas", "Microsoft YaHei UI", "Microsoft YaHei", monospace;
+      }
+      .regcalc64-help-card {
+        position: relative;
+        width: min(86%, 390px);
+        max-height: 86%;
+        overflow: auto;
+        padding: 14px 16px 16px;
+        border: 1px solid rgba(203, 213, 225, 0.78);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.96);
+        color: #18212f;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+      }
+      .regcalc64-help-close {
+        position: sticky;
+        float: right;
+        top: 0;
+        width: 22px;
+        height: 22px;
+        border: 0;
+        border-radius: 999px;
+        background: rgba(100, 116, 139, 0.14);
+        color: rgba(15, 23, 42, 0.72);
+        font: 700 16px/22px Arial, sans-serif;
+        cursor: pointer;
+      }
+      .regcalc64-help-close:hover {
+        background: rgba(239, 68, 68, 0.16);
+        color: #b91c1c;
+      }
+      .regcalc64-help-body h3 {
+        margin: 4px 0 8px;
+        font-size: 16px;
+      }
+      .regcalc64-help-version {
+        margin-left: 6px;
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 500;
+      }
+      .regcalc64-help-body h4 {
+        margin: 10px 0 5px;
+        font-size: 13px;
+      }
+      .regcalc64-help-body ul {
+        margin: 0 0 8px 18px;
+        padding: 0;
+      }
+      .regcalc64-help-body li {
+        margin: 3px 0;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+      .regcalc64-help-body code {
+        padding: 1px 4px;
+        border-radius: 4px;
+        background: #f1f5f9;
+        font-family: "JetBrains Mono", "Cascadia Mono", "Consolas", "Microsoft YaHei UI", "Microsoft YaHei", monospace;
+      }
+    `;
+
+    overlay.appendChild(style);
+    document.body.appendChild(overlay);
+
+    overlay.querySelector(".regcalc64-help-close").addEventListener("click", function () {
+      overlay.remove();
+    });
+    overlay.addEventListener("click", function (event) {
+      if (event.target === overlay) overlay.remove();
+    });
+  };
+})();
+</script>
+
+<script id="regcalc64-header-drag-bridge">
+(function () {
+  function bindHeaderDrag() {
+    const header = document.querySelector("#regcalc-ui .regcalc-title-table td");
+    if (!header || header.dataset.regcalcDragBound === "1") return;
+    header.dataset.regcalcDragBound = "1";
+
+    let dragging = false;
+    let pointerId = null;
+    let lastX = 0;
+    let lastY = 0;
+
+    header.addEventListener("pointerdown", function (event) {
+      if (event.button !== 0) return;
+      if (event.target.closest("button,a,input,textarea,select")) return;
+      dragging = true;
+      pointerId = event.pointerId;
+      lastX = event.screenX;
+      lastY = event.screenY;
+      try { header.setPointerCapture(pointerId); } catch {}
+      window.parent.postMessage({ type: "REGCALC64_HEADER_DRAG_START" }, "*");
+      event.preventDefault();
+    });
+
+    header.addEventListener("pointermove", function (event) {
+      if (!dragging || event.pointerId !== pointerId) return;
+      const dx = event.screenX - lastX;
+      const dy = event.screenY - lastY;
+      lastX = event.screenX;
+      lastY = event.screenY;
+      if (dx || dy) {
+        window.parent.postMessage({ type: "REGCALC64_HEADER_DRAG_MOVE", dx: dx, dy: dy }, "*");
+      }
+      event.preventDefault();
+    });
+
+    function endDrag(event) {
+      if (!dragging) return;
+      dragging = false;
+      try { header.releasePointerCapture(pointerId); } catch {}
+      pointerId = null;
+      window.parent.postMessage({ type: "REGCALC64_HEADER_DRAG_END" }, "*");
+      if (event) event.preventDefault();
+    }
+
+    header.addEventListener("pointerup", endDrag);
+    header.addEventListener("pointercancel", endDrag);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bindHeaderDrag, { once: true });
+  } else {
+    bindHeaderDrag();
+  }
+})();
+</script>
+
+
+<script id="regcalc-v030-selection-script">
+(function () {
+  let regcalc_selectionDragStart = null;
+  let regcalc_selectionDragEnd = null;
+  let regcalc_selectionPointerId = null;
+  let regcalc_selectionDidDrag = false;
+  let regcalc_selectionSuppressNextClick = false;
+  let regcalc_selectionCurrent = null;
+  let regcalc_selectionBar = null;
+
+  function regcalc_normalizeSelectionRange(a, b) {
+    const hi = Math.max(Number(a), Number(b));
+    const lo = Math.min(Number(a), Number(b));
+    return { hi, lo, width: hi - lo + 1 };
+  }
+
+  function regcalc_extractSelectionValue(fullValue, hi, lo) {
+    const width = Number(hi) - Number(lo) + 1;
+    const mask = (1n << BigInt(width)) - 1n;
+    return (BigInt(fullValue) >> BigInt(lo)) & mask;
+  }
+
+  function regcalc_getBitButtonFromPoint(x, y) {
+    const hit = document.elementFromPoint(x, y);
+    if (!hit) return null;
+    if (hit.matches && hit.matches('.regcalc-bit-toggle')) return hit;
+    const cell = hit.closest ? hit.closest('.regcalc-bit-cell') : null;
+    return cell ? cell.querySelector('.regcalc-bit-toggle') : null;
+  }
+
+  function regcalc_getButtonBit(button) {
+    if (!button) return null;
+    if (button.dataset.regcalcBit !== undefined) return Number(button.dataset.regcalcBit);
+    const index = button.closest('.regcalc-bit-cell')?.querySelector('.regcalc-bit-index');
+    if (!index) return null;
+    const bit = Number(index.textContent);
+    if (!Number.isInteger(bit) || bit < 0 || bit > 63) return null;
+    button.dataset.regcalcBit = String(bit);
+    return bit;
+  }
+
+  function regcalc_clearSelectionHighlight() {
+    document.querySelectorAll('#regcalc-ui .regcalc-bit-cell.regcalc-selection-active').forEach(cell => {
+      cell.classList.remove('regcalc-selection-active');
+      cell.querySelector('.regcalc-bit-index')?.classList.remove('regcalc-selection-index-active');
+    });
+  }
+
+  function regcalc_renderSelectionHighlight(range) {
+    regcalc_clearSelectionHighlight();
+    if (!range) return;
+    document.querySelectorAll('#regcalc-ui .regcalc-bit-toggle').forEach(button => {
+      const bit = regcalc_getButtonBit(button);
+      if (bit === null || bit < range.lo || bit > range.hi) return;
+      const cell = button.closest('.regcalc-bit-cell');
+      if (!cell) return;
+      cell.classList.add('regcalc-selection-active');
+      cell.querySelector('.regcalc-bit-index')?.classList.add('regcalc-selection-index-active');
+    });
+  }
+
+  function regcalc_formatSelectionRange(range) {
+    return range.hi === range.lo ? `[${range.hi}]` : `[${range.hi}:${range.lo}]`;
+  }
+
+  function regcalc_ensureSelectionBar() {
+    if (regcalc_selectionBar && document.body.contains(regcalc_selectionBar)) return regcalc_selectionBar;
+    const grid = document.querySelector('#regcalc-ui .regcalc-bit-grid');
+    if (!grid) return null;
+
+    const bar = document.createElement('div');
+    bar.id = 'regcalc-bit-selection-bar';
+    bar.className = 'regcalc-bit-selection-bar';
+    bar.innerHTML = `
+      <span id="regcalc-selection-range" class="regcalc-selection-range">[19:12]</span>
+      <span class="regcalc-selection-sep">:</span>
+      <input id="regcalc-selection-hex" class="regcalc-selection-edit" type="text" value="0x0" spellcheck="false" aria-label="Selected field hexadecimal value">
+      <span class="regcalc-selection-sep">=</span>
+      <input id="regcalc-selection-dec" class="regcalc-selection-edit" type="text" value="0" spellcheck="false" aria-label="Selected field decimal value">
+      <span class="regcalc-selection-sep">,</span>
+      <span id="regcalc-selection-width" class="regcalc-selection-width">8bit</span>
+      <button id="regcalc-selection-close" class="regcalc-selection-close" type="button" title="Clear selection" aria-label="Clear selection">×</button>`;
+    grid.insertAdjacentElement('afterend', bar);
+    regcalc_selectionBar = bar;
+
+    const hexInput = bar.querySelector('#regcalc-selection-hex');
+    const decInput = bar.querySelector('#regcalc-selection-dec');
+    const closeButton = bar.querySelector('#regcalc-selection-close');
+    hexInput.addEventListener('change', function () { regcalc_updateSelectionFromHex(this); });
+    decInput.addEventListener('change', function () { regcalc_updateSelectionFromDec(this); });
+    [hexInput, decInput].forEach(input => {
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') { event.preventDefault(); this.blur(); }
+      });
+      input.addEventListener('input', function () { this.classList.remove('is-invalid'); this.removeAttribute('title'); });
+    });
+    closeButton.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      regcalc_clearBitSelection();
+    });
+    return bar;
+  }
+
+  function regcalc_readSelectionValue(range) {
+    try {
+      return regcalc_extractSelectionValue(regcalc_getFullHexValue(), range.hi, range.lo);
+    } catch {
+      return 0n;
+    }
+  }
+
+  function regcalc_refreshSelectionBar() {
+    const range = regcalc_selectionCurrent;
+    const bar = regcalc_ensureSelectionBar();
+    if (!bar) return;
+    if (!range) {
+      bar.classList.remove('is-visible');
+      return;
+    }
+
+    bar.classList.add('is-visible');
+    bar.querySelector('#regcalc-selection-range').textContent = regcalc_formatSelectionRange(range);
+    bar.querySelector('#regcalc-selection-width').textContent = `${range.width}bit`;
+
+    const value = regcalc_readSelectionValue(range);
+    const hexInput = bar.querySelector('#regcalc-selection-hex');
+    const decInput = bar.querySelector('#regcalc-selection-dec');
+    if (document.activeElement !== hexInput) hexInput.value = '0x' + value.toString(16).toUpperCase();
+    if (document.activeElement !== decInput) decInput.value = value.toString(10);
+  }
+
+  function regcalc_showSelection(range) {
+    regcalc_selectionCurrent = range;
+    regcalc_renderSelectionHighlight(range);
+    regcalc_refreshSelectionBar();
+  }
+
+  function regcalc_clearBitSelection() {
+    regcalc_selectionCurrent = null;
+    regcalc_selectionDragStart = null;
+    regcalc_selectionDragEnd = null;
+    regcalc_selectionDidDrag = false;
+    regcalc_clearSelectionHighlight();
+    regcalc_refreshSelectionBar();
+  }
+  window.regcalc_clearBitSelection = regcalc_clearBitSelection;
+
+  function regcalc_findBitFieldRowForRange(range) {
+    const rows = regcalc_getBitFieldRows();
+    for (const row of rows) {
+      const input = row.querySelector('.regcalc-bit-range');
+      const parsed = regcalc_parseBitRange(input?.value || '');
+      if (parsed && parsed.hi === range.hi && parsed.lo === range.lo) return row;
+    }
+    return null;
+  }
+
+  function regcalc_findBlankBitFieldRow() {
+    return regcalc_getBitFieldRows().find(row => {
+      const input = row.querySelector('.regcalc-bit-range');
+      return !input || !input.value.trim();
+    }) || null;
+  }
+
+  function regcalc_syncSelectionToBitField(range) {
+    const rowsRoot = document.getElementById('regcalc_bitfieldRows');
+    if (!rowsRoot || !range) return null;
+
+    let row = regcalc_findBitFieldRowForRange(range);
+    if (!row) row = regcalc_findBlankBitFieldRow();
+    if (!row) {
+      row = regcalc_createBitFieldRow();
+      rowsRoot.appendChild(row);
+    }
+
+    const rangeInput = row.querySelector('.regcalc-bit-range');
+    rangeInput.value = range.hi === range.lo ? String(range.hi) : `${range.hi}:${range.lo}`;
+    regcalc_updateBitFieldRow(row);
+    regcalc_refreshBitFieldButtons();
+    rangeInput.dispatchEvent(new Event('change', { bubbles: true }));
+    return row;
+  }
+
+  function regcalc_setSelectionInputInvalid(input, message) {
+    input.classList.add('is-invalid');
+    input.title = message;
+  }
+
+  function regcalc_commitSelectionValue(input, radix) {
+    const range = regcalc_selectionCurrent;
+    if (!range) return;
+    let row = regcalc_findBitFieldRowForRange(range) || regcalc_syncSelectionToBitField(range);
+    if (!row) return;
+
+    const raw = input.value.trim();
+    let value;
+    try {
+      if (radix === 16) {
+        const clean = raw.replace(/^0x/i, '');
+        if (!clean || !/^[0-9a-f]+$/i.test(clean)) throw new Error('Enter a hexadecimal value.');
+        value = BigInt('0x' + clean);
+      } else {
+        if (!/^\d+$/.test(raw)) throw new Error('Enter a decimal value.');
+        value = BigInt(raw);
+      }
+      const maxValue = (1n << BigInt(range.width)) - 1n;
+      if (value > maxValue) throw new Error(`Value exceeds ${range.width}-bit range.`);
+    } catch (error) {
+      regcalc_setSelectionInputInvalid(input, error.message || 'Invalid value.');
+      return;
+    }
+
+    input.classList.remove('is-invalid');
+    input.removeAttribute('title');
+    const target = radix === 16 ? row.querySelector('.regcalc-sub-hex') : row.querySelector('.regcalc-sub-dec');
+    target.value = radix === 16 ? '0x' + value.toString(16) : value.toString(10);
+    regcalc_updateFromBitField(target, radix === 16 ? 'hex' : 'dec');
+    regcalc_updateBitFieldRow(row);
+    regcalc_refreshSelectionBar();
+  }
+
+  function regcalc_updateSelectionFromHex(input) {
+    regcalc_commitSelectionValue(input, 16);
+  }
+
+  function regcalc_updateSelectionFromDec(input) {
+    regcalc_commitSelectionValue(input, 10);
+  }
+
+  function regcalc_selectionStart(button, event) {
+    if (event.button !== 0) return;
+    const bit = regcalc_getButtonBit(button);
+    if (bit === null) return;
+    regcalc_selectionDragStart = bit;
+    regcalc_selectionDragEnd = bit;
+    regcalc_selectionDidDrag = false;
+    regcalc_selectionPointerId = event.pointerId;
+    try { button.setPointerCapture(event.pointerId); } catch {}
+  }
+
+  function regcalc_selectionMove(event) {
+    if (regcalc_selectionDragStart === null || regcalc_selectionPointerId !== event.pointerId) return;
+    if ((event.buttons & 1) === 0) return;
+    const button = regcalc_getBitButtonFromPoint(event.clientX, event.clientY);
+    const bit = regcalc_getButtonBit(button);
+    if (bit === null || bit === regcalc_selectionDragEnd) return;
+    regcalc_selectionDragEnd = bit;
+    if (bit !== regcalc_selectionDragStart) regcalc_selectionDidDrag = true;
+    if (regcalc_selectionDidDrag) {
+      regcalc_showSelection(regcalc_normalizeSelectionRange(regcalc_selectionDragStart, regcalc_selectionDragEnd));
+    }
+  }
+
+  function regcalc_selectionEnd(event) {
+    if (regcalc_selectionDragStart === null || regcalc_selectionPointerId !== event.pointerId) return;
+    if (regcalc_selectionDidDrag) {
+      const range = regcalc_normalizeSelectionRange(regcalc_selectionDragStart, regcalc_selectionDragEnd);
+      regcalc_showSelection(range);
+      regcalc_syncSelectionToBitField(range);
+      regcalc_refreshSelectionBar();
+      regcalc_selectionSuppressNextClick = true;
+    }
+    regcalc_selectionDragStart = null;
+    regcalc_selectionDragEnd = null;
+    regcalc_selectionPointerId = null;
+    regcalc_selectionDidDrag = false;
+  }
+
+  function regcalc_installBitSelection() {
+    regcalc_ensureSelectionBar();
+    document.querySelectorAll('#regcalc-ui .regcalc-bit-toggle').forEach(button => {
+      regcalc_getButtonBit(button);
+      button.addEventListener('pointerdown', function (event) { regcalc_selectionStart(button, event); });
+      button.addEventListener('click', function (event) {
+        if (!regcalc_selectionSuppressNextClick) return;
+        regcalc_selectionSuppressNextClick = false;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }, true);
+    });
+
+    document.addEventListener('pointermove', regcalc_selectionMove, true);
+    document.addEventListener('pointerup', regcalc_selectionEnd, true);
+    document.addEventListener('pointercancel', regcalc_selectionEnd, true);
+
+    // Keep the selection readout synchronized when the register changes through existing controls.
+    document.addEventListener('input', function (event) {
+      if (!regcalc_selectionCurrent) return;
+      if (event.target?.closest?.('#regcalc-bit-selection-bar')) return;
+      setTimeout(regcalc_refreshSelectionBar, 0);
+    }, true);
+    document.addEventListener('click', function (event) {
+      if (!regcalc_selectionCurrent) return;
+      if (event.target?.closest?.('#regcalc-bit-selection-bar')) return;
+      setTimeout(regcalc_refreshSelectionBar, 0);
+    }, true);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', regcalc_installBitSelection, { once: true });
+  } else {
+    regcalc_installBitSelection();
+  }
+
+  window.regcalc_normalizeSelectionRange = regcalc_normalizeSelectionRange;
+  window.regcalc_extractSelectionValue = regcalc_extractSelectionValue;
+  window.regcalc_syncSelectionToBitField = regcalc_syncSelectionToBitField;
+  window.regcalc_updateSelectionFromHex = regcalc_updateSelectionFromHex;
+  window.regcalc_updateSelectionFromDec = regcalc_updateSelectionFromDec;
+  window.regcalc_clearBitSelection = regcalc_clearBitSelection;
+  window.regcalc_selectionSuppressNextClick = regcalc_selectionSuppressNextClick;
+})();
+</script>
+
+</body>
+</html>

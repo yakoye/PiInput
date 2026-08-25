@@ -156,7 +156,8 @@ private:
         const std::string& input,
         const std::vector<std::string>& syllables,
         bool allow_short_datetime_aliases,
-        std::size_t result_limit) const;
+        std::size_t result_limit,
+        const SettingsSnapshot& settings) const;
 
     struct PrefixQueryCache {
         std::shared_mutex state_mutex;

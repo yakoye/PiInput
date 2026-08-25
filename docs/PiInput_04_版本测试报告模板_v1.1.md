@@ -1,6 +1,6 @@
 # PiInput 版本测试报告模板
 
-> Release Qualification Report Template · v1.1  
+> Release Qualification Report Template · v1.2
 > 使用方式：复制本文件并命名为 `PiInput_<version>_版本测试报告_<date>.md`
 
 ## 0. 填写规则
@@ -316,6 +316,11 @@ p0_real_host_matrix=NOT_RUN
 | 包内/安装后 Host 与 TSF 哈希对应 |  |  |
 | Controlled TSF 实际加载 DLL + 物理键 smoke |  |  |
 | 公开 Release ZIP 回下载与本地/sidecar 哈希 |  |  |
+| 内置计算器/程序员计算器/画图别名与候选位置 |  |  |
+| `kuaijie` 撤销别名不产生动作候选 |  |  |
+| 自定义快捷 3 槽配置往返、动作时序与失败恢复 |  |  |
+| `bin` 中 RegCalc HTML/CSS/JS 三项运行时资产完整 |  |  |
+| 同一已安装候选实际打开系统工具/HTML/自定义目标 |  |  |
 
 ## 15. 未关闭问题
 

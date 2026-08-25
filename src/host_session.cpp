@@ -550,9 +550,18 @@ HostReply HostSession::choose(const std::uint64_t candidate_id) {
             const CandidateKind kind = listed[index].candidate.evidence.kind;
             if (kind == CandidateKind::symbol_tool_action ||
                 kind == CandidateKind::emoji_tool_action ||
-                kind == CandidateKind::settings_action) {
+                kind == CandidateKind::settings_action ||
+                kind == CandidateKind::launch_action) {
+                const std::string launch_target =
+                    listed[index].candidate.evidence.action_target;
+                if (kind == CandidateKind::launch_action && launch_target.empty()) {
+                    return reply(false, HostAction::none);
+                }
                 chinese_.clear();
                 advance_generation(true);
+                if (kind == CandidateKind::launch_action) {
+                    return reply(true, HostAction::launch_program, launch_target);
+                }
                 return reply(true,
                     kind == CandidateKind::settings_action
                         ? HostAction::launch_settings

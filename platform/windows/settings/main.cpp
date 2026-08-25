@@ -45,6 +45,9 @@ enum class Field : std::uint8_t {
     english_enabled, english_builtin, english_user_dictionary, english_user_learning,
     english_items_per_row,
     hot_reload, prefix_beam_width, prefix_scan_limit,
+    shortcut_1_aliases, shortcut_1_position, shortcut_1_name, shortcut_1_target,
+    shortcut_2_aliases, shortcut_2_position, shortcut_2_name, shortcut_2_target,
+    shortcut_3_aliases, shortcut_3_position, shortcut_3_name, shortcut_3_target,
 };
 
 struct Row final {
@@ -61,7 +64,7 @@ constexpr std::array<const wchar_t*, 5U> kNone{};
 constexpr std::array<const wchar_t*, 5U> kRowKeys{
     L"下一行", L"上一行", nullptr, nullptr, nullptr};
 
-constexpr std::array<Row, 31U> kRows{{
+constexpr std::array<Row, 43U> kRows{{
     {0, Kind::choice, Field::schema, L"输入方案",
         {L"全拼", L"小鹤双拼", L"自然码", L"微软双拼", L"智能 ABC"}, 0U, 0U},
     {0, Kind::choice, Field::default_language, L"默认输入语言",
@@ -102,10 +105,23 @@ constexpr std::array<Row, 31U> kRows{{
     {4, Kind::toggle, Field::hot_reload, L"保存后自动生效", kNone, 0U, 0U},
     {4, Kind::number, Field::prefix_beam_width, L"前缀搜索宽度", kNone, 8U, 128U},
     {4, Kind::number, Field::prefix_scan_limit, L"前缀扫描上限", kNone, 128U, 16384U},
+
+    {5, Kind::text, Field::shortcut_1_aliases, L"快捷 1：触发码", kNone, 0U, 0U},
+    {5, Kind::number, Field::shortcut_1_position, L"快捷 1：候选位置", kNone, 2U, 9U},
+    {5, Kind::text, Field::shortcut_1_name, L"快捷 1：名称", kNone, 0U, 0U},
+    {5, Kind::text, Field::shortcut_1_target, L"快捷 1：调用程序", kNone, 0U, 0U},
+    {5, Kind::text, Field::shortcut_2_aliases, L"快捷 2：触发码", kNone, 0U, 0U},
+    {5, Kind::number, Field::shortcut_2_position, L"快捷 2：候选位置", kNone, 2U, 9U},
+    {5, Kind::text, Field::shortcut_2_name, L"快捷 2：名称", kNone, 0U, 0U},
+    {5, Kind::text, Field::shortcut_2_target, L"快捷 2：调用程序", kNone, 0U, 0U},
+    {5, Kind::text, Field::shortcut_3_aliases, L"快捷 3：触发码", kNone, 0U, 0U},
+    {5, Kind::number, Field::shortcut_3_position, L"快捷 3：候选位置", kNone, 2U, 9U},
+    {5, Kind::text, Field::shortcut_3_name, L"快捷 3：名称", kNone, 0U, 0U},
+    {5, Kind::text, Field::shortcut_3_target, L"快捷 3：调用程序", kNone, 0U, 0U},
 }};
 
-constexpr std::array<const wchar_t*, 5U> kPages{
-    L"输入", L"候选窗", L"标点符号", L"英文", L"高级"};
+constexpr std::array<const wchar_t*, 6U> kPages{
+    L"输入", L"候选窗", L"标点符号", L"英文", L"高级", L"快捷调用"};
 
 struct AppState final {
     std::filesystem::path settings_path;
@@ -401,6 +417,9 @@ void load_into_controls(AppState& state) {
     const auto number = [&state](const std::size_t index, const unsigned value) {
         select_number(state.controls[index], value);
     };
+    const auto text = [&state](const std::size_t index, const std::string& value) {
+        SetWindowTextW(state.controls[index], piinput::utf8_to_wide(value).c_str());
+    };
     const auto row_index = [](const piinput::RowNavigationAction action) {
         return action == piinput::RowNavigationAction::previous_row ? 1 : 0;
     };
@@ -453,6 +472,18 @@ void load_into_controls(AppState& state) {
         case Field::hot_reload: check(index, settings.general.hot_reload); break;
         case Field::prefix_beam_width: number(index, settings.pinyin.prefix_beam_width); break;
         case Field::prefix_scan_limit: number(index, settings.pinyin.prefix_scan_limit); break;
+        case Field::shortcut_1_aliases: text(index, settings.custom_shortcuts[0].aliases); break;
+        case Field::shortcut_1_position: number(index, settings.custom_shortcuts[0].position); break;
+        case Field::shortcut_1_name: text(index, settings.custom_shortcuts[0].name); break;
+        case Field::shortcut_1_target: text(index, settings.custom_shortcuts[0].target); break;
+        case Field::shortcut_2_aliases: text(index, settings.custom_shortcuts[1].aliases); break;
+        case Field::shortcut_2_position: number(index, settings.custom_shortcuts[1].position); break;
+        case Field::shortcut_2_name: text(index, settings.custom_shortcuts[1].name); break;
+        case Field::shortcut_2_target: text(index, settings.custom_shortcuts[1].target); break;
+        case Field::shortcut_3_aliases: text(index, settings.custom_shortcuts[2].aliases); break;
+        case Field::shortcut_3_position: number(index, settings.custom_shortcuts[2].position); break;
+        case Field::shortcut_3_name: text(index, settings.custom_shortcuts[2].name); break;
+        case Field::shortcut_3_target: text(index, settings.custom_shortcuts[2].target); break;
         }
     }
 }
@@ -469,6 +500,13 @@ void store_from_controls(AppState& state) {
     const auto row_action = [](const int index) {
         return index == 1 ? piinput::RowNavigationAction::previous_row
                           : piinput::RowNavigationAction::next_row;
+    };
+    const auto text = [&state](const std::size_t index) {
+        std::wstring value(4096U, L' ');
+        const int length = GetWindowTextW(
+            state.controls[index], value.data(), static_cast<int>(value.size()));
+        value.resize(length > 0 ? static_cast<std::size_t>(length) : 0U);
+        return piinput::wide_to_utf8(value.c_str());
     };
     for (std::size_t index = 0U; index < kRows.size(); ++index) {
         const auto& row = kRows[index];
@@ -529,6 +567,18 @@ void store_from_controls(AppState& state) {
         case Field::hot_reload: settings.general.hot_reload = checked(index); break;
         case Field::prefix_beam_width: settings.pinyin.prefix_beam_width = number(); break;
         case Field::prefix_scan_limit: settings.pinyin.prefix_scan_limit = number(); break;
+        case Field::shortcut_1_aliases: settings.custom_shortcuts[0].aliases = text(index); break;
+        case Field::shortcut_1_position: settings.custom_shortcuts[0].position = number(); break;
+        case Field::shortcut_1_name: settings.custom_shortcuts[0].name = text(index); break;
+        case Field::shortcut_1_target: settings.custom_shortcuts[0].target = text(index); break;
+        case Field::shortcut_2_aliases: settings.custom_shortcuts[1].aliases = text(index); break;
+        case Field::shortcut_2_position: settings.custom_shortcuts[1].position = number(); break;
+        case Field::shortcut_2_name: settings.custom_shortcuts[1].name = text(index); break;
+        case Field::shortcut_2_target: settings.custom_shortcuts[1].target = text(index); break;
+        case Field::shortcut_3_aliases: settings.custom_shortcuts[2].aliases = text(index); break;
+        case Field::shortcut_3_position: settings.custom_shortcuts[2].position = number(); break;
+        case Field::shortcut_3_name: settings.custom_shortcuts[2].name = text(index); break;
+        case Field::shortcut_3_target: settings.custom_shortcuts[2].target = text(index); break;
         }
     }
 }

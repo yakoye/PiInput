@@ -34,6 +34,42 @@ enum class CandidateShortcutKind {
     settings,
 };
 
+struct LaunchShortcut final {
+    std::string label;
+    std::string reading;
+    std::string target;
+    std::string fallback_text;
+    std::size_t position{};  // one-based candidate number
+};
+
+[[nodiscard]] bool calculator_shortcut(const std::string_view key) noexcept {
+    return key == "jisuanqi" || key == "jisrqi" || key == "jsq" ||
+        key == "jisrq" || key == "calc" || key == "reg";
+}
+
+[[nodiscard]] bool paint_shortcut(const std::string_view key) noexcept {
+    return key == "hxtu" || key == "ht" || key == "huatu" ||
+        key == "mspaint" || key == "msp";
+}
+
+[[nodiscard]] bool configured_alias_matches(
+    const std::string_view aliases,
+    const std::string_view key) noexcept {
+    std::size_t offset = 0U;
+    while (offset < aliases.size()) {
+        const auto separator = aliases.find_first_of(",; \t", offset);
+        std::string alias(aliases.substr(offset,
+            separator == std::string_view::npos ? std::string_view::npos : separator - offset));
+        std::transform(alias.begin(), alias.end(), alias.begin(), [](const unsigned char ch) {
+            return static_cast<char>(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch);
+        });
+        if (alias == key) return true;
+        if (separator == std::string_view::npos) break;
+        offset = separator + 1U;
+    }
+    return false;
+}
+
 [[nodiscard]] CandidateShortcutKind candidate_shortcut_kind(
     const std::string_view key) noexcept {
     if (key == "fh" || key == "fuhao" || key == "fuh" || key == "fuhc") {
@@ -728,7 +764,8 @@ void Engine::splice_symbol_shortcuts(
     const std::string& input,
     const std::vector<std::string>& syllables,
     const bool allow_short_datetime_aliases,
-    const std::size_t result_limit) const {
+    const std::size_t result_limit,
+    const SettingsSnapshot& settings) const {
 
 
     std::string reading;
@@ -744,6 +781,14 @@ void Engine::splice_symbol_shortcuts(
     std::string datetime_label;
     CandidateShortcutKind action_kind{CandidateShortcutKind::none};
     std::string action_reading;
+    std::vector<LaunchShortcut> launch_shortcuts;
+    const auto add_launch = [&](LaunchShortcut shortcut) {
+        const bool exists = std::any_of(launch_shortcuts.begin(), launch_shortcuts.end(),
+            [&](const LaunchShortcut& current) {
+                return current.target == shortcut.target && current.label == shortcut.label;
+            });
+        if (!exists) launch_shortcuts.push_back(std::move(shortcut));
+    };
     const auto collect = [&](const std::string& key) {
         if (key.empty()) return;
         const bool datetime_allowed = allow_short_datetime_aliases ||
@@ -758,6 +803,21 @@ void Engine::splice_symbol_shortcuts(
             action_kind = candidate_shortcut_kind(key);
             if (action_kind != CandidateShortcutKind::none) action_reading = key;
         }
+        if (calculator_shortcut(key)) {
+            add_launch({"🖩计算器", key, "system:calculator", "计算器", 2U});
+            add_launch({"🖩程序员计算器", key, "package:regcalc64", "计算器", 3U});
+        }
+        if (paint_shortcut(key)) {
+            add_launch({"🎨画图", key, "system:mspaint", "画图", 2U});
+        }
+        for (const auto& shortcut : settings.custom_shortcuts) {
+            if (shortcut.aliases.empty() || shortcut.name.empty() || shortcut.target.empty() ||
+                !configured_alias_matches(shortcut.aliases, key)) {
+                continue;
+            }
+            add_launch({shortcut.name, key, "custom:" + shortcut.target,
+                "快捷调用", static_cast<std::size_t>(shortcut.position)});
+        }
         const auto found = symbol_shortcuts_.find(key);
         if (found == symbol_shortcuts_.end()) return;
         for (const auto& symbol : found->second) {
@@ -769,7 +829,7 @@ void Engine::splice_symbol_shortcuts(
     collect(reading);
     if (input != reading) collect(input);
     if (wanted.empty() && datetime_label.empty() &&
-        action_kind == CandidateShortcutKind::none) return;
+        action_kind == CandidateShortcutKind::none && launch_shortcuts.empty()) return;
 
     // A symbol the dictionary already offered stays where the ranking put it.
     std::erase_if(wanted, [&](const std::string& symbol) {
@@ -841,7 +901,7 @@ void Engine::splice_symbol_shortcuts(
     inline_candidates.resize(take_inline);
     trailing.resize(take_trailing);
     const std::size_t added = take_inline + take_trailing;
-    if (added == 0U) return;
+    if (added == 0U && launch_shortcuts.empty()) return;
     const std::size_t keep_ordinary = result_limit - added;
     if (results.size() > keep_ordinary) results.resize(keep_ordinary);
 
@@ -852,6 +912,28 @@ void Engine::splice_symbol_shortcuts(
     results.insert(results.end(),
         std::make_move_iterator(trailing.begin()),
         std::make_move_iterator(trailing.end()));
+
+    if (!launch_shortcuts.empty() && results.empty() && result_limit >= 2U) {
+        EngineCandidate fallback = make(launch_shortcuts.front().fallback_text);
+        fallback.evidence.kind = CandidateKind::exact_lexicon;
+        results.push_back(std::move(fallback));
+    }
+    std::stable_sort(launch_shortcuts.begin(), launch_shortcuts.end(),
+        [](const LaunchShortcut& left, const LaunchShortcut& right) {
+            return left.position < right.position;
+        });
+    for (const auto& shortcut : launch_shortcuts) {
+        if (shortcut.position == 0U || shortcut.position > result_limit) continue;
+        EngineCandidate action = make(shortcut.label);
+        action.pinyin = shortcut.reading;
+        action.evidence.kind = CandidateKind::launch_action;
+        action.evidence.action_target = shortcut.target;
+        if (results.size() >= result_limit) results.pop_back();
+        const std::size_t action_at =
+            (std::min)(shortcut.position - 1U, results.size());
+        results.insert(results.begin() + static_cast<std::ptrdiff_t>(action_at),
+            std::move(action));
+    }
 }
 
 std::vector<EngineCandidate> Engine::query(
@@ -1080,7 +1162,10 @@ std::vector<EngineCandidate> Engine::query(
             }
         }
     } catch (const std::invalid_argument&) {
-        return {};
+        // Raw command aliases such as calc, reg and mspaint are intentionally
+        // not required to be valid pinyin. Continue with an empty parse set so
+        // the shortcut splicer can still supply their action candidates; an
+        // unrelated invalid input still ends with an empty result.
     }
 
     struct RankedCandidate {
@@ -1515,7 +1600,8 @@ std::vector<EngineCandidate> Engine::query(
         primary_parse != nullptr ? primary_parse->complete_syllables
                                  : std::vector<std::string>{},
         is_full_pinyin_schema(schema),
-        result_limit);
+        result_limit,
+        settings);
     return results;
 }
 

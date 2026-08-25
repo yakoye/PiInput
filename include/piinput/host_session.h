@@ -54,6 +54,7 @@ enum class HostAction : std::uint8_t {
     pass_through,
     launch_symbol_tool,
     launch_settings,
+    launch_program,
 };
 
 enum class CandidateManagementAction : std::uint8_t {

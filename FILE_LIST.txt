@@ -632,5 +632,8 @@ tools/caret_demo/main.cpp
 tools/dictionary_builder/main.cpp
 tools/ime_cli/main.cpp
 tools/lexicon_compiler/main.cpp
+tools/regcalc/RegCalc64Tool.html
+tools/regcalc/shared-ui.css
+tools/regcalc/shared-ui.js
 tools/scel_converter/main.cpp
 VERSION

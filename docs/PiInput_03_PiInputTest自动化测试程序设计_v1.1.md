@@ -1,7 +1,7 @@
 # PiInputTest 自动化测试程序设计
 
-> Automation Harness Design · v1.1  
-> 更新日期：2026-08-23
+> Automation Harness Design · v1.2
+> 更新日期：2026-08-25
 
 ## 修改记录
 
@@ -9,10 +9,11 @@
 |---|---|---|
 | v1.0 | 初版，提出独立自动化框架 | 2026-08-23 |
 | v1.1 | 改为增量建设：复用现有 CTest、Host fixture、PowerShell 回归、诊断和发布脚本；补充 Smart Punctuation、包闭环、资源曲线与真实宿主分层 | 2026-08-23 |
+| v1.2 | 将候选启动动作、设置往返、异步 edit 时序和随包工具资产纳入现有测试层 | 2026-08-25 |
 
 ## 1. 设计结论
 
-PiInputTest 不应先另起一个与仓库现有测试平行的大工程。当前已经有 65 个 CTest、原生 C++ fixture、Host 进程测试、PowerShell 回归、结构化语料、benchmark、Windows CI、包闭环和 soak 脚本；新增项包含 Controlled TSF Host 与安装/卸载 UAC manifest 自检。
+PiInputTest 不应先另起一个与仓库现有测试平行的大工程。当前已经有 66 个 CTest、原生 C++ fixture、Host 进程测试、PowerShell 回归、结构化语料、benchmark、Windows CI、包闭环和 soak 脚本；新增项包含候选动作、Controlled TSF Host 与安装/卸载 UAC manifest 自检。
 
 当前已完成受控 Win32 TSF Host、物理扫描码注入、焦点/context 控制、最终文本 Oracle，以及可选的真实 PiInput profile/DLL 身份模式。下一阶段继续把这些执行器纳入统一“场景与证据层”，补齐仍缺失的能力：
 
@@ -26,7 +27,7 @@ PiInputTest 不应先另起一个与仓库现有测试平行的大工程。当�
 
 | 资产 | 当前能力 | 不应误认为 |
 |---|---|---|
-| CTest 65 项 | 当前 Release 全量 65/65 已通过，包含受控宿主和 UAC manifest 自检 | 真实应用矩阵已自动化或当前冻结候选再次全量 65/65 PASS |
+| CTest 66 项 | 当前 Release 全量 66/66 已通过，包含候选动作、受控宿主和 UAC manifest 自检 | 真实应用矩阵已自动化或当前冻结候选再次全量 66/66 PASS |
 | `piinput-host-client-fixture` | 驱动真实 Host 协议与负载 | 驱动了 TSF/Notepad++ |
 | `host_process_tests.ps1` | Host health、协议、身份、性能 smoke | 端到端按键到 UI 延迟 |
 | `structured_corpus_regression.ps1` | 313 条结构化语料和 59 条专业词 | 用户真实键盘/候选 UI 验收 |
@@ -335,6 +336,10 @@ CI 必须上传：CTest `LastTest.log`、统一 `result.json`、artifact manifes
 2. TSF/App 持续控制器、资源采样器和 fixture smoke 已完成；当前候选真实 smoke/8h 待执行。
 3. 未签名包静态闭环已通过；安装/卸载主流程为当前用户 `asInvoker`，窄范围 UAC 只处理机器 profile/category 与 HKLM COM，用户数据和 Host 保持原用户令牌；实际闭环仍受正式证书和标准用户/应用控制干净机证据阻塞。
 4. WPF/WinUI/Qt 与更多真实应用待扩展。
+
+### 18.1 候选动作自动化
+
+候选动作不通过桌面点击模拟来判定。L0 验证别名、候选位置、名称和目标；L1 验证 Host 协议往返、组合清理、同步/异步 edit 成败顺序；L2 验证设置文件往返和发布目录资产；L3 才由真人确认系统应用或自定义目标实际打开。测试必须包含撤销别名的负例，并保证自动回归不启动 GUI、不抢占工作桌面。
 
 ## 19. 推荐目录
 

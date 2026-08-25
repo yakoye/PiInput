@@ -1438,6 +1438,40 @@ void test_candidate_two_launches_tools_without_committing_the_label() {
             settings_reply.action == piinput::HostAction::launch_settings &&
             settings_reply.text.empty() && settings_reply.snapshot.raw.empty(),
         "candidate 2 for sz clears composition and requests the settings application");
+
+    const auto calculator = choose_second("jsq");
+    check(calculator.accepted && calculator.action == piinput::HostAction::launch_program &&
+            calculator.text == "system:calculator" && calculator.snapshot.raw.empty(),
+        "candidate 2 for jsq launches the Windows calculator after clearing composition");
+
+    type(session, "jsq");
+    check(session.snapshot().candidates.size() >= 3U,
+        "calculator shortcut exposes a third candidate");
+    const auto programmer = session.apply({
+        .kind = piinput::HostKeyKind::select_digit,
+        .character = '3',
+    });
+    check(programmer.accepted && programmer.action == piinput::HostAction::launch_program &&
+            programmer.text == "package:regcalc64" && programmer.snapshot.raw.empty(),
+        "candidate 3 for jsq launches the bundled programmer calculator");
+
+    const auto paint = choose_second("msp");
+    check(paint.accepted && paint.action == piinput::HostAction::launch_program &&
+            paint.text == "system:mspaint" && paint.snapshot.raw.empty(),
+        "candidate 2 for msp launches Windows Paint");
+
+    auto custom_settings = piinput::default_settings();
+    custom_settings.custom_shortcuts[0] = {
+        "github,gh", 2U, "🌐GitHub", "https://github.com"};
+    piinput::HostSession custom_session(engine, nullptr, custom_settings, "full");
+    type(custom_session, "github");
+    const auto custom = custom_session.apply({
+        .kind = piinput::HostKeyKind::select_digit,
+        .character = '2',
+    });
+    check(custom.accepted && custom.action == piinput::HostAction::launch_program &&
+            custom.text == "custom:https://github.com" && custom.snapshot.raw.empty(),
+        "configured candidate action carries its launch target without committing the label");
     std::filesystem::remove(lexicon_path);
 }
 

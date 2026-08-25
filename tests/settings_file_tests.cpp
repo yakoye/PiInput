@@ -184,6 +184,8 @@ void test_every_option_round_trips_without_disturbing_the_file() {
     loaded.english.enabled = true;
     loaded.english.items_per_row = 7U;
     loaded.general.symbol_tool = "D:/tools/yesymbol.exe";
+    loaded.custom_shortcuts[0] = {
+        "calc,jsq", 3U, "My calculator", "D:/tools/calc.html"};
     check(piinput::windows::save_all_settings_atomic(path, loaded, error),
         "every option saves");
 
@@ -207,6 +209,8 @@ void test_every_option_round_trips_without_disturbing_the_file() {
     check(reloaded.english.items_per_row == 7U, "english items_per_row round trips");
     check(reloaded.general.symbol_tool == "D:/tools/yesymbol.exe",
         "the tray's symbol tool path round trips");
+    check(reloaded.custom_shortcuts[0] == loaded.custom_shortcuts[0],
+        "custom shortcut aliases, position, name, and target round trip");
 
     const auto text = read_text(path);
     check(text.find("# a comment the user wrote") != std::string::npos,
@@ -215,6 +219,9 @@ void test_every_option_round_trips_without_disturbing_the_file() {
         "a key this build does not know survives a save");
     check(text.find("[punctuation]") != std::string::npos,
         "a section the file never had is appended");
+    check(text.find("[shortcuts]") != std::string::npos &&
+            text.find("target_1=D:/tools/calc.html") != std::string::npos,
+        "custom shortcut section is appended with its launch target");
     std::filesystem::remove_all(directory);
 }
 

@@ -834,3 +834,12 @@ v0.6.6 宣称修复的两个问题在真机上都没解决，两段录屏经进�
 - 已安装构建 `0.7.14+53395fffe054` 复核显示：永久 TSF DLL 位于 `C:\Program Files\PiInput\Runtime\Shim`，当前 Host、`yesymbol.exe` 和 `PiInput-Settings.exe` 位于 `%LOCALAPPDATA%\PiInput\bin`；原实现使用 DLL 同目录，因此候选 2 的动作已经正确返回但最终启动目标错误；
 - TSF 现在复用传输层的 `CurrentHostPath` 解析结果，以活动 Host 的父目录定位符号和设置程序；自定义 `symbol_tool` 路径仍优先；
 - 路径解析加入单元回归，Windows 源码门禁固定两个候选动作都必须经过活动 Host 路径。自动测试不主动启动图形程序，真实启动保留为安装后人工验收。
+
+## 12.49 v0.7.14 计算器、画图与自定义快捷调用
+
+- 计算器内置别名为 `jisuanqi/jisrqi/jsq/jisrq/calc/reg`：候选 2 调 Windows 计算器，候选 3 调随包 `RegCalc64Tool.html`；用户误输入的“快捷/kuaijie”已明确排除并有负向回归；
+- 画图内置别名为 `hxtu/ht/huatu/mspaint/msp`，候选 2 调 Windows 画图；
+- 设置增加“快捷调用”页，固定提供 3 个用户槽，每槽保存多个纯字母别名、2～9 候选位置、显示名称和目标。目标可为 EXE、HTML、文件、URL、环境变量路径；`cmd:` 前缀显式通过命令解释器执行；
+- 动作目标进入 Host 协议但不作为正文或学习候选。Host 清理组合后才返回 launch action，Shim 只有在同步或异步 cancel edit 成功后才调用目标；空目标在清理前拒绝；
+- 从 RegCalcTextTool 取入 `RegCalc64Tool.html`、`shared-ui.css`、`shared-ui.js`，直接安装到活动版本 `bin`。CMake、打包脚本、静态包闭环和 Windows 源码门禁共同要求三项资产存在；
+- 引擎别名/候选位置、撤销别名、设置解析与保存、Host 会话、协议往返、CompositionMirror 时序均有自动回归；系统 GUI 与 HTML 的真实拉起仍留给同一已安装候选的人工验收，自动化不抢用户桌面。

@@ -1,7 +1,7 @@
 # PiInput QA 测试体系手册
 
-> QA System Handbook · v1.1  
-> 更新日期：2026-08-23
+> QA System Handbook · v1.2
+> 更新日期：2026-08-25
 
 ## 修改记录
 
@@ -9,6 +9,7 @@
 |---|---|---|
 | v1.0 | 将测试规范、用例、自动化设计和报告模板合并归档 | 2026-08-23 |
 | v1.1 | 改为 QA 总入口和治理手册；不再复制子文档正文；纳入 Smart Punctuation 与当前实现成熟度；恢复 Word 初稿稳定 Case ID 语义和遗漏的质量/Fuzz/资源字段 | 2026-08-23 |
+| v1.2 | 将候选启动动作和随包工具资产纳入跨文档追踪与发布判定 | 2026-08-25 |
 
 ## 1. 手册定位
 
@@ -54,7 +55,7 @@ Word v1.0/v1.1 文件作为初稿归档；上述 Markdown 是后续工程执行�
 
 | 领域 | 成熟度 | 说明 | 下一完成条件 |
 |---|---|---|---|
-| 核心拼音/候选/Host | 可持续回归 | 当前标准 Release 构建及 65/65 已通过；Controlled TSF Host 与 UAC manifest 自检已纳入 | 冻结候选再次 clean 重跑并归档 |
+| 核心拼音/候选/Host | 可持续回归 | 当前标准 Release 构建及 66/66 已通过；候选动作、Controlled TSF Host 与 UAC manifest 自检已纳入 | 冻结候选再次 clean 重跑并归档 |
 | 结构化语料/专业词 | 已实现 | 313 条总语料，59 条专业词；13 个缺口已补数据 | 固定候选构建报告归档 |
 | 敏感输入 | 组件级完成 | InputScope 策略与 TSF 旁路已实现；Controlled TSF Host 显式发布 Password/Numeric PIN，真实 profile Oracle 已写 | 当前候选受控实跑及浏览器/WinUI/凭据矩阵 |
 | 大词库 mmap | 已实现，Host 8h 运行中 | Host/benchmark 可报告映射状态；短时稳态通过 | 完整 8h/24h 曲线与真实 TSF soak |
@@ -246,10 +247,11 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 
 | 需求族 | 规范/Gate | 稳定 Case ID | 自动化/执行设计 | 报告落点 | 当前结论 |
 |---|---|---|---|---|---|
-| 构建身份与回归 | 01 G0/G1 | `BUILD-001..008` | 03 L0–L2、CI | 04 §1/2/4/5 | 当前 Release 65/65；统一 result/manifest 已接入，冻结候选 clean 重跑与在线 run 待完成 |
+| 构建身份与回归 | 01 G0/G1 | `BUILD-001..008` | 03 L0–L2、CI | 04 §1/2/4/5 | 当前 Release 66/66；统一 result/manifest 已接入，冻结候选 clean 重跑与在线 run 待完成 |
 | 输入完整性/状态机 | 01 G2 | `IME-BASIC-*`、`IME-FOCUS-*`、`IME-SW-*` | 03 Controller/Oracle/Controlled Host | 04 §5/6/9 | 组件较完整，受控/真实宿主压力未完 |
 | 敏感输入 | 01 G3 | `PRIV-001..006`、`SP-PRIV-001` | 03 scope event/Oracle | 04 §7/8 | 策略已实现，真实输入框矩阵未完 |
 | 智能标点 | 01 G4、05 | `SP-MIX-001..009`、`SP-STATE-*`、`SP-HOST-*` | 03 §8、Controlled Host | 04 §7 | 核心子集和 Notepad++ 完成，完整规范/跨宿主未完 |
+| 候选工具动作 | 01 G2/G7、05 | `IME-EDGE-006..013` | 03 §18.1、Host/TSF/包门禁 | 04 §14 | L0/L1 与资产闭环已实现；同一安装候选的真实启动待验收 |
 | 真实应用/DPI/生命周期 | 01 G5 | `IME-APP-*`、`IME-DPI-*`、`IME-OS-*` | 03 L3–L5 | 04 §9/13 | 大部分 MANUAL/PLANNED |
 | 词库/中文质量 | 01 G1/G6.3 | `LEX-*`、`IME-QUAL-*` | 03 corpus/metrics | 04 §5/11/12 | 313/59 确定性回归已完成；完整质量基线未完 |
 | 性能/资源/长时 | 01 G6 | `IME-PERF-*`、`IME-RES-*` | 03 §12–14 | 04 §10/13 | 冻结候选 Host-only 8h 已通过；UI 延迟与 TSF/App soak 未完 |
@@ -262,7 +264,7 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 |---|---|---|
 | 01 | 保留兼容性、完整性、状态机、性能、中文质量、压力资源、安装和缺陷门禁 | 增加证据等级、隐私、签名包闭环和当前真实状态 |
 | 02 | 保留所有初版 Case ID 原语义；补回 `FOCUS-006`、`QUAL-*`、`EDGE-*` | 新场景只追加 ID；拆分覆盖状态与实际执行结果 |
-| 03 | 保留事件关联、分段延迟、Fuzz、Crash/Hang、CI、MVP 和目录设计 | 改为复用现有 63 项测试与 Host/PowerShell 资产，标注各 Phase 当前状态 |
+| 03 | 保留事件关联、分段延迟、Fuzz、Crash/Hang、CI、MVP 和目录设计 | 改为复用现有 CTest 与 Host/PowerShell 资产，标注各 Phase 当前状态 |
 | 04 | 保留兼容、事件规模、性能、完整资源和中文质量表 | 增加 build identity、智能标点、隐私、mmap、双 soak、签名和包闭环 |
 | 05 | 保留全部符号语义与 `SP-MIX-001..009` 原语义 | 增加宿主回调根因、provisional 状态、隐私边界及规范/实现差距矩阵 |
 | QA | 不再复制 01–04 正文，避免多份真相 | 作为单一入口维护权威边界、流程、追踪矩阵和实施顺序 |

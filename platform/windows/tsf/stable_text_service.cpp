@@ -1391,7 +1391,8 @@ void TextService::handle_reply(HostEnvelope envelope) noexcept {
                 }
             } else if (reply->action == HostAction::cancel ||
                 reply->action == HostAction::launch_symbol_tool ||
-                reply->action == HostAction::launch_settings) {
+                reply->action == HostAction::launch_settings ||
+                reply->action == HostAction::launch_program) {
                 end_candidate_ui();
                 clear_deferred_updates();
                 if (replayed_key) {
@@ -1407,7 +1408,7 @@ void TextService::handle_reply(HostEnvelope envelope) noexcept {
                 } else {
                     const bool completed = edit_result == EditRequestResult::completed;
                     recovery = mirror_.complete_edit(completed);
-                    complete_candidate_action(reply->action, completed);
+                    complete_candidate_action(reply->action, reply->text, completed);
                     next_replayed_key = final_edit_keys_.complete_final_edit();
                 }
             }
@@ -1701,8 +1702,9 @@ void TextService::complete_deferred_edit(
         return;
     }
     const HostAction pending_action = mirror_.pending_action();
+    const std::string pending_target = mirror_.pending_commit();
     const auto recovery = mirror_.complete_edit(SUCCEEDED(result));
-    complete_candidate_action(pending_action, SUCCEEDED(result));
+    complete_candidate_action(pending_action, pending_target, SUCCEEDED(result));
     if (commit && request != nullptr) {
         send_commit_result(request->generation, SUCCEEDED(result));
     }
@@ -1956,14 +1958,61 @@ void TextService::launch_settings() noexcept {
     }
 }
 
+void TextService::launch_program(const std::string_view target) noexcept {
+    if (target == "system:calculator") {
+        (void)ShellExecuteW(nullptr, L"open", L"calc.exe", nullptr, nullptr, SW_SHOWNORMAL);
+        return;
+    }
+    if (target == "system:mspaint") {
+        (void)ShellExecuteW(nullptr, L"open", L"mspaint.exe", nullptr, nullptr, SW_SHOWNORMAL);
+        return;
+    }
+    if (target == "package:regcalc64") {
+        const auto page = transport_ != nullptr
+            ? transport_->resolve_program_path(L"RegCalc64Tool.html")
+            : sibling_program(module_, L"RegCalc64Tool.html");
+        if (std::filesystem::is_regular_file(page)) {
+            (void)ShellExecuteW(nullptr, L"open", page.c_str(), nullptr,
+                page.parent_path().c_str(), SW_SHOWNORMAL);
+        }
+        return;
+    }
+    constexpr std::string_view custom_prefix = "custom:";
+    if (!target.starts_with(custom_prefix)) return;
+    std::wstring configured = utf8_to_wide_local(
+        std::string(target.substr(custom_prefix.size())));
+    if (configured.empty()) return;
+    std::wstring expanded(32768U, L'\0');
+    const DWORD length = ExpandEnvironmentStringsW(
+        configured.c_str(), expanded.data(), static_cast<DWORD>(expanded.size()));
+    if (length > 0U && length <= expanded.size()) {
+        expanded.resize(length - 1U);
+        configured = std::move(expanded);
+    }
+    constexpr std::wstring_view command_prefix = L"cmd:";
+    if (configured.starts_with(command_prefix)) {
+        const std::wstring command(configured.substr(command_prefix.size()));
+        if (command.empty()) return;
+        const std::wstring arguments = L"/d /s /c \"" + command + L"\"";
+        (void)ShellExecuteW(nullptr, L"open", L"cmd.exe", arguments.c_str(),
+            nullptr, SW_SHOWNORMAL);
+        return;
+    }
+    (void)ShellExecuteW(nullptr, L"open", configured.c_str(), nullptr,
+        nullptr, SW_SHOWNORMAL);
+}
+
 void TextService::complete_candidate_action(
     const HostAction action,
+    const std::string_view target,
     const bool edit_succeeded) noexcept {
     if (!edit_succeeded) return;
     if (action == HostAction::launch_symbol_tool) {
         launch_symbol_tool();
     } else if (action == HostAction::launch_settings) {
         launch_settings();
+    } else if (action == HostAction::launch_program) {
+        launch_program(target);
     }
 }
 

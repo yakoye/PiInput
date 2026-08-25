@@ -1,7 +1,7 @@
 # PiInput 测试用例集
 
-> Manual + Automated Test Cases · v1.1  
-> 更新日期：2026-08-23
+> Manual + Automated Test Cases · v1.2
+> 更新日期：2026-08-25
 
 ## 修改记录
 
@@ -9,6 +9,7 @@
 |---|---|---|
 | v1.0 | 初版 | 2026-08-23 |
 | v1.1 | 按当前自动化能力重分状态；增加智能标点、敏感输入、构建身份、内存映射、签名包闭环和 8h 曲线用例 | 2026-08-23 |
+| v1.2 | 增加计算器、画图、自定义快捷调用、动作时序和随包运行时资产用例 | 2026-08-25 |
 
 ## 1. 使用规则
 
@@ -39,7 +40,7 @@
 
 ## 3. 当前 CTest 与用例映射
 
-当前 Release 配置注册 65 个 CTest；受控 TSF Host 与安装/卸载 UAC manifest 自检均已纳入，全量 65/65 已通过。关键映射如下：
+当前 Release 配置注册 66 个 CTest；受控 TSF Host、安装/卸载 UAC manifest 自检与候选动作回归均已纳入，全量 66/66 已通过。关键映射如下：
 
 | 自动化入口 | 主要覆盖 |
 |---|---|
@@ -61,7 +62,7 @@
 
 | ID | P | Mode | Layer | Current | 步骤 | 预期 |
 |---|---|---|---|---|---|---|
-| BUILD-001 | P0 | AUTO | L2 | COVERED | 当前 Release 构建和全量 65/65 CTest 已通过；CI `always()` 汇总统一 `result.json`，正式发布仍要求冻结候选 clean 重跑 | 构建成功；Failed=0；skip/disabled 有解释；统一结果绑定 build ID |
+| BUILD-001 | P0 | AUTO | L2 | COVERED | 当前 Release 构建和全量 66/66 CTest 已通过；CI `always()` 汇总统一 `result.json`，正式发布仍要求冻结候选 clean 重跑 | 构建成功；Failed=0；skip/disabled 有解释；统一结果绑定 build ID |
 | BUILD-002 | P0 | AUTO | L2 | COVERED | 比较 `VERSION`、Host `--version`、包名 | 完全一致 |
 | BUILD-003 | P0 | AUTO | L2 | COVERED | 读取 Host `--build-id`；CI package closure 精确比较 `VERSION+12位 tag commit`，错误 ID 失败夹具已通过 | 含版本与源码身份；与 tag commit 精确一致 |
 | BUILD-004 | P0 | AUTO | L2 | PARTIAL | workflow 已加入 tag/VERSION 与 checkout dirty 检查，待在线执行 | dirty 构建或 tag/version 不一致被正式流程拒绝 |
@@ -239,6 +240,10 @@
 | IME-EDGE-007 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `bq/biaoqing/biaoq/bnqk/bnq` | 候选 2 为 `😜表情`；按 2 清除组合后打开 `yesymbol.exe`；L0/L1 已通过，真实 TSF 待验收 |
 | IME-EDGE-008 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `shizhi/uevi/sz/shiz/uev` | 候选 2 为 `⚙️设置`；按 2 清除组合后打开设置程序；L0/L1 已通过，真实 TSF 待验收 |
 | IME-EDGE-009 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | 宿主拒绝/延迟最终 cancel edit 时选择功能候选 | 清除失败则恢复原始编码且不启动程序；异步清除成功后才启动；L1 已通过，真实拒绝型宿主待验收 |
+| IME-EDGE-010 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `jisuanqi/jisrqi/jsq/jisrq/calc/reg` | 候选 2 为 Windows 计算器、候选 3 为随包程序员计算器；`kuaijie` 不产生动作；L0/L1 已通过，真实启动待验收 |
+| IME-EDGE-011 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `hxtu/ht/huatu/mspaint/msp` | 候选 2 为 Windows 画图；L0/L1 已通过，真实启动待验收 |
+| IME-EDGE-012 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 设置 3 组触发码、候选位置、名称和 EXE/HTML/URL/`cmd:` 目标 | 设置往返不丢字段；新组合出现动作候选；标签不上屏；失败不清空组合 |
+| IME-EDGE-013 | P1 | AUTO | L1/L2 | IMPLEMENTED | 安装/解包发布候选 | `bin/RegCalc64Tool.html`、`shared-ui.css`、`shared-ui.js` 同时存在并进入包白名单；任一缺失则失败 |
 
 ## 16. 回归集合
 

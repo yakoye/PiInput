@@ -24,7 +24,8 @@ bool CompositionMirror::confirm(
     connected_ = true;
     if (reply.action == HostAction::commit || reply.action == HostAction::cancel ||
         reply.action == HostAction::launch_symbol_tool ||
-        reply.action == HostAction::launch_settings) {
+        reply.action == HostAction::launch_settings ||
+        reply.action == HostAction::launch_program) {
         pending_reply_ = reply;
         edit_pending_ = true;
         pending_edit_sequence_ = request.sequence;

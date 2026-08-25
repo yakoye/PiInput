@@ -371,6 +371,15 @@ if(WIN32)
     if(EXISTS ${CMAKE_SOURCE_DIR}/yesymbol/yesymbol.exe)
         install(PROGRAMS ${CMAKE_SOURCE_DIR}/yesymbol/yesymbol.exe DESTINATION bin)
     endif()
+    # The bundled programmer calculator is self-contained apart from these two
+    # adjacent UI assets. Keep all three beside PiInputHost.exe so the installed
+    # path is stable in both per-user and machine layouts.
+    install(FILES
+        tools/regcalc/RegCalc64Tool.html
+        tools/regcalc/shared-ui.css
+        tools/regcalc/shared-ui.js
+        DESTINATION bin
+    )
 endif()
 if(PIINPUT_BUNDLED_LEXICON)
     install(FILES "${PIINPUT_BUNDLED_LEXICON}" DESTINATION data)

@@ -67,15 +67,19 @@ void test_reply_round_trip_preserves_candidate_snapshot() {
 
 void test_candidate_actions_round_trip() {
     for (const auto action : {piinput::HostAction::launch_symbol_tool,
-             piinput::HostAction::launch_settings}) {
+             piinput::HostAction::launch_settings,
+             piinput::HostAction::launch_program}) {
         piinput::HostReply reply;
         reply.accepted = true;
         reply.action = action;
+        if (action == piinput::HostAction::launch_program) {
+            reply.text = "custom:https://example.com";
+        }
         reply.snapshot.generation = 23U;
         piinput::HostPayloadError error = piinput::HostPayloadError::none;
         const auto decoded = piinput::decode_host_reply(
             piinput::encode_host_reply(reply), error);
-        check(decoded.has_value() && decoded->action == action,
+        check(decoded.has_value() && decoded->action == action && decoded->text == reply.text,
             "candidate launch action round trips through the Host protocol");
     }
 }

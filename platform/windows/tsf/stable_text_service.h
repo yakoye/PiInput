@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 namespace piinput::windows {
@@ -190,7 +191,9 @@ private:
     void on_lang_bar_command(LangBarCommand command) noexcept;
     void launch_symbol_tool() noexcept;
     void launch_settings() noexcept;
-    void complete_candidate_action(HostAction action, bool edit_succeeded) noexcept;
+    void launch_program(std::string_view target) noexcept;
+    void complete_candidate_action(
+        HostAction action, std::string_view target, bool edit_succeeded) noexcept;
     [[nodiscard]] std::wstring schema_display_name() const;
     // A candidate the user clicked in the host's candidate window. Replayed
     // through the ordinary selection path so it commits exactly like a digit.
