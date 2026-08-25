@@ -645,6 +645,58 @@ void test_symbol_shortcuts_reach_candidates_in_every_schema() {
     std::filesystem::remove(path);
 }
 
+void test_tool_shortcuts_are_always_candidate_two() {
+    const auto path = std::filesystem::temp_directory_path() /
+        "piinput-tool-shortcuts.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        output << "word\tpinyin\tweight\n";
+        output << "符号\tfu'hao\t9000\n";
+        output << "表情\tbiao'qing\t9000\n";
+        output << "设置\tshe'zhi\t9000\n";
+    }
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+
+    struct ShortcutCase {
+        const char* input;
+        const char* schema;
+        const char* label;
+        piinput::CandidateKind kind;
+    };
+    const ShortcutCase cases[]{
+        {"fh", "full", "Ω符号", piinput::CandidateKind::symbol_tool_action},
+        {"fuhao", "full", "Ω符号", piinput::CandidateKind::symbol_tool_action},
+        {"fuh", "full", "Ω符号", piinput::CandidateKind::symbol_tool_action},
+        {"fuhc", "flypy", "Ω符号", piinput::CandidateKind::symbol_tool_action},
+        {"bq", "full", "😜表情", piinput::CandidateKind::emoji_tool_action},
+        {"biaoqing", "full", "😜表情", piinput::CandidateKind::emoji_tool_action},
+        {"biaoq", "full", "😜表情", piinput::CandidateKind::emoji_tool_action},
+        {"bnqk", "flypy", "😜表情", piinput::CandidateKind::emoji_tool_action},
+        {"bnq", "flypy", "😜表情", piinput::CandidateKind::emoji_tool_action},
+        {"shizhi", "full", "⚙️设置", piinput::CandidateKind::settings_action},
+        {"uevi", "flypy", "⚙️设置", piinput::CandidateKind::settings_action},
+        {"sz", "full", "⚙️设置", piinput::CandidateKind::settings_action},
+        {"shiz", "full", "⚙️设置", piinput::CandidateKind::settings_action},
+        {"uev", "flypy", "⚙️设置", piinput::CandidateKind::settings_action},
+    };
+    for (const auto& shortcut : cases) {
+        const auto candidates = engine.query(shortcut.input, shortcut.schema, 8U);
+        check(candidates.size() >= 2U && candidates[1U].word == shortcut.label &&
+                candidates[1U].evidence.kind == shortcut.kind,
+            std::string("工具快捷码应固定在候选 2：") + shortcut.input);
+    }
+
+    const auto cross_schema = engine.query("uevi", "full", 8U);
+    check(cross_schema.size() >= 2U && cross_schema.front().word == "设置" &&
+            cross_schema[1U].word == "⚙️设置",
+        "原始快捷码无法按当前方案解析时仍应保留候选 2 的设置入口");
+    const auto one_slot = engine.query("uevi", "full", 1U);
+    check(one_slot.empty() || one_slot.front().word != "⚙️设置",
+        "只有一个候选槽位时功能入口不能悄悄移到候选 1");
+    std::filesystem::remove(path);
+}
+
 void test_shift_toggle_state() {
     piinput::ShiftToggleState state;
     state.on_shift_down();
@@ -1217,6 +1269,7 @@ int run(const std::vector<std::string>& arguments) {
     test_short_readings_are_filled_with_prefix_words();
     test_date_and_time_candidates();
     test_symbol_shortcuts_reach_candidates_in_every_schema();
+    test_tool_shortcuts_are_always_candidate_two();
     test_shift_toggle_state();
         test_pinyin();
         test_shuangpin();

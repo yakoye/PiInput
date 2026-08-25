@@ -22,7 +22,9 @@ bool CompositionMirror::confirm(
     }
     confirmed_sequence_ = request.sequence;
     connected_ = true;
-    if (reply.action == HostAction::commit || reply.action == HostAction::cancel) {
+    if (reply.action == HostAction::commit || reply.action == HostAction::cancel ||
+        reply.action == HostAction::launch_symbol_tool ||
+        reply.action == HostAction::launch_settings) {
         pending_reply_ = reply;
         edit_pending_ = true;
         pending_edit_sequence_ = request.sequence;
@@ -130,6 +132,10 @@ const HostSnapshot& CompositionMirror::snapshot() const noexcept {
 const std::string& CompositionMirror::pending_commit() const noexcept {
     static const std::string empty;
     return edit_pending_ ? pending_reply_.text : empty;
+}
+
+HostAction CompositionMirror::pending_action() const noexcept {
+    return edit_pending_ ? pending_reply_.action : HostAction::none;
 }
 
 HostResumeState CompositionMirror::resume_state() const {

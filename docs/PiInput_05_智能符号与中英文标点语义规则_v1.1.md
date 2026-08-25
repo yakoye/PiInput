@@ -55,6 +55,7 @@ BIT[31:16] 表示高 16 bit，BIT[15:0] 表示低 16 bit。
 | 临时标点 composition 与右侧前瞻 | 已实现 | 后续数字保留 ASCII，否则解析为中文；焦点/异步完成按 context 与 session 校验 |
 | 决策 reason code 与结构化日志 | 已实现 | `smart_context_source`、`smart_context`、`smart_punctuation`、`smart_resolution` 已进入隔离 trace |
 | 多真实宿主语义矩阵 | 部分完成 | Notepad++ 已完成；ChatGPT、浏览器、Windows 搜索、Office、VS Code 仍需加载同一新 Shim 验收；Windows 搜索另要求 HKLM COM 可见 |
+| 符号/表情/设置功能候选 | 已实现组件层，真实宿主待验收 | 全拼与小鹤原始别名的候选 2 分别显示 `Ω符号`、`😜表情`、`⚙️设置`；选择后先完成 TSF cancel edit，再启动 `yesymbol.exe` 或设置程序，失败时不抢焦点也不丢组合 |
 
 已实现能力可以按组件和 Notepad++ 证据写为通过，但在跨宿主矩阵完成前不得把整个 Smart Punctuation Gate 写成通过。
 

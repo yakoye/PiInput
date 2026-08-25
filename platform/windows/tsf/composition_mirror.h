@@ -36,6 +36,7 @@ public:
     [[nodiscard]] std::size_t caret() const noexcept;
     [[nodiscard]] const HostSnapshot& snapshot() const noexcept;
     [[nodiscard]] const std::string& pending_commit() const noexcept;
+    [[nodiscard]] HostAction pending_action() const noexcept;
     [[nodiscard]] HostResumeState resume_state() const;
 
 private:

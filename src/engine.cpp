@@ -27,6 +27,73 @@ enum class DatetimeShortcutKind {
     time,
 };
 
+enum class CandidateShortcutKind {
+    none,
+    symbol_tool,
+    emoji_tool,
+    settings,
+};
+
+[[nodiscard]] CandidateShortcutKind candidate_shortcut_kind(
+    const std::string_view key) noexcept {
+    if (key == "fh" || key == "fuhao" || key == "fuh" || key == "fuhc") {
+        return CandidateShortcutKind::symbol_tool;
+    }
+    if (key == "bq" || key == "biaoqing" || key == "biaoq" ||
+        key == "bnqk" || key == "bnq") {
+        return CandidateShortcutKind::emoji_tool;
+    }
+    if (key == "shizhi" || key == "uevi" || key == "sz" ||
+        key == "shiz" || key == "uev") {
+        return CandidateShortcutKind::settings;
+    }
+    return CandidateShortcutKind::none;
+}
+
+[[nodiscard]] std::string_view candidate_shortcut_label(
+    const CandidateShortcutKind kind) noexcept {
+    switch (kind) {
+    case CandidateShortcutKind::symbol_tool: return "Ω符号";
+    case CandidateShortcutKind::emoji_tool: return "😜表情";
+    case CandidateShortcutKind::settings: return "⚙️设置";
+    case CandidateShortcutKind::none: return {};
+    }
+    return {};
+}
+
+[[nodiscard]] std::string_view candidate_shortcut_text(
+    const CandidateShortcutKind kind) noexcept {
+    switch (kind) {
+    case CandidateShortcutKind::symbol_tool: return "符号";
+    case CandidateShortcutKind::emoji_tool: return "表情";
+    case CandidateShortcutKind::settings: return "设置";
+    case CandidateShortcutKind::none: return {};
+    }
+    return {};
+}
+
+[[nodiscard]] std::string_view candidate_shortcut_pinyin(
+    const CandidateShortcutKind kind) noexcept {
+    switch (kind) {
+    case CandidateShortcutKind::symbol_tool: return "fu'hao";
+    case CandidateShortcutKind::emoji_tool: return "biao'qing";
+    case CandidateShortcutKind::settings: return "she'zhi";
+    case CandidateShortcutKind::none: return {};
+    }
+    return {};
+}
+
+[[nodiscard]] CandidateKind candidate_shortcut_evidence(
+    const CandidateShortcutKind kind) noexcept {
+    switch (kind) {
+    case CandidateShortcutKind::symbol_tool: return CandidateKind::symbol_tool_action;
+    case CandidateShortcutKind::emoji_tool: return CandidateKind::emoji_tool_action;
+    case CandidateShortcutKind::settings: return CandidateKind::settings_action;
+    case CandidateShortcutKind::none: return CandidateKind::decoded_sentence;
+    }
+    return CandidateKind::decoded_sentence;
+}
+
 [[nodiscard]] DatetimeShortcutKind datetime_shortcut_kind(
     const std::string_view key) noexcept {
     if (key == "riq" || key == "riqi" || key == "date") {
@@ -675,6 +742,8 @@ void Engine::splice_symbol_shortcuts(
     // which is what every other input method does with them.
     std::string datetime_reading;
     std::string datetime_label;
+    CandidateShortcutKind action_kind{CandidateShortcutKind::none};
+    std::string action_reading;
     const auto collect = [&](const std::string& key) {
         if (key.empty()) return;
         const bool datetime_allowed = allow_short_datetime_aliases ||
@@ -684,6 +753,10 @@ void Engine::splice_symbol_shortcuts(
             datetime_reading = key;
             datetime_label = datetime_group_label(
                 datetime_shortcut_kind(key) == DatetimeShortcutKind::date);
+        }
+        if (action_kind == CandidateShortcutKind::none) {
+            action_kind = candidate_shortcut_kind(key);
+            if (action_kind != CandidateShortcutKind::none) action_reading = key;
         }
         const auto found = symbol_shortcuts_.find(key);
         if (found == symbol_shortcuts_.end()) return;
@@ -695,7 +768,8 @@ void Engine::splice_symbol_shortcuts(
     };
     collect(reading);
     if (input != reading) collect(input);
-    if (wanted.empty() && datetime_label.empty()) return;
+    if (wanted.empty() && datetime_label.empty() &&
+        action_kind == CandidateShortcutKind::none) return;
 
     // A symbol the dictionary already offered stays where the ranking put it.
     std::erase_if(wanted, [&](const std::string& symbol) {
@@ -727,6 +801,24 @@ void Engine::splice_symbol_shortcuts(
         group.pinyin = datetime_reading;
         group.evidence.kind = CandidateKind::datetime_group;
         inline_candidates.push_back(std::move(group));
+    }
+    if (action_kind != CandidateShortcutKind::none &&
+        (!results.empty() || result_limit >= 2U)) {
+        // The command is deliberately candidate 2. A raw alias can be useful
+        // even when it is not valid in the active schema (for example uevi in
+        // full pinyin), so provide the corresponding ordinary word when the
+        // dictionary has no first candidate rather than moving the command to
+        // digit 1 and making the shortcut depend on schema parsing.
+        if (results.empty() && result_limit >= 2U) {
+            EngineCandidate text = make(std::string(candidate_shortcut_text(action_kind)));
+            text.pinyin = candidate_shortcut_pinyin(action_kind);
+            text.evidence.kind = CandidateKind::exact_lexicon;
+            results.push_back(std::move(text));
+        }
+        EngineCandidate action = make(std::string(candidate_shortcut_label(action_kind)));
+        action.pinyin = action_reading;
+        action.evidence.kind = candidate_shortcut_evidence(action_kind);
+        inline_candidates.push_back(std::move(action));
     }
     for (const auto& text : wanted) {
         if (utf8_codepoint_count(text) <= inline_candidate_codepoints) {

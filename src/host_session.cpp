@@ -539,6 +539,19 @@ HostReply HostSession::choose(const std::uint64_t candidate_id) {
         // of committing. Its text is the shortest format, so the row reads
         // sensibly before it is opened.
         const auto& listed = chinese_.snapshot().candidates;
+        if (index < listed.size()) {
+            const CandidateKind kind = listed[index].candidate.evidence.kind;
+            if (kind == CandidateKind::symbol_tool_action ||
+                kind == CandidateKind::emoji_tool_action ||
+                kind == CandidateKind::settings_action) {
+                chinese_.clear();
+                advance_generation(true);
+                return reply(true,
+                    kind == CandidateKind::settings_action
+                        ? HostAction::launch_settings
+                        : HostAction::launch_symbol_tool);
+            }
+        }
         if (index < listed.size() &&
             listed[index].candidate.evidence.kind == CandidateKind::datetime_group &&
             open_datetime_menu(listed[index].candidate.pinyin)) {

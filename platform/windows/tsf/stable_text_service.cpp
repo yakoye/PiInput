@@ -1377,7 +1377,9 @@ void TextService::handle_reply(HostEnvelope envelope) noexcept {
                         edit_result == EditRequestResult::completed);
                     next_replayed_key = final_edit_keys_.complete_final_edit();
                 }
-            } else if (reply->action == HostAction::cancel) {
+            } else if (reply->action == HostAction::cancel ||
+                reply->action == HostAction::launch_symbol_tool ||
+                reply->action == HostAction::launch_settings) {
                 end_candidate_ui();
                 clear_deferred_updates();
                 if (replayed_key) {
@@ -1391,7 +1393,9 @@ void TextService::handle_reply(HostEnvelope envelope) noexcept {
                 if (edit_result == EditRequestResult::pending) {
                     (void)deferred_updates_.begin(request);
                 } else {
-                    recovery = mirror_.complete_edit(edit_result == EditRequestResult::completed);
+                    const bool completed = edit_result == EditRequestResult::completed;
+                    recovery = mirror_.complete_edit(completed);
+                    complete_candidate_action(reply->action, completed);
                     next_replayed_key = final_edit_keys_.complete_final_edit();
                 }
             }
@@ -1684,7 +1688,9 @@ void TextService::complete_deferred_edit(
         }
         return;
     }
+    const HostAction pending_action = mirror_.pending_action();
     const auto recovery = mirror_.complete_edit(SUCCEEDED(result));
+    complete_candidate_action(pending_action, SUCCEEDED(result));
     if (commit && request != nullptr) {
         send_commit_result(request->generation, SUCCEEDED(result));
     }
@@ -1909,6 +1915,42 @@ void TextService::set_english_mode(const bool english) noexcept {
     refresh_lang_bar();
 }
 
+void TextService::launch_symbol_tool() noexcept {
+    const auto configured = settings_value("symbol_tool");
+    std::filesystem::path tool = configured.empty()
+        ? sibling_program(module_, L"yesymbol.exe")
+        : std::filesystem::path(utf8_to_wide_local(configured));
+    if (std::filesystem::is_regular_file(tool)) {
+        (void)ShellExecuteW(nullptr, L"open", tool.c_str(), nullptr,
+            tool.parent_path().c_str(), SW_SHOWNORMAL);
+        return;
+    }
+    MessageBoxW(nullptr,
+        L"找不到符号工具 yesymbol.exe。\n\n"
+        L"它随 PiInput 一同安装，正常在程序目录下。也可以在设置窗口的"
+        L"「标点符号」页指定其他路径。",
+        L"PiInput 符号", MB_OK | MB_ICONINFORMATION);
+}
+
+void TextService::launch_settings() noexcept {
+    const auto settings = sibling_program(module_, L"PiInput-Settings.exe");
+    if (std::filesystem::is_regular_file(settings)) {
+        (void)ShellExecuteW(nullptr, L"open", settings.c_str(), nullptr,
+            settings.parent_path().c_str(), SW_SHOWNORMAL);
+    }
+}
+
+void TextService::complete_candidate_action(
+    const HostAction action,
+    const bool edit_succeeded) noexcept {
+    if (!edit_succeeded) return;
+    if (action == HostAction::launch_symbol_tool) {
+        launch_symbol_tool();
+    } else if (action == HostAction::launch_settings) {
+        launch_settings();
+    }
+}
+
 void TextService::on_lang_bar_command(const LangBarCommand command) noexcept {
     switch (command) {
     case LangBarCommand::toggle_language: {
@@ -1951,28 +1993,11 @@ void TextService::on_lang_bar_command(const LangBarCommand command) noexcept {
         return;
     }
     case LangBarCommand::symbols: {
-        const auto configured = settings_value("symbol_tool");
-        std::filesystem::path tool = configured.empty()
-            ? sibling_program(module_, L"yesymbol.exe")
-            : std::filesystem::path(std::wstring(configured.begin(), configured.end()));
-        if (std::filesystem::is_regular_file(tool)) {
-            (void)ShellExecuteW(nullptr, L"open", tool.c_str(), nullptr,
-                tool.parent_path().c_str(), SW_SHOWNORMAL);
-        } else {
-            MessageBoxW(nullptr,
-                L"找不到符号工具 yesymbol.exe。\n\n"
-                L"它随 PiInput 一同安装，正常在程序目录下。也可以在设置窗口的"
-                L"「标点符号」页指定其他路径。",
-                L"PiInput 符号", MB_OK | MB_ICONINFORMATION);
-        }
+        launch_symbol_tool();
         return;
     }
     case LangBarCommand::settings: {
-        const auto settings = sibling_program(module_, L"PiInput-Settings.exe");
-        if (std::filesystem::is_regular_file(settings)) {
-            (void)ShellExecuteW(nullptr, L"open", settings.c_str(), nullptr,
-                settings.parent_path().c_str(), SW_SHOWNORMAL);
-        }
+        launch_settings();
         return;
     }
     case LangBarCommand::about: {

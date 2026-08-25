@@ -65,6 +65,21 @@ void test_reply_round_trip_preserves_candidate_snapshot() {
         "host reply candidate view and candidates round trip");
 }
 
+void test_candidate_actions_round_trip() {
+    for (const auto action : {piinput::HostAction::launch_symbol_tool,
+             piinput::HostAction::launch_settings}) {
+        piinput::HostReply reply;
+        reply.accepted = true;
+        reply.action = action;
+        reply.snapshot.generation = 23U;
+        piinput::HostPayloadError error = piinput::HostPayloadError::none;
+        const auto decoded = piinput::decode_host_reply(
+            piinput::encode_host_reply(reply), error);
+        check(decoded.has_value() && decoded->action == action,
+            "candidate launch action round trips through the Host protocol");
+    }
+}
+
 void test_v2_reply_preserves_composition_text_and_active_column() {
     piinput::HostReply reply;
     reply.accepted = true;
@@ -259,6 +274,7 @@ void test_payload_decoder_rejects_truncation_unknown_enums_and_excessive_counts(
 int main() {
     test_key_event_and_resume_round_trip();
     test_reply_round_trip_preserves_candidate_snapshot();
+    test_candidate_actions_round_trip();
     test_v2_reply_preserves_composition_text_and_active_column();
     test_caret_update_round_trip_preserves_text_geometry_and_fallback();
     test_commit_result_is_strict_and_round_trips();

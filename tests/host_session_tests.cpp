@@ -1352,6 +1352,41 @@ void test_symbol_center_and_semicolon_routing() {
     std::filesystem::remove(lexicon_path);
 }
 
+void test_candidate_two_launches_tools_without_committing_the_label() {
+    piinput::Engine engine;
+    const auto lexicon_path = write_chinese_lexicon();
+    engine.load_lexicon(lexicon_path);
+    const auto settings = piinput::default_settings();
+    piinput::HostSession session(engine, nullptr, settings, "full");
+
+    const auto choose_second = [&](const std::string_view input) {
+        type(session, std::string(input));
+        check(session.snapshot().candidates.size() >= 2U,
+            "tool shortcut exposes a second candidate");
+        return session.apply({
+            .kind = piinput::HostKeyKind::select_digit,
+            .character = '2',
+        });
+    };
+
+    const auto symbol = choose_second("fh");
+    check(symbol.accepted && symbol.action == piinput::HostAction::launch_symbol_tool &&
+            symbol.text.empty() && symbol.snapshot.raw.empty(),
+        "candidate 2 for fh clears composition and requests yesymbol without committing its label");
+
+    const auto emoji = choose_second("bq");
+    check(emoji.accepted && emoji.action == piinput::HostAction::launch_symbol_tool &&
+            emoji.text.empty() && emoji.snapshot.raw.empty(),
+        "candidate 2 for bq shares the yesymbol launch action");
+
+    const auto settings_reply = choose_second("sz");
+    check(settings_reply.accepted &&
+            settings_reply.action == piinput::HostAction::launch_settings &&
+            settings_reply.text.empty() && settings_reply.snapshot.raw.empty(),
+        "candidate 2 for sz clears composition and requests the settings application");
+    std::filesystem::remove(lexicon_path);
+}
+
 }  // namespace
 
 int main() {
@@ -1385,6 +1420,7 @@ int main() {
     test_space_and_digits_are_resolved_by_current_host_state();
     test_punctuation_is_transformed_and_committed_by_host();
     test_symbol_center_and_semicolon_routing();
+    test_candidate_two_launches_tools_without_committing_the_label();
     std::cout << "PiInput host session tests passed.\n";
     return 0;
 }

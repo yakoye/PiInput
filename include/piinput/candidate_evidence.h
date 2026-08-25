@@ -18,6 +18,11 @@ enum class CandidateKind : std::uint8_t {
     // The entry that opens the date or time formats. Choosing it replaces the
     // candidate list with those formats instead of committing anything.
     datetime_group,
+    // Candidate-row commands are kept distinct from text candidates so the
+    // Host never tries to learn or commit their visible labels.
+    symbol_tool_action,
+    emoji_tool_action,
+    settings_action,
 };
 
 struct CandidateEvidence {

@@ -192,6 +192,30 @@ void test_failed_commit_rolls_back_until_edit_session_confirms() {
         "successful TSF edit atomically accepts Host commit and clears raw state");
 }
 
+void test_tool_action_waits_for_the_cancel_edit() {
+    piinput::windows::CompositionMirror mirror(5U, 7U);
+    check(mirror.confirm(mirror.begin_request(), update_reply(2U, "fh", 2U)),
+        "tool shortcut composition is mirrored before selection");
+
+    piinput::HostReply launch;
+    launch.accepted = true;
+    launch.action = piinput::HostAction::launch_symbol_tool;
+    launch.snapshot.generation = 3U;
+    check(mirror.confirm(mirror.begin_request(), launch) &&
+            mirror.pending_action() == piinput::HostAction::launch_symbol_tool &&
+            mirror.raw() == "fh",
+        "tool action remains pending until TSF removes the composition");
+    const auto recovery = mirror.complete_edit(false);
+    check(recovery.has_value() && recovery->raw == "fh" &&
+            mirror.pending_action() == piinput::HostAction::none,
+        "failed cancellation restores raw input and drops the launch action");
+
+    check(mirror.confirm(mirror.begin_request(), launch),
+        "tool action can be selected again after recovery");
+    check(!mirror.complete_edit(true).has_value() && mirror.raw().empty(),
+        "successful cancellation accepts the cleared Host snapshot");
+}
+
 void test_late_commit_completion_cannot_erase_the_next_composition() {
     piinput::windows::CompositionMirror mirror(17U, 29U);
     check(mirror.confirm(mirror.begin_request(), update_reply(4U, "gjjt", 4U)),
@@ -314,6 +338,7 @@ int main() {
     test_disconnect_preserves_raw_and_resume_state();
     test_external_termination_discards_raw_and_rejects_inflight_replies();
     test_failed_commit_rolls_back_until_edit_session_confirms();
+    test_tool_action_waits_for_the_cancel_edit();
     test_late_commit_completion_cannot_erase_the_next_composition();
     test_segment_composition_is_displayed_without_corrupting_resume_state();
     test_new_text_context_starts_an_isolated_host_session();

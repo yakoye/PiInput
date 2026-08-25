@@ -234,6 +234,10 @@
 | IME-EDGE-003 | P1 | AUTO+MANUAL | L2/L3 | PARTIAL | 超长 composition 超过产品上限 | 合理截断/分页，无越界、崩溃或无限增长 |
 | IME-EDGE-004 | P1 | AUTO | L3/L4 | PLANNED | 随机按键+焦点+IME 切换+窗口销毁 Fuzz 1h | 无 crash/hang；seed 可 100% 重放 |
 | IME-EDGE-005 | P2 | AUTO+MANUAL | L3 | PARTIAL | 粘贴大文本后立即继续中文输入 | 不删除/覆盖粘贴文本，不复活旧 composition |
+| IME-EDGE-006 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `fh/fuhao/fuh/fuhc` | 候选 2 为 `Ω符号`；按 2 清除组合后打开 `yesymbol.exe`，不提交入口文字；L0/L1 已通过，真实 TSF 待验收 |
+| IME-EDGE-007 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `bq/biaoqing/biaoq/bnqk/bnq` | 候选 2 为 `😜表情`；按 2 清除组合后打开 `yesymbol.exe`；L0/L1 已通过，真实 TSF 待验收 |
+| IME-EDGE-008 | P1 | AUTO+MANUAL | L0/L1/L3 | PARTIAL | 逐项输入 `shizhi/uevi/sz/shiz/uev` | 候选 2 为 `⚙️设置`；按 2 清除组合后打开设置程序；L0/L1 已通过，真实 TSF 待验收 |
+| IME-EDGE-009 | P0 | AUTO+MANUAL | L1/L3 | PARTIAL | 宿主拒绝/延迟最终 cancel edit 时选择功能候选 | 清除失败则恢复原始编码且不启动程序；异步清除成功后才启动；L1 已通过，真实拒绝型宿主待验收 |
 
 ## 16. 回归集合
 

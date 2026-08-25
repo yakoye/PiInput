@@ -52,6 +52,8 @@ enum class HostAction : std::uint8_t {
     commit,
     cancel,
     pass_through,
+    launch_symbol_tool,
+    launch_settings,
 };
 
 enum class CandidateManagementAction : std::uint8_t {
