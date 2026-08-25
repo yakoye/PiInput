@@ -26,6 +26,7 @@ p0_real_host_matrix=NOT_RUN
 ## 当前外部条件
 
 - 本机证书存储没有适用于公开发行的可信代码签名证书；GitHub 仓库当前也未配置 `PIINPUT_SIGNING_PFX_BASE64` 与 `PIINPUT_SIGNING_PFX_PASSWORD`。
+- GitHub 托管 Windows runner 可以验证构建、测试、安装、重装和卸载闭环，但没有受支持的交互式输入桌面。Controlled TSF 物理按键测试必须单列为 `BLOCKED`，不得把“窗口未加载 TSF”的全 false 结果误报为功能失败，也不得伪造为通过。
 - 自动化不会打开真实桌面宿主或抢占用户鼠标。需要人工操作的 P0 宿主项目在完成前保持 `NOT_RUN`。
 
 在三个机器 Gate 都为 `PASS`、正式签名可用并且包闭环通过之前，本文件不得作为正式发布通过证明。

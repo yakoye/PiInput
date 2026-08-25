@@ -131,9 +131,23 @@ jobs:
             ExpectedBuildId = "$version+$revision"
             RequireSigned = $signed
             InstallSmoke = $true
-            ControlledTsfController = './build/windows-x64/Release/piinput-controlled-tsf-controller.exe'
             ReportDirectory = './artifacts/package-closure'
           }
+          $controlledTsfCapability = if ($env:RUNNER_ENVIRONMENT -eq 'github-hosted') {
+            [ordered]@{
+              status = 'BLOCKED'
+              reason = 'GitHub-hosted Windows runners do not provide a supported interactive input desktop for physical-key TSF validation.'
+              runner_environment = $env:RUNNER_ENVIRONMENT
+            }
+          } else {
+            $closure.ControlledTsfController = './build/windows-x64/Release/piinput-controlled-tsf-controller.exe'
+            [ordered]@{
+              status = 'AVAILABLE'
+              reason = ''
+              runner_environment = $env:RUNNER_ENVIRONMENT
+            }
+          }
+          $controlledTsfCapability | ConvertTo-Json | Set-Content -LiteralPath './artifacts/package-closure/controlled-tsf-capability.json' -Encoding UTF8
           $previousZip = '${{ steps.previous_release.outputs.zip }}'
           if (-not [string]::IsNullOrWhiteSpace($previousZip)) {
             $closure.PreviousPackageZip = $previousZip
@@ -182,11 +196,25 @@ jobs:
           } else {
             Convert-Outcome '${{ steps.signing.outcome }}'
           }
+          $controlledTsfStatus = 'NOT_RUN'
+          $controlledTsfCapabilityPath = './artifacts/package-closure/controlled-tsf-capability.json'
+          if (Test-Path -LiteralPath $controlledTsfCapabilityPath -PathType Leaf) {
+            $controlledTsfCapability = Get-Content -Raw -LiteralPath $controlledTsfCapabilityPath | ConvertFrom-Json
+            if ([string]$controlledTsfCapability.status -eq 'BLOCKED') {
+              $controlledTsfStatus = 'BLOCKED'
+            } elseif ('${{ steps.package.outcome }}' -eq 'success') {
+              $packageSummary = Get-Content -Raw -LiteralPath './artifacts/package-closure/summary.json' | ConvertFrom-Json
+              if ([string]$packageSummary.controlled_tsf_smoke -eq 'passed') {
+                $controlledTsfStatus = 'PASS'
+              }
+            }
+          }
           $cases = @(
             New-Case 'BUILD-001' $buildStatus 'BUILD_OR_CTEST' @('./artifacts/test-results/ctest.xml')
             New-Case 'BUILD-008' $releaseEvidenceStatus 'RELEASE_EVIDENCE' @('./release-evidence.json')
             New-Case 'IME-SIGN-001' $signingStatus 'AUTHENTICODE' @('./artifacts/signing/signatures.json')
             New-Case 'IME-PKG-001' $packageStatus 'PACKAGE_CLOSURE' @('./artifacts/package-closure/summary.json')
+            New-Case 'IME-TSF-001' $controlledTsfStatus 'CONTROLLED_TSF' @('./artifacts/package-closure/controlled-tsf-capability.json')
           )
           $casePath = Join-Path $resultRoot 'cases.json'
           @{ cases = $cases } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $casePath -Encoding UTF8
@@ -195,6 +223,7 @@ jobs:
             './release-evidence.json',
             './artifacts/signing/signatures.json',
             './artifacts/package-closure/summary.json',
+            './artifacts/package-closure/controlled-tsf-capability.json',
             './build/windows-x64/Testing/Temporary/LastTest.log',
             './artifacts/PiInput-v' + (Get-Content ./VERSION -Raw).Trim() + '-windows-x64.zip',
             './artifacts/PiInput-v' + (Get-Content ./VERSION -Raw).Trim() + '-windows-x64.zip.sha256.txt'
