@@ -24,7 +24,8 @@ inline constexpr int host_exit_failure = 3;
     std::uint64_t client_id = 0U,
     std::uint64_t session_id = 1U,
     std::uint64_t sequence = 0U,
-    std::uint64_t generation = 1U) noexcept;
+    std::uint64_t generation = 1U,
+    std::uint32_t protocol_version = host_protocol_v1) noexcept;
 
 class PipeServer final {
 public:

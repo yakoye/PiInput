@@ -22,6 +22,12 @@ v0.7.13 是词库覆盖、发布工程和长时间运行质量的收口版本。
 - 发布包精确校验 tag commit build ID、SHA-256、安装后 Host/TSF 哈希、注册路径、实际加载模块、签名者和 RFC3161 时间戳，并拒绝源码、调试文件、源码映射和 PowerShell 脚本泄漏。
 - 正式 tag 在任何构建和签名前要求 Host-only 8h、TSF/App 8h 与 P0 真实宿主矩阵全部有 PASS 证据；未完成时流水线直接阻断。
 
+## Windows 搜索候选窗
+
+- 修复快速 XAML 宿主中 caret 结果先于候选快照到达时，Host 永久等待候选定位消息的问题。
+- Host 协议升级到 v4：Shim 把文本视图的顶层 HWND 随 caret 发送给 Host，候选 popup 作为该窗口的 owned window 创建；Windows 搜索、开始菜单等系统表面因此与候选窗保持正确的 z-order 关系。
+- owner 切换、窗口销毁和句柄失效都会触发候选窗重建；受控 TSF smoke 不再只检查最终汉字，而是同时验证可见候选窗的真实 `GW_OWNER`。
+
 正式发布仍需使用可信代码签名证书跑标签流水线，并完成真实应用输入框验收。
 
 冻结候选 `a2d5f8fe3c53` 的 Host-only 8 小时稳定性 Gate 已通过：build ID `0.7.13+a2d5f8fe3c53`，957 个样本，40,758,365 bytes mmap，Private/Working Set/Handle 增量和斜率均在门槛内。TSF/App 8 小时与真实宿主矩阵仍是独立发布条件。

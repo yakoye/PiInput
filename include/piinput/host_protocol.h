@@ -11,7 +11,8 @@ namespace piinput {
 inline constexpr std::uint32_t host_protocol_v1 = 1U;
 inline constexpr std::uint32_t host_protocol_v2 = 2U;
 inline constexpr std::uint32_t host_protocol_v3 = 3U;
-inline constexpr std::uint32_t host_protocol_current = host_protocol_v3;
+inline constexpr std::uint32_t host_protocol_v4 = 4U;
+inline constexpr std::uint32_t host_protocol_current = host_protocol_v4;
 inline constexpr std::size_t host_header_bytes = 56U;
 inline constexpr std::size_t host_max_payload_bytes = 1024U * 1024U;
 

@@ -378,12 +378,12 @@ bool CandidatePresenter::show_at(
     if (update.has_text_caret) {
         const RECT anchor{update.left, update.top, update.right, update.bottom};
         if (model_.caret_is_inherited()) {
-            window_.show_at_provisional_caret(anchor);
+            window_.show_at_provisional_caret(anchor, update.owner_window);
         } else {
-            window_.show_at_text_caret(anchor);
+            window_.show_at_text_caret(anchor, update.owner_window);
         }
     } else {
-        window_.show_near_caret();
+        window_.show_near_caret(update.owner_window);
     }
     if (std::FILE* const trace = caret_trace(); trace != nullptr) {
         RECT placed{};

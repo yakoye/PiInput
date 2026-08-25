@@ -53,7 +53,7 @@ bool PipeClient::send_caret(
         .sequence = request.sequence,
         .generation = request.generation,
         .type = HostMessageType::caret,
-        .payload = encode_host_caret_update(update),
+        .payload = encode_host_caret_update(update, host_protocol_current),
     });
 }
 

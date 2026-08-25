@@ -76,6 +76,18 @@ void test_protocol_v3_accepts_commit_result_messages() {
         "protocol v3 accepts confirmed TSF commit results");
 }
 
+void test_protocol_v4_accepts_owned_candidate_caret_messages() {
+    auto expected = sample_envelope();
+    expected.version = piinput::host_protocol_v4;
+    expected.type = piinput::HostMessageType::caret;
+    const auto encoded = piinput::encode_host_envelope(expected);
+    piinput::ProtocolError error = piinput::ProtocolError::none;
+    const auto decoded = piinput::decode_host_envelope(encoded, error);
+    check(decoded.has_value() && decoded->version == piinput::host_protocol_v4 &&
+            decoded->type == piinput::HostMessageType::caret,
+        "protocol v4 accepts text-view-owned candidate caret messages");
+}
+
 void test_decoder_rejects_untrusted_lengths_before_allocation() {
     auto envelope = sample_envelope();
     envelope.payload.assign(piinput::host_max_payload_bytes + 1U, std::byte{0x41});
@@ -110,7 +122,7 @@ void test_decoder_rejects_malformed_or_unsupported_envelopes() {
     check(error == piinput::ProtocolError::truncated_header, "truncation has a typed error");
 
     auto unsupported = valid;
-    unsupported[8] = std::byte{0x04};
+    unsupported[8] = std::byte{0x05};
     check(!piinput::decode_host_envelope(unsupported, error).has_value(),
         "unsupported protocol major version is rejected");
     check(error == piinput::ProtocolError::unsupported_version,
@@ -152,6 +164,7 @@ int main() {
     test_round_trip_preserves_fixed_width_fields_and_payload();
     test_protocol_v2_envelope_is_accepted_for_extended_candidate_state();
     test_protocol_v3_accepts_commit_result_messages();
+    test_protocol_v4_accepts_owned_candidate_caret_messages();
     test_decoder_rejects_untrusted_lengths_before_allocation();
     test_decoder_rejects_malformed_or_unsupported_envelopes();
     std::cout << "PiInput host protocol tests passed.\n";

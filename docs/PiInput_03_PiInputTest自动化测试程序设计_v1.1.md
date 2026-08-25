@@ -173,7 +173,7 @@ L1/L3 需要验证：
 
 Notepad++ 是 Smart Punctuation 的 P0 首要宿主，因为它已经暴露出“直通键只有 `OnTestKeyDown`”的差异。ChatGPT Windows App 作为另一种宿主模型同时验证，不能用其中一个替代另一个。
 
-Windows 搜索必须单列为打包系统宿主：除了 profile/category、`IMMERSIVESUPPORT` 和 DLL 的 `ALL APPLICATION PACKAGES` 读取执行权限，还要核对 64 位 HKLM COM 入口。HKCU/HKLM 都必须指向 Program Files 下仅管理员可写的同一 Shim；绝不能让机器 COM 指向用户可写的 LocalAppData。只存在 HKCU `InprocServer32` 时，普通桌面应用可以加载，而 SearchHost 看不到该类；测试必须记录 SearchHost PID、实际模块路径和中文最终文本。
+Windows 搜索必须单列为打包系统宿主：除了 profile/category、`IMMERSIVESUPPORT` 和 DLL 的 `ALL APPLICATION PACKAGES` 读取执行权限，还要核对 64 位 HKLM COM 入口。HKCU/HKLM 都必须指向 Program Files 下仅管理员可写的同一 Shim；绝不能让机器 COM 指向用户可写的 LocalAppData。只存在 HKCU `InprocServer32` 时，普通桌面应用可以加载，而 SearchHost 看不到该类；测试必须记录 SearchHost PID、实际模块路径和中文最终文本。候选 UI 另有独立断言：Shim 必须在 edit session 内取得 `ITfContextView::GetWnd`，失败时回退当前焦点，转换为顶层 HWND 后随 caret 消息传给 Host；Controller 枚举可见 `PiInputTsfCandidateWindow` 并断言 `GetWindow(candidate, GW_OWNER)` 等于测试宿主。还要销毁宿主后再输入，验证 Host 不复用失效 HWND。
 
 ## 9. Controlled TSF TestHost
 

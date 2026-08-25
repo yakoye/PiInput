@@ -218,6 +218,39 @@ template <std::size_t Size>
     return control_text(control) == expected;
 }
 
+struct CandidateSearch final {
+    HWND owner{};
+    HWND found{};
+};
+
+BOOL CALLBACK find_owned_candidate(const HWND candidate, const LPARAM parameter) {
+    auto* search = reinterpret_cast<CandidateSearch*>(parameter);
+    if (search == nullptr || GetWindow(candidate, GW_OWNER) != search->owner ||
+        IsWindowVisible(candidate) == FALSE) {
+        return TRUE;
+    }
+    std::array<wchar_t, 64U> class_name{};
+    if (GetClassNameW(candidate, class_name.data(), static_cast<int>(class_name.size())) > 0 &&
+        std::wstring_view(class_name.data()) == L"PiInputTsfCandidateWindow") {
+        search->found = candidate;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+[[nodiscard]] HWND wait_for_owned_candidate(
+    const HWND owner,
+    const DWORD timeout_ms = 3000U) noexcept {
+    const DWORD started = GetTickCount();
+    do {
+        CandidateSearch search{.owner = owner};
+        EnumWindows(find_owned_candidate, reinterpret_cast<LPARAM>(&search));
+        if (search.found != nullptr) return search.found;
+        Sleep(20U);
+    } while (GetTickCount() - started < timeout_ms);
+    return nullptr;
+}
+
 [[nodiscard]] bool prepare_case(
     const HWND window,
     const HWND control,
@@ -410,9 +443,17 @@ int wmain(const int argc, wchar_t** const argv) {
         const std::filesystem::path loaded = loaded_tsf_module(child.information.dwProcessId);
         const bool module_identity = same_path(loaded, expected_tsf);
         const bool chinese_mode = module_identity && ensure_chinese_mode(window, edit_a);
+        const bool candidate_owned = chinese_mode &&
+            prepare_case(window, edit_a, {}, 0U) &&
+            send_sequence(std::array<WORD, 2U>{'N', 'I'}) &&
+            wait_for_owned_candidate(window) != nullptr;
+        if (candidate_owned) {
+            (void)send_physical_key(VK_ESCAPE);
+            (void)wait_for_text(edit_a, {}, 500U);
+        }
 
         const std::wstring decimal_initial = L"314";
-        const bool decimal = chinese_mode && run_text_case(
+        const bool decimal = candidate_owned && run_text_case(
             window, edit_a, decimal_initial, 1U,
             {{VK_OEM_PERIOD, false}}, L"3.14");
 
@@ -541,7 +582,8 @@ int wmain(const int argc, wchar_t** const argv) {
             {{'1', false}, {'2', false}, {VK_OEM_1, true}, {'2', false}, {'3', false}},
             L"12:23");
 
-        bool passed = controls && list_dot && module_identity && chinese_mode && decimal && time &&
+        bool passed = controls && list_dot && module_identity && chinese_mode && candidate_owned &&
+            decimal && time &&
             version_sentence && grouped && incomplete_group && grouped_backspace &&
             grouped_escape && invalid_group && filename &&
             url_question && chinese_question && technical_symbols && technical_bang &&
@@ -596,6 +638,7 @@ int wmain(const int argc, wchar_t** const argv) {
         std::cout << "{\"pass\":" << (passed ? "true" : "false")
                   << ",\"module_identity\":" << (module_identity ? "true" : "false")
                   << ",\"chinese_mode\":" << (chinese_mode ? "true" : "false")
+                  << ",\"candidate_owned\":" << (candidate_owned ? "true" : "false")
                   << ",\"list_dot\":" << (list_dot ? "true" : "false")
                   << ",\"decimal\":" << (decimal ? "true" : "false")
                   << ",\"time\":" << (time ? "true" : "false")

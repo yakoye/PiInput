@@ -170,7 +170,7 @@
 | IME-APP-008 | P0 | ChatGPT Windows App | MANUAL |
 | IME-APP-009 | P1 | Windows Terminal | MANUAL |
 | IME-APP-010 | P1 | PowerShell/CMD | MANUAL |
-| IME-APP-011 | P0 | Windows 设置/搜索/WinUI | PARTIAL；HKLM COM 修复后 `0.7.13+ed980905fcb4` 已由 SearchHost 加载并可空格提交汉字；随后定位并修复 caret 先于候选快照到达时 Presenter 永久等待的竞态，L2 已覆盖同代提前结果、no-geometry fallback、旧代及跨会话拒绝，新候选候选 UI 待实机复测 |
+| IME-APP-011 | P0 | Windows 设置/搜索/WinUI | PARTIAL；HKLM COM 修复后 `0.7.13+ed980905fcb4` 已由 SearchHost 加载并可空格提交汉字；候选 UI 又定位出两层根因：caret 先于快照的竞态，以及外部候选窗没有绑定文本宿主。协议 v4 已传递 `GetWnd`/`GetFocus` 归一后的顶层 HWND，Host 以它作为 popup owner 并在 owner 变化/失效时重建；L2/Controlled Host 增加 wire、`GW_OWNER` 与宿主销毁回归。新构建仍须在 SearchHost 看到首字母候选窗后才可 PASS |
 | IME-APP-012 | P1 | WPF 控件 | MANUAL/PLANNED HOST |
 | IME-APP-013 | P1 | Qt 控件 | MANUAL/PLANNED HOST |
 | IME-APP-014 | P0 | Windows 远程桌面连接地址框 | MANUAL；增加空闲状态连续数字完全透传回归 |

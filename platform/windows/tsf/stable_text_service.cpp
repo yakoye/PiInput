@@ -2008,9 +2008,27 @@ void TextService::capture_composition_caret(
     const TfEditCookie edit_cookie,
     HostCaretUpdate& update) const noexcept {
     update.has_text_caret = false;
+    update.owner_window = 0U;
     if (context == nullptr) return;
     ITfContextView* view = nullptr;
-    if (FAILED(context->GetActiveView(&view)) || view == nullptr) return;
+    if (FAILED(context->GetActiveView(&view)) || view == nullptr) {
+        const HWND focused = GetFocus();
+        const HWND root = focused == nullptr ? nullptr : GetAncestor(focused, GA_ROOT);
+        update.owner_window = reinterpret_cast<std::uintptr_t>(
+            root != nullptr ? root : focused);
+        return;
+    }
+
+    HWND view_window = nullptr;
+    const bool has_reported_view_window =
+        SUCCEEDED(view->GetWnd(&view_window)) && view_window != nullptr;
+    if (!has_reported_view_window) view_window = GetFocus();
+    const bool has_view_window = view_window != nullptr;
+    if (has_view_window) {
+        const HWND root = GetAncestor(view_window, GA_ROOT);
+        update.owner_window = reinterpret_cast<std::uintptr_t>(
+            root != nullptr ? root : view_window);
+    }
 
     const auto query_rect = [&](ITfRange* const range) -> std::optional<RECT> {
         if (range == nullptr || FAILED(range->Collapse(edit_cookie, TF_ANCHOR_END))) {
@@ -2056,9 +2074,6 @@ void TextService::capture_composition_caret(
     if (chosen.has_value()) {
         const RECT reported = *chosen;
         RECT rect = reported;
-        HWND view_window = nullptr;
-        const bool has_view_window =
-            SUCCEEDED(view->GetWnd(&view_window)) && view_window != nullptr;
         const DPI_AWARENESS awareness = has_view_window
             ? GetAwarenessFromDpiAwarenessContext(
                 GetWindowDpiAwarenessContext(view_window))

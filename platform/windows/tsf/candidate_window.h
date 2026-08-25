@@ -85,6 +85,10 @@ candidate_context_action_from_command(UINT command) noexcept;
     bool locked_to_text_caret,
     bool incoming_text_caret) noexcept;
 
+// Converts an untrusted wire HWND into a live top-level owner. Text services
+// often report the focused child control; popup ownership must use its root.
+[[nodiscard]] HWND resolve_candidate_owner(std::uint64_t owner_window) noexcept;
+
 class CandidateWindow final {
 public:
     CandidateWindow() = default;
@@ -114,12 +118,13 @@ public:
     // up the moment a new word opens, and relying on hide() having happened is
     // what let the bar stay at the previous word's position.
     void release_anchor() noexcept;
-    void show_at_text_caret(const RECT& caret);
+    void show_at_text_caret(const RECT& caret, std::uint64_t owner_window = 0U);
     // Same placement, but the lock is not marked as coming from a real text
     // caret, so the first true caret of this composition may correct it once.
-    void show_at_provisional_caret(const RECT& caret);
-    void show_near_caret();
+    void show_at_provisional_caret(const RECT& caret, std::uint64_t owner_window = 0U);
+    void show_near_caret(std::uint64_t owner_window = 0U);
     void hide();
+    [[nodiscard]] HWND native_handle() const noexcept { return window_; }
 
 private:
     static LRESULT CALLBACK window_proc(HWND window, UINT message, WPARAM wparam, LPARAM lparam);
@@ -130,12 +135,16 @@ private:
     [[nodiscard]] std::vector<int> item_widths(HDC dc) const;
     void resize_for_toolbar_menu();
     void update_window_region(int width, int height);
-    void show_at_anchor(const RECT& anchor, int anchor_gap, bool text_caret);
+    [[nodiscard]] bool ensure_window(std::uint64_t owner_window);
+    void show_at_anchor(
+        const RECT& anchor, int anchor_gap, bool text_caret, std::uint64_t owner_window);
     void move_to_target_monitor(POINT point);
     void update_dpi(UINT dpi);
     [[nodiscard]] int scaled(int value) const noexcept;
 
     HWND window_{};
+    HINSTANCE instance_{};
+    HWND owner_window_{};
     HFONT font_{};
     // Set when font_ is a stock object, which belongs to the system and must
     // never be passed to DeleteObject.

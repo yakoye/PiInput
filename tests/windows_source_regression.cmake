@@ -242,6 +242,27 @@ if(NOT candidate_presenter_text MATCHES "update\.has_text_caret" OR
     message(FATAL_ERROR
         "Candidate presenter must prefer TSF text geometry and retain the mouse fallback")
 endif()
+string(FIND "${candidate_window_text}"
+    "const HWND owner = resolve_candidate_owner(owner_window);"
+    candidate_resolved_owner_position)
+string(FIND "${candidate_window_text}"
+    "        owner," candidate_create_owner_position)
+string(FIND "${stable_text_service_text}" "view->GetWnd(&view_window)" owner_getwnd_position)
+string(FIND "${stable_text_service_text}" "GetFocus()" owner_focus_position)
+string(FIND "${stable_text_service_text}"
+    "GetAncestor(view_window, GA_ROOT)" owner_root_position)
+string(FIND "${stable_text_service_text}" "update.owner_window" owner_wire_position)
+string(FIND "${candidate_presenter_text}" "update.owner_window" owner_presenter_position)
+if(owner_getwnd_position LESS 0 OR
+   owner_focus_position LESS 0 OR
+   owner_root_position LESS 0 OR
+   owner_wire_position LESS 0 OR
+   owner_presenter_position LESS 0 OR
+   candidate_resolved_owner_position LESS 0 OR
+   candidate_create_owner_position LESS 0)
+    message(FATAL_ERROR
+        "Candidate popup ownership must flow from the TSF text-view root to CreateWindowEx")
+endif()
 string(FIND "${candidate_presenter_text}" "bool CandidatePresenter::stage(" presenter_stage_start)
 string(FIND "${candidate_presenter_text}" "bool CandidatePresenter::show_at(" presenter_show_at_start)
 if(presenter_stage_start LESS 0 OR presenter_show_at_start LESS_EQUAL presenter_stage_start)
@@ -1178,6 +1199,8 @@ foreach(controlled_tsf_controller_token IN ITEMS
         "ensure_chinese_mode"
         "loaded_tsf_module"
         "module_identity"
+        "candidate_owned"
+        "wait_for_owned_candidate"
         "version_sentence"
         "incomplete_group"
         "grouped_backspace"

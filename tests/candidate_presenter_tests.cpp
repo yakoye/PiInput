@@ -561,6 +561,37 @@ void test_switching_application_sessions_resets_candidate_geometry() {
         "the first active session has no stale geometry to reset");
 }
 
+void test_candidate_popup_is_owned_by_the_text_view_root() {
+    const HINSTANCE instance = GetModuleHandleW(nullptr);
+    const HWND root = CreateWindowExW(
+        0U, L"STATIC", L"PiInput candidate owner test", WS_OVERLAPPED,
+        0, 0, 320, 120, nullptr, nullptr, instance, nullptr);
+    check(root != nullptr, "candidate owner test creates a top-level text host");
+    const HWND child = CreateWindowExW(
+        WS_EX_CLIENTEDGE, L"EDIT", L"", WS_CHILD | WS_VISIBLE,
+        8, 8, 240, 28, root, nullptr, instance, nullptr);
+    check(child != nullptr, "candidate owner test creates a focused child control");
+
+    piinput::windows::CandidateWindow window;
+    check(window.create(instance), "candidate popup class is created");
+    window.update(L"ni", {L"你", L"呢"}, 0U, 0U, 0U, 6U, 1U);
+    window.show_at_text_caret(
+        {20, 20, 22, 44},
+        static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(child)));
+    check(piinput::windows::resolve_candidate_owner(
+              static_cast<std::uint64_t>(reinterpret_cast<std::uintptr_t>(child))) == root,
+        "a text child is normalized to its top-level host");
+    check(GetWindow(window.native_handle(), GW_OWNER) == root,
+        "CreateWindowEx binds the candidate popup to the text host root");
+
+    DestroyWindow(root);
+    window.show_at_text_caret({30, 30, 32, 54});
+    check(window.native_handle() != nullptr && IsWindow(window.native_handle()) != FALSE &&
+            GetWindow(window.native_handle(), GW_OWNER) == nullptr,
+        "a destroyed text host causes the candidate popup to be recreated safely");
+    window.destroy();
+}
+
 void test_presenter_identity_keeps_same_session_number_isolated_per_process() {
     const auto first = piinput::windows::candidate_presentation_id(1001U, 1U);
     const auto second = piinput::windows::candidate_presentation_id(1002U, 1U);
@@ -632,6 +663,7 @@ int main() {
     test_a_word_never_opens_on_a_guessed_position();
     test_the_anchor_does_not_drift_while_the_word_grows();
     test_switching_application_sessions_resets_candidate_geometry();
+    test_candidate_popup_is_owned_by_the_text_view_root();
     test_presenter_identity_keeps_same_session_number_isolated_per_process();
     test_text_caret_geometry_prefers_the_actual_selection_over_composition_extent();
     test_text_caret_geometry_uses_composition_only_as_a_valid_fallback();

@@ -229,7 +229,13 @@ std::optional<HostResumeState> decode_host_resume_state(
     return HostResumeState{*generation, std::move(*raw), static_cast<std::size_t>(*caret), mode};
 }
 
-std::vector<std::byte> encode_host_caret_update(const HostCaretUpdate& update) {
+std::vector<std::byte> encode_host_caret_update(
+    const HostCaretUpdate& update,
+    const std::uint32_t protocol_version) {
+    if (protocol_version != host_protocol_v1 && protocol_version != host_protocol_v2 &&
+        protocol_version != host_protocol_v3 && protocol_version != host_protocol_v4) {
+        throw std::invalid_argument("unsupported PiInput Host caret protocol version");
+    }
     Writer writer;
     writer.integer(update.generation);
     writer.integer(static_cast<std::uint32_t>(update.has_text_caret ? 1U : 0U));
@@ -237,13 +243,20 @@ std::vector<std::byte> encode_host_caret_update(const HostCaretUpdate& update) {
     writer.integer(std::bit_cast<std::uint32_t>(update.top));
     writer.integer(std::bit_cast<std::uint32_t>(update.right));
     writer.integer(std::bit_cast<std::uint32_t>(update.bottom));
+    if (protocol_version >= host_protocol_v4) writer.integer(update.owner_window);
     return std::move(writer).finish();
 }
 
 std::optional<HostCaretUpdate> decode_host_caret_update(
     const std::span<const std::byte> input,
-    HostPayloadError& error) {
+    HostPayloadError& error,
+    const std::uint32_t protocol_version) {
     error = HostPayloadError::none;
+    if (protocol_version != host_protocol_v1 && protocol_version != host_protocol_v2 &&
+        protocol_version != host_protocol_v3 && protocol_version != host_protocol_v4) {
+        error = HostPayloadError::unknown_value;
+        return std::nullopt;
+    }
     Reader reader(input);
     const auto generation = reader.integer<std::uint64_t>();
     const auto flags = reader.integer<std::uint32_t>();
@@ -251,7 +264,10 @@ std::optional<HostCaretUpdate> decode_host_caret_update(
     const auto top = reader.integer<std::uint32_t>();
     const auto right = reader.integer<std::uint32_t>();
     const auto bottom = reader.integer<std::uint32_t>();
-    if (!generation || !flags || !left || !top || !right || !bottom) {
+    const auto owner_window = protocol_version >= host_protocol_v4
+        ? reader.integer<std::uint64_t>()
+        : std::optional<std::uint64_t>{0U};
+    if (!generation || !flags || !left || !top || !right || !bottom || !owner_window) {
         error = HostPayloadError::truncated;
         return std::nullopt;
     }
@@ -270,6 +286,7 @@ std::optional<HostCaretUpdate> decode_host_caret_update(
         .top = std::bit_cast<std::int32_t>(*top),
         .right = std::bit_cast<std::int32_t>(*right),
         .bottom = std::bit_cast<std::int32_t>(*bottom),
+        .owner_window = *owner_window,
     };
     if (result.has_text_caret &&
         (result.right < result.left || result.bottom < result.top)) {
@@ -314,7 +331,7 @@ std::vector<std::byte> encode_host_reply(
     const HostReply& reply,
     const std::uint32_t protocol_version) {
     if (protocol_version != host_protocol_v1 && protocol_version != host_protocol_v2 &&
-        protocol_version != host_protocol_v3) {
+        protocol_version != host_protocol_v3 && protocol_version != host_protocol_v4) {
         throw std::invalid_argument("unsupported PiInput Host reply protocol version");
     }
     if (reply.snapshot.candidates.size() > host_max_candidates) {

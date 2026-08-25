@@ -29,6 +29,10 @@ struct HostCaretUpdate final {
     std::int32_t top{};
     std::int32_t right{};
     std::int32_t bottom{};
+    // Top-level text-view window reported by the in-process TSF shim. The
+    // out-of-process Host uses it as the candidate popup owner so immersive
+    // surfaces such as Windows Search keep the popup in their z-order group.
+    std::uint64_t owner_window{};
 
     bool operator==(const HostCaretUpdate&) const = default;
 };
@@ -51,10 +55,12 @@ struct HostCommitResult final {
     HostPayloadError& error);
 
 [[nodiscard]] std::vector<std::byte> encode_host_caret_update(
-    const HostCaretUpdate& update);
+    const HostCaretUpdate& update,
+    std::uint32_t protocol_version = host_protocol_current);
 [[nodiscard]] std::optional<HostCaretUpdate> decode_host_caret_update(
     std::span<const std::byte> input,
-    HostPayloadError& error);
+    HostPayloadError& error,
+    std::uint32_t protocol_version = host_protocol_current);
 
 [[nodiscard]] std::vector<std::byte> encode_host_commit_result(
     const HostCommitResult& result);

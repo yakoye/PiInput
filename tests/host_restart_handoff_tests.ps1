@@ -19,7 +19,7 @@ try {
         $ready = $false
         for ($attempt = 0; $attempt -lt 80; $attempt++) {
             $health = & $HostExe --health 2>&1
-            if ($LASTEXITCODE -eq 0 -and ($health -join "`n") -match "protocol=3") {
+            if ($LASTEXITCODE -eq 0 -and ($health -join "`n") -match "protocol=4") {
                 $ready = $true
                 break
             }

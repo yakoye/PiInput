@@ -601,7 +601,8 @@ int main(const int argc, char** const argv) {
             piinput::windows::process_client_id(),
             1U,
             sequence++,
-            update.generation);
+            update.generation,
+            piinput::host_protocol_current);
         if (!response.has_value() || response->type != piinput::HostMessageType::caret ||
             !response->payload.empty()) {
             return 5;

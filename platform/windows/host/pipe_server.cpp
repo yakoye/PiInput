@@ -226,7 +226,8 @@ std::optional<HostEnvelope> request_host(
     std::uint64_t client_id,
     const std::uint64_t session_id,
     std::uint64_t sequence,
-    const std::uint64_t generation) noexcept {
+    const std::uint64_t generation,
+    const std::uint32_t protocol_version) noexcept {
     const std::wstring name = host_pipe_name();
     if (name.empty()) return std::nullopt;
     HANDLE pipe = INVALID_HANDLE_VALUE;
@@ -255,7 +256,7 @@ std::optional<HostEnvelope> request_host(
     if (client_id == 0U) client_id = static_cast<std::uint64_t>(GetCurrentProcessId());
     if (sequence == 0U) sequence = (std::max)(GetTickCount64(), 1ULL);
     HostEnvelope request{
-        .version = host_protocol_v1,
+        .version = protocol_version,
         .client_id = client_id,
         .session_id = session_id,
         .sequence = sequence,
@@ -370,7 +371,8 @@ int PipeServer::run() noexcept {
             } else if (request.has_value() && request->type == HostMessageType::caret &&
                 presenter_ != nullptr) {
                 HostPayloadError payload_error = HostPayloadError::none;
-                const auto update = decode_host_caret_update(request->payload, payload_error);
+                const auto update = decode_host_caret_update(
+                    request->payload, payload_error, request->version);
                 if (update.has_value() && update->generation == request->generation) {
                     // A pre-key probe arrives before the snapshot it belongs to
                     // exists, so it cannot be shown. It is still the truth about
@@ -389,6 +391,14 @@ int PipeServer::run() noexcept {
                         .type = HostMessageType::caret,
                     };
                     (void)write_pipe_message(pipe, response);
+                } else {
+                    std::cerr << "PiInputHost: rejected caret payload, protocol="
+                              << request->version
+                              << " payload_error=" << static_cast<int>(payload_error)
+                              << " payload_bytes=" << request->payload.size()
+                              << " envelope_generation=" << request->generation
+                              << " payload_generation="
+                              << (update.has_value() ? update->generation : 0U) << '\n';
                 }
             } else if (request.has_value() && request->type == HostMessageType::focus &&
                 presenter_ != nullptr && request->payload.size() == 1U) {

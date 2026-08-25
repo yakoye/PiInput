@@ -218,7 +218,7 @@ Smart Punctuation 已从“待建纯引擎”进入“核心子集完成、完�
 - PFX Base64/密码 secret 只暴露给单个签名步骤，不进入 job 级环境；临时 PFX 在该步骤 `finally` 删除且绝不上传。
 - `RequireSigned` 由 tag/final policy 决定，不能由开发者为通过测试随意关闭。
 - 正式资产必须再次验证每个 PE 签名和 ZIP SHA-256。
-- 安装闭环必须核对 HKCU 与 SearchHost 可见的 HKLM TSF 路径、Host 路径、包内/安装后 Host 与 TSF 哈希，并用 Controlled TSF Host 证明实际加载 DLL；tag 发布后再次下载 ZIP，与 sidecar 和本地 SHA-256 三方比对。
+- 安装闭环必须核对 HKCU 与 SearchHost 可见的 HKLM TSF 路径、Host 路径、包内/安装后 Host 与 TSF 哈希，并用 Controlled TSF Host 证明实际加载 DLL；系统表面还必须看到首字母候选窗，并核对候选 popup 的 `GW_OWNER` 是文本宿主顶层窗口，不能只用最终汉字上屏代替 UI 证据；tag 发布后再次下载 ZIP，与 sidecar 和本地 SHA-256 三方比对。
 - CI 失败也必须保存证据：CTest 输出 JUnit，package closure 在最早的哈希失败到安装/卸载失败之间都写出 `status=failed`、`stage` 和错误原因。
 - CI 的 `always()` 收尾使用 `compose-test-result.ps1` 生成 schema v1 统一结果和 SHA-256 manifest；非法状态、重复 Case ID 或声明证据缺失必须失败，`BLOCKED/NOT_RUN/N/A` 只单独计数，不进入 executed pass rate。
 - 正式 tag 在任何构建/签名前先执行 `verify-release-evidence.ps1`；Host-only 8h、TSF/App 8h、P0 真实宿主矩阵必须在对应版本验证记录中全部标为 `PASS`，否则流水线 fail-closed。

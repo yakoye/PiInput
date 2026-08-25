@@ -106,11 +106,20 @@ void test_caret_update_round_trip_preserves_text_geometry_and_fallback() {
         .top = 200,
         .right = 102,
         .bottom = 224,
+        .owner_window = 0x12345678U,
     };
     const auto decoded_primary = piinput::decode_host_caret_update(
         piinput::encode_host_caret_update(primary), error);
     check(decoded_primary.has_value() && *decoded_primary == primary,
-        "text caret geometry round trips");
+        "text caret geometry and popup owner round trip");
+
+    const auto legacy_primary = piinput::decode_host_caret_update(
+        piinput::encode_host_caret_update(primary, piinput::host_protocol_v3),
+        error,
+        piinput::host_protocol_v3);
+    check(legacy_primary.has_value() && legacy_primary->owner_window == 0U &&
+            legacy_primary->left == primary.left && legacy_primary->bottom == primary.bottom,
+        "protocol v3 caret geometry remains compatible without a popup owner");
 
     const piinput::HostCaretUpdate negative_monitor{
         .generation = 74U,

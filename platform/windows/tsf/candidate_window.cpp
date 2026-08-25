@@ -188,14 +188,21 @@ bool should_reanchor_candidate_window(
     return !geometry_locked || (!locked_to_text_caret && incoming_text_caret);
 }
 
+HWND resolve_candidate_owner(const std::uint64_t owner_window) noexcept {
+    const HWND candidate = reinterpret_cast<HWND>(
+        static_cast<std::uintptr_t>(owner_window));
+    if (candidate == nullptr || IsWindow(candidate) == FALSE) return nullptr;
+    const HWND root = GetAncestor(candidate, GA_ROOT);
+    return root != nullptr ? root : candidate;
+}
+
 CandidateWindow::~CandidateWindow() {
     destroy();
 }
 
 bool CandidateWindow::create(const HINSTANCE instance) {
-    if (window_ != nullptr) {
-        return true;
-    }
+    if (window_ != nullptr) return true;
+    instance_ = instance;
     WNDCLASSEXW window_class{};
     window_class.cbSize = sizeof(window_class);
     window_class.hInstance = instance;
@@ -203,7 +210,10 @@ bool CandidateWindow::create(const HINSTANCE instance) {
     window_class.lpszClassName = kCandidateClass;
     window_class.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     window_class.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-    RegisterClassExW(&window_class);
+    if (RegisterClassExW(&window_class) == 0U &&
+        GetLastError() != ERROR_CLASS_ALREADY_EXISTS) {
+        return false;
+    }
 
     // Owns the popup menus. A menu whose owner is not the foreground window
     // ignores clicks outside itself and stays on screen; the candidate window
@@ -212,6 +222,30 @@ bool CandidateWindow::create(const HINSTANCE instance) {
     menu_owner_ = CreateWindowExW(
         WS_EX_TOOLWINDOW, kCandidateClass, L"", WS_POPUP,
         0, 0, 0, 0, nullptr, nullptr, instance, nullptr);
+
+    // Create a hidden fallback immediately so Host startup still fails closed
+    // if the popup class cannot be instantiated. The first TSF caret update
+    // recreates it with the text-view root as its real owner.
+    return ensure_window(0U);
+}
+
+bool CandidateWindow::ensure_window(const std::uint64_t owner_window) {
+    const HWND owner = resolve_candidate_owner(owner_window);
+    if (window_ != nullptr && IsWindow(window_) != FALSE && owner_window_ == owner) {
+        return true;
+    }
+    if (window_ != nullptr) {
+        if (IsWindow(window_) != FALSE) DestroyWindow(window_);
+        window_ = nullptr;
+    }
+    owner_window_ = nullptr;
+    shown_ = false;
+    geometry_locked_ = false;
+    locked_to_text_caret_ = false;
+    locked_rect_ = {};
+    visible_item_rects_.clear();
+    visible_item_indexes_.clear();
+    layout_dirty_ = true;
 
     window_ = CreateWindowExW(
         WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
@@ -222,13 +256,14 @@ bool CandidateWindow::create(const HINSTANCE instance) {
         0,
         480,
         kCompactWindowHeight,
+        owner,
         nullptr,
-        nullptr,
-        instance,
+        instance_,
         this);
     if (window_ == nullptr) {
         return false;
     }
+    owner_window_ = owner;
     update_dpi(GetDpiForWindow(window_));
     return true;
 }
@@ -275,6 +310,11 @@ void CandidateWindow::destroy() {
     if (window_ != nullptr) {
         DestroyWindow(window_);
         window_ = nullptr;
+    }
+    owner_window_ = nullptr;
+    if (menu_owner_ != nullptr) {
+        DestroyWindow(menu_owner_);
+        menu_owner_ = nullptr;
     }
     if (font_ != nullptr) {
         if (!stock_font_) DeleteObject(font_);
@@ -323,10 +363,8 @@ void CandidateWindow::update(
     }
 }
 
-void CandidateWindow::show_near_caret() {
-    if (window_ == nullptr) {
-        return;
-    }
+void CandidateWindow::show_near_caret(const std::uint64_t owner_window) {
+    if (!ensure_window(owner_window)) return;
     GUITHREADINFO info{sizeof(info)};
     RECT anchor{20, 40, 20, 40};
     const HWND foreground = GetForegroundWindow();
@@ -340,21 +378,25 @@ void CandidateWindow::show_near_caret() {
         ClientToScreen(info.hwndCaret, &top_left);
         ClientToScreen(info.hwndCaret, &bottom_right);
         anchor = {top_left.x, top_left.y, bottom_right.x, bottom_right.y};
-        show_at_anchor(anchor, 4, false);
+        show_at_anchor(anchor, 4, false, owner_window);
     } else {
         POINT point{};
         GetCursorPos(&point);
         anchor = {point.x, point.y, point.x, point.y};
-        show_at_anchor(anchor, 20, false);
+        show_at_anchor(anchor, 20, false, owner_window);
     }
 }
 
-void CandidateWindow::show_at_text_caret(const RECT& caret) {
-    show_at_anchor(caret, 4, true);
+void CandidateWindow::show_at_text_caret(
+    const RECT& caret,
+    const std::uint64_t owner_window) {
+    show_at_anchor(caret, 4, true, owner_window);
 }
 
-void CandidateWindow::show_at_provisional_caret(const RECT& caret) {
-    show_at_anchor(caret, 4, false);
+void CandidateWindow::show_at_provisional_caret(
+    const RECT& caret,
+    const std::uint64_t owner_window) {
+    show_at_anchor(caret, 4, false, owner_window);
 }
 
 void CandidateWindow::move_to_target_monitor(const POINT point) {
@@ -371,10 +413,9 @@ void CandidateWindow::move_to_target_monitor(const POINT point) {
 void CandidateWindow::show_at_anchor(
     const RECT& anchor,
     const int anchor_gap,
-    const bool text_caret) {
-    if (window_ == nullptr) {
-        return;
-    }
+    const bool text_caret,
+    const std::uint64_t owner_window) {
+    if (!ensure_window(owner_window)) return;
 
     const bool reanchor = should_reanchor_candidate_window(
         geometry_locked_, locked_to_text_caret_, text_caret);
