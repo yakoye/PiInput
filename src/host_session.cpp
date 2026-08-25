@@ -99,11 +99,18 @@ HostReply HostSession::apply(const HostKeyEvent& event) {
         return reply(true, HostAction::update);
     }
     if (event.kind == HostKeyKind::switch_to_english) {
+        // A standalone Shift is also an explicit boundary for the Chinese
+        // composition. Preserve exactly what the user typed instead of
+        // selecting a Chinese candidate or cancelling the raw letters. This
+        // makes "cmd" + Shift commit "cmd" and then enter English mode.
+        const std::string raw = current_raw();
         chinese_.clear();
         if (english_ != nullptr) english_->clear();
         mode_ = HostInputMode::english;
         advance_generation(true);
-        return reply(true, HostAction::cancel);
+        return raw.empty()
+            ? reply(true, HostAction::cancel)
+            : reply(true, HostAction::commit, raw);
     }
     if (event.kind == HostKeyKind::switch_to_chinese) {
         if (english_ != nullptr) english_->clear();

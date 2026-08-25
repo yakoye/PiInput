@@ -1257,8 +1257,13 @@ void test_optional_english_session_uses_the_same_host_boundary() {
     auto settings = piinput::default_settings();
     settings.english.enabled = true;
     piinput::HostSession session(engine, &english, settings, "full");
-    check(session.apply({.kind = piinput::HostKeyKind::switch_to_english}).accepted,
-        "host can enter configured English mode");
+    type(session, "cmd");
+    const auto switched = session.apply({.kind = piinput::HostKeyKind::switch_to_english});
+    check(switched.accepted && switched.action == piinput::HostAction::commit &&
+            switched.text == "cmd" &&
+            switched.snapshot.mode == piinput::HostInputMode::english &&
+            switched.snapshot.raw.empty(),
+        "Shift commits pending Chinese raw letters before entering English candidates");
     type(session, "re");
     const auto snapshot = session.snapshot();
     check(snapshot.mode == piinput::HostInputMode::english && snapshot.raw == "re",
@@ -1276,10 +1281,13 @@ void test_shift_enters_direct_english_when_candidates_are_disabled() {
     check(!settings.english.enabled, "English candidates stay disabled by default");
     piinput::HostSession session(engine, nullptr, settings, "full");
 
+    type(session, "cmd");
     const auto english = session.apply({.kind = piinput::HostKeyKind::switch_to_english});
-    check(english.accepted && english.snapshot.mode == piinput::HostInputMode::english &&
+    check(english.accepted && english.action == piinput::HostAction::commit &&
+            english.text == "cmd" &&
+            english.snapshot.mode == piinput::HostInputMode::english &&
             english.snapshot.raw.empty() && english.snapshot.candidates.empty(),
-        "standalone Shift enters direct English even when English candidates are disabled");
+        "standalone Shift preserves pending raw letters and enters direct English");
 
     const auto letter = session.apply({
         .kind = piinput::HostKeyKind::text,

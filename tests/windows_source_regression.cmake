@@ -39,6 +39,7 @@ file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/candidate_ui_element.h" ca
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/pipe_server.cpp" host_pipe_server_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/candidate_presenter.cpp" candidate_presenter_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/host/main.cpp" host_main_text)
+file(READ "${PIINPUT_SOURCE_DIR}/src/host_session.cpp" host_session_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/diagnostics/main.cpp" diagnostics_main_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/settings/main.cpp" settings_main_text)
 
@@ -1328,6 +1329,18 @@ if(NOT stable_text_service_header_text MATCHES "smart_punctuation_enabled_" OR
    NOT stable_text_service_text MATCHES "if \\(!smart_punctuation_enabled_\\) return false")
     message(FATAL_ERROR
         "TSF smart punctuation must defer at composition boundaries to explicit English/programmer settings")
+endif()
+string(FIND "${host_session_text}"
+    "if (event.kind == HostKeyKind::switch_to_english)" shift_english_branch)
+string(FIND "${host_session_text}"
+    "const std::string raw = current_raw();" shift_raw_commit_source)
+string(FIND "${host_session_text}"
+    "reply(true, HostAction::commit, raw)" shift_raw_commit_reply)
+if(shift_english_branch LESS 0 OR
+   shift_raw_commit_source LESS shift_english_branch OR
+   shift_raw_commit_reply LESS shift_raw_commit_source)
+    message(FATAL_ERROR
+        "Switching from a Chinese composition to English must commit the raw letters")
 endif()
 if(NOT settings_main_text MATCHES "SS_OWNERDRAW" OR
    NOT settings_main_text MATCHES "WM_DRAWITEM" OR
