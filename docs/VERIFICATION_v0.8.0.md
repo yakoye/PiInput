@@ -53,11 +53,25 @@ english_completion_real_run=NOT_RUN
   > `PiInput-Install.exe` that did not meet the Enterprise signing level requirements
   > or violated code integrity policy (Policy ID:`{0283ac0f-fff1-49ae-ada1-8a933130cad6}`)
 
-**这是内核代码完整性层的拒绝，不是应用层提示框。** 因此不存在用户态绕过途径：命令行、PowerShell 与双击的结果相同，弹窗上的「正常」只是关闭对话框。
+**这是内核代码完整性层的拒绝，不是应用层提示框。** 弹窗上的「正常」只是关闭对话框，不构成放行。
 
-**推论：拦截不止于安装。** 拒绝发生在加载 PE 文件的时刻，而 PiInput 的运行方式是把 `PiInputTSF.dll` 加载进每一个接受输入的进程。同一策略会同样拒绝该 DLL，因此在强制模式的机器上，即使绕过安装步骤，输入法也无法工作。签名是唯一解，不存在"先凑合用"的中间状态。
+**但拦截的范围远比"未签名即拒绝"要窄，实测如下：**
 
-包内全部 exe 与 dll 的 `Get-AuthenticodeSignature` 均为 `NotSigned`，v0.7.13 起各版本皆然，签名状态从未变化。
+| 文件 | 名称像安装器 | 依赖 comctl32 | 该机器首次见到 | 结果 |
+| --- | --- | --- | --- | --- |
+| v0.7.14 `PiInput-Install.exe` | 是 | 否 | 否 | 正常运行 |
+| v0.7.14 `PiInput-Uninstall.exe` | 否 | **是** | 否 | 正常运行 |
+| v0.7.16 `piinput-diagnostics.exe` | 否 | 否 | **是** | 正常运行 |
+| v0.7.16 `PiInput-Install.exe` | **是** | 是 | **是** | **被拒绝** |
+| 已安装的 `PiInputTSF.dll` | 否 | 否 | 否 | 正常加载，输入法工作中 |
+
+以上全部未签名。comctl32 与 Common Controls 6 清单单独出现（卸载器）不触发拦截，全新文件单独出现（诊断程序）也不触发；**只有"名称像安装器"与"该机器未见过此文件"同时成立时才被拒绝**。这与安全软件对安装程序单独抬高判定门槛的通行做法一致。因此可排除 v0.7.16 为安装器新增的 comctl32 依赖。
+
+同一台强制模式的机器上，同为未签名，只有一个文件被拒。因此**不能得出"未签名二进制一律无法运行"的结论**：微软文档中"app intelligence services provide safety predictions"这条路径确实在起作用，签名只是绕过判定的其中一种方式。此前本文档曾据单点观察推广出该结论，属推断过度，已更正。
+
+仍待区分的两个因素：文件名启发式，与"该哈希对判定服务为全新"。用一份改名后的同一文件即可分辨——改名能运行则为前者，仍被拒则为后者。两者的应对完全不同：前者只需更换发布文件名，后者只能靠签名或等待判定累积。
+
+包内全部 exe 与 dll 的 `Get-AuthenticodeSignature` 均为 `NotSigned`，v0.7.13 起各版本皆然，签名状态从未变化——这也说明签名并非 v0.7.14 与 v0.7.16 行为差异的原因。
 
 诊断脚本保留在 `scripts/dev/diagnose-smart-app-control.ps1`，只读，可直接发给遇到拦截的用户运行。
 
