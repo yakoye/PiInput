@@ -298,6 +298,7 @@ docs/release_notes_v0.7.15.md
 docs/release_notes_v0.7.16.md
 docs/TSF_DEVELOPER_TEST.md
 docs/v0.7.15安装、使用与测试.md
+docs/v0.7.16安装、使用与测试.md
 docs/VERIFICATION_v0.7.15.md
 docs/VERIFICATION_v0.7.16.md
 docs/WORKSPACE_LAYOUT.md
