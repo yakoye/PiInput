@@ -25,6 +25,7 @@ docs/安装与使用指南.md
 docs/词库查询与分段取字.md
 docs/词库更新说明.md
 docs/三个长文本打字测试_v0.7.15.md
+docs/三个长文本打字测试_v0.7.16.md
 docs/三组文本与八向边界对照测试_2026-08-15.md
 docs/稳定入口与无重启升级说明.md
 docs/archive/history/260717_1808_08同步计划.md
@@ -298,6 +299,7 @@ docs/release_notes_v0.7.16.md
 docs/TSF_DEVELOPER_TEST.md
 docs/v0.7.15安装、使用与测试.md
 docs/VERIFICATION_v0.7.15.md
+docs/VERIFICATION_v0.7.16.md
 docs/WORKSPACE_LAYOUT.md
 examples/sample_lexicon.tsv
 FILE_LIST.txt
