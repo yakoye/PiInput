@@ -296,6 +296,8 @@ docs/PORTABLE_TEST_RESULTS_2026-08-15.md
 docs/README.md
 docs/release_notes_v0.7.15.md
 docs/release_notes_v0.7.16.md
+docs/superpowers/plans/2026-08-26-中文模式英文候选.md
+docs/superpowers/specs/2026-08-26-中文模式英文候选设计.md
 docs/TSF_DEVELOPER_TEST.md
 docs/v0.7.15安装、使用与测试.md
 docs/v0.7.16安装、使用与测试.md
@@ -313,6 +315,7 @@ include/piinput/composition_caret.h
 include/piinput/datetime_candidates.h
 include/piinput/dictionary_builder.h
 include/piinput/engine.h
+include/piinput/english_completion.h
 include/piinput/english_key_policy.h
 include/piinput/english_lexicon.h
 include/piinput/english_session.h
@@ -472,6 +475,7 @@ src/composition_caret.cpp
 src/datetime_candidates.cpp
 src/dictionary_builder.cpp
 src/engine.cpp
+src/english_completion.cpp
 src/english_key_policy.cpp
 src/english_lexicon.cpp
 src/english_session.cpp
@@ -622,6 +626,7 @@ tests/unit/candidate_ui_element_tests.cpp
 tests/unit/character_coverage_tests.cpp
 tests/unit/composition_mirror_tests.cpp
 tests/unit/dictionary_builder_tests.cpp
+tests/unit/english_completion_tests.cpp
 tests/unit/english_lexicon_tests.cpp
 tests/unit/full_pinyin_variants_tests.cpp
 tests/unit/host_endpoint_tests.cpp

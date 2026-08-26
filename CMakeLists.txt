@@ -104,6 +104,7 @@ add_library(piinput_core STATIC
     src/composition_caret.cpp
     src/input_mode.cpp
     src/lazy_load_gate.cpp
+    src/english_completion.cpp
     src/english_lexicon.cpp
     src/english_key_policy.cpp
     src/english_session.cpp
@@ -530,6 +531,15 @@ if(PIINPUT_BUILD_TESTS)
     )
     piinput_enable_warnings(piinput-english-lexicon-tests)
 
+    add_executable(piinput-english-completion-tests
+        tests/unit/english_completion_tests.cpp
+    )
+    target_link_libraries(piinput-english-completion-tests PRIVATE piinput_core)
+    target_compile_definitions(piinput-english-completion-tests PRIVATE
+        PIINPUT_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+    piinput_enable_warnings(piinput-english-completion-tests)
+
     add_executable(piinput-dictionary-builder-tests
         tests/unit/dictionary_builder_tests.cpp
     )
@@ -758,6 +768,7 @@ if(PIINPUT_BUILD_TESTS)
     add_test(NAME piinput-full-pinyin-variants COMMAND piinput-full-pinyin-variants-tests)
     add_test(NAME piinput-incremental-decoder COMMAND piinput-incremental-decoder-tests)
     add_test(NAME piinput-english-lexicon COMMAND piinput-english-lexicon-tests)
+    add_test(NAME piinput-english-completion COMMAND piinput-english-completion-tests)
     add_test(NAME piinput-dictionary-builder COMMAND piinput-dictionary-builder-tests)
     add_test(NAME piinput-lexicon-query COMMAND piinput-lexicon-query-tests)
     add_test(NAME piinput-segment-selection COMMAND piinput-segment-selection-tests)
