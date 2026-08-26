@@ -124,18 +124,25 @@ void test_english_completion_is_off_unless_asked_for() {
     check(!settings.english.chinese_mode_completion,
         "mixing English into Chinese is off in the defaults");
 
+    // Four letters, because two never reach English at all -- one syllable
+    // belongs to 我 and 的 outright. `wond` is a prefix of the fixture's
+    // wonder, which sits in the high-frequency band a four-letter prefix is
+    // allowed to reach.
     piinput::HostSession without(engine, &english, settings, "full");
-    type(without, "wo");
+    type(without, "wond");
     const auto plain = candidate_texts(without.snapshot());
 
     settings.english.chinese_mode_completion = true;
     piinput::HostSession with(engine, &english, settings, "full");
-    type(with, "wo");
+    type(with, "wond");
     const auto mixed = candidate_texts(with.snapshot());
 
-    check(!plain.empty() && plain.front() == "我",
-        "the Chinese row is unchanged while the switch is off");
-    check(mixed.size() > plain.size(),
+    const auto carries_english = [](const std::vector<std::string>& row) {
+        return std::find(row.begin(), row.end(), "wonder") != row.end();
+    };
+    check(!carries_english(plain),
+        "the Chinese row carries no English while the switch is off");
+    check(carries_english(mixed),
         "turning the switch on is what adds the English words");
 
     std::filesystem::remove(chinese_path);
@@ -155,7 +162,7 @@ void test_english_completion_never_renumbers_a_shortcut() {
     auto settings = piinput::default_settings();
     settings.english.chinese_mode_completion = true;
     piinput::HostSession session(engine, &english, settings, "full");
-    type(session, "wo");
+    type(session, "wond");
     const auto texts = candidate_texts(session.snapshot());
 
     const auto action = std::find_if(texts.begin(), texts.end(),
@@ -187,7 +194,7 @@ void test_english_completion_commits_and_learns() {
     auto settings = piinput::default_settings();
     settings.english.chinese_mode_completion = true;
     piinput::HostSession session(engine, &english, settings, "full");
-    type(session, "wo");
+    type(session, "wond");
     const auto texts = candidate_texts(session.snapshot());
     const auto found = std::find(texts.begin(), texts.end(), "wonder");
     check(found != texts.end(), "the row carries the English word");

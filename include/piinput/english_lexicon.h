@@ -33,6 +33,19 @@ struct EnglishCandidate {
     bool operator==(const EnglishCandidate&) const = default;
 };
 
+struct EnglishQueryOptions {
+    std::size_t limit{3U};
+    // 子序列联想：输入 jiy 也能给出 jimmy。这是为英文模式设计的缩写输入，
+    // 在中文模式下必须关掉——那里的字母是拼音，按子序列去凑英文单词只会
+    // 得到 tzn -> tarzan、buhc -> buddhic 这种和输入毫无关系的词。
+    bool allow_subsequence{true};
+    // 词条权重下限。词库最底下一层只有词形没有真实词频，混进中文候选行
+    // 里的是 bucolic、tizwin、nizey 这类没人用的词，纯属噪音。
+    std::uint64_t minimum_weight{0U};
+
+    bool operator==(const EnglishQueryOptions&) const = default;
+};
+
 class EnglishLexicon final {
 public:
     [[nodiscard]] std::size_t load_builtin_tsv(const std::filesystem::path& path);
@@ -44,6 +57,9 @@ public:
     [[nodiscard]] std::vector<EnglishCandidate> query(
         std::string_view prefix,
         std::size_t limit) const;
+    [[nodiscard]] std::vector<EnglishCandidate> query(
+        std::string_view prefix,
+        const EnglishQueryOptions& options) const;
     [[nodiscard]] bool record_selection(std::string_view word) noexcept;
     [[nodiscard]] bool save_learning_tsv(const std::filesystem::path& path) noexcept;
 

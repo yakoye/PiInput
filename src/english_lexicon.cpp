@@ -264,6 +264,13 @@ std::size_t EnglishLexicon::load_learning_tsv(const std::filesystem::path& path)
 std::vector<EnglishCandidate> EnglishLexicon::query(
     const std::string_view prefix,
     const std::size_t limit) const {
+    return query(prefix, EnglishQueryOptions{.limit = limit});
+}
+
+std::vector<EnglishCandidate> EnglishLexicon::query(
+    const std::string_view prefix,
+    const EnglishQueryOptions& options) const {
+    const std::size_t limit = options.limit;
     if (prefix.empty() || limit == 0U || !is_ascii_word(prefix)) {
         return {};
     }
@@ -274,12 +281,20 @@ std::vector<EnglishCandidate> EnglishLexicon::query(
             return entries_[index].lowercase_word < value;
         });
 
+    // 学习到的词与用户词典不受权重下限约束：它们是用户自己打进来的，
+    // 无论词库把它们排在哪一层，用户显然想要它们。
+    const auto passes_weight = [&](const EnglishCandidate& candidate) {
+        return candidate.user_entry || candidate.learning_count > 0U ||
+               candidate.base_weight >= options.minimum_weight;
+    };
+
     std::vector<EnglishCandidate> result;
     for (auto current = first; current != prefix_index_.end(); ++current) {
         const auto& entry = entries_[*current];
         if (!entry.lowercase_word.starts_with(lowercase_prefix)) {
             break;
         }
+        if (!passes_weight(entry.candidate)) continue;
         result.push_back(entry.candidate);
     }
     const auto preference_for = [&](const EnglishCandidate& candidate) {
@@ -321,13 +336,14 @@ std::vector<EnglishCandidate> EnglishLexicon::query(
         }
         return left.word < right.word;
     };
-    if (lowercase_prefix.size() >= 3U) {
+    if (options.allow_subsequence && lowercase_prefix.size() >= 3U) {
         for (const std::size_t index : prefix_index_) {
             const auto& entry = entries_[index];
             if (entry.lowercase_word.starts_with(lowercase_prefix) ||
                 !is_bounded_subsequence_completion(lowercase_prefix, entry.lowercase_word)) {
                 continue;
             }
+            if (!passes_weight(entry.candidate)) continue;
             auto candidate = entry.candidate;
             candidate.flags |= static_cast<std::uint32_t>(EnglishCandidateFlag::fuzzy);
             result.push_back(std::move(candidate));

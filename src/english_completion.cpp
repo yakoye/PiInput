@@ -6,34 +6,86 @@
 namespace piinput {
 namespace {
 
-// The same letters are both pinyin and an English word, so the position of an
-// English candidate cannot be fixed. These thresholds are calibrated against
-// measured behaviour in full pinyin: 和 at 6,252,031 leaves no room for
-// English, 按 at 3,826,950 pushes it down the row, 那么 at 501,795 concedes
-// the second slot, and 错的 at 105,000 concedes the first.
-struct StartPositionThresholds {
-    std::int64_t suppress_above;
-    std::int64_t demote_above;
-    std::int64_t second_above;
-    std::size_t demoted_position;
-};
+// English is offered only where an English word was plausibly typed.
+//
+// The first attempt judged that from the Chinese side, treating an incomplete
+// reading as evidence the candidates were guesswork. That reasoning collapses
+// in double pinyin, where a trailing half-syllable is completely ordinary:
+// `wom` is wo + m, `niz` is ni + z, and the engine completes those on purpose
+// -- it is how `mkt` gives 明天. The signal read "uncertain" where it meant
+// "business as usual", and English shouldered aside 我们, 不错 and 你在.
+//
+// Two conditions carry the decision instead, and between them they account
+// for every case reported from real typing:
+//
+//   wom niz tzn jiy     three letters and only a prefix -- refused by length
+//   buco buhc           four letters, but reaching only bucolic and buddhic,
+//                       words with no usage data -- refused by the floor
+//   cat me wome women   offered
+//   book belie pallad   offered; these decode to no Chinese at all
+//
+// Note what is absent: how strong the Chinese is. An earlier version gated on
+// that and got `buco` right for the wrong reason -- its Chinese happens to
+// score 500,601, but the actual problem is that nobody types bucolic.
 
-constexpr StartPositionThresholds kFullPinyin{
-    .suppress_above = 5000000,
-    .demote_above = 1000000,
-    .second_above = 200000,
-    .demoted_position = 5U,
-};
+// Three letters before English is offered at all. Two is exactly one syllable
+// in double pinyin, and the characters reached there are the most common in
+// the language -- 我 at 29,569,261, 的 at 76,938,354. Nothing English wins
+// against those.
+constexpr std::size_t kMinimumLength = 3U;
 
-// Double pinyin spells a whole syllable in two letters, so short English words
-// nearly always decode to something. The bar rises accordingly; otherwise
-// English would take the first slot away from characters people type daily.
-constexpr StartPositionThresholds kDoublePinyin{
-    .suppress_above = 3000000,
-    .demote_above = 600000,
-    .second_above = 100000,
-    .demoted_position = 5U,
-};
+// Below this, only the curated base dictionary is consulted. Those 24,180
+// words were selected by frequency, so `book` and `believe` are there while
+// bucolic, palladium and quixotic are not. Three and four letters are still
+// mid-word in double pinyin, and reaching into the long tail there is what
+// produced buco -> bucolic.
+constexpr std::size_t kLengthForFullDictionary = 5U;
+constexpr std::uint64_t kBaseDictionaryFloor = 1000000U;
+
+// Below this a prefix does not count -- only a word finished. Three letters
+// of pinyin are pinyin far more often than the opening of an English word:
+// wom, niz, tzn and jiy each prefix a real word and none should offer one.
+constexpr std::size_t kLengthAllowingPrefixes = 4U;
+
+// Where it appears follows the length of what was typed. `wome` and `women`
+// reach Chinese of identical score (14,230), yet the four-letter one is
+// offered second and the five-letter one first.
+constexpr std::size_t kLengthForFirstSlot = 5U;
+
+// Where a three-letter word goes. Double pinyin spells a syllable in two
+// letters, so three is always mid-word -- 我们 passes through wom on its way
+// to womm, and car, men and big are likewise 擦+r, 么+n and 壁+g in passing.
+// Other input methods put English second here; that interrupts the typing it
+// was passing through. Offered, but far enough down to be ignorable.
+constexpr std::size_t kShortInputSlot = 5U;
+
+// Floor for entries the dictionary build gave a real frequency to. Below it
+// lies the bulk word list, which supplies spellings and no usage data at all
+// -- bucolic at 155,354 and buddhic at 155,349 both live there.
+//
+// It applies to prefixes only. Typing a word out in full is a statement about
+// what you meant, however obscure the word: `bucolic` is offered, while
+// `bucoli` is not, and the difference is not the word but whether it was
+// finished. Guessing that four letters were headed somewhere nobody goes is a
+// different matter entirely.
+// Kept in step with build-english-lexicon.ps1, where the bands start at
+// 200,001.
+constexpr std::uint64_t kFrequencyBandFloor = 200000U;
+
+// Above this the Chinese is established enough to hold the first slot, so
+// English follows it. 我么那 at 14,230 lets `women` lead; 不错 at 500,601
+// keeps `bucolic` second, and 擦 at 172,541 does the same for `cat`.
+constexpr std::int64_t kChineseHoldsTheLead = 100000;
+
+// Above this a short word is not worth interrupting for. Both Sogou and
+// WeChat decline English on `bus`, whose 不是 scores 501,670, yet both offer
+// it on `car`, whose 擦 scores 172,541 -- and Sogou still offers `bucolic`
+// although its 不错 scores 500,601, barely different from `bus`.
+//
+// What separates those is length, not the Chinese. Seven letters have already
+// declared their intent; three are far more likely to be pinyin that happens
+// to spell something. So the Chinese only gets a veto over short input.
+constexpr std::int64_t kChineseVetoesShortWords = 200000;
 
 [[nodiscard]] bool is_ascii_letter(const char value) noexcept {
     return (value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z');
@@ -43,19 +95,41 @@ constexpr StartPositionThresholds kDoublePinyin{
     return value >= 'A' && value <= 'Z';
 }
 
+[[nodiscard]] bool same_word_ignoring_case(
+    const std::string_view left, const std::string_view right) noexcept {
+    return left.size() == right.size() &&
+        std::equal(left.begin(), left.end(), right.begin(),
+            [](const char a, const char b) {
+                return std::tolower(static_cast<unsigned char>(a)) ==
+                       std::tolower(static_cast<unsigned char>(b));
+            });
+}
+
 }  // namespace
 
 std::size_t english_start_position(
-    const ChineseCandidateSummary& chinese, const bool double_pinyin) noexcept {
+    const ChineseCandidateSummary& chinese,
+    const std::size_t input_length,
+    const bool typed_a_whole_word,
+    const bool double_pinyin) noexcept {
+    (void)double_pinyin;
+    // Nothing to compete with: this is the spelling-help case the feature
+    // exists for -- book, belie and pallad decode to no Chinese at all.
     if (!chinese.has_candidates) return 1U;
-    // The Chinese candidates were guessed from an incomplete reading, so they
-    // are no more certain than the English word and should not outrank it.
-    if (!chinese.covers_all_input) return 1U;
-    const StartPositionThresholds& limits = double_pinyin ? kDoublePinyin : kFullPinyin;
-    if (chinese.top_score > limits.suppress_above) return 0U;
-    if (chinese.top_score > limits.demote_above) return limits.demoted_position;
-    if (chinese.top_score > limits.second_above) return 2U;
-    return 1U;
+
+    // Three letters is mid-word in double pinyin, so English waits at the back
+    // rather than interrupting.
+    if (input_length < kLengthAllowingPrefixes) return kShortInputSlot;
+
+    // The first slot asks for all three: a word finished rather than started,
+    // long enough to be unlikely as pinyin, and Chinese weak enough to yield.
+    // `women` clears all three; `bucolic` is finished and long but its 不错
+    // scores 500,601, and `wome` is only a prefix.
+    if (typed_a_whole_word && input_length >= kLengthForFirstSlot &&
+        chinese.top_score < kChineseHoldsTheLead) {
+        return 1U;
+    }
+    return 2U;
 }
 
 std::size_t english_insert_index(
@@ -101,16 +175,91 @@ EnglishCompletionPlan plan_english_completion(
     const EnglishLexicon& lexicon,
     const EnglishCompletionSettings& settings) {
     if (!settings.enabled || settings.max_items == 0U) return {};
-    // One letter completes to hundreds of words and collides with a great many
-    // readings; the suggestions would be noise rather than help.
-    if (input.size() < 2U) return {};
+    // Two letters is exactly one syllable, and the characters living there are
+    // the most common in the language: 我 at 29 million, 的 at 76 million.
+    // Every English word that collides -- wo, ni, de, he, you -- loses to them
+    // every time, so none is offered.
+    if (input.size() < kMinimumLength) return {};
     if (!std::all_of(input.begin(), input.end(), is_ascii_letter)) return {};
 
-    const std::size_t position = english_start_position(chinese, settings.double_pinyin);
+    EnglishQueryOptions options;
+    // Wide enough that the obscure entries dropped below cannot crowd out the
+    // usable ones before the filter runs. The query sorts by weight, so the
+    // words worth keeping are at the front of this window regardless.
+    options.limit = 32U;
+    // Prefix only. The letters being typed are pinyin, so completing them as
+    // an English abbreviation produces words unrelated to the input: tzn
+    // reached tarzan, jiy reached jimmy, buhc reached buddhic.
+    options.allow_subsequence = false;
+    // No floor at this stage: a word typed out in full is exempt from it, and
+    // filtering here would drop `bucolic` (155,354) before that exemption
+    // could apply. The floor is enforced below, once completions can be told
+    // from finished words.
+    options.minimum_weight = 0U;
+    auto matches = lexicon.query(input, options);
+    if (matches.empty()) return {};
+
+    // Short input sees only the curated base dictionary. Three and four
+    // letters are still mid-word in double pinyin, and reaching into the long
+    // tail there is exactly what answered `buco` with bucolic. Past that the
+    // input has committed, and the rest of the dictionary opens up so a
+    // forgotten spelling can actually be found.
+    const std::uint64_t completion_floor = input.size() >= kLengthForFullDictionary
+        ? kFrequencyBandFloor
+        : kBaseDictionaryFloor;
+
+    const bool typed_a_whole_word = std::any_of(matches.begin(), matches.end(),
+        [&](const EnglishCandidate& candidate) {
+            return same_word_ignoring_case(candidate.word, input);
+        });
+
+    // Below four letters only a complete word counts, and even then the
+    // Chinese can veto it: `bus` is a word, but 不是 at 501,670 is what
+    // someone typing three letters almost certainly meant.
+    if (input.size() < kLengthAllowingPrefixes) {
+        if (!typed_a_whole_word) return {};
+        if (chinese.has_candidates &&
+            chinese.top_score >= kChineseVetoesShortWords) {
+            return {};
+        }
+    }
+
+    // Obscure words are reachable by finishing them, not by starting them.
+    // `bucolic` is offered; `buco` and `bucoli` are not, though all three lead
+    // to the same word. The query above already applied this floor, but a word
+    // typed out in full is exempt from it and has to be re-admitted here.
+    matches.erase(
+        std::remove_if(matches.begin(), matches.end(),
+            [&](const EnglishCandidate& candidate) {
+                if (same_word_ignoring_case(candidate.word, input)) return false;
+                if (candidate.user_entry || candidate.learning_count > 0U) return false;
+                return candidate.base_weight < completion_floor;
+            }),
+        matches.end());
+    if (matches.empty()) return {};
+
+    const std::size_t position = english_start_position(
+        chinese, input.size(), typed_a_whole_word, settings.double_pinyin);
     if (position == 0U) return {};
 
-    const auto matches = lexicon.query(input, settings.max_items);
-    if (matches.empty()) return {};
+    // A whole short word stands on its own. Offering catch and cathedral
+    // beside cat would spend three slots guessing which longer word was meant,
+    // in a row that belongs to Chinese.
+    if (typed_a_whole_word && input.size() < kLengthForFirstSlot) {
+        matches.erase(
+            std::remove_if(matches.begin(), matches.end(),
+                [&](const EnglishCandidate& candidate) {
+                    return !same_word_ignoring_case(candidate.word, input);
+                }),
+            matches.end());
+    }
+
+    // Back down to what was asked for. The query above deliberately looked
+    // further so the obscure prefixes could be dropped without leaving the
+    // row short; without this the row would carry every survivor.
+    if (matches.size() > settings.max_items) {
+        matches.resize(settings.max_items);
+    }
 
     EnglishCompletionPlan plan;
     plan.start_position = position;

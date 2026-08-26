@@ -764,7 +764,11 @@ void HostSession::rebuild_english_plan() {
     }
     EnglishCompletionSettings completion;
     completion.enabled = true;
-    completion.max_items = 3U;
+    // Two, not three. The row belongs to Chinese; English is there to answer
+    // a spelling that was forgotten, and a third guess at which longer word
+    // was meant costs a slot without earning one. A word typed out in full is
+    // narrowed to itself anyway, so this only ever applies to completions.
+    completion.max_items = 2U;
     completion.double_pinyin = schema_ != "full";
     english_plan_ = plan_english_completion(
         source.input, summary, *english_lexicon_, completion);

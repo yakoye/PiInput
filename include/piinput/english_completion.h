@@ -42,8 +42,17 @@ struct EnglishCompletionPlan {
     bool operator==(const EnglishCompletionPlan&) const = default;
 };
 
+// Which candidate number the English words start at, or 0 for none.
+//
+// Two independent signals. The Chinese score decides whether English appears
+// at all. How far forward it sits then depends on how much of a word was
+// actually typed: a complete one earns its place by length, while a mere
+// prefix stays out of the first slot regardless.
 [[nodiscard]] std::size_t english_start_position(
-    const ChineseCandidateSummary& chinese, bool double_pinyin) noexcept;
+    const ChineseCandidateSummary& chinese,
+    std::size_t input_length,
+    bool typed_a_whole_word,
+    bool double_pinyin) noexcept;
 
 // Where the English words actually land, given which of the Chinese entries
 // are shortcut commands.
