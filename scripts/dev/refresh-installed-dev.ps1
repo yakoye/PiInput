@@ -21,9 +21,18 @@ if (-not (Test-Path -LiteralPath $Installer -PathType Leaf)) {
     throw "Current Release installer is missing: $Installer"
 }
 
-& $Installer --silent
-if ($LASTEXITCODE -ne 0) {
-    throw "PiInput side-by-side installer failed with exit code $LASTEXITCODE."
+# The installer gained a window in v0.8.0, which made it a GUI-subsystem
+# binary: PowerShell no longer blocks on it and never sets $LASTEXITCODE, so
+# `& $Installer --silent` returned while the copy was still running and the
+# next line failed reading an unset variable under StrictMode.
+#
+# WaitForExit() rather than -Wait, because -Wait also waits for descendants
+# and the installer ends by starting PiInputHost.exe, which is meant to keep
+# running. -Wait therefore blocks until the daemon is killed, i.e. never.
+$install = Start-Process -FilePath $Installer -ArgumentList "--silent" -PassThru
+$install.WaitForExit()
+if ($install.ExitCode -ne 0) {
+    throw "PiInput side-by-side installer failed with exit code $($install.ExitCode)."
 }
 
 $Installed = Resolve-PiInputInstalledDev
