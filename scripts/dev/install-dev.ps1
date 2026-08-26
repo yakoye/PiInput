@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet("full", "flypy", "natural", "mspy", "abc")]
     [string]$Schema = "flypy",
     [switch]$ImportScel,

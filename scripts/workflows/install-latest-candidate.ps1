@@ -1,10 +1,12 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$CandidatesRoot = "",
     # 覆盖升级是默认路径；只有需要把旧版彻底清掉时才加 -CleanReinstall，
     # 它会多要一次 UAC。
     [switch]$CleanReinstall,
     [switch]$SkipUninstall,
+    # 供自动化调用：成功后不询问是否打开设置程序。
+    [switch]$NoPrompt,
     [switch]$DryRun
 )
 
@@ -56,6 +58,7 @@ Write-Host "按目录时间选择最新候选：$($selected.Name)" -ForegroundCo
 $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $Updater, "-ZipPath", $selected.Zip)
 if ($CleanReinstall) { $arguments += "-CleanReinstall" }
 if ($SkipUninstall) { $arguments += "-SkipUninstall" }
+if ($NoPrompt) { $arguments += "-NoPrompt" }
 if ($DryRun) { $arguments += "-DryRun" }
 & powershell.exe @arguments
 if ($LASTEXITCODE -ne 0) {

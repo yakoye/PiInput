@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$DictionaryRoot = "",
     [string]$RimeIceRoot = "",
     [switch]$Force,

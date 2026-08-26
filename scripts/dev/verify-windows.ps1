@@ -1,4 +1,4 @@
-param([switch]$SkipRegistryCheck)
+﻿param([switch]$SkipRegistryCheck)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest

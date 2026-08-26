@@ -1,4 +1,4 @@
-# 默认走覆盖升级，不先卸载。
+﻿# 默认走覆盖升级，不先卸载。
 #
 # 安装器本来就是为原地升级设计的：被占用的文件改名让路，稳定的 TSF 入口保持
 # 不动，只有字节真的变了才需要动 Program Files 里的 Shim。先卸载再安装等于
@@ -16,6 +16,8 @@ param(
     [switch]$CleanReinstall,
     # 保留给既有调用方；覆盖升级现在是默认行为，这个开关不再改变任何事。
     [switch]$SkipUninstall,
+    # 供自动化调用：成功后不询问是否打开设置程序，只打印路径。
+    [switch]$NoPrompt,
     [switch]$DryRun
 )
 
@@ -173,6 +175,25 @@ try {
 
     Write-Host "更新成功：$actualBuildId" -ForegroundColor Green
     Write-Host "验证日志：$logPath" -ForegroundColor DarkGray
+
+    # 安装器是以 --silent 跑的，一个窗口都不显示，因此完成页那个「打开设置」
+    # 的勾选框在这条路径上根本不存在。双击这个脚本的人就坐在电脑前等结果，
+    # 而默认关闭的新功能如果没人提起，他不会知道要去哪里打开——上一版的中文
+    # 模式英文候选就是这样被当成「没做」的。所以由脚本自己把话说完。
+    $settingsExe = Join-Path $installedRoot "bin\PiInput-Settings.exe"
+    Write-Host ""
+    Write-Host "输入法已就位，不需要重启电脑。请重新打开要使用的程序，再用 Win+Space 选择 PiInput。" -ForegroundColor Cyan
+    if (Test-Path -LiteralPath $settingsExe -PathType Leaf) {
+        Write-Host "部分功能默认关闭，需要在设置程序里打开，例如「中文输入时也给出英文候选」。"
+        if (-not $NoPrompt -and [Environment]::UserInteractive) {
+            $answer = Read-Host "现在打开设置程序？(Y/N)"
+            if ($answer -match '^[Yy]') {
+                $null = Start-Process -FilePath $settingsExe -ErrorAction SilentlyContinue
+            }
+        } else {
+            Write-Host "设置程序：$settingsExe" -ForegroundColor DarkGray
+        }
+    }
 }
 finally {
     if (Test-Path -LiteralPath $stage) {

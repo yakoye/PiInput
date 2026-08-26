@@ -1,4 +1,4 @@
-# Turns the three real-world test texts into keystroke scripts for
+﻿# Turns the three real-world test texts into keystroke scripts for
 # piinput-host-client-fixture.exe --type-script.
 #
 # Each output line is one thing the user types before committing:

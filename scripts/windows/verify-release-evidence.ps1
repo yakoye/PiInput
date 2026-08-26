@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Version = "",
     [string]$VerificationDocument = "",
     [string]$ReportPath = ""

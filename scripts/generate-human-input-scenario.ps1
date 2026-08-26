@@ -1,4 +1,4 @@
-param(
+﻿param(
     [int]$Seed = 0,
     [string]$OutputDirectory = ""
 )

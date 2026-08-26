@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)][string]$Cli,
     [Parameter(Mandatory = $true)][string]$SourceDir
 )

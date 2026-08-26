@@ -1,4 +1,4 @@
-param(
+﻿param(
     [Parameter(Mandatory = $true)][string]$Builder,
     [Parameter(Mandatory = $true)][string]$SourceDir
 )

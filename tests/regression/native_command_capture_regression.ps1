@@ -1,4 +1,4 @@
-param([Parameter(Mandatory = $true)][string]$SourceDir)
+﻿param([Parameter(Mandatory = $true)][string]$SourceDir)
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest

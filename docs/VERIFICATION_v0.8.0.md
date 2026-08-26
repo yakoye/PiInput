@@ -22,6 +22,15 @@ english_completion_real_run=NOT_RUN
 - **词库分层是必需的而非优化。** 先用「原有词表 + 无词频大表」两层实现时，`pallad` 补不出 `palladium`——它被 `palladia`、`palladic` 按词长挡在三个候选之外。加入真实词频层后，`palladium`（zipf 3.17）落在中频层 999583，而 `palladia`、`palladic` 不在词频表中、落到低频层 96694。该失败与修复均已固化为测试。
 - **词库许可已逐一核对。** Norvig 的 33 万词表因数据无明确许可、且源自 LDC 商业语料而未采用。最终采用 dwyl/english-words（Unlicense，公有领域）与 wordfreq（数据 CC BY-SA 4.0）。CC BY-SA 强制署名 SUBTLEX 作者，已写入 `LICENSE_NOTICE.md`、`third_party/english-wordlist/PROVENANCE.md`，并随包安装到 `bin/licenses/EnglishWordlist/`。
 
+## 开发机与他人机器的差异（重要）
+
+本机配置与常规 Windows 有两处不同，导致两类故障在此永远测不出来，只在分发后暴露：
+
+- **`ACP = 65001`**（开启了「使用 Unicode UTF-8 提供全球语言支持」）。Windows PowerShell 5.1 因此把无 BOM 的 UTF-8 脚本读对了，而常规简体中文 Windows 的 `ACP = 936`，同一批脚本在那里会因中文注释乱码而解析崩溃。已实测于他人机器，现已给全部含中文的 21 个 `.ps1` 加上 UTF-8 BOM，并在 `one_click_update_regression.ps1` 中改为**直接断言文件字节**——因为「跑一遍看报不报错」在本机是假通过。
+- **智能应用控制关闭**。他人机器开启强制模式，安装器被直接拦下。
+
+结论：涉及脚本编码、签名、系统防护的验证，本机结果不可采信，必须在常规配置的机器上复验。
+
 ## 尚未验证（阻止转为正式版）
 
 - **英文候选未实机使用。** 位置阈值是否符合真实手感、双拼阈值是否需要调整、低频层是否带来噪音，都必须实际输入后才能判断。这三项都只需改常量或重跑词库构建脚本，不牵动逻辑。
@@ -30,7 +39,7 @@ english_completion_real_run=NOT_RUN
 - **重启后文件保留未验证。** v0.7.16 修复的核心缺陷需要「升级 → 重启 → 确认文件仍在」的完整闭环才能确认。
 - **Windows 搜索候选可见性**已在 v0.7.16 实机确认（Windows 11 家庭版中文版 Build 26200、125% 缩放），但未在其他缩放比例下复验。
 - Host 8 小时、TSF/App 8 小时、P0 真实宿主矩阵均未运行。
-- 无可信 Authenticode 签名与 RFC 3161 时间戳。
+- **无可信 Authenticode 签名与 RFC 3161 时间戳。** 已在他人机器上实测到后果：开启智能应用控制（`VerifiedAndReputablePolicyState=1`）的 Windows 11 直接拦下 `PiInput-Install.exe`，提示「因为无法验证其发布者」，且强制模式不提供绕过入口，只能整体关闭该功能（不可逆）。包内全部 exe 的 `Get-AuthenticodeSignature` 均为 `NotSigned`。这是分发给他人的硬阻塞，写多少代码都不能绕开。
 - 词库扩大约 12 倍（378 KB → 4.39 MB），Host 常驻内存的实际增量未测量。
 
 ## 结论
