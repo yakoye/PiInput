@@ -314,10 +314,15 @@ if(WIN32)
     target_compile_definitions(PiInput-Install PRIVATE
         PIINPUT_INSTALLER_VERSION=L"${PROJECT_VERSION}"
         PIINPUT_INSTALLER_BUILD_ID=L"${PIINPUT_BUILD_ID}")
-    target_link_libraries(PiInput-Install PRIVATE piinput_core ole32 shell32 advapi32 user32)
+    target_link_libraries(PiInput-Install PRIVATE
+        piinput_core ole32 shell32 advapi32 user32 comctl32)
     if(MSVC)
+        # TaskDialogIndirect lives in Common Controls 6. Without the dependency
+        # the process binds to version 5, every task dialog fails to create, and
+        # the installer would fall back to being invisible again.
         target_link_options(PiInput-Install PRIVATE
-            "/MANIFESTUAC:level='asInvoker' uiAccess='false'")
+            "/MANIFESTUAC:level='asInvoker' uiAccess='false'"
+            "/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'")
     endif()
     piinput_enable_warnings(PiInput-Install)
 
