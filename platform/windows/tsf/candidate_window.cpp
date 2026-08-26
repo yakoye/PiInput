@@ -3,6 +3,8 @@
 #include "piinput/candidate_layout.h"
 
 #include <algorithm>
+#include <iterator>
+#include <string_view>
 #include <utility>
 
 namespace piinput::windows {
@@ -20,6 +22,10 @@ std::optional<CandidateContextAction> candidate_context_action_from_command(
 namespace {
 
 constexpr wchar_t kCandidateClass[] = L"PiInputTsfCandidateWindow";
+// How far the bar sinks back toward an obstructing panel, in DIP. The panel's
+// window rectangle includes a margin that paints nothing, so clearing it
+// exactly leaves the bar looking detached from the surface it belongs to.
+constexpr int kObstructionSink = 10;
 constexpr int kPadding = 8;
 constexpr int kCompactWindowHeight = 40;
 constexpr int kRowHeight = 30;
@@ -101,12 +107,20 @@ CandidateToolbarAction candidate_toolbar_hit_test(
         : CandidateToolbarAction::settings;
 }
 
+// Whether two rectangles share any area. Touching edges do not count: a bar
+// resting exactly on the panel's top edge is still fully visible.
+[[nodiscard]] bool rects_overlap(const RECT& first, const RECT& second) noexcept {
+    return first.left < second.right && second.left < first.right &&
+           first.top < second.bottom && second.top < first.bottom;
+}
+
 RECT place_candidate_window(
     const RECT& caret,
     SIZE desired,
     const RECT& work_area,
     const UINT dpi,
-    const int anchor_gap) noexcept {
+    const int anchor_gap,
+    const RECT* const obstruction) noexcept {
     const LONG scale = static_cast<LONG>((std::max)(dpi, 96U));
     const LONG gap = (std::max)(0L, static_cast<LONG>(anchor_gap) * scale / 96L);
     const LONG width = (std::max)(desired.cx, 1L);
@@ -124,7 +138,31 @@ RECT place_candidate_window(
     const LONG above_top = caret.top - gap - height;
     const bool below_fits = below_top + height <= work_area.bottom - margin;
     const bool above_fits = above_top >= work_area.top + margin;
-    const LONG top = !below_fits && above_fits ? above_top : below_top;
+    LONG top = !below_fits && above_fits ? above_top : below_top;
+
+    // The caret sits inside the obstructing surface, so both of the usual
+    // placements land inside it too. Clear the whole rectangle rather than the
+    // caret: above it first, because that is the edge the search panel grows
+    // away from, and below it only if the top edge leaves no room.
+    if (obstruction != nullptr &&
+        rects_overlap({caret.left, top, caret.left + width, top + height}, *obstruction)) {
+        // The panel's window rectangle is larger than the surface the user
+        // sees -- it carries a margin that draws nothing. Resting exactly on
+        // that edge therefore leaves a visible gap, so the bar sinks back by
+        // the difference and reads as attached to the panel.
+        const LONG sink = static_cast<LONG>(kObstructionSink) * scale / 96L;
+        const LONG above_panel = obstruction->top - gap - height + sink;
+        const LONG below_panel = obstruction->bottom + gap;
+        if (above_panel >= work_area.top + margin) {
+            top = above_panel;
+        } else if (below_panel + height <= work_area.bottom - margin) {
+            top = below_panel;
+        }
+        // Neither edge leaves room: keep the caret-relative placement. It is
+        // hidden, but it is where every other host puts it, so the behaviour
+        // stays predictable instead of jumping somewhere arbitrary.
+    }
+
     return clamp_candidate_window_rect(
         {caret.left, top, caret.left + width, top + height},
         work_area,
@@ -136,8 +174,9 @@ RECT place_candidate_window_at_text_caret(
     const SIZE desired,
     const RECT& work_area,
     const UINT dpi,
-    const int anchor_gap) noexcept {
-    return place_candidate_window(caret, desired, work_area, dpi, anchor_gap);
+    const int anchor_gap,
+    const RECT* const obstruction) noexcept {
+    return place_candidate_window(caret, desired, work_area, dpi, anchor_gap, obstruction);
 }
 
 RECT clamp_candidate_window_rect(
@@ -186,6 +225,42 @@ bool should_reanchor_candidate_window(
     const bool locked_to_text_caret,
     const bool incoming_text_caret) noexcept {
     return !geometry_locked || (!locked_to_text_caret && incoming_text_caret);
+}
+
+// Windows Search paints its panel in a window band that no ordinary top-most
+// window can rise above. A candidate bar placed under the caret there is on
+// screen and reports itself visible, yet the user sees nothing -- which is why
+// the symptom reads as "no candidates" while Space still commits correctly.
+//
+// Nothing else on the desktop behaves this way, so this is keyed to that one
+// executable instead of to any host that looks large or immersive. A window
+// that cannot be identified is left alone: the ordinary placement is right for
+// every other application, and guessing wrong would move a bar that was fine.
+[[nodiscard]] bool owner_hides_top_most_windows(const HWND owner) noexcept {
+    if (owner == nullptr || IsWindow(owner) == FALSE) return false;
+    DWORD process_id = 0U;
+    if (GetWindowThreadProcessId(owner, &process_id) == 0U || process_id == 0U) {
+        return false;
+    }
+    // PROCESS_QUERY_LIMITED_INFORMATION is the one right a medium-integrity
+    // process is reliably granted on an AppContainer process like SearchHost.
+    const HANDLE process = OpenProcess(
+        PROCESS_QUERY_LIMITED_INFORMATION, FALSE, process_id);
+    if (process == nullptr) return false;
+    wchar_t path[MAX_PATH]{};
+    DWORD length = static_cast<DWORD>(std::size(path));
+    const bool named =
+        QueryFullProcessImageNameW(process, 0U, path, &length) != FALSE;
+    (void)CloseHandle(process);
+    if (!named || length == 0U) return false;
+    const std::wstring_view full(path, length);
+    const auto separator = full.find_last_of(L'\\');
+    const std::wstring_view leaf = separator == std::wstring_view::npos
+        ? full
+        : full.substr(separator + 1U);
+    return CompareStringOrdinal(
+        leaf.data(), static_cast<int>(leaf.size()),
+        L"SearchHost.exe", -1, TRUE) == CSTR_EQUAL;
 }
 
 HWND resolve_candidate_owner(const std::uint64_t owner_window) noexcept {
@@ -264,6 +339,9 @@ bool CandidateWindow::ensure_window(const std::uint64_t owner_window) {
         return false;
     }
     owner_window_ = owner;
+    // Resolved once per owner rather than per keystroke: the executable behind
+    // a window cannot change, and this runs on the typing path.
+    owner_hides_top_most_ = owner_hides_top_most_windows(owner);
     update_dpi(GetDpiForWindow(window_));
     return true;
 }
@@ -443,12 +521,20 @@ void CandidateWindow::show_at_anchor(
     MONITORINFO monitor_info{sizeof(monitor_info)};
     RECT placed{point.x, point.y + scaled(anchor_gap),
                 point.x + width, point.y + scaled(anchor_gap) + height};
+    // Read live: the search panel grows as results come in, so the rectangle
+    // to clear is not the one measured when the owner was first resolved.
+    RECT obstruction{};
+    const bool avoid_owner = owner_hides_top_most_ && owner_window_ != nullptr &&
+        IsWindow(owner_window_) != FALSE &&
+        GetWindowRect(owner_window_, &obstruction) != FALSE;
     if (GetMonitorInfoW(monitor, &monitor_info) != FALSE) {
         placed = text_caret
             ? place_candidate_window_at_text_caret(
-                anchor, {width, height}, monitor_info.rcWork, dpi_, anchor_gap)
+                anchor, {width, height}, monitor_info.rcWork, dpi_, anchor_gap,
+                avoid_owner ? &obstruction : nullptr)
             : place_candidate_window(
-                anchor, {width, height}, monitor_info.rcWork, dpi_, anchor_gap);
+                anchor, {width, height}, monitor_info.rcWork, dpi_, anchor_gap,
+                avoid_owner ? &obstruction : nullptr);
     }
     RECT stable = stabilize_candidate_window_rect(
         geometry_locked_ ? &locked_rect_ : nullptr,

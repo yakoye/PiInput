@@ -10,19 +10,27 @@
 
 namespace piinput::windows {
 
+// `obstruction`, when given, is a surface the candidate bar cannot be seen
+// through even though it sits inside the work area. Windows Search is the one
+// case: its panel is drawn in a higher window band than any ordinary top-most
+// window can reach, so a bar placed under the caret is on screen, visible by
+// every API, and still invisible to the user. Placing the bar clear of that
+// rectangle is what puts it back in front of them.
 [[nodiscard]] RECT place_candidate_window(
     const RECT& caret,
     SIZE desired,
     const RECT& work_area,
     UINT dpi,
-    int anchor_gap = 4) noexcept;
+    int anchor_gap = 4,
+    const RECT* obstruction = nullptr) noexcept;
 
 [[nodiscard]] RECT place_candidate_window_at_text_caret(
     const RECT& caret,
     SIZE desired,
     const RECT& work_area,
     UINT dpi,
-    int anchor_gap = 4) noexcept;
+    int anchor_gap = 4,
+    const RECT* obstruction = nullptr) noexcept;
 
 [[nodiscard]] RECT clamp_candidate_window_rect(
     const RECT& candidate,
@@ -145,6 +153,9 @@ private:
     HWND window_{};
     HINSTANCE instance_{};
     HWND owner_window_{};
+    // Set when the owner paints above every ordinary top-most window, so the
+    // bar must be placed clear of it rather than under the caret.
+    bool owner_hides_top_most_{};
     HFONT font_{};
     // Set when font_ is a stock object, which belongs to the system and must
     // never be passed to DeleteObject.

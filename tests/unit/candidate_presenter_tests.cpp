@@ -209,6 +209,52 @@ void test_candidate_geometry_scales_and_clamps_to_monitor_work_area() {
         "200-percent text popup uses the target monitor DPI before placement");
 }
 
+void test_a_host_that_hides_top_most_windows_pushes_the_bar_clear() {
+    // Real numbers from a window trace on Windows 11 25H2. The search panel is
+    // drawn in a band no ordinary top-most window reaches, so the bar placed at
+    // the caret was on screen, reported visible by every API, and invisible to
+    // the user -- the input looked dead while Space still committed correctly.
+    const RECT caret{854, 309, 854, 333};
+    const RECT panel{560, 260, 1780, 900};
+    const RECT work{0, 0, 2048, 1104};
+    const SIZE desired{626, 45};
+
+    const RECT unavoided = piinput::windows::place_candidate_window(
+        caret, desired, work, 120U, 4);
+    check(unavoided.top > caret.bottom && unavoided.top < panel.bottom,
+        "without the obstruction the bar lands inside the panel, as it did in the field");
+
+    const RECT avoided = piinput::windows::place_candidate_window(
+        caret, desired, work, 120U, 4, &panel);
+    check(avoided.top < panel.top,
+        "the bar sits above the panel rather than inside it");
+    // The panel rectangle is bigger than what it paints, so the bar deliberately
+    // sinks back into that dead margin instead of floating clear of it.
+    check(avoided.bottom > panel.top && avoided.bottom < panel.top + 24,
+        "only the margin-compensating sliver reaches into the panel rectangle");
+    check(avoided.top >= work.top,
+        "clearing the panel still respects the top of the work area");
+
+    // A panel already against the top of the screen leaves no room above, so
+    // the bar goes under it instead of being pushed off-screen.
+    const RECT top_panel{560, 0, 1780, 600};
+    const RECT below = piinput::windows::place_candidate_window(
+        caret, desired, work, 120U, 4, &top_panel);
+    check(below.top >= top_panel.bottom,
+        "a panel with no room above it pushes the bar below instead");
+
+    // Every other host keeps the placement it always had. A caret outside the
+    // obstruction is not touched, so a stray rectangle cannot move a bar that
+    // was already correct.
+    const RECT elsewhere{200, 950, 200, 974};
+    const RECT untouched = piinput::windows::place_candidate_window(
+        elsewhere, desired, work, 120U, 4, &panel);
+    const RECT baseline = piinput::windows::place_candidate_window(
+        elsewhere, desired, work, 120U, 4);
+    check(untouched.top == baseline.top && untouched.left == baseline.left,
+        "a bar that never overlapped the obstruction is placed exactly as before");
+}
+
 void test_a_caret_shorter_than_its_text_line_does_not_get_covered() {
     // Real numbers from a caret trace: WeChat reports a two-pixel-high
     // insertion point, while an ordinary application on the same machine
@@ -646,6 +692,7 @@ int main() {
     test_an_early_caret_must_match_generation_and_session();
     test_unmatched_raw_input_does_not_show_an_empty_candidate_frame();
     test_candidate_geometry_scales_and_clamps_to_monitor_work_area();
+    test_a_host_that_hides_top_most_windows_pushes_the_bar_clear();
     test_a_caret_shorter_than_its_text_line_does_not_get_covered();
     test_candidate_geometry_covers_all_eight_work_area_boundaries();
     test_text_caret_placement_preserves_the_full_caret_height();
