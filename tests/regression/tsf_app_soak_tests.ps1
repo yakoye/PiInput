@@ -40,7 +40,7 @@ if (-not $FixtureMode) {
     $ExpectedTsf = [IO.Path]::GetFullPath($ExpectedTsf)
 }
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = Join-Path (Split-Path -Parent $PSScriptRoot) "artifacts/tsf-app-soak"
+    $OutputDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "artifacts/tsf-app-soak"
 }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null

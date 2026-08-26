@@ -102,9 +102,9 @@ endif()
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.cpp" stable_text_service_text)
 file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/stable_text_service.h" stable_text_service_header_text)
 file(READ "${PIINPUT_SOURCE_DIR}/src/smart_punctuation.cpp" smart_punctuation_text)
-file(READ "${PIINPUT_SOURCE_DIR}/tests/controlled_tsf_host.cpp" controlled_tsf_host_text)
-file(READ "${PIINPUT_SOURCE_DIR}/tests/controlled_tsf_controller.cpp" controlled_tsf_controller_text)
-file(READ "${PIINPUT_SOURCE_DIR}/tests/tsf_app_soak_tests.ps1" tsf_app_soak_text)
+file(READ "${PIINPUT_SOURCE_DIR}/tests/fixtures/controlled_tsf_host.cpp" controlled_tsf_host_text)
+file(READ "${PIINPUT_SOURCE_DIR}/tests/fixtures/controlled_tsf_controller.cpp" controlled_tsf_controller_text)
+file(READ "${PIINPUT_SOURCE_DIR}/tests/regression/tsf_app_soak_tests.ps1" tsf_app_soak_text)
 foreach(search_candidate_token IN ITEMS
         "ITfTextInputProcessorEx"
         "ActivateEx"
@@ -1392,9 +1392,9 @@ foreach(required_launch_token IN ITEMS
     endif()
 endforeach()
 foreach(required_regcalc_asset IN ITEMS
-        "tools/regcalc/RegCalc64Tool.html"
-        "tools/regcalc/shared-ui.css"
-        "tools/regcalc/shared-ui.js")
+        "third_party/regcalc/RegCalc64Tool.html"
+        "third_party/regcalc/shared-ui.css"
+        "third_party/regcalc/shared-ui.js")
     string(FIND "${cmake_text}${package_text}${package_closure_text}"
         "${required_regcalc_asset}" regcalc_asset_position)
     if(regcalc_asset_position LESS 0)

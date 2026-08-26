@@ -54,7 +54,7 @@ function(run_gate label fixture_root expected_result)
     execute_process(
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${fixture_root}
-            -P ${SOURCE_DIR}/tests/brand_regression.cmake
+            -P ${SOURCE_DIR}/tests/regression/brand_regression.cmake
         RESULT_VARIABLE gate_result
         OUTPUT_VARIABLE gate_output
         ERROR_VARIABLE gate_error

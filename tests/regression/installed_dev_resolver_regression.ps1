@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-. (Join-Path (Split-Path -Parent $PSScriptRoot) "scripts/windows/resolve-installed-dev.ps1")
+. (Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "scripts/windows/resolve-installed-dev.ps1")
 
 $root = Join-Path ([IO.Path]::GetTempPath()) ("piinput-runtime-resolver-" + [guid]::NewGuid())
 try {

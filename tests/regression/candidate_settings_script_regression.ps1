@@ -8,7 +8,7 @@ function Assert-True {
     }
 }
 
-$RepositoryRoot = Split-Path -Parent $PSScriptRoot
+$RepositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $TemporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
     "piinput-candidate-settings-" + [guid]::NewGuid().ToString("N"))
 $PreviousLocalAppData = $env:LOCALAPPDATA

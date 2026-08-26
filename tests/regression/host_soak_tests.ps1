@@ -22,7 +22,7 @@ foreach ($required in @($HostExe, $ClientExe, $LexiconPath)) {
 }
 if (-not (Test-Path -LiteralPath $DataDir -PathType Container)) { throw "Missing data directory: $DataDir" }
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = Join-Path (Split-Path -Parent $PSScriptRoot) "artifacts/soak"
+    $OutputDirectory = Join-Path (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)) "artifacts/soak"
 }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force $OutputDirectory | Out-Null

@@ -10,7 +10,7 @@ param(
 #
 # SHA256SUMS.txt 不能收录自己，否则永远算不出稳定的哈希；FILE_LIST.txt 要收录
 # 自己，并且必须先落盘再算哈希，因为它自己的哈希也在 SHA256SUMS.txt 里。
-# tests/sha256_regression.cmake 会逐条复核这两条约束。
+# tests/regression/sha256_regression.cmake 会逐条复核这两条约束。
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest

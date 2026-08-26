@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$RepoRoot = Split-Path -Parent $PSScriptRoot
+$RepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $Converter = Join-Path $RepoRoot "scripts/convert-english-wordfreq.ps1"
 $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) (
     "piinput-english-conversion-" + [Guid]::NewGuid().ToString("N"))

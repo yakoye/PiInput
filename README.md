@@ -224,7 +224,6 @@ jpiu  → 接触        mkt   → 明天（未完成编码也给候选）
 - [项目上下文](PROJECT_CONTEXT.md)
 - [产品定义](docs/260719_0854_01产品定义.md)
 - [总体架构](docs/260719_0854_02总体架构.md)
-- [开发任务](docs/260719_0854_03开发任务.md)
 - [开发约束](docs/260718_1658_04开发约束.md)
 - [词库与 SCEL](docs/260719_0854_06词库与SCEL.md)
 - [标点与符号](docs/260719_0854_07标点与符号.md)
@@ -235,8 +234,9 @@ jpiu  → 接触        mkt   → 明天（未完成编码也给候选）
 - [v0.7.15 版本说明](docs/release_notes_v0.7.15.md)
 - [v0.7.15 验证记录](docs/VERIFICATION_v0.7.15.md)
 - [安装与使用指南](docs/安装与使用指南.md)
+- [文档目录与归档说明](docs/README.md)
 
-历版的版本说明、验证记录与安装测试文档都保留在 [`docs/`](docs/) 目录里，按 `release_notes_vX.Y.Z.md`、`VERIFICATION_vX.Y.Z.md`、`vX.Y.Z安装、使用与测试.md` 命名。
+当前版本文档保留在 [`docs/`](docs/) 根目录；历版说明、验证记录、安装测试和开发计划统一归档在 [`docs/archive/releases/`](docs/archive/releases/) 中。
 
 ## 许可与来源
 

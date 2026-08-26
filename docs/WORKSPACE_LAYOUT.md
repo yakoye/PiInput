@@ -23,7 +23,7 @@
 | 状态 | 位置 | 规则 |
 |---|---|---|
 | 正式最新版 | `releases\current\vX.Y.Z` | 仅全部门禁通过后进入 |
-| 候选版 | `releases\candidates\vX.Y.Z-commit12` | 必须带精确提交号；不得称正式版 |
+| 候选版 | `releases\candidates\vX.Y.Z-yyMMdd_HHmm-commit12` | 带生成时间和精确提交号；不得称正式版 |
 | 历史版 | `releases\history\vX.Y.Z` | current 被新版本替换后移入 |
 | 撤回版 | `releases\withdrawn` | 禁止误装；保留原因和哈希 |
 
@@ -58,11 +58,19 @@ pwsh ./scripts/workflows/piinput-workflow.ps1 commit -Message "feat: ..."
 # 完整构建、测试、打包，并放入 candidates；不会正式发布
 pwsh ./scripts/workflows/piinput-workflow.ps1 candidate -Version 0.7.15
 
+# 选择 candidates 中时间最新的包，先做无安装演练
+pwsh ./scripts/workflows/install-latest-candidate.ps1 -DryRun
+
+# 校验、卸载旧版、安装最新候选并核对 build ID
+pwsh ./scripts/workflows/install-latest-candidate.ps1
+
 # 只整理历史文件，不删除任何内容
 pwsh ./scripts/workflows/piinput-workflow.ps1 organize
 ```
 
 `promote` 只负责本地目录状态切换。它要求显式提供 `-GatesPassed`，但仍不代替签名验证、真实宿主验收、tag、GitHub Release 和公开资产核对。
+
+每个新候选目录还会带 `PiInput-OneClick-Update.ps1` 和 `一键更新PiInput.cmd`。把这两个文件连同 ZIP、SHA-256 一起发给试用者，对方双击 CMD 即可更新；不要单独发送没有哈希文件的 ZIP。
 
 ## 6. 清理原则
 
@@ -71,4 +79,3 @@ pwsh ./scripts/workflows/piinput-workflow.ps1 organize
 3. Git 工作树必须通过 Git 迁移，不能直接拖动。
 4. 未完成的 soak 不移动。
 5. `releases/current` 永远只能有一个正式版本目录。
-

@@ -660,7 +660,7 @@ v0.6.6 宣称修复的两个问题在真机上都没解决，两段录屏经进�
 - 未完成音节的补全池只按词频排序时，「我」会压过「完」。改为先查一次 `canonical_prefix` 的长词前缀（如 `xie'zai'wan'le`），取出该音节的真实读法作为上下文证据优先，因此半音节 `w` 就能给出「卸载完」；
 - 拼接的意义是覆盖没有单条词条能覆盖的输入，所以词库一旦有整词命中全部音节（`我爱你`、`你好吗`），拼接直接关闭，避免「我爱尼」挤掉「我爱」；
 - 拼接候选数：未完成输入至多 3 条，完整输入至多 2 条；
-- 这条改动推翻了 12.28 的「不机械拼句」的一部分：实词加一个收尾单字现在允许，纯单字串联仍然禁止。`tests/host_session_tests.cpp` 中原本断言「非常快」绝不出现，现改为断言它排在首位、且「卡吨」这类无锚点字串联仍不出现；
+- 这条改动推翻了 12.28 的「不机械拼句」的一部分：实词加一个收尾单字现在允许，纯单字串联仍然禁止。`tests/unit/host_session_tests.cpp` 中原本断言「非常快」绝不出现，现改为断言它排在首位、且「卡吨」这类无锚点字串联仍不出现；
 - 逐键回归数据在 `tests/data/incremental_join_cases.tsv`。
 ## 12.31 v0.7.3 全拼逐字母：把打完的音节同时读成没打完
 
@@ -705,7 +705,7 @@ v0.6.6 宣称修复的两个问题在真机上都没解决，两段录屏经进�
 
 - **候选窗点击卡死**：候选窗由 Host 主线程创建，Windows 只向创建窗口的线程投递窗口消息。`PipeServer::run()` 同步阻塞在 `ConnectNamedPipe`，消息泵只在循环末尾、处理完一次请求后跑一次，空闲时窗口完全不处理消息——点击进队列不被派发，工具栏无反应，Windows 判定无响应。新增 `ConnectionWaiter` 把等待连接放到工作线程，主线程改用 `MsgWaitForMultipleObjects(..., QS_ALLINPUT)` 同时等连接与消息。管道保持同步：句柄一旦带 `FILE_FLAG_OVERLAPPED`，热路径上每一次读写都要改写，而那条路径已为卡顿返工多轮（v0.5.8/v0.6.0/v0.6.1）；
 - 该场景本有测试 `--toolbar-responsive`，错误信息也写着 "while the pipe server was idle"，但它发完按键立刻点击，恰好赶在那一轮消息泵之前，是个竞态，因此一直是绿的。现在点击前 `Sleep(600)` 模拟真人节奏，加上等待后立刻复现失败；
-- **设置窗口打不开**：`CreateMutexW` 只承诺「已存在时设 `ERROR_ALREADY_EXISTS`」，不承诺新建成功时清零 last error。调用前未 `SetLastError`，`InitCommonControlsEx` 残留的错误码被误判为「已有实例」，随即静默 `return 0`——无窗口、无提示、退出码 0。修复：调用前显式清零；且判定为「已存在」但 `FindWindow` 找不到窗口时视为残留互斥体，继续开自己的窗口。新增 `tests/settings_window_regression.ps1`；
+- **设置窗口打不开**：`CreateMutexW` 只承诺「已存在时设 `ERROR_ALREADY_EXISTS`」，不承诺新建成功时清零 last error。调用前未 `SetLastError`，`InitCommonControlsEx` 残留的错误码被误判为「已有实例」，随即静默 `return 0`——无窗口、无提示、退出码 0。修复：调用前显式清零；且判定为「已存在」但 `FindWindow` 找不到窗口时视为残留互斥体，继续开自己的窗口。新增 `tests/regression/settings_window_regression.ps1`；
 - **简拼单字兜底**：`mk`、`dddyn` 这类纯声母输入在常规路径下完全无解析（`m` 不是合法音节，`mk` 也不是任何音节的前缀），`expand_input_prefix` 返回空，于是只有简拼候选，单字兜底那条路从未被触发——`mk` 给完 24 个词就断了。现在简拼词组之后用第一个声母的单字继续填充（复用 `query_completions_unlocked`），`mk` 48 个、`dddyn` 24 个、`sdsf` 32 个，与搜狗观感一致；
 - **微信输入框遮挡**：靠 `CandidatePresenter` 已有的光标定位日志取证。坐标系要先对齐——PowerShell 默认进程是 DPI 虚拟化的，查到 2048x1152，`SetProcessDPIAware` 后才是真实的 2560x1440；据微信窗口 `x=1636~2540` 才能从日志里认出它的记录。微信报告的插入点矩形只有 2 像素高（同机普通程序报 24），`place_candidate_window` 用 `caret.bottom + gap` 锚定，于是候选窗落在文字行的下半部分。修复是锚定前把插入点补足到至少 `16 * dpi / 96`，通用规则而非微信特例——Electron 系普遍报告过小的插入点；
 - 该修复与 `candidate_presenter_tests.cpp` 中 200% DPI 那条断言冲突：它用 24 像素高的 caret，在 200% 缩放下相当于半行。改为 48 像素，即该 DPI 下一行文字的真实高度，测试原本要验证的「间隙随 DPI 缩放」意图不变。

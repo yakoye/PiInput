@@ -62,7 +62,8 @@ switch ($Action) {
         Write-Host "`n正式最新版："
         Get-ChildItem -LiteralPath (Join-Path $Releases "current") -Force -ErrorAction SilentlyContinue | Select-Object Name, LastWriteTime
         Write-Host "`n候选版："
-        Get-ChildItem -LiteralPath (Join-Path $Releases "candidates") -Directory -ErrorAction SilentlyContinue | Select-Object Name, LastWriteTime
+        Get-ChildItem -LiteralPath (Join-Path $Releases "candidates") -Directory -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending | Select-Object Name, LastWriteTime
     }
     "build" {
         $args = @("-Configuration", $Configuration)
@@ -90,12 +91,16 @@ switch ($Action) {
         if ([string]::IsNullOrWhiteSpace($Version)) { $Version = Get-CurrentVersion }
         Invoke-Checked "pwsh" @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $ReleaseScript, "-Version", $Version, "-Configuration", $Configuration, "-Mode", "full", "-NonInteractive")
         $commit = (& git -C $RepoRoot rev-parse --short=12 HEAD).Trim()
-        $candidate = Join-Path $Releases "candidates\v$Version-$commit"
+        $stamp = Get-Date -Format "yyMMdd_HHmm"
+        $candidate = Join-Path $Releases "candidates\v$Version-$stamp-$commit"
         if (Test-Path -LiteralPath $candidate) { throw "候选目录已存在：$candidate" }
         New-Item -ItemType Directory -Path $candidate -Force | Out-Null
         $packageName = "PiInput-v$Version-windows-x64"
         foreach ($name in @($packageName, "$packageName.zip", "$packageName.zip.sha256.txt")) {
             Copy-Item -LiteralPath (Join-Path $RepoRoot "artifacts\$name") -Destination (Join-Path $candidate $name) -Recurse
+        }
+        foreach ($updater in @("PiInput-OneClick-Update.ps1", "一键更新PiInput.cmd")) {
+            Copy-Item -LiteralPath (Join-Path $PSScriptRoot $updater) -Destination (Join-Path $candidate $updater)
         }
         Test-PackageHash $candidate $Version
         Write-Host "候选包已归档：$candidate" -ForegroundColor Green
@@ -106,8 +111,10 @@ switch ($Action) {
         if ([string]::IsNullOrWhiteSpace($Version) -or [string]::IsNullOrWhiteSpace($BuildId)) {
             throw "promote 必须同时提供 -Version 和 -BuildId。"
         }
-        $candidate = Join-Path $Releases "candidates\v$Version-$BuildId"
-        if (-not (Test-Path -LiteralPath $candidate)) { throw "候选目录不存在：$candidate" }
+        $matches = @(Get-ChildItem -LiteralPath (Join-Path $Releases "candidates") -Directory |
+            Where-Object { $_.Name -match ("^v" + [regex]::Escape($Version) + "-\d{6}_\d{4}-" + [regex]::Escape($BuildId) + "$") })
+        if ($matches.Count -ne 1) { throw "必须且只能找到一个匹配版本与 build ID 的候选目录。" }
+        $candidate = $matches[0].FullName
         Test-PackageHash $candidate $Version
         $currentRoot = Join-Path $Releases "current"
         $historyRoot = Join-Path $Releases "history"
@@ -128,4 +135,3 @@ switch ($Action) {
         Invoke-Checked "pwsh" $args
     }
 }
-

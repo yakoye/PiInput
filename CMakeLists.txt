@@ -209,7 +209,7 @@ if(WIN32)
 
     add_executable(piinput-host-client-fixture
         platform/windows/host/candidate_presenter.cpp
-        tests/host_client_fixture.cpp
+        tests/fixtures/host_client_fixture.cpp
         platform/windows/host/pipe_endpoint.cpp
         platform/windows/host/pipe_security.cpp
         platform/windows/host/pipe_server.cpp
@@ -369,7 +369,7 @@ if(WIN32)
     install(FILES platform/windows/tsf/piinput_icon.ico DESTINATION bin)
     # The symbol tool the language bar's 符号 entry launches. It ships beside the
     # other programs so a fresh install has one without any configuration.
-    set(PIINPUT_YESYMBOL_DIR "${CMAKE_SOURCE_DIR}/yesymbol")
+    set(PIINPUT_YESYMBOL_DIR "${CMAKE_SOURCE_DIR}/third_party/yesymbol")
     if(NOT EXISTS "${PIINPUT_YESYMBOL_DIR}/yesymbol.exe")
         message(FATAL_ERROR "The pinned YeSymbol runtime asset is missing")
     endif()
@@ -380,14 +380,14 @@ if(WIN32)
         "${PIINPUT_YESYMBOL_DIR}/PROVENANCE.md"
         DESTINATION bin/licenses/YeSymbol
     )
-    install(FILES third_party/YeTool/LICENSE DESTINATION bin/licenses/YeTool)
+    install(FILES third_party/yetool/LICENSE DESTINATION bin/licenses/YeTool)
     # The bundled programmer calculator is self-contained apart from these two
     # adjacent UI assets. Keep all three beside PiInputHost.exe so the installed
     # path is stable in both per-user and machine layouts.
     install(FILES
-        tools/regcalc/RegCalc64Tool.html
-        tools/regcalc/shared-ui.css
-        tools/regcalc/shared-ui.js
+        third_party/regcalc/RegCalc64Tool.html
+        third_party/regcalc/shared-ui.css
+        third_party/regcalc/shared-ui.js
         DESTINATION bin
     )
 endif()
@@ -401,7 +401,7 @@ if(PIINPUT_BUILD_TESTS)
     enable_testing()
 
     add_executable(piinput-core-tests
-        tests/test_main.cpp
+        tests/unit/test_main.cpp
     )
     target_link_libraries(piinput-core-tests PRIVATE piinput_core)
     target_compile_definitions(piinput-core-tests PRIVATE
@@ -410,25 +410,25 @@ if(PIINPUT_BUILD_TESTS)
     piinput_enable_warnings(piinput-core-tests)
 
     add_executable(piinput-settings-tests
-        tests/settings_tests.cpp
+        tests/unit/settings_tests.cpp
     )
     target_link_libraries(piinput-settings-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-settings-tests)
 
     add_executable(piinput-candidate-grid-tests
-        tests/candidate_grid_tests.cpp
+        tests/unit/candidate_grid_tests.cpp
     )
     target_link_libraries(piinput-candidate-grid-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-candidate-grid-tests)
 
     add_executable(piinput-user-model-tests
-        tests/user_model_tests.cpp
+        tests/unit/user_model_tests.cpp
     )
     target_link_libraries(piinput-user-model-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-user-model-tests)
 
     add_executable(piinput-user-model-persistence-tests
-        tests/user_model_persistence_tests.cpp
+        tests/unit/user_model_persistence_tests.cpp
         platform/windows/host/user_model_persistence.cpp
     )
     target_include_directories(piinput-user-model-persistence-tests PRIVATE
@@ -437,20 +437,20 @@ if(PIINPUT_BUILD_TESTS)
     piinput_enable_warnings(piinput-user-model-persistence-tests)
 
     add_executable(piinput-user-phrase-performance-tests
-        tests/user_phrase_performance_tests.cpp
+        tests/unit/user_phrase_performance_tests.cpp
     )
     target_link_libraries(piinput-user-phrase-performance-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-user-phrase-performance-tests)
 
     add_executable(piinput-key-event-gate-tests
-        tests/key_event_gate_tests.cpp
+        tests/unit/key_event_gate_tests.cpp
     )
     target_link_libraries(piinput-key-event-gate-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-key-event-gate-tests)
 
     if(WIN32)
         add_executable(piinput-input-scope-policy-tests
-            tests/input_scope_policy_tests.cpp
+            tests/unit/input_scope_policy_tests.cpp
         )
         target_include_directories(piinput-input-scope-policy-tests PRIVATE
             platform/windows/tsf
@@ -459,13 +459,13 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-input-scope-policy-tests)
 
         add_executable(piinput-controlled-tsf-host
-            tests/controlled_tsf_host.cpp
+            tests/fixtures/controlled_tsf_host.cpp
         )
         target_link_libraries(piinput-controlled-tsf-host PRIVATE user32)
         piinput_enable_warnings(piinput-controlled-tsf-host)
 
         add_executable(piinput-controlled-tsf-controller
-            tests/controlled_tsf_controller.cpp
+            tests/fixtures/controlled_tsf_controller.cpp
         )
         target_include_directories(piinput-controlled-tsf-controller PRIVATE
             platform/windows/tsf
@@ -478,37 +478,37 @@ if(PIINPUT_BUILD_TESTS)
     endif()
 
     add_executable(piinput-host-protocol-tests
-        tests/host_protocol_tests.cpp
+        tests/unit/host_protocol_tests.cpp
     )
     target_link_libraries(piinput-host-protocol-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-host-protocol-tests)
 
     add_executable(piinput-host-session-tests
-        tests/host_session_tests.cpp
+        tests/unit/host_session_tests.cpp
     )
     target_link_libraries(piinput-host-session-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-host-session-tests)
 
     add_executable(piinput-host-messages-tests
-        tests/host_messages_tests.cpp
+        tests/unit/host_messages_tests.cpp
     )
     target_link_libraries(piinput-host-messages-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-host-messages-tests)
 
     add_executable(piinput-lazy-load-gate-tests
-        tests/lazy_load_gate_tests.cpp
+        tests/unit/lazy_load_gate_tests.cpp
     )
     target_link_libraries(piinput-lazy-load-gate-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-lazy-load-gate-tests)
 
     add_executable(piinput-full-pinyin-variants-tests
-        tests/full_pinyin_variants_tests.cpp
+        tests/unit/full_pinyin_variants_tests.cpp
     )
     target_link_libraries(piinput-full-pinyin-variants-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-full-pinyin-variants-tests)
 
     add_executable(piinput-incremental-decoder-tests
-        tests/incremental_decoder_tests.cpp
+        tests/unit/incremental_decoder_tests.cpp
     )
     target_link_libraries(piinput-incremental-decoder-tests PRIVATE piinput_core)
     target_compile_definitions(piinput-incremental-decoder-tests PRIVATE
@@ -517,7 +517,7 @@ if(PIINPUT_BUILD_TESTS)
     piinput_enable_warnings(piinput-incremental-decoder-tests)
 
     add_executable(piinput-english-lexicon-tests
-        tests/english_lexicon_tests.cpp
+        tests/unit/english_lexicon_tests.cpp
     )
     target_link_libraries(piinput-english-lexicon-tests PRIVATE piinput_core)
     target_compile_definitions(piinput-english-lexicon-tests PRIVATE
@@ -526,7 +526,7 @@ if(PIINPUT_BUILD_TESTS)
     piinput_enable_warnings(piinput-english-lexicon-tests)
 
     add_executable(piinput-dictionary-builder-tests
-        tests/dictionary_builder_tests.cpp
+        tests/unit/dictionary_builder_tests.cpp
     )
     target_link_libraries(piinput-dictionary-builder-tests PRIVATE piinput_core)
     target_compile_definitions(piinput-dictionary-builder-tests PRIVATE
@@ -535,7 +535,7 @@ if(PIINPUT_BUILD_TESTS)
     piinput_enable_warnings(piinput-dictionary-builder-tests)
 
     add_executable(piinput-lexicon-query-tests
-        tests/lexicon_query_tests.cpp
+        tests/unit/lexicon_query_tests.cpp
     )
     target_link_libraries(piinput-lexicon-query-tests PRIVATE piinput_core)
     target_compile_definitions(piinput-lexicon-query-tests PRIVATE
@@ -544,38 +544,38 @@ if(PIINPUT_BUILD_TESTS)
     piinput_enable_warnings(piinput-lexicon-query-tests)
 
     add_executable(piinput-segment-selection-tests
-        tests/segment_selection_tests.cpp
+        tests/unit/segment_selection_tests.cpp
     )
     target_link_libraries(piinput-segment-selection-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-segment-selection-tests)
 
     add_executable(piinput-character-coverage-tests
-        tests/character_coverage_tests.cpp
+        tests/unit/character_coverage_tests.cpp
     )
     target_link_libraries(piinput-character-coverage-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-character-coverage-tests)
 
     add_executable(piinput-paragraph-input-tests
-        tests/paragraph_input_tests.cpp
+        tests/unit/paragraph_input_tests.cpp
     )
     target_link_libraries(piinput-paragraph-input-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-paragraph-input-tests)
 
     add_executable(piinput-corpus-candidate-tests
-        tests/corpus_candidate_runner.cpp
+        tests/tools/corpus_candidate_runner.cpp
     )
     target_link_libraries(piinput-corpus-candidate-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-corpus-candidate-tests)
 
     add_executable(piinput-keystroke-latency-tests
-        tests/keystroke_latency_tests.cpp
+        tests/unit/keystroke_latency_tests.cpp
     )
     target_link_libraries(piinput-keystroke-latency-tests PRIVATE piinput_core)
     piinput_enable_warnings(piinput-keystroke-latency-tests)
 
     if(WIN32)
         add_executable(piinput-pipe-client-tests
-            tests/pipe_client_tests.cpp
+            tests/unit/pipe_client_tests.cpp
             platform/windows/tsf/pipe_client.cpp
         )
         target_include_directories(piinput-pipe-client-tests PRIVATE
@@ -585,7 +585,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-pipe-client-tests)
 
         add_executable(piinput-composition-mirror-tests
-            tests/composition_mirror_tests.cpp
+            tests/unit/composition_mirror_tests.cpp
             platform/windows/tsf/composition_mirror.cpp
         )
         target_include_directories(piinput-composition-mirror-tests PRIVATE
@@ -595,7 +595,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-composition-mirror-tests)
 
         add_executable(piinput-session-manager-tests
-            tests/session_manager_tests.cpp
+            tests/unit/session_manager_tests.cpp
             platform/windows/host/session_manager.cpp
         )
         target_include_directories(piinput-session-manager-tests PRIVATE
@@ -605,7 +605,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-session-manager-tests)
 
         add_executable(piinput-host-runtime-tests
-            tests/host_runtime_tests.cpp
+            tests/unit/host_runtime_tests.cpp
             platform/windows/host/host_runtime.cpp
         )
         target_include_directories(piinput-host-runtime-tests PRIVATE
@@ -618,7 +618,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-host-runtime-tests)
 
         add_executable(piinput-candidate-presenter-tests
-            tests/candidate_presenter_tests.cpp
+            tests/unit/candidate_presenter_tests.cpp
             platform/windows/host/candidate_presenter.cpp
             platform/windows/tsf/candidate_window.cpp
         )
@@ -630,7 +630,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-candidate-presenter-tests)
 
         add_executable(piinput-candidate-ui-element-tests
-            tests/candidate_ui_element_tests.cpp
+            tests/unit/candidate_ui_element_tests.cpp
             platform/windows/tsf/candidate_ui_element.cpp
         )
         target_include_directories(piinput-candidate-ui-element-tests PRIVATE
@@ -641,7 +641,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-candidate-ui-element-tests)
 
         add_executable(piinput-mode-indicator-tests
-            tests/mode_indicator_tests.cpp
+            tests/unit/mode_indicator_tests.cpp
             platform/windows/tsf/mode_indicator.cpp
             platform/windows/tsf/client_identity.cpp
             platform/windows/tsf/lang_bar_item.cpp
@@ -654,7 +654,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-mode-indicator-tests)
 
         add_executable(piinput-settings-file-tests
-            tests/settings_file_tests.cpp
+            tests/unit/settings_file_tests.cpp
             platform/windows/settings/settings_file.cpp
         )
         target_include_directories(piinput-settings-file-tests PRIVATE
@@ -664,7 +664,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-settings-file-tests)
 
         add_executable(piinput-pipe-security-tests
-            tests/pipe_security_tests.cpp
+            tests/unit/pipe_security_tests.cpp
             platform/windows/host/pipe_security.cpp
         )
         target_include_directories(piinput-pipe-security-tests PRIVATE
@@ -674,14 +674,14 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-pipe-security-tests)
 
         add_executable(piinput-host-endpoint-tests
-            tests/host_endpoint_tests.cpp
+            tests/unit/host_endpoint_tests.cpp
             platform/windows/host/pipe_endpoint.cpp
         )
         target_include_directories(piinput-host-endpoint-tests PRIVATE platform/windows/host)
         piinput_enable_warnings(piinput-host-endpoint-tests)
 
         add_executable(piinput-host-instance-tests
-            tests/host_instance_tests.cpp
+            tests/unit/host_instance_tests.cpp
             platform/windows/host/host_instance.cpp
             platform/windows/host/pipe_endpoint.cpp
         )
@@ -689,7 +689,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-host-instance-tests)
 
         add_executable(piinput-user-keyboard-tests
-            tests/user_keyboard_registration_tests.cpp
+            tests/unit/user_keyboard_registration_tests.cpp
             platform/windows/tsf/user_keyboard_registration.cpp
         )
         target_include_directories(piinput-user-keyboard-tests PRIVATE
@@ -700,14 +700,14 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-user-keyboard-tests)
 
         add_executable(piinput-installer-layout-tests
-            tests/installer_layout_tests.cpp
+            tests/unit/installer_layout_tests.cpp
             platform/windows/installer/install_layout.cpp
         )
         target_include_directories(piinput-installer-layout-tests PRIVATE platform/windows/installer)
         piinput_enable_warnings(piinput-installer-layout-tests)
 
         add_executable(piinput-stable-runtime-tests
-            tests/stable_runtime_tests.cpp
+            tests/unit/stable_runtime_tests.cpp
             platform/windows/installer/stable_runtime.cpp
         )
         target_include_directories(piinput-stable-runtime-tests PRIVATE
@@ -717,7 +717,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-stable-runtime-tests)
 
         add_executable(piinput-uninstall-layout-tests
-            tests/uninstall_layout_tests.cpp
+            tests/unit/uninstall_layout_tests.cpp
             platform/windows/installer/stable_runtime.cpp
             platform/windows/installer/uninstall_layout.cpp
         )
@@ -725,7 +725,7 @@ if(PIINPUT_BUILD_TESTS)
         piinput_enable_warnings(piinput-uninstall-layout-tests)
 
         add_executable(piinput-migration-tests
-            tests/migration_tests.cpp
+            tests/unit/migration_tests.cpp
             platform/windows/installer/migration.cpp
         )
         target_include_directories(piinput-migration-tests PRIVATE
@@ -785,7 +785,7 @@ if(PIINPUT_BUILD_TESTS)
                 add_test(
                     NAME piinput-controlled-tsf-soak-smoke
                     COMMAND pwsh -NoProfile -ExecutionPolicy Bypass
-                        -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/tsf_app_soak_tests.ps1"
+                        -File "${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/tsf_app_soak_tests.ps1"
                         -ControllerExe "$<TARGET_FILE:piinput-controlled-tsf-controller>"
                         -ExpectedTsf "${PIINPUT_TEST_REGISTERED_TSF}"
                         -DurationHours 0.003
@@ -821,26 +821,26 @@ if(PIINPUT_BUILD_TESTS)
         NAME piinput-brand-regression
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-            -P ${CMAKE_SOURCE_DIR}/tests/brand_regression.cmake
+            -P ${CMAKE_SOURCE_DIR}/tests/regression/brand_regression.cmake
     )
     add_test(
         NAME piinput-brand-filter-regression
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
             -DTEST_BINARY_DIR=${CMAKE_BINARY_DIR}/brand-filter-regression
-            -P ${CMAKE_SOURCE_DIR}/tests/brand_filter_regression.cmake
+            -P ${CMAKE_SOURCE_DIR}/tests/regression/brand_filter_regression.cmake
     )
     add_test(
         NAME piinput-sha256-regression
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-            -P ${CMAKE_SOURCE_DIR}/tests/sha256_regression.cmake
+            -P ${CMAKE_SOURCE_DIR}/tests/regression/sha256_regression.cmake
     )
     add_test(
         NAME piinput-release-metadata-regression
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-            -P ${CMAKE_SOURCE_DIR}/tests/release_metadata_regression.cmake
+            -P ${CMAKE_SOURCE_DIR}/tests/regression/release_metadata_regression.cmake
     )
     if(WIN32)
         # The test suite contains UTF-8 source and fixtures. Prefer PowerShell 7,
@@ -870,7 +870,7 @@ if(PIINPUT_BUILD_TESTS)
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
                 -ExecutionPolicy Bypass
-                -File ${CMAKE_SOURCE_DIR}/tests/host_process_tests.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/host_process_tests.ps1
                 -HostExe $<TARGET_FILE:PiInputHost>
                 -ClientExe $<TARGET_FILE:piinput-host-client-fixture>
                 ${PIINPUT_HOST_PERFORMANCE_ARGS}
@@ -887,7 +887,7 @@ if(PIINPUT_BUILD_TESTS)
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
                 -ExecutionPolicy Bypass
-                -File ${CMAKE_SOURCE_DIR}/tests/typing_latency_tests.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/typing_latency_tests.ps1
                 -HostExe $<TARGET_FILE:PiInputHost>
                 -ClientExe $<TARGET_FILE:piinput-host-client-fixture>
                 -ScriptDirectory ${CMAKE_SOURCE_DIR}/tests/data/typing
@@ -903,7 +903,7 @@ if(PIINPUT_BUILD_TESTS)
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
                 -ExecutionPolicy Bypass
-                -File ${CMAKE_SOURCE_DIR}/tests/host_restart_handoff_tests.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/host_restart_handoff_tests.ps1
                 -HostExe $<TARGET_FILE:PiInputHost>
                 -ClientExe $<TARGET_FILE:piinput-host-client-fixture>
         )
@@ -916,45 +916,45 @@ if(PIINPUT_BUILD_TESTS)
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
                 -ExecutionPolicy Bypass
-                -File ${CMAKE_SOURCE_DIR}/tests/diagnostics_tests.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/diagnostics_tests.ps1
                 -DiagnosticsExe $<TARGET_FILE:piinput-diagnostics>
         )
         add_test(
             NAME piinput-installed-dev-resolver-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/installed_dev_resolver_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/installed_dev_resolver_regression.ps1
         )
         add_test(
             NAME piinput-uninstall-fail-closed-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/uninstall_fail_closed_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/uninstall_fail_closed_regression.ps1
         )
         add_test(
             NAME piinput-settings-window-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/settings_window_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/settings_window_regression.ps1
                 -SettingsExe $<TARGET_FILE:PiInput-Settings>
         )
         add_test(
             NAME piinput-candidate-settings-script-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/candidate_settings_script_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/candidate_settings_script_regression.ps1
         )
         add_test(
             NAME piinput-english-dictionary-conversion-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/english_dictionary_conversion_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/english_dictionary_conversion_regression.ps1
         )
         add_test(
             NAME piinput-dictionary-builder-cli-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/dictionary_builder_cli_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/dictionary_builder_cli_regression.ps1
                 -Builder $<TARGET_FILE:piinput-dictionary-builder>
                 -SourceDir ${CMAKE_SOURCE_DIR}
         )
@@ -962,7 +962,7 @@ if(PIINPUT_BUILD_TESTS)
             NAME piinput-dictionary-query-cli-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/dictionary_query_cli_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/dictionary_query_cli_regression.ps1
                 -Cli $<TARGET_FILE:piinput-cli>
                 -SourceDir ${CMAKE_SOURCE_DIR}
         )
@@ -970,55 +970,64 @@ if(PIINPUT_BUILD_TESTS)
             NAME piinput-query-dictionary-cmd-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/query_dictionary_cmd_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/query_dictionary_cmd_regression.ps1
                 -SourceDir ${CMAKE_SOURCE_DIR}
         )
         add_test(
             NAME piinput-native-command-capture-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/native_command_capture_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/native_command_capture_regression.ps1
                 -SourceDir ${CMAKE_SOURCE_DIR}
         )
         add_test(
             NAME piinput-human-input-scenario-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/human_input_scenario_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/human_input_scenario_regression.ps1
                 -SourceDir ${CMAKE_SOURCE_DIR}
         )
         add_test(
             NAME piinput-uninstaller-source-regression
             COMMAND ${CMAKE_COMMAND}
                 -DPIINPUT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-                -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/uninstaller_source_regression.cmake
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/uninstaller_source_regression.cmake
         )
         add_test(
             NAME piinput-uac-manifest-regression
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                 -NoProfile
-                -File ${CMAKE_SOURCE_DIR}/tests/uac_manifest_regression.ps1
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/uac_manifest_regression.ps1
                 -InstallerExe $<TARGET_FILE:PiInput-Install>
                 -UninstallerExe $<TARGET_FILE:PiInput-Uninstall>
+        )
+        add_test(
+            NAME piinput-one-click-update-regression
+            COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
+                -NoProfile
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/one_click_update_regression.ps1
+                -UpdaterScript ${CMAKE_SOURCE_DIR}/scripts/workflows/PiInput-OneClick-Update.ps1
+                -InstallerExe $<TARGET_FILE:PiInput-Install>
+                -HostExe $<TARGET_FILE:PiInputHost>
         )
     endif()
     add_test(
         NAME piinput-windows-source-regression
         COMMAND ${CMAKE_COMMAND}
             -DPIINPUT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/windows_source_regression.cmake
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/regression/windows_source_regression.cmake
     )
     add_test(
         NAME piinput-dictionary-script-regression
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-            -P ${CMAKE_SOURCE_DIR}/tests/dictionary_script_regression.cmake
+            -P ${CMAKE_SOURCE_DIR}/tests/regression/dictionary_script_regression.cmake
     )
     add_test(
         NAME piinput-corpus-regression
         COMMAND "${CMAKE_COMMAND}"
             -DSOURCE_DIR=${CMAKE_SOURCE_DIR}
-            -P ${CMAKE_SOURCE_DIR}/tests/corpus_regression.cmake
+            -P ${CMAKE_SOURCE_DIR}/tests/regression/corpus_regression.cmake
     )
     add_test(
         NAME piinput-performance-smoke
@@ -1118,7 +1127,7 @@ if(PIINPUT_BUILD_TESTS)
                 NAME piinput-structured-corpus-regression
                 COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
                     -NoProfile
-                    -File ${CMAKE_SOURCE_DIR}/tests/structured_corpus_regression.ps1
+                    -File ${CMAKE_SOURCE_DIR}/tests/regression/structured_corpus_regression.ps1
                     -Runner $<TARGET_FILE:piinput-corpus-candidate-tests>
                     -Lexicon "${EXTERNAL_LEXICON}"
                     -SourceDir ${CMAKE_SOURCE_DIR}

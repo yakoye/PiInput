@@ -249,7 +249,7 @@ Oracle 同时比较：
 
 ### 13.1 Host-only 8h
 
-复用 `tests/host_soak_tests.ps1`：
+复用 `tests/regression/host_soak_tests.ps1`：
 
 - 强制验证 `lexicon_storage=mmap`；
 - 循环中文、英文和 transport workload；
@@ -261,7 +261,7 @@ Oracle 同时比较：
 
 ### 13.2 TSF/App 8h
 
-已新增 `tests/tsf_app_soak_tests.ps1` 与控制器持续模式：同一受控宿主循环 Smart Punctuation、Password scope 和 context 销毁/创建，原子发布 app PID、迭代数和 `context_recreates`；CSV/summary 同步保存生命周期事件量，采样 Shim 所在宿主的 Private/Working Set/Virtual/Handle/Thread/CPU/GDI/USER，并记录当前 PiInput Host 的 Private/Working Set/Handle/Thread/CPU。Host PID 由默认 health pipe 返回的 `host_pid` 与注册可执行路径双重确认，不在同路径多进程中猜测。真实模式同时门禁应用与 Host 的增长量和斜率；默认要求每小时至少 100 轮，并核对每 20 轮一次的 context 重建数量，避免空转假 PASS。采样器已用不加载 PiInput 的 fixture 模式完成正向密度 smoke，并用极高阈值验证低密度会 fail；这些只证明 harness，不证明 TSF，真实短时入口仅在显式启用交互测试且提供已注册 DLL 路径时注册，完整 8h 仍必须单独执行和归档。
+已新增 `tests/regression/tsf_app_soak_tests.ps1` 与控制器持续模式：同一受控宿主循环 Smart Punctuation、Password scope 和 context 销毁/创建，原子发布 app PID、迭代数和 `context_recreates`；CSV/summary 同步保存生命周期事件量，采样 Shim 所在宿主的 Private/Working Set/Virtual/Handle/Thread/CPU/GDI/USER，并记录当前 PiInput Host 的 Private/Working Set/Handle/Thread/CPU。Host PID 由默认 health pipe 返回的 `host_pid` 与注册可执行路径双重确认，不在同路径多进程中猜测。真实模式同时门禁应用与 Host 的增长量和斜率；默认要求每小时至少 100 轮，并核对每 20 轮一次的 context 重建数量，避免空转假 PASS。采样器已用不加载 PiInput 的 fixture 模式完成正向密度 smoke，并用极高阈值验证低密度会 fail；这些只证明 harness，不证明 TSF，真实短时入口仅在显式启用交互测试且提供已注册 DLL 路径时注册，完整 8h 仍必须单独执行和归档。
 
 两种 soak 各自独立 PASS，不能互相替代。
 
