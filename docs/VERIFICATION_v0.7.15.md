@@ -11,9 +11,11 @@ p0_real_host_matrix=NOT_RUN
 ## 冻结候选自动验证
 
 - v0.7.14 功能实现提交 `dd63bb983787` 的 Release 构建已完成 66/66 CTest，静态包闭环通过。
-- v0.7.15 统一快捷调用功能冻结提交为 `2326df00048631031cee73a6cca519e2dd5f9fa5`，精确 build ID 为 `0.7.15+2326df000486`。
+- v0.7.15 统一快捷调用功能的首个冻结提交为 `2326df00048631031cee73a6cca519e2dd5f9fa5`，精确 build ID 为 `0.7.15+2326df000486`；该候选随后被 `bb90009d7aa1c4ab0c56788fdbd82e807afefd57` 取代。
 - 该干净提交已在独立目录 `build/windows-x64-v0715-2326df000486` 从零生成 Release 构建，完整 CTest 为 66/66 通过；另一次开发目录全量回归同为 66/66 通过。
-- 未签名开发候选 `artifacts/PiInput-v0.7.15-windows-x64.zip` 已通过静态包闭环：42 个文件、17 个 PE，运行时白名单、必需资产、版本和精确 build ID 均匹配。闭环证据位于 `artifacts/package-closure-shortcut-table-2326df000486/summary.json`。
+- 首个未签名候选现归档于工作区 `releases/candidates/v0.7.15-2326df000486/`；其静态包闭环证据位于 `artifacts/package-closure/history/package-closure-shortcut-table-2326df000486/summary.json`。
+- 当前替代候选归档于工作区 `releases/candidates/v0.7.15-bb90009d7aa1/`，ZIP SHA-256 为 `8c9df56420d0ae2b840c83e622543fabb104324258616fadd5d7d99ab707b799`。它的独立 Release 构建为 66/66 通过，GitHub Windows CI 运行 `32878436255` 已通过，未签名 CI 分支的安装、重装和卸载闭环通过；CI 证据位于 `artifacts/ci/history/ci-package-bb90009d7aa1/`。
+- 当前候选的 Host-only 8 小时稳定性测试仍在 `artifacts/soak-8h-final-20260826-bb90009d7aa1/` 运行；在生成并核对最终 `summary.json` 前，`host_soak_8h` 继续保持 `NOT_RUN`。
 - 上述静态闭环未运行安装、重装、前版升级、卸载或 Controlled TSF，也未要求正式签名；不得据此宣称安装闭环或正式发布通过。
 - 计算器、程序员计算器、画图、统一快捷调用表、撤销的 `kuaijie` 负例、动态行数/图标/旧三槽迁移、英文候选动作、设置往返、Host 协议和同步/异步 TSF edit 时序均已进入自动回归。
 - 设置程序内置 95 项 Windows 系统工具模板和 1 项 Everything 模板；模板导入后转换为普通快捷行。YeTool 模板数据的 MIT 许可随包保留，Everything 本体不打包。

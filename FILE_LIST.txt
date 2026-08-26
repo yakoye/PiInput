@@ -290,6 +290,7 @@ docs/VERIFICATION_v0.7.12.md
 docs/VERIFICATION_v0.7.13.md
 docs/VERIFICATION_v0.7.14.md
 docs/VERIFICATION_v0.7.15.md
+docs/WORKSPACE_LAYOUT.md
 examples/sample_lexicon.tsv
 FILE_LIST.txt
 include/piinput/binary_lexicon.h
@@ -429,6 +430,7 @@ scripts/dev/uninstall-dev.ps1
 scripts/dev/update-dictionaries.cmd
 scripts/dev/verify-windows.ps1
 scripts/generate-human-input-scenario.ps1
+scripts/maintenance/organize-workspace.ps1
 scripts/native-command.ps1
 scripts/package_release.ps1
 scripts/query-dictionary.ps1
@@ -445,6 +447,7 @@ scripts/windows/sign-binaries.ps1
 scripts/windows/update-source-manifest.ps1
 scripts/windows/verify-package-closure.ps1
 scripts/windows/verify-release-evidence.ps1
+scripts/workflows/piinput-workflow.ps1
 setup-dev.cmd
 src/binary_lexicon.cpp
 src/candidate_grid.cpp
