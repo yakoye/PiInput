@@ -1,6 +1,20 @@
+# 默认走覆盖升级，不先卸载。
+#
+# 安装器本来就是为原地升级设计的：被占用的文件改名让路，稳定的 TSF 入口保持
+# 不动，只有字节真的变了才需要动 Program Files 里的 Shim。先卸载再安装等于
+# 把这些工作全部推翻重做，代价有三个：
+#
+#   1. 卸载和安装各弹一次 UAC，用户要确认两次；
+#   2. 卸载器会删掉机器级 Shim，安装器随后又装回同一个路径 —— 这正是
+#      「重启后文件全部消失、只剩注册表」那次事故的成因；
+#   3. 慢，而且中途失败会留下一个装不上也卸不掉的半残状态。
+#
+# 需要彻底重装时用 -CleanReinstall，它保留原来的先卸载再安装流程。
 [CmdletBinding()]
 param(
     [string]$ZipPath = "",
+    [switch]$CleanReinstall,
+    # 保留给既有调用方；覆盖升级现在是默认行为，这个开关不再改变任何事。
     [switch]$SkipUninstall,
     [switch]$DryRun
 )
@@ -101,7 +115,7 @@ try {
         return
     }
 
-    if (-not $SkipUninstall -and (Test-Path -LiteralPath $uninstallKey)) {
+    if ($CleanReinstall -and (Test-Path -LiteralPath $uninstallKey)) {
         $entry = Get-ItemProperty -LiteralPath $uninstallKey
         $uninstaller = Get-UninstallExecutable ([string]$entry.QuietUninstallString)
         if (-not (Test-Path -LiteralPath $uninstaller -PathType Leaf)) {
@@ -111,7 +125,7 @@ try {
             throw "检测到旧版安装记录，但找不到卸载器。请修复旧版卸载器后重试。"
         }
 
-        Write-Host "正在卸载旧版（保留用户设置和词库）……"
+        Write-Host "正在卸载旧版（保留用户设置和词库）；这一步会单独请求一次 UAC……"
         Invoke-HiddenProcess $uninstaller @("--silent") "卸载旧版"
         $deadline = (Get-Date).AddSeconds(30)
         while ((Test-Path -LiteralPath $uninstallKey) -and (Get-Date) -lt $deadline) {
@@ -122,9 +136,10 @@ try {
         }
     }
 
-    # 不提升整个脚本。安装器仅在注册机器级稳定 Shim 时自行请求 UAC，
-    # 避免标准用户输入另一管理员账户凭据后把 HKCU 安装到错误账户。
-    Write-Host "正在安装新版；如 Windows 请求权限，请确认安装器的 UAC 提示……"
+    # 不提升整个脚本。安装器仅在机器级稳定 Shim 的字节确实要换时才自行请求
+    # UAC，避免标准用户输入另一管理员账户凭据后把 HKCU 安装到错误账户。
+    # Shim 没变的升级一次 UAC 都不需要。
+    Write-Host "正在安装新版（覆盖升级，保留用户设置和词库）；如 Windows 请求权限，请确认……"
     Invoke-HiddenProcess $installers[0].FullName @("--silent") "安装新版"
 
     if (-not (Test-Path -LiteralPath $uninstallKey)) {
@@ -153,6 +168,7 @@ try {
         build_id = $actualBuildId
         install_location = $installedRoot
         user_data_preserved = $true
+        mode = if ($CleanReinstall) { "clean-reinstall" } else { "in-place-upgrade" }
     } | ConvertTo-Json | Set-Content -LiteralPath $logPath -Encoding UTF8
 
     Write-Host "更新成功：$actualBuildId" -ForegroundColor Green
