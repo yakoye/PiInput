@@ -42,6 +42,27 @@ english_completion_real_run=NOT_RUN
 - **无可信 Authenticode 签名与 RFC 3161 时间戳。** 已在他人机器上实测到后果：开启智能应用控制（`VerifiedAndReputablePolicyState=1`）的 Windows 11 直接拦下 `PiInput-Install.exe`，提示「因为无法验证其发布者」，且强制模式不提供绕过入口，只能整体关闭该功能（不可逆）。包内全部 exe 的 `Get-AuthenticodeSignature` 均为 `NotSigned`。这是分发给他人的硬阻塞，写多少代码都不能绕开。
 - 词库扩大约 12 倍（378 KB → 4.39 MB），Host 常驻内存的实际增量未测量。
 
+## 智能应用控制拦截的实测证据
+
+2026-08-26 在他人机器（Windows 11 家庭版中文版 Build 26200 / 25H2）取得的诊断：
+
+- `VerifiedAndReputablePolicyState = 1`，即强制模式。
+- 事件日志 `Microsoft-Windows-CodeIntegrity/Operational` 记录 Id 3033 与 3077：
+
+  > Code Integrity determined that a process (`explorer.exe`) attempted to load
+  > `PiInput-Install.exe` that did not meet the Enterprise signing level requirements
+  > or violated code integrity policy (Policy ID:`{0283ac0f-fff1-49ae-ada1-8a933130cad6}`)
+
+**这是内核代码完整性层的拒绝，不是应用层提示框。** 因此不存在用户态绕过途径：命令行、PowerShell 与双击的结果相同，弹窗上的「正常」只是关闭对话框。
+
+**推论：拦截不止于安装。** 拒绝发生在加载 PE 文件的时刻，而 PiInput 的运行方式是把 `PiInputTSF.dll` 加载进每一个接受输入的进程。同一策略会同样拒绝该 DLL，因此在强制模式的机器上，即使绕过安装步骤，输入法也无法工作。签名是唯一解，不存在"先凑合用"的中间状态。
+
+包内全部 exe 与 dll 的 `Get-AuthenticodeSignature` 均为 `NotSigned`，v0.7.13 起各版本皆然，签名状态从未变化。
+
+诊断脚本保留在 `scripts/dev/diagnose-smart-app-control.ps1`，只读，可直接发给遇到拦截的用户运行。
+
 ## 结论
 
 自动回归完整通过，词库分层与许可合规已确认。但英文候选、安装器界面、升级重启闭环均未实机验证，签名门禁未完成。**只能作为候选版分发，不得转入 `releases/current`。**
+
+对开启智能应用控制强制模式的机器，本版与此前任何版本一样无法安装或运行，且这不是可通过改代码解决的问题。

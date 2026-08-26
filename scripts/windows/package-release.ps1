@@ -1,7 +1,13 @@
 ﻿param(
     [string]$Configuration = "Release",
     [string]$Version = "",
-    [switch]$RequireSigned
+    [switch]$RequireSigned,
+    # 代码签名证书的指纹（SHA-1）。给了就在打包前对包内所有 exe/dll 签名。
+    # 证书需已安装到当前用户的证书存储；使用硬件令牌时插入令牌即可。
+    [string]$SigningCertificateThumbprint = "",
+    # RFC 3161 时间戳服务器。时间戳让签名在证书过期后依然有效，
+    # 没有它证书一到期所有已发布的包就同时失去签名。
+    [string]$TimestampUrl = "http://timestamp.digicert.com"
 )
 
 $ErrorActionPreference = "Stop"
@@ -105,6 +111,32 @@ Copy-Item -LiteralPath $QuickGuide -Destination $PackageRoot
 Copy-Item -LiteralPath $ReleaseNotes -Destination $PackageRoot
 Copy-Item -LiteralPath $Verification -Destination $PackageRoot
 Copy-Item -LiteralPath (Join-Path $Root "LICENSE_NOTICE.md") -Destination $PackageRoot
+# 先签名再校验。此前只有校验没有签名步骤，-RequireSigned 因此永远失败，
+# 除非有人在别处手工签过。
+if ($SigningCertificateThumbprint -ne "") {
+    $toSign = @(Get-ChildItem -LiteralPath $PackageRoot -Recurse -File |
+        Where-Object { $_.Extension -in @(".exe", ".dll") })
+    $certificate = Get-ChildItem -Path "Cert:\CurrentUser\My\$SigningCertificateThumbprint" -ErrorAction SilentlyContinue
+    if ($null -eq $certificate) {
+        $certificate = Get-ChildItem -Path "Cert:\LocalMachine\My\$SigningCertificateThumbprint" -ErrorAction SilentlyContinue
+    }
+    if ($null -eq $certificate) {
+        throw "找不到指纹为 $SigningCertificateThumbprint 的证书。使用硬件令牌时请先插入令牌。"
+    }
+    Write-Host "正在签名 $($toSign.Count) 个文件：$($certificate.Subject)" -ForegroundColor Cyan
+    foreach ($file in $toSign) {
+        # 时间戳不是可选项：没有它，证书过期的当天，所有已发出去的包会
+        # 同时失去有效签名，而那些包早已在别人手里。
+        $result = Set-AuthenticodeSignature -LiteralPath $file.FullName `
+            -Certificate $certificate -TimestampServer $TimestampUrl `
+            -HashAlgorithm SHA256
+        if ($result.Status -ne "Valid") {
+            throw "签名失败：$($file.FullName) —— $($result.Status) $($result.StatusMessage)"
+        }
+    }
+    Write-Host "签名完成。" -ForegroundColor Green
+}
+
 if ($RequireSigned) {
     $signedFiles = @(Get-ChildItem -LiteralPath $PackageRoot -Recurse -File |
         Where-Object { $_.Extension -in @(".exe", ".dll") })

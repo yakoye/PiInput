@@ -430,6 +430,7 @@ scripts/build-dictionaries.ps1
 scripts/convert-english-wordfreq.ps1
 scripts/dev/build-english-lexicon.ps1
 scripts/dev/build.sh
+scripts/dev/diagnose-smart-app-control.ps1
 scripts/dev/export-wordfreq.py
 scripts/dev/import-dicts.ps1
 scripts/dev/install-dev.ps1
