@@ -294,6 +294,7 @@ docs/PORTABLE_TEST_GUIDE.md
 docs/PORTABLE_TEST_RESULTS_2026-08-15.md
 docs/README.md
 docs/release_notes_v0.7.15.md
+docs/release_notes_v0.7.16.md
 docs/TSF_DEVELOPER_TEST.md
 docs/v0.7.15安装、使用与测试.md
 docs/VERIFICATION_v0.7.15.md

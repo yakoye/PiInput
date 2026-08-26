@@ -6,7 +6,7 @@
 
 **轻量 · 快速 · 纯离线的中文输入法**
 
-当前发布版本：`v0.7.15` · C++20 · Windows TSF
+当前发布版本：`v0.7.16` · C++20 · Windows TSF
 
 </div>
 
@@ -231,6 +231,7 @@ jpiu  → 接触        mkt   → 明天（未完成编码也给候选）
 
 **当前版本**
 
+- [v0.7.16 版本说明](docs/release_notes_v0.7.16.md)
 - [v0.7.15 版本说明](docs/release_notes_v0.7.15.md)
 - [v0.7.15 验证记录](docs/VERIFICATION_v0.7.15.md)
 - [安装与使用指南](docs/安装与使用指南.md)
