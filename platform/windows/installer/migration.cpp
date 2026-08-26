@@ -258,6 +258,45 @@ void migrate_legacy_user_data(
     }
 }
 
+#ifdef _WIN32
+namespace {
+
+// PendingFileRenameOperations records paths, not files: whatever path is
+// registered is what Session Manager deletes at the next boot. Uninstalling
+// and immediately installing again is the normal upgrade flow, and the
+// installer writes the new files back to exactly those paths -- so a stable
+// path left sitting in that queue makes the next restart delete the freshly
+// installed file. That is how an installation ends up with every registry
+// entry intact and no PiInputTSF.dll behind them: the profile is still listed
+// and switchable, and every attempt to load it fails.
+//
+// A file that cannot be deleted now is therefore renamed to a path that
+// belongs to this uninstall alone before it is queued. Renaming a mapped
+// image is allowed; the stable path is freed immediately and never enters the
+// queue, so a later install owns it outright.
+[[nodiscard]] std::filesystem::path doomed_path_for(const std::filesystem::path& path) {
+    FILETIME now{};
+    GetSystemTimeAsFileTime(&now);
+    // 100-ns ticks since 1601 never restart at zero, unlike GetTickCount64,
+    // so a name minted before a reboot cannot collide with one minted after.
+    const unsigned long long stamp =
+        (static_cast<unsigned long long>(now.dwHighDateTime) << 32) |
+        static_cast<unsigned long long>(now.dwLowDateTime);
+    const std::wstring prefix = path.wstring() + L".doomed." +
+        std::to_wstring(GetCurrentProcessId()) + L"." + std::to_wstring(stamp) + L".";
+    for (unsigned int attempt = 0U; attempt < 1024U; ++attempt) {
+        std::filesystem::path candidate = prefix + std::to_wstring(attempt);
+        std::error_code error;
+        if (!std::filesystem::exists(candidate, error) && !error) {
+            return candidate;
+        }
+    }
+    return {};
+}
+
+}  // namespace
+#endif
+
 void remove_or_schedule_legacy_runtime(const std::filesystem::path& source_root) {
     std::error_code error;
     std::filesystem::remove_all(source_root, error);
@@ -269,7 +308,23 @@ void remove_or_schedule_legacy_runtime(const std::filesystem::path& source_root)
         if (!std::filesystem::exists(path)) {
             continue;
         }
-        if (MoveFileExW(path.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT) == FALSE) {
+        std::error_code directory_error;
+        if (std::filesystem::is_directory(path, directory_error) && !directory_error) {
+            // A directory is safe to queue by its own path. It is emptied by
+            // the entries queued ahead of it and disappears, or a reinstall
+            // refills it and the queued removal simply fails -- neither
+            // outcome can reach the files inside it.
+            if (MoveFileExW(path.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT) == FALSE) {
+                throw std::runtime_error("Cannot schedule the legacy runtime for deletion");
+            }
+            continue;
+        }
+        const auto doomed = doomed_path_for(path);
+        if (doomed.empty() ||
+            MoveFileExW(path.c_str(), doomed.c_str(), MOVEFILE_REPLACE_EXISTING) == FALSE) {
+            throw std::runtime_error("Cannot schedule the legacy runtime for deletion");
+        }
+        if (MoveFileExW(doomed.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT) == FALSE) {
             throw std::runtime_error("Cannot schedule the legacy runtime for deletion");
         }
     }

@@ -59,6 +59,46 @@ if(unregister_position LESS 0 OR delete_position LESS 0 OR
     message(FATAL_ERROR "Runtime deletion must occur only after DLL/Profile unregistration")
 endif()
 
+# Uninstalling and immediately installing again is the normal upgrade flow.
+# PendingFileRenameOperations records paths, not files, so queueing a stable
+# path that the installer is about to rewrite makes the next restart delete the
+# freshly installed file and leave the registry pointing at an empty directory:
+# the profile stays listed and switchable while every attempt to load it fails.
+# A file that cannot be deleted now must therefore be renamed to a path
+# belonging to this uninstall alone before it is queued.
+set(migration "${PIINPUT_SOURCE_DIR}/platform/windows/installer/migration.cpp")
+if(NOT EXISTS "${migration}")
+    message(FATAL_ERROR "Installer migration source is missing")
+endif()
+file(READ "${migration}" migration_text)
+
+foreach(required IN ITEMS
+    "doomed_path_for"
+    "GetSystemTimeAsFileTime"
+    "MoveFileExW\\(path\\.c_str\\(\\), doomed\\.c_str\\(\\), MOVEFILE_REPLACE_EXISTING\\)"
+    "MoveFileExW\\(doomed\\.c_str\\(\\), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT\\)")
+    if(NOT migration_text MATCHES "${required}")
+        message(FATAL_ERROR
+            "A locked file must be renamed to a single-use path before it is queued for "
+            "deletion, so a reinstall to the same path survives the next restart: ${required}")
+    endif()
+endforeach()
+
+string(FIND "${migration_text}"
+    "MoveFileExW(path.c_str(), doomed.c_str(), MOVEFILE_REPLACE_EXISTING)" rename_position)
+string(FIND "${migration_text}"
+    "MoveFileExW(doomed.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT)" queue_position)
+if(rename_position LESS 0 OR queue_position LESS 0 OR queue_position LESS rename_position)
+    message(FATAL_ERROR
+        "A locked file must leave its stable path before that path could be queued for deletion")
+endif()
+
+if(migration_text MATCHES "GetTickCount64\\(\\)")
+    message(FATAL_ERROR
+        "Single-use deletion names must not come from GetTickCount64: it restarts at zero "
+        "after a reboot, so a name minted before one can collide with a name minted after")
+endif()
+
 if(NOT cmake_text MATCHES "add_executable\\(PiInput-Uninstall WIN32" OR
    NOT cmake_text MATCHES "target_link_libraries\\(PiInput-Uninstall PRIVATE[^\\)]*comctl32" OR
    NOT cmake_text MATCHES "MANIFESTUAC:level='asInvoker'" OR
