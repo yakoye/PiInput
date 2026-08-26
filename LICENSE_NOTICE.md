@@ -36,3 +36,14 @@ YeTool `yetool-dev` 模板数据。YeTool 采用 MIT License，原版权声明�
 `Copyright (c) 2026 PathCopy contributors`。PiInput 仅复用模板的分类、名称、
 目标和参数数据，并将其转换为可编辑的快捷调用条目；不会随包分发 YeTool 或
 Everything 程序本体。
+
+随包 `data/english_lexicon.tsv` 是英文候选词库，由三层合并而成。高频层是本
+项目原有词表；中频层的词频取自 wordfreq，其代码采用 Apache-2.0，**数据采用
+CC BY-SA 4.0**；低频层词形取自 dwyl/english-words，采用 Unlicense（公有领域）。
+
+依据 CC BY-SA 4.0，wordfreq 及其衍生数据必须署名 SUBTLEX 作者，并保持
+「SUBTLEX 是可自由获取的数据」这一点清楚可见；部分数据源自 Google Books
+Ngram Viewer（`http://books.google.com/ngrams`）。wordfreq 本身拒绝提供 CSV
+导出，理由是该格式没有容纳署名与许可信息的位置，因此本声明与
+`bin/licenses/EnglishWordlist/` 下的完整许可证、来源和取用方式随包分发，不
+依赖词库文件自身携带。

@@ -166,10 +166,44 @@ void test_english_never_renumbers_a_shortcut() {
         "a suppressed plan has nothing to place");
 }
 
+// The shipped dictionary is layered: the original 24,323 word table sits
+// above a large open word list. Coverage is the whole reason the large list
+// is there -- spelling help is most needed for words nobody types often, and
+// the original table had none of them.
+void test_shipped_dictionary_layers_do_not_overlap() {
+    piinput::EnglishLexicon lexicon;
+    const std::filesystem::path shipped =
+        std::filesystem::path(PIINPUT_SOURCE_DIR) / "data" / "english_lexicon.tsv";
+    const auto loaded = lexicon.load_builtin_tsv(shipped);
+    // Far past the 24,323 the original table held, which is what says the
+    // layered build is in place rather than the old one.
+    check(loaded > 200000U, "the shipped dictionary carries the layered word list");
+
+    const auto believe = lexicon.query("believ", 4U);
+    check(!believe.empty() && believe.front().word == "believe",
+        "an everyday word still wins its own prefix");
+    check(!believe.empty() && believe.front().base_weight > 1000000U,
+        "everyday words live in the band the large list cannot reach");
+
+    // Only three candidates are ever shown, so being present in the file is
+    // not enough -- the word has to survive the ranking. An earlier build put
+    // palladia and palladic ahead of it purely because they are shorter,
+    // which is exactly the failure a frequency signal exists to prevent.
+    const auto palladium = lexicon.query("pallad", 3U);
+    const bool covered = std::any_of(palladium.begin(), palladium.end(),
+        [](const piinput::EnglishCandidate& candidate) {
+            return candidate.word == "palladium";
+        });
+    check(covered, "a word the original table lacked is reachable within three");
+    check(palladium.empty() || palladium.front().base_weight < 1000000U,
+        "rare words stay below the everyday band");
+}
+
 }  // namespace
 
 int main() {
     test_full_pinyin_start_position();
+    test_shipped_dictionary_layers_do_not_overlap();
     test_english_never_renumbers_a_shortcut();
     test_double_pinyin_thresholds_are_stricter();
     test_input_case_is_carried_to_the_word();

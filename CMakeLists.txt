@@ -387,6 +387,16 @@ if(WIN32)
         DESTINATION bin/licenses/YeSymbol
     )
     install(FILES third_party/yetool/LICENSE DESTINATION bin/licenses/YeTool)
+    # The English dictionary carries wordfreq data under CC-BY-SA, which
+    # requires attribution to travel with it. wordfreq itself declines to ship
+    # CSV exports because that format leaves nowhere to put the notice, so the
+    # notice ships as its own file beside the binaries.
+    install(FILES
+        third_party/english-wordlist/LICENSE.dwyl-english-words.md
+        third_party/english-wordlist/LICENSE.wordfreq.txt
+        third_party/english-wordlist/PROVENANCE.md
+        DESTINATION bin/licenses/EnglishWordlist
+    )
     # The bundled programmer calculator is self-contained apart from these two
     # adjacent UI assets. Keep all three beside PiInputHost.exe so the installed
     # path is stable in both per-user and machine layouts.

@@ -108,6 +108,11 @@ void test_defaults_and_round_trip() {
     check(defaults.candidates.down_key == piinput::RowNavigationAction::next_row, "default down key");
     check(defaults.candidates.up_key == piinput::RowNavigationAction::previous_row, "default up key");
     check(!defaults.english.enabled, "default English disabled");
+    // Mixing English into Chinese is a new surface for every existing user, so
+    // it stays off until asked for. The two switches are independent: turning
+    // one on must never imply the other.
+    check(!defaults.english.chinese_mode_completion,
+        "default Chinese-mode English completion disabled");
     check(defaults.english.builtin_dictionary, "default built-in English dictionary");
     check(defaults.english.user_dictionary, "default user English dictionary");
     check(defaults.english.user_learning, "default English learning");
@@ -165,6 +170,7 @@ void test_valid_values_and_boundaries() {
         "up_key=next_row\n"
         "[english]\n"
         "enabled=true\n"
+        "chinese_mode_completion=true\n"
         "builtin_dictionary=false\n"
         "user_dictionary=false\n"
         "user_learning=false\n"
@@ -210,6 +216,8 @@ void test_valid_values_and_boundaries() {
     check(parsed.settings.candidates.up_key == piinput::RowNavigationAction::next_row,
         "up key navigation");
     check(parsed.settings.english.enabled, "English enabled");
+    check(parsed.settings.english.chinese_mode_completion,
+        "Chinese-mode English completion is read from the file");
     check(!parsed.settings.english.builtin_dictionary, "built-in English dictionary disabled");
     check(!parsed.settings.english.user_dictionary, "user English dictionary disabled");
     check(!parsed.settings.english.user_learning, "English learning disabled");

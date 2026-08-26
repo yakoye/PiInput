@@ -866,3 +866,13 @@ v0.6.6 宣称修复的两个问题在真机上都没解决，两段录屏经进�
 - 实测确认 Windows 11 25H2 的搜索框 `BeginUIElement` 返回 `show=TRUE` 且从不查询 `ITfIntegratableCandidateListUIElement`，即它既不接管候选显示也不使用搜索框集成协议。宿主声明接管却不绘制时，Shim 恢复显示自己的候选窗，避免两边都不画；
 - 安装器补上确认、进度与完成三步对话框，`--silent` 行为逐字节不变；一键更新改为原地覆盖升级，UAC 由两次降到最多一次，Shim 字节未变时为零次，`-CleanReinstall` 保留旧路径；
 - 候选界面协议新增可选诊断日志，marker 为 `piinput-candidate-trace.on`，与语言栏、光标、按键诊断同一机制，默认关闭。
+
+## 12.53 v0.8.0 中文模式英文候选
+
+- 中文输入模式下混入英文单词候选，默认关闭，开关为 `[english] chinese_mode_completion`，与英文模式的 `enabled` 相互独立。真正解决的是拼写辅助：忘了怎么拼，打出前几个字母让词库补全；
+- 位置不能固定，因为同一串字母既是拼音又可能是英文词。由两个信号查表决定：`CandidateEvidence::covers_all_input`（拼音是否被完整消耗，简拼或前缀猜出来的候选不比英文更确凿）与中文最佳候选词频。阈值对着实测的竞品行为标定——和 625 万完全不给英文，按 382 万压到行尾，那么 50 万让出第二位，错的 10 万让出第一位。双拼两字母一音节、`covers_all_input` 几乎恒真，因此单独一套更严的阈值；
+- 规则全部落在纯函数组件 `english_completion`，输入是「输入串 + 中文侧摘要 + 词库 + 设置」，输出是「插到第几位 + 插哪些词」，可脱离 TSF 与 Host 进程单测。计划一代只算一次并缓存在 `HostSession`，因为候选行长度、快照与选中三处必须对同一份结果达成一致，各自重算会漂移并提交错条目；
+- 快捷命令的候选编号是手工配置的，英文一律排在最后一个 `symbol_tool_action`/`emoji_tool_action`/`settings_action`/`launch_action`/`datetime_group` 之后，绝不上移它们；固定与删除候选作用于词库，对英文候选直接拒绝而非误伤同位置的中文词；
+- 词库扩到约 25 万词，分三层且分数区间不重叠：原有 24,323 词表在 1,000,001 之上，wordfreq 真实词频层在 200,001 之上，dwyl 词形层在其下。分层是必需而非优化——只有词形没有词频时 `pallad` 补不出 `palladium`，它被 `palladia`、`palladic` 按词长挡在三个候选之外，而后两者根本不在词频统计中；
+- 词库许可逐一核对：Norvig 33 万词表因数据无明确许可且源自 LDC 商业语料而弃用；采用 dwyl/english-words（Unlicense）与 wordfreq（数据 CC BY-SA 4.0，强制署名 SUBTLEX 作者）。署名写入 `LICENSE_NOTICE.md` 与 `third_party/english-wordlist/PROVENANCE.md`，完整许可证随包安装到 `bin/licenses/EnglishWordlist/`；
+- 英文候选参与学习，与英文模式共用同一份学习数据。词库再大也覆盖不到领域专名，打过一次即可补全，这是长尾唯一的出口。

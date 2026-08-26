@@ -451,6 +451,8 @@ bool save_all_settings_atomic(
         {"commands", "hotkey", hotkey_name(settings.commands.hotkey)},
         {"commands", "middle_dot_alias", boolean(settings.commands.middle_dot_alias)},
         {"english", "enabled", boolean(settings.english.enabled)},
+        {"english", "chinese_mode_completion",
+            boolean(settings.english.chinese_mode_completion)},
         {"english", "builtin_dictionary", boolean(settings.english.builtin_dictionary)},
         {"english", "user_dictionary", boolean(settings.english.user_dictionary)},
         {"english", "user_learning", boolean(settings.english.user_learning)},

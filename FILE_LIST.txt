@@ -6,6 +6,7 @@ build.ps1
 CMakeLists.txt
 data/base_lexicon.tsv
 data/english_completion_preferences.tsv
+data/english_lexicon.high-frequency.tsv
 data/english_lexicon.tsv
 data/english_supplement.tsv
 data/host_protocol.json
@@ -26,6 +27,7 @@ docs/词库查询与分段取字.md
 docs/词库更新说明.md
 docs/三个长文本打字测试_v0.7.15.md
 docs/三个长文本打字测试_v0.7.16.md
+docs/三个长文本打字测试_v0.8.0.md
 docs/三组文本与八向边界对照测试_2026-08-15.md
 docs/稳定入口与无重启升级说明.md
 docs/archive/history/260717_1808_08同步计划.md
@@ -296,13 +298,16 @@ docs/PORTABLE_TEST_RESULTS_2026-08-15.md
 docs/README.md
 docs/release_notes_v0.7.15.md
 docs/release_notes_v0.7.16.md
+docs/release_notes_v0.8.0.md
 docs/superpowers/plans/2026-08-26-中文模式英文候选.md
 docs/superpowers/specs/2026-08-26-中文模式英文候选设计.md
 docs/TSF_DEVELOPER_TEST.md
 docs/v0.7.15安装、使用与测试.md
 docs/v0.7.16安装、使用与测试.md
+docs/v0.8.0安装、使用与测试.md
 docs/VERIFICATION_v0.7.15.md
 docs/VERIFICATION_v0.7.16.md
+docs/VERIFICATION_v0.8.0.md
 docs/WORKSPACE_LAYOUT.md
 examples/sample_lexicon.tsv
 FILE_LIST.txt
@@ -423,7 +428,9 @@ scripts/build_windows_vs2026.cmd
 scripts/build_windows_vs2026.ps1
 scripts/build-dictionaries.ps1
 scripts/convert-english-wordfreq.ps1
+scripts/dev/build-english-lexicon.ps1
 scripts/dev/build.sh
+scripts/dev/export-wordfreq.py
 scripts/dev/import-dicts.ps1
 scripts/dev/install-dev.ps1
 scripts/dev/refresh-installed-dev.cmd
@@ -658,6 +665,9 @@ tests/unit/user_keyboard_registration_tests.cpp
 tests/unit/user_model_persistence_tests.cpp
 tests/unit/user_model_tests.cpp
 tests/unit/user_phrase_performance_tests.cpp
+third_party/english-wordlist/LICENSE.dwyl-english-words.md
+third_party/english-wordlist/LICENSE.wordfreq.txt
+third_party/english-wordlist/PROVENANCE.md
 third_party/README.md
 third_party/regcalc/RegCalc64Tool.html
 third_party/regcalc/shared-ui.css

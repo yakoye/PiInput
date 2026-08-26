@@ -64,8 +64,8 @@ enum class Field : std::uint8_t {
     equal_key, minus_key, down_key, up_key,
     punctuation_mode, bracket_style, command_enabled, command_hotkey, middle_dot_alias,
     symbol_tool,
-    english_enabled, english_builtin, english_user_dictionary, english_user_learning,
-    english_items_per_row,
+    english_enabled, english_chinese_mode, english_builtin, english_user_dictionary,
+    english_user_learning, english_items_per_row,
     hot_reload, prefix_beam_width, prefix_scan_limit,
 };
 
@@ -83,7 +83,7 @@ constexpr std::array<const wchar_t*, 5U> kNone{};
 constexpr std::array<const wchar_t*, 5U> kRowKeys{
     L"下一行", L"上一行", nullptr, nullptr, nullptr};
 
-constexpr std::array<Row, 31U> kRows{{
+constexpr std::array<Row, 32U> kRows{{
     {0, Kind::choice, Field::schema, L"输入方案",
         {L"全拼", L"小鹤双拼", L"自然码", L"微软双拼", L"智能 ABC"}, 0U, 0U},
     {0, Kind::choice, Field::default_language, L"默认输入语言",
@@ -115,7 +115,8 @@ constexpr std::array<Row, 31U> kRows{{
     {2, Kind::toggle, Field::middle_dot_alias, L"也可以用 · 打开符号面板", kNone, 0U, 0U},
     {2, Kind::text, Field::symbol_tool, L"托盘符号工具", kNone, 0U, 0U},
 
-    {3, Kind::toggle, Field::english_enabled, L"启用英文候选", kNone, 0U, 0U},
+    {3, Kind::toggle, Field::english_enabled, L"英文模式下启用英文候选", kNone, 0U, 0U},
+    {3, Kind::toggle, Field::english_chinese_mode, L"中文输入时也给出英文候选", kNone, 0U, 0U},
     {3, Kind::toggle, Field::english_builtin, L"使用内置英文词库", kNone, 0U, 0U},
     {3, Kind::toggle, Field::english_user_dictionary, L"使用自定义英文词库", kNone, 0U, 0U},
     {3, Kind::toggle, Field::english_user_learning, L"记住英文用词习惯", kNone, 0U, 0U},
@@ -891,6 +892,8 @@ void load_into_controls(AppState& state) {
                 piinput::utf8_to_wide(settings.general.symbol_tool).c_str());
             break;
         case Field::english_enabled: check(index, settings.english.enabled); break;
+        case Field::english_chinese_mode:
+            check(index, settings.english.chinese_mode_completion); break;
         case Field::english_builtin: check(index, settings.english.builtin_dictionary); break;
         case Field::english_user_dictionary:
             check(index, settings.english.user_dictionary); break;
@@ -967,6 +970,8 @@ void store_from_controls(AppState& state) {
             break;
         }
         case Field::english_enabled: settings.english.enabled = checked(index); break;
+        case Field::english_chinese_mode:
+            settings.english.chinese_mode_completion = checked(index); break;
         case Field::english_builtin: settings.english.builtin_dictionary = checked(index); break;
         case Field::english_user_dictionary:
             settings.english.user_dictionary = checked(index); break;
