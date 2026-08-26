@@ -384,6 +384,9 @@ void parse_english(
     auto& english = result.settings.english;
     if (key == "enabled") {
         assign_parsed(result, english.enabled, parse_bool, value, line, "english", key);
+    } else if (key == "chinese_mode_completion") {
+        assign_parsed(result, english.chinese_mode_completion, parse_bool, value, line,
+            "english", key);
     } else if (key == "builtin_dictionary") {
         assign_parsed(result, english.builtin_dictionary, parse_bool, value, line, "english", key);
     } else if (key == "user_dictionary") {
@@ -723,6 +726,7 @@ std::string serialize_default_settings() {
         "up_key=previous_row\n"
         "[english]\n"
         "enabled=false\n"
+        "chinese_mode_completion=false\n"
         "builtin_dictionary=true\n"
         "user_dictionary=true\n"
         "user_learning=true\n"

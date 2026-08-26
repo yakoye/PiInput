@@ -75,6 +75,10 @@ struct CandidateSettings {
 
 struct EnglishSettings {
     bool enabled{false};
+    // English candidates while typing Chinese. Separate from `enabled`, which
+    // governs English mode after Shift: turning this on must not change what
+    // English mode does, and vice versa.
+    bool chinese_mode_completion{false};
     bool builtin_dictionary{true};
     bool user_dictionary{true};
     bool user_learning{true};

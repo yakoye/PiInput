@@ -138,10 +138,39 @@ void test_plan_reports_where_to_insert() {
     std::filesystem::remove(path);
 }
 
+void test_english_never_renumbers_a_shortcut() {
+    using piinput::english_insert_index;
+
+    // calc: Chinese at 1, the calculator shortcut at 2. English wants the
+    // first slot, but taking it would push the calculator to three.
+    const std::vector<bool> calculator_at_two{false, true, false, false};
+    check(english_insert_index(1U, calculator_at_two) == 2U,
+        "English starts after the shortcut rather than renumbering it");
+    check(english_insert_index(2U, calculator_at_two) == 2U,
+        "a request for the shortcut's own slot lands just past it");
+
+    // Two shortcuts below the requested position: clearing only the first
+    // would still renumber the second.
+    const std::vector<bool> two_shortcuts{false, true, true, false};
+    check(english_insert_index(1U, two_shortcuts) == 3U,
+        "English clears every shortcut, not just the first");
+
+    const std::vector<bool> none{false, false, false};
+    check(english_insert_index(1U, none) == 0U,
+        "with no shortcuts English lands exactly where it asked");
+    check(english_insert_index(2U, none) == 1U,
+        "the second slot is index one");
+    check(english_insert_index(9U, none) == 3U,
+        "a position past the end appends rather than overruns");
+    check(english_insert_index(0U, none) == 0U,
+        "a suppressed plan has nothing to place");
+}
+
 }  // namespace
 
 int main() {
     test_full_pinyin_start_position();
+    test_english_never_renumbers_a_shortcut();
     test_double_pinyin_thresholds_are_stricter();
     test_input_case_is_carried_to_the_word();
     test_plan_respects_the_trigger_conditions();

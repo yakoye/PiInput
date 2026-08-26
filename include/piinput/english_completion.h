@@ -45,6 +45,17 @@ struct EnglishCompletionPlan {
 [[nodiscard]] std::size_t english_start_position(
     const ChineseCandidateSummary& chinese, bool double_pinyin) noexcept;
 
+// Where the English words actually land, given which of the Chinese entries
+// are shortcut commands.
+//
+// A shortcut's candidate number is configured by hand -- calc opens the
+// calculator from position two because the user put it there. Inserting an
+// English word above it would renumber it, so the words go after the last
+// shortcut instead of displacing one. `reserved[i]` is true when Chinese
+// entry `i` is a shortcut, symbol tool or datetime group.
+[[nodiscard]] std::size_t english_insert_index(
+    std::size_t start_position, const std::vector<bool>& reserved) noexcept;
+
 // Dresses a dictionary word in the case the user is typing: book stays book,
 // Book becomes Book, BOOK becomes BOOK. A word stored as a proper noun keeps
 // its own capitals.

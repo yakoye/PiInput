@@ -26,6 +26,18 @@ struct SymbolRequest final {
     return std::nullopt;
 }
 
+// Entries whose candidate number the user configured, or that open a list
+// rather than committing text. English words go after them so their numbers
+// stay put: calc opens the calculator from position two because it was put
+// there, and mixing in a word above it would silently renumber it.
+[[nodiscard]] bool is_reserved_action(const CandidateKind kind) noexcept {
+    return kind == CandidateKind::symbol_tool_action ||
+           kind == CandidateKind::emoji_tool_action ||
+           kind == CandidateKind::settings_action ||
+           kind == CandidateKind::launch_action ||
+           kind == CandidateKind::datetime_group;
+}
+
 [[nodiscard]] std::vector<SymbolCandidate> resolve_symbols(
     const SymbolIndex& symbols,
     const std::string_view input,
@@ -394,15 +406,31 @@ HostSnapshot HostSession::snapshot() const {
         }
         return result;
     }
-    result.candidates.reserve(source.candidates.size());
+    result.candidates.reserve(source.candidates.size() + english_plan_.words.size());
     for (std::size_t index = 0; index < source.candidates.size(); ++index) {
         const auto& candidate = source.candidates[index].candidate;
         result.candidates.push_back({
-            (generation_ << 32U) | static_cast<std::uint64_t>(index + 1U),
+            0U,
             candidate.word,
             candidate.pinyin,
             candidate.score,
         });
+    }
+    // Inserted rather than appended: the whole point is which number the word
+    // carries. english_insert_at_ already accounts for the shortcuts it must
+    // not renumber.
+    for (std::size_t offset = 0; offset < english_plan_.words.size(); ++offset) {
+        const std::size_t at = (std::min)(
+            english_insert_at_ + offset, result.candidates.size());
+        result.candidates.insert(
+            result.candidates.begin() + static_cast<std::ptrdiff_t>(at),
+            HostCandidate{0U, english_plan_.words[offset], {}, 0});
+    }
+    // Numbered last so every entry carries the position it is actually shown
+    // at, which is what selection and management resolve against.
+    for (std::size_t index = 0; index < result.candidates.size(); ++index) {
+        result.candidates[index].id =
+            (generation_ << 32U) | static_cast<std::uint64_t>(index + 1U);
     }
     return result;
 }
@@ -415,12 +443,26 @@ HostReply HostSession::manage_candidate(
     const auto& source = chinese_.snapshot();
     if (mode_ != HostInputMode::chinese ||
         source.view_mode != CandidateViewMode::normal ||
-        requested_generation != generation_ || ordinal == 0U ||
-        ordinal > source.candidates.size()) {
+        requested_generation != generation_ || ordinal == 0U) {
         return reply(false, HostAction::none);
     }
-    const EngineCandidate candidate =
-        source.candidates[static_cast<std::size_t>(ordinal - 1U)].candidate;
+    std::size_t chinese_index = static_cast<std::size_t>(ordinal - 1U);
+    // Pinning and deleting act on the dictionary, so an English word in the
+    // row has nothing for them to act on. Refuse rather than silently pinning
+    // whichever Chinese entry happens to share the position.
+    if (!english_plan_.words.empty()) {
+        if (chinese_index >= english_insert_at_ &&
+            chinese_index < english_insert_at_ + english_plan_.words.size()) {
+            return reply(false, HostAction::none);
+        }
+        if (chinese_index >= english_insert_at_) {
+            chinese_index -= english_plan_.words.size();
+        }
+    }
+    if (chinese_index >= source.candidates.size()) {
+        return reply(false, HostAction::none);
+    }
+    const EngineCandidate candidate = source.candidates[chinese_index].candidate;
     if (action == CandidateManagementAction::pin_first) {
         chinese_.pin_candidate(candidate);
         advance_generation(true);
@@ -431,6 +473,8 @@ HostReply HostSession::manage_candidate(
         advance_generation(true);
         return reply(true, HostAction::update);
     }
+    // The row is renumbered after the deletion, so the selection follows the
+    // position the user was looking at rather than the Chinese-side index.
     const std::size_t deleted_index = static_cast<std::size_t>(ordinal - 1U);
     chinese_.delete_candidate(candidate);
     advance_generation(false);
@@ -522,7 +566,29 @@ HostReply HostSession::choose(const std::uint64_t candidate_id) {
         ordinal > current_candidate_count()) {
         return reply(false, HostAction::none);
     }
-    const std::size_t index = static_cast<std::size_t>(ordinal - 1U);
+    std::size_t index = static_cast<std::size_t>(ordinal - 1U);
+    // The row the user sees has English words spliced into it, so a position
+    // in that row is not a position in the Chinese candidate list. Resolve the
+    // English entries first, then shift the rest back by however many of them
+    // sit above.
+    if (!english_plan_.words.empty()) {
+        if (index >= english_insert_at_ &&
+            index < english_insert_at_ + english_plan_.words.size()) {
+            const std::string word = english_plan_.words[index - english_insert_at_];
+            if (english_lexicon_ != nullptr && settings_.english.user_learning) {
+                // Learned wherever it was typed. Which mode a word was picked
+                // in says nothing about whether it will be wanted again, and a
+                // word learned once is the only way the long tail is reached.
+                (void)english_lexicon_->record_selection(word);
+            }
+            chinese_.clear();
+            advance_generation(true);
+            return reply(true, HostAction::commit, word);
+        }
+        if (index >= english_insert_at_) {
+            index -= english_plan_.words.size();
+        }
+    }
     std::optional<std::string> chosen;
     if (!datetime_menu_.empty()) {
         if (index >= datetime_menu_.size()) return reply(false, HostAction::none);
@@ -677,6 +743,41 @@ void HostSession::advance_generation(const bool collapse_view) {
     }
 }
 
+void HostSession::rebuild_english_plan() {
+    english_plan_ = {};
+    english_insert_at_ = 0U;
+    if (mode_ != HostInputMode::chinese || english_lexicon_ == nullptr ||
+        !settings_.english.chinese_mode_completion) {
+        return;
+    }
+    const auto& source = chinese_.snapshot();
+    // Segment selection is a different surface with its own meaning for each
+    // row; mixing dictionary words into it would only make it harder to read.
+    if (source.view_mode != CandidateViewMode::normal) return;
+
+    ChineseCandidateSummary summary;
+    summary.has_candidates = !source.candidates.empty();
+    if (summary.has_candidates) {
+        const auto& best = source.candidates.front().candidate;
+        summary.covers_all_input = best.evidence.covers_all_input;
+        summary.top_score = best.score;
+    }
+    EnglishCompletionSettings completion;
+    completion.enabled = true;
+    completion.max_items = 3U;
+    completion.double_pinyin = schema_ != "full";
+    english_plan_ = plan_english_completion(
+        source.input, summary, *english_lexicon_, completion);
+    if (english_plan_.words.empty()) return;
+
+    std::vector<bool> reserved;
+    reserved.reserve(source.candidates.size());
+    for (const auto& candidate : source.candidates) {
+        reserved.push_back(is_reserved_action(candidate.candidate.evidence.kind));
+    }
+    english_insert_at_ = english_insert_index(english_plan_.start_position, reserved);
+}
+
 void HostSession::rebuild_candidate_grid(const bool collapse_view) {
     // Any new composition state replaces the format list, so it cannot outlive
     // the candidates it was opened from.
@@ -718,10 +819,14 @@ void HostSession::rebuild_candidate_grid(const bool collapse_view) {
         take_leading(symbols,
             [](const auto& candidate) -> const std::string& { return candidate.symbol; });
     } else {
+        rebuild_english_plan();
         take_leading(chinese_.snapshot().candidates,
             [](const auto& candidate) -> const std::string& {
                 return candidate.candidate.word;
             });
+        // The mixed-in words are part of the row, so the count that drives
+        // paging and selection has to include them.
+        count += english_plan_.words.size();
     }
     candidate_grid_.set_items_per_row(static_cast<std::uint32_t>(candidate_items_per_row(
         settings_.candidates.items_per_row, std::span<const std::string_view>(leading))));

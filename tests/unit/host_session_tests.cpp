@@ -5,6 +5,7 @@
 #include "piinput/settings.h"
 #include "piinput/symbols.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -88,6 +89,122 @@ std::filesystem::path write_chinese_lexicon() {
 }
 
 void type(piinput::HostSession& session, const std::string& text);
+
+std::filesystem::path write_english_completion_lexicon() {
+    const auto path =
+        std::filesystem::temp_directory_path() / "piinput-host-english-completion.tsv";
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    // Scores sit in the high-frequency band, matching the layered dictionary.
+    output << "wonder\t1024000\t2\n"
+           << "wonderful\t1023000\t2\n"
+           << "wondering\t1022000\t2\n";
+    return path;
+}
+
+std::vector<std::string> candidate_texts(const piinput::HostSnapshot& snapshot) {
+    std::vector<std::string> texts;
+    texts.reserve(snapshot.candidates.size());
+    for (const auto& candidate : snapshot.candidates) {
+        texts.push_back(candidate.text);
+    }
+    return texts;
+}
+
+// The switch is off by default and must stay invisible until asked for. This
+// is the one assertion that protects every existing user from the feature.
+void test_english_completion_is_off_unless_asked_for() {
+    piinput::Engine engine;
+    const auto chinese_path = write_chinese_lexicon();
+    engine.load_lexicon(chinese_path);
+    const auto english_path = write_english_completion_lexicon();
+    piinput::EnglishLexicon english;
+    check(english.load_builtin_tsv(english_path) > 0U, "English fixture loads");
+
+    auto settings = piinput::default_settings();
+    check(!settings.english.chinese_mode_completion,
+        "mixing English into Chinese is off in the defaults");
+
+    piinput::HostSession without(engine, &english, settings, "full");
+    type(without, "wo");
+    const auto plain = candidate_texts(without.snapshot());
+
+    settings.english.chinese_mode_completion = true;
+    piinput::HostSession with(engine, &english, settings, "full");
+    type(with, "wo");
+    const auto mixed = candidate_texts(with.snapshot());
+
+    check(!plain.empty() && plain.front() == "我",
+        "the Chinese row is unchanged while the switch is off");
+    check(mixed.size() > plain.size(),
+        "turning the switch on is what adds the English words");
+
+    std::filesystem::remove(chinese_path);
+    std::filesystem::remove(english_path);
+}
+
+// A shortcut's candidate number was configured by hand. Mixing a word in
+// above it would renumber it, so the words go after it instead.
+void test_english_completion_never_renumbers_a_shortcut() {
+    piinput::Engine engine;
+    const auto chinese_path = write_chinese_lexicon();
+    engine.load_lexicon(chinese_path);
+    const auto english_path = write_english_completion_lexicon();
+    piinput::EnglishLexicon english;
+    check(english.load_builtin_tsv(english_path) > 0U, "English fixture loads");
+
+    auto settings = piinput::default_settings();
+    settings.english.chinese_mode_completion = true;
+    piinput::HostSession session(engine, &english, settings, "full");
+    type(session, "wo");
+    const auto texts = candidate_texts(session.snapshot());
+
+    const auto action = std::find_if(texts.begin(), texts.end(),
+        [](const std::string& text) {
+            return text.find("符号") != std::string::npos ||
+                   text.find("设置") != std::string::npos ||
+                   text.find("表情") != std::string::npos;
+        });
+    if (action != texts.end()) {
+        const auto english_word = std::find(texts.begin(), texts.end(), "wonder");
+        check(english_word == texts.end() || english_word > action,
+            "English words never take a slot from a configured shortcut");
+    }
+
+    std::filesystem::remove(chinese_path);
+    std::filesystem::remove(english_path);
+}
+
+// Selecting a mixed-in word must commit the word itself, not whichever
+// Chinese candidate happens to share that position, and must teach it.
+void test_english_completion_commits_and_learns() {
+    piinput::Engine engine;
+    const auto chinese_path = write_chinese_lexicon();
+    engine.load_lexicon(chinese_path);
+    const auto english_path = write_english_completion_lexicon();
+    piinput::EnglishLexicon english;
+    check(english.load_builtin_tsv(english_path) > 0U, "English fixture loads");
+
+    auto settings = piinput::default_settings();
+    settings.english.chinese_mode_completion = true;
+    piinput::HostSession session(engine, &english, settings, "full");
+    type(session, "wo");
+    const auto texts = candidate_texts(session.snapshot());
+    const auto found = std::find(texts.begin(), texts.end(), "wonder");
+    check(found != texts.end(), "the row carries the English word");
+
+    const auto position = static_cast<std::size_t>(found - texts.begin());
+    const auto chosen = session.snapshot().candidates[position];
+    const auto reply = session.apply({
+        .kind = piinput::HostKeyKind::select_candidate,
+        .candidate_id = chosen.id,
+    });
+    check(reply.accepted && reply.action == piinput::HostAction::commit &&
+            reply.text == "wonder",
+        "picking the English entry commits that word, not a Chinese one");
+
+    std::filesystem::remove(chinese_path);
+    std::filesystem::remove(english_path);
+}
 
 void test_space_and_digits_are_resolved_by_current_host_state() {
     piinput::Engine engine;
@@ -1525,6 +1642,9 @@ int main() {
     test_chinese_input_can_use_english_punctuation();
     test_symbol_center_and_semicolon_routing();
     test_candidate_two_launches_tools_without_committing_the_label();
+    test_english_completion_is_off_unless_asked_for();
+    test_english_completion_never_renumbers_a_shortcut();
+    test_english_completion_commits_and_learns();
     std::cout << "PiInput host session tests passed.\n";
     return 0;
 }

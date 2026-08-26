@@ -1,6 +1,7 @@
 #pragma once
 
 #include "piinput/candidate_grid.h"
+#include "piinput/english_completion.h"
 #include "piinput/english_session.h"
 #include "piinput/punctuation.h"
 #include "piinput/session.h"
@@ -160,6 +161,8 @@ private:
     [[nodiscard]] HostReply reply(bool accepted, HostAction action, std::string text = {}) const;
     void advance_generation(bool collapse_view);
     void rebuild_candidate_grid(bool collapse_view);
+    // Recomputes english_plan_ and english_insert_at_ for the current input.
+    void rebuild_english_plan();
     // Keystroke-hot accessors. They answer the questions apply() actually asks
     // without materializing a full HostSnapshot, which would copy every
     // candidate word and pinyin string on every key.
@@ -192,6 +195,12 @@ private:
     std::unique_ptr<EnglishSession> english_;
     HostInputMode mode_{HostInputMode::chinese};
     std::uint64_t generation_{1U};
+    // The English words mixed into the current Chinese row, and where they
+    // sit in it. Computed once per generation in rebuild_candidate_grid(),
+    // because the row's length, the snapshot and candidate selection must all
+    // agree on it -- recomputing in each would risk them drifting apart.
+    EnglishCompletionPlan english_plan_;
+    std::size_t english_insert_at_{};
     CandidateGrid candidate_grid_;
     std::size_t normal_return_index_{};
     PunctuationTransformer punctuation_;

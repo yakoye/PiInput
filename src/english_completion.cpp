@@ -58,6 +58,21 @@ std::size_t english_start_position(
     return 1U;
 }
 
+std::size_t english_insert_index(
+    const std::size_t start_position, const std::vector<bool>& reserved) noexcept {
+    if (start_position == 0U) return 0U;
+    std::size_t index = start_position - 1U;
+    // Walking the whole list rather than stopping at the first shortcut: two
+    // shortcuts can both sit below the requested position, and clearing only
+    // the first would still renumber the second.
+    for (std::size_t position = 0U; position < reserved.size(); ++position) {
+        if (reserved[position] && position >= index) {
+            index = position + 1U;
+        }
+    }
+    return (std::min)(index, reserved.size());
+}
+
 std::string apply_input_case(
     const std::string_view input, const std::string_view word) {
     std::string result(word);
