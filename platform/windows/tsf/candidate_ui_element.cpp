@@ -1,11 +1,38 @@
 #include "candidate_ui_element.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <limits>
 #include <new>
+#include <string>
 #include <utility>
 
 namespace piinput::windows {
+
+// Opt-in tracing for the application-owned candidate surface, off unless a
+// marker file named piinput-candidate-trace.on exists in the temp directory --
+// the same gate the language bar, caret and key traces use, and for the same
+// reason: the Shim runs inside other applications and inherits their
+// environment, not the tester's.
+//
+// It answers the question no amount of watching the screen can: when an
+// application asks for the popup to be withheld, does it then actually consume
+// the candidate list, or does it leave the user with nothing on screen?
+void trace_candidate_ui(const char* const stage, const long detail) noexcept {
+    static std::FILE* file = [] () -> std::FILE* {
+        char temp[MAX_PATH]{};
+        if (GetTempPathA(MAX_PATH, temp) == 0U) return nullptr;
+        const std::string marker = std::string(temp) + "piinput-candidate-trace.on";
+        if (GetFileAttributesA(marker.c_str()) == INVALID_FILE_ATTRIBUTES) return nullptr;
+        const std::string path = std::string(temp) + "piinput-candidate.log";
+        return _fsopen(path.c_str(), "a", _SH_DENYWR);
+    }();
+    if (file == nullptr) return;
+    (void)std::fprintf(file, "%lu pid=%lu %s=%ld\n",
+        GetTickCount(), GetCurrentProcessId(), stage, detail);
+    (void)std::fflush(file);
+}
+
 namespace {
 
 // {407A225A-7D4B-40DF-9E2D-3D419B02AE70}
@@ -57,6 +84,7 @@ STDMETHODIMP CandidateUiElement::QueryInterface(REFIID iid, void** const object)
         IsEqualIID(iid, IID_ITfCandidateListUIElementBehavior)) {
         *object = static_cast<ITfCandidateListUIElementBehavior*>(this);
     } else if (IsEqualIID(iid, IID_ITfIntegratableCandidateListUIElement)) {
+        trace_candidate_ui("QI.integratable", 1);
         *object = static_cast<ITfIntegratableCandidateListUIElement*>(this);
     } else {
         return E_NOINTERFACE;
@@ -86,6 +114,7 @@ STDMETHODIMP CandidateUiElement::GetGUID(GUID* const guid) {
 }
 
 STDMETHODIMP CandidateUiElement::Show(const BOOL show) {
+    trace_candidate_ui("Show", show != FALSE ? 1 : 0);
     shown_ = show != FALSE;
     return S_OK;
 }
@@ -97,6 +126,7 @@ STDMETHODIMP CandidateUiElement::IsShown(BOOL* const shown) {
 }
 
 STDMETHODIMP CandidateUiElement::GetUpdatedFlags(DWORD* const flags) {
+    trace_candidate_ui("GetUpdatedFlags", static_cast<long>(updated_flags_));
     if (flags == nullptr) return E_POINTER;
     *flags = updated_flags_;
     return S_OK;
@@ -104,6 +134,7 @@ STDMETHODIMP CandidateUiElement::GetUpdatedFlags(DWORD* const flags) {
 
 STDMETHODIMP CandidateUiElement::GetDocumentMgr(
     ITfDocumentMgr** const document_manager) {
+    trace_candidate_ui("GetDocumentMgr", document_manager_ != nullptr ? 1 : 0);
     if (document_manager == nullptr) return E_POINTER;
     *document_manager = document_manager_;
     if (*document_manager == nullptr) return E_NOTIMPL;
@@ -112,12 +143,14 @@ STDMETHODIMP CandidateUiElement::GetDocumentMgr(
 }
 
 STDMETHODIMP CandidateUiElement::GetCount(UINT* const count) {
+    trace_candidate_ui("GetCount", static_cast<long>(candidates_.size()));
     if (count == nullptr) return E_POINTER;
     *count = static_cast<UINT>(candidates_.size());
     return S_OK;
 }
 
 STDMETHODIMP CandidateUiElement::GetSelection(UINT* const index) {
+    trace_candidate_ui("GetSelection", static_cast<long>(selected_));
     if (index == nullptr) return E_POINTER;
     *index = static_cast<UINT>(selected_);
     return S_OK;
@@ -129,6 +162,12 @@ STDMETHODIMP CandidateUiElement::GetString(
     if (text == nullptr) return E_POINTER;
     *text = nullptr;
     if (index >= candidates_.size()) return E_INVALIDARG;
+    // Reaching for a candidate string is the one thing an application cannot
+    // skip if it means to paint the list itself. Record it: the text service
+    // reads this to tell a host that really took the candidates over from one
+    // that only asked for the popup to disappear.
+    host_took_over_ = true;
+    trace_candidate_ui("GetString", static_cast<long>(index));
     *text = SysAllocStringLen(
         candidates_[index].data(), static_cast<UINT>(candidates_[index].size()));
     return *text != nullptr ? S_OK : E_OUTOFMEMORY;
@@ -178,6 +217,7 @@ STDMETHODIMP CandidateUiElement::GetCurrentPage(UINT* const page) {
 }
 
 STDMETHODIMP CandidateUiElement::SetSelection(const UINT index) {
+    trace_candidate_ui("SetSelection", static_cast<long>(index));
     if (index >= candidates_.size()) return E_INVALIDARG;
     selected_ = index;
     updated_flags_ = TF_CLUIE_SELECTION | TF_CLUIE_CURRENTPAGE;
@@ -185,6 +225,7 @@ STDMETHODIMP CandidateUiElement::SetSelection(const UINT index) {
 }
 
 STDMETHODIMP CandidateUiElement::Finalize() {
+    trace_candidate_ui("Finalize", static_cast<long>(selected_));
     if (selected_ >= candidate_ids_.size() || !select_handler_) return E_FAIL;
     select_handler_(candidate_ids_[selected_]);
     return S_OK;
@@ -198,12 +239,18 @@ STDMETHODIMP CandidateUiElement::Abort() {
 
 STDMETHODIMP CandidateUiElement::SetIntegrationStyle(const GUID style) {
     search_box_style_ = IsEqualGUID(style, kSearchBoxIntegrationStyle) != FALSE;
+    // Declaring the search-box style is an application committing to draw the
+    // candidates in its own surface, so it counts as taking them over even
+    // before the first string is read.
+    if (search_box_style_) host_took_over_ = true;
+    trace_candidate_ui("SetIntegrationStyle", search_box_style_ ? 1 : 0);
     return search_box_style_ ? S_OK : E_NOTIMPL;
 }
 
 STDMETHODIMP CandidateUiElement::GetSelectionStyle(
     TfIntegratableCandidateListSelectionStyle* const style) {
     if (style == nullptr) return E_POINTER;
+    trace_candidate_ui("GetSelectionStyle", 1);
     *style = STYLE_ACTIVE_SELECTION;
     return S_OK;
 }
@@ -219,11 +266,13 @@ STDMETHODIMP CandidateUiElement::OnKeyDown(
     // service has already routed it through ITfKeyEventSink. Match the Windows
     // SampleIME contract and mark that integrated candidate input as handled;
     // returning FALSE lets the search box consume navigation a second time.
+    trace_candidate_ui("OnKeyDown", static_cast<long>(wparam));
     *eaten = TRUE;
     return S_OK;
 }
 
 STDMETHODIMP CandidateUiElement::ShowCandidateNumbers(BOOL* const show) {
+    trace_candidate_ui("ShowCandidateNumbers", 1);
     if (show == nullptr) return E_POINTER;
     *show = TRUE;
     return S_OK;

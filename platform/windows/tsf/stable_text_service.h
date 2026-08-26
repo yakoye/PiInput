@@ -201,6 +201,10 @@ private:
     [[nodiscard]] bool update_candidate_ui(
         ITfContext* context,
         const HostSnapshot& snapshot) noexcept;
+    // Decides whether the Host still draws the external candidate window,
+    // after the application has had its synchronous chance to consume the
+    // published UI element.
+    [[nodiscard]] bool resolve_candidate_ui_owner() noexcept;
     void end_candidate_ui() noexcept;
 
     static LRESULT CALLBACK callback_window_proc(
@@ -258,6 +262,13 @@ private:
     CandidateUiElement* candidate_ui_{};
     DWORD candidate_ui_id_{static_cast<DWORD>(-1)};
     bool show_custom_candidate_ui_{true};
+    // What BeginUIElement asked for, kept because the answer arrives once but
+    // has to be re-applied on every later update.
+    bool host_requested_hidden_popup_{};
+    // Latched the moment the application first reads the candidate list.
+    // Sticky on purpose: a host that renders once is rendering, and must not
+    // lose the surface to a single update it happened to satisfy from cache.
+    bool host_confirmed_rendering_{};
 };
 
 extern std::atomic<long> g_object_count;

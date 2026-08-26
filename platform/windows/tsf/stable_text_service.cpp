@@ -2178,6 +2178,8 @@ bool TextService::update_candidate_ui(
         DWORD id = static_cast<DWORD>(-1);
         const HRESULT begun = ui_element_manager_->BeginUIElement(
             candidate_ui_, &show, &id);
+        trace_candidate_ui("BeginUIElement.hr", static_cast<long>(begun));
+        trace_candidate_ui("BeginUIElement.show", show != FALSE ? 1 : 0);
         if (FAILED(begun)) {
             candidate_ui_->Release();
             candidate_ui_ = nullptr;
@@ -2185,7 +2187,8 @@ bool TextService::update_candidate_ui(
             return true;
         }
         candidate_ui_id_ = id;
-        show_custom_candidate_ui_ = show != FALSE;
+        host_requested_hidden_popup_ = show == FALSE;
+        host_confirmed_rendering_ = false;
         // BeginUIElement only registers the object with the sink.  In
         // particular, Windows Search's integrated candidate surface waits for
         // the first UpdateUIElement notification before it queries strings and
@@ -2194,11 +2197,39 @@ bool TextService::update_candidate_ui(
         // us to hide our popup but never renders the replacement UI.
         candidate_ui_->update(snapshot);
         (void)ui_element_manager_->UpdateUIElement(candidate_ui_id_);
+        show_custom_candidate_ui_ = resolve_candidate_ui_owner();
         return show_custom_candidate_ui_;
     }
     candidate_ui_->update(snapshot);
     (void)ui_element_manager_->UpdateUIElement(candidate_ui_id_);
+    show_custom_candidate_ui_ = resolve_candidate_ui_owner();
     return show_custom_candidate_ui_;
+}
+
+// Whether the Host should still draw the external candidate window.
+//
+// Taking BeginUIElement's answer at face value is what leaves Windows Search
+// with no candidates on screen at all: it asks for the popup to be withheld,
+// and then never renders the integrated row it promised. Composition, decoding
+// and commit all keep working there, so the input looks alive while the
+// candidates are invisible -- pinyin shows up and Space still commits Chinese,
+// which is exactly why this failed every attempt to verify it by typing.
+//
+// UpdateUIElement dispatches to ITfUIElementSink synchronously, so by the time
+// it returns, a host that intends to paint has already pulled the strings out
+// of the element. One that has not touched the list is not rendering anything,
+// and the external window has to go back up.
+bool TextService::resolve_candidate_ui_owner() noexcept {
+    if (!host_requested_hidden_popup_) {
+        trace_candidate_ui("owner.popup_not_withheld", 1);
+        return true;
+    }
+    if (candidate_ui_ != nullptr && candidate_ui_->host_took_over()) {
+        host_confirmed_rendering_ = true;
+    }
+    const bool draw_external = !host_confirmed_rendering_;
+    trace_candidate_ui("owner.draw_external", draw_external ? 1 : 0);
+    return draw_external;
 }
 
 void TextService::end_candidate_ui() noexcept {
@@ -2216,6 +2247,10 @@ void TextService::end_candidate_ui() noexcept {
         ui_element_manager_ = nullptr;
     }
     show_custom_candidate_ui_ = true;
+    // The next context gets its own answer from its own BeginUIElement. A
+    // host that rendered for this one says nothing about the next.
+    host_requested_hidden_popup_ = false;
+    host_confirmed_rendering_ = false;
 }
 
 void TextService::capture_composition_caret(

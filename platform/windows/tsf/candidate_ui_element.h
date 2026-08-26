@@ -14,6 +14,11 @@
 
 namespace piinput::windows {
 
+// Opt-in tracing for the application-owned candidate surface, off unless
+// %TEMP%\piinput-candidate-trace.on exists. Records whether an application
+// that asked for the popup to be withheld actually consumes the candidates.
+void trace_candidate_ui(const char* stage, long detail) noexcept;
+
 // TSF's application-owned candidate surface. SearchHost and other immersive
 // text controls can ask the text service not to draw a separate popup and
 // consume this object instead. Keeping it in the in-process Shim is essential:
@@ -68,6 +73,15 @@ public:
 
     void update(const HostSnapshot& snapshot);
 
+    // An application that answers BeginUIElement with "do not draw your own
+    // popup" is trusted only as far as it actually reads this list. Anything
+    // that genuinely renders the candidates has to pull the strings out of
+    // here, or declare the search-box integration style, before it can paint a
+    // row. Windows Search asks for the popup to be withheld and then does
+    // neither, which leaves the user with no candidate UI at all, so the text
+    // service watches this flag and puts its own window back.
+    [[nodiscard]] bool host_took_over() const noexcept { return host_took_over_; }
+
 private:
     ~CandidateUiElement();
     [[nodiscard]] std::size_t page_size() const noexcept;
@@ -86,6 +100,7 @@ private:
         TF_CLUIE_CURRENTPAGE};
     bool shown_{true};
     bool search_box_style_{};
+    bool host_took_over_{};
 };
 
 }  // namespace piinput::windows
