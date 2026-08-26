@@ -858,3 +858,11 @@ v0.6.6 宣称修复的两个问题在真机上都没解决，两段录屏经进�
 - 英文候选开启时注入同一动作候选并保留 typed candidate 第一；英文候选关闭时不截获普通字母，按 Shift 切中文后调用；
 - PiInput 设置程序自身实现可搜索、分类筛选的模板库，包含从 MIT 许可 YeTool 模板适配的 95 个 Windows 入口和一个 Everything 入口。导入后先填写触发码，再转换成普通快捷行；Everything 本体不随包分发；
 - `shell:program|arguments` 保持程序与参数分离，`system:everything` 按常见安装目录和 PATH 查找。模板 MIT 许可安装到 `bin/licenses/YeTool/LICENSE`。
+
+## 12.52 v0.7.16 重启保留安装、搜索面板候选与安装体验
+
+- 卸载器不再把仍会被重新写入的稳定路径排进 `PendingFileRenameOperations`。升级是「卸载后立刻安装同一批路径」，队列按路径生效，因此重启时删掉的是刚装好的文件，只剩注册表指向空目录，输入法列得出来、切得过去、一个字也打不出来。删不掉的文件先改名到本次卸载独有的一次性路径再登记，一次性名字取自 `FILETIME` 而非重启归零的 `GetTickCount64`；
+- Windows 搜索的候选此前不可见，原因不是没有绘制而是被遮挡：搜索面板绘制在普通 `WS_EX_TOPMOST` 窗口无法逾越的层级带上。候选窗改为避开面板整体摆放，面板矩形每次实时读取；避让严格以宿主可执行文件是否为 `SearchHost.exe` 为准，识别不出的宿主一律沿用原有落点；
+- 实测确认 Windows 11 25H2 的搜索框 `BeginUIElement` 返回 `show=TRUE` 且从不查询 `ITfIntegratableCandidateListUIElement`，即它既不接管候选显示也不使用搜索框集成协议。宿主声明接管却不绘制时，Shim 恢复显示自己的候选窗，避免两边都不画；
+- 安装器补上确认、进度与完成三步对话框，`--silent` 行为逐字节不变；一键更新改为原地覆盖升级，UAC 由两次降到最多一次，Shim 字节未变时为零次，`-CleanReinstall` 保留旧路径；
+- 候选界面协议新增可选诊断日志，marker 为 `piinput-candidate-trace.on`，与语言栏、光标、按键诊断同一机制，默认关闭。
