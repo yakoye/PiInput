@@ -34,13 +34,32 @@ namespace {
 // against those.
 constexpr std::size_t kMinimumLength = 3U;
 
+// The floor where nothing decodes to Chinese. One letter matches most of the
+// dictionary and says nothing about what was wanted; two already narrows it,
+// and there is no Chinese candidate for it to push aside.
+constexpr std::size_t kMinimumLengthWithoutChinese = 2U;
+
 // Below this, only the curated base dictionary is consulted. Those 24,180
 // words were selected by frequency, so `book` and `believe` are there while
 // bucolic, palladium and quixotic are not. Three and four letters are still
 // mid-word in double pinyin, and reaching into the long tail there is what
 // produced buco -> bucolic.
 constexpr std::size_t kLengthForFullDictionary = 5U;
-constexpr std::uint64_t kBaseDictionaryFloor = 1000000U;
+
+// How common a word has to be for three or four letters to guess at it.
+//
+// This used to be the base dictionary's own boundary, 1,000,000 -- "anything
+// in the curated list". That stopped meaning much once the curated list grew
+// to take in the whole twenty-thousand common-word table: `bucolic` sits at
+// 16,841 of 17,030 there, which put it at 1,007,483, and `buco` started
+// answering 不错 with it again.
+//
+// Measured rather than picked. Everything a four-letter prefix should reach
+// bottoms out at preview 1,016,244, with the rest at 1,022,804 and above
+// (people, because, through, women, information, problem, animal). Everything
+// it should not tops out at ephemeral 1,011,918, then bucolic 1,007,483. The
+// line sits in the gap between those two.
+constexpr std::uint64_t kBaseDictionaryFloor = 1014000U;
 
 // Below this a prefix does not count -- only a word finished. Three letters
 // of pinyin are pinyin far more often than the opening of an English word:
@@ -77,15 +96,36 @@ constexpr std::uint64_t kFrequencyBandFloor = 200000U;
 // keeps `bucolic` second, and 擦 at 172,541 does the same for `cat`.
 constexpr std::int64_t kChineseHoldsTheLead = 100000;
 
-// Above this a short word is not worth interrupting for. Both Sogou and
-// WeChat decline English on `bus`, whose 不是 scores 501,670, yet both offer
-// it on `car`, whose 擦 scores 172,541 -- and Sogou still offers `bucolic`
-// although its 不错 scores 500,601, barely different from `bus`.
+// Three letters is always mid-word in double pinyin, so the question there is
+// whether the word is common enough to be worth mentioning at all.
 //
-// What separates those is length, not the Chinese. Seven letters have already
-// declared their intent; three are far more likely to be pinyin that happens
-// to spell something. So the Chinese only gets a veto over short input.
-constexpr std::int64_t kChineseVetoesShortWords = 200000;
+// It was first asked of the Chinese -- decline when the reading scores above
+// 200,000 -- and that cannot work: `dog` reaches 多个 at 500,505 and `bus`
+// reaches 不是 at 501,670, near enough identical. Any line through the Chinese
+// takes both or neither, and it took `dog`.
+//
+// Asking it of the word by weight fails differently. Any threshold cuts the
+// middle out of a continuous list, and everything just below it is a word
+// somebody types: at 1,020,000 the list still reads odd, sum, vol, hop.
+//
+// So it is asked as membership instead. The dictionary build marks every word
+// carried by the twenty-thousand common-word list, which is a direct answer to
+// the question rather than a proxy for it, and it separates the two groups
+// cleanly: dog, egg, cat, bus and car are all in it, while tam, nim, nid, wod,
+// niz, tzn, jiy, wom and ken are all absent.
+[[nodiscard]] bool is_common_word(const EnglishCandidate& candidate) noexcept {
+    // Learned and user words count too: typed once, they are common to you.
+    if (candidate.user_entry || candidate.learning_count > 0U) return true;
+    return (candidate.flags &
+        static_cast<std::uint32_t>(EnglishCandidateFlag::common)) != 0U;
+}
+
+// How many words to offer where the input decodes to no Chinese at all. The
+// ordinary cap of two exists to keep English out of a row that belongs to
+// Chinese; with no Chinese in it there is nothing to keep out, and two leaves
+// most of the row blank while the wanted spelling sits just past the cut.
+// Six fills the row a candidate window shows without needing a second page.
+constexpr std::size_t kItemsWithNoChinese = 6U;
 
 [[nodiscard]] bool is_ascii_letter(const char value) noexcept {
     return (value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z');
@@ -175,12 +215,24 @@ EnglishCompletionPlan plan_english_completion(
     const EnglishLexicon& lexicon,
     const EnglishCompletionSettings& settings) {
     if (!settings.enabled || settings.max_items == 0U) return {};
+    if (!std::all_of(input.begin(), input.end(), is_ascii_letter)) return {};
+
+    // Every length rule below exists to keep English out of a row that belongs
+    // to Chinese. Where the input decodes to no Chinese at all, there is no
+    // such row, and applying them anyway is what made English seem to appear
+    // out of nowhere: `gi`, `gir` and `girl` are not readings in double pinyin,
+    // so the row stood empty for two keystrokes and then filled at the fourth.
+    //
+    // Two letters is still the floor. One matches most of the dictionary and
+    // says nothing about what was wanted.
+    const bool row_belongs_to_chinese = chinese.has_candidates;
+    const std::size_t minimum_length =
+        row_belongs_to_chinese ? kMinimumLength : kMinimumLengthWithoutChinese;
     // Two letters is exactly one syllable, and the characters living there are
     // the most common in the language: 我 at 29 million, 的 at 76 million.
     // Every English word that collides -- wo, ni, de, he, you -- loses to them
     // every time, so none is offered.
-    if (input.size() < kMinimumLength) return {};
-    if (!std::all_of(input.begin(), input.end(), is_ascii_letter)) return {};
+    if (input.size() < minimum_length) return {};
 
     EnglishQueryOptions options;
     // Wide enough that the obscure entries dropped below cannot crowd out the
@@ -213,15 +265,20 @@ EnglishCompletionPlan plan_english_completion(
             return same_word_ignoring_case(candidate.word, input);
         });
 
-    // Below four letters only a complete word counts, and even then the
-    // Chinese can veto it: `bus` is a word, but 不是 at 501,670 is what
-    // someone typing three letters almost certainly meant.
-    if (input.size() < kLengthAllowingPrefixes) {
+    // Below four letters only a complete word counts, and only a common one.
+    // Both conditions are on the input rather than the Chinese behind it,
+    // because the Chinese cannot tell `dog` from `bus` -- see is_common_word.
+    //
+    // Skipped where nothing decodes: three letters is mid-word only if there
+    // is a word to be in the middle of, and `gir` is not.
+    if (row_belongs_to_chinese && input.size() < kLengthAllowingPrefixes) {
         if (!typed_a_whole_word) return {};
-        if (chinese.has_candidates &&
-            chinese.top_score >= kChineseVetoesShortWords) {
-            return {};
-        }
+        const bool common_enough = std::any_of(matches.begin(), matches.end(),
+            [&](const EnglishCandidate& candidate) {
+                return same_word_ignoring_case(candidate.word, input) &&
+                       is_common_word(candidate);
+            });
+        if (!common_enough) return {};
     }
 
     // Obscure words are reachable by finishing them, not by starting them.
@@ -257,8 +314,17 @@ EnglishCompletionPlan plan_english_completion(
     // Back down to what was asked for. The query above deliberately looked
     // further so the obscure prefixes could be dropped without leaving the
     // row short; without this the row would carry every survivor.
-    if (matches.size() > settings.max_items) {
-        matches.resize(settings.max_items);
+    //
+    // The limit exists to stop English crowding a row that belongs to Chinese.
+    // Where the input decodes to no Chinese at all -- `preview`, `belie`,
+    // `pallad` -- there is nothing to crowd, and holding to two leaves a row
+    // that is mostly empty while the word being looked for sits just past the
+    // cut. So the cap only applies when there is Chinese to protect.
+    const std::size_t limit = chinese.has_candidates
+        ? settings.max_items
+        : (std::max)(settings.max_items, kItemsWithNoChinese);
+    if (matches.size() > limit) {
+        matches.resize(limit);
     }
 
     EnglishCompletionPlan plan;

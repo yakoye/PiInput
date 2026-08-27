@@ -310,7 +310,7 @@ void test_bundled_english_dictionary_has_broad_frequency_coverage() {
         "the bundled technical supplement loads independently");
     check(lexicon.load_completion_preferences_tsv(
               std::filesystem::path(PIINPUT_SOURCE_DIR) /
-              "data/english_completion_preferences.tsv") >= 15U,
+              "data/english_completion_preferences.tsv") >= 14U,
         "the curated prefix preferences load independently");
 
     const auto r = lexicon.query("r", 20U);
@@ -323,8 +323,8 @@ void test_bundled_english_dictionary_has_broad_frequency_coverage() {
     check(contains_word(rev, "review") && contains_word(rev, "reverse"),
         "rev includes review and reverse");
     const auto reve = lexicon.query("reve", 30U);
-    check(contains_word(reve, "reverse") && contains_word(reve, "revile"),
-        "reve keeps exact prefix words first and adds a bounded near completion");
+    check(contains_word(reve, "reverse") && contains_word(reve, "revealed"),
+        "reve completes to real words rather than a near-miss on revile");
     const auto b = lexicon.query("b", 30U);
     check(contains_word(b, "but") && contains_word(b, "because"),
         "single-letter b includes common connector words");
@@ -339,6 +339,111 @@ void test_bundled_english_dictionary_has_broad_frequency_coverage() {
         "book includes common inflected forms");
 }
 
+// Subsequence matching is abbreviation input: jiy reaches jimmy. It was
+// written when the dictionary held 24,323 curated words, so however loosely it
+// matched, it could only ever land on a common one.
+//
+// Growing the dictionary to 250,000 words for spelling help quietly widened it
+// too, and English mode -- which was supposed to be untouched by that release
+// -- started answering uuru with uhuru. Prefix matching still needs the whole
+// dictionary, because finding a half-remembered spelling is the entire point;
+// abbreviations do not, because they are ambiguous by nature and reaching
+// further only finds more unrelated words.
+void test_subsequence_matching_stays_inside_the_base_dictionary() {
+    piinput::EnglishLexicon lexicon;
+    const auto source = std::filesystem::path(PIINPUT_SOURCE_DIR);
+    check(lexicon.load_builtin_tsv(source / "data/english_lexicon.tsv") >= 24000U,
+        "the shipped dictionary loads");
+
+    // English mode's own call: the two-argument overload, whose defaults are
+    // what actually ship.
+    const auto uuru = lexicon.query("uuru", 30U);
+    check(!contains_word(uuru, "uhuru"),
+        "uuru no longer reaches uhuru, which scores 980,659 in the middle band");
+
+    // The same cut, one band up, still works: these came with the old
+    // dictionary and abbreviation input has always found them.
+    const auto jiy = lexicon.query("jiy", 30U);
+    check(contains_word(jiy, "jimmy"),
+        "jiy still reaches jimmy at 1,020,907");
+    const auto tzn = lexicon.query("tzn", 30U);
+    check(contains_word(tzn, "tarzan"),
+        "tzn still reaches tarzan at 1,002,691");
+
+    // Prefix matching keeps the full reach. This is the distinction the fix
+    // rests on, so it is asserted rather than assumed.
+    const auto pallad = lexicon.query("pallad", 30U);
+    check(contains_word(pallad, "palladium"),
+        "prefix completion still reaches palladium at 999,667, below the cut");
+    const auto bucol = lexicon.query("bucol", 30U);
+    check(contains_word(bucol, "bucolic"),
+        "and bucolic at 160,076, far below it");
+
+    // Nothing shipped is curated below the cut -- `reve -> revile` was, and
+    // was removed as a completion nobody wants -- so the exemption below is
+    // proved against a fixture rather than the shipped file.
+    check(lexicon.load_completion_preferences_tsv(
+              source / "data/english_completion_preferences.tsv") >= 14U,
+        "the curated prefix preferences load");
+    check(!contains_word(lexicon.query("reve", 30U), "revile"),
+        "reve reaches only real completions now that its preference is gone");
+}
+
+// Finishing a word rules out everything built on top of it, and the ordering
+// has to say so. Weight alone did not: animals outscores animal by 188, so
+// typing all of `animal` offered the plural first.
+void test_the_word_typed_outranks_what_is_built_on_it() {
+    piinput::EnglishLexicon lexicon;
+    const auto source = std::filesystem::path(PIINPUT_SOURCE_DIR);
+    check(lexicon.load_builtin_tsv(source / "data/english_lexicon.tsv") >= 24000U,
+        "the shipped dictionary loads");
+
+    const auto animal = words(lexicon.query("animal", 10U));
+    check(!animal.empty() && animal.front() == "animal",
+        "animal leads its own plural, though animals scores 1,022,992 to 1,022,804");
+    check(std::find(animal.begin(), animal.end(), "animals") != animal.end(),
+        "and the plural is still there, one place down");
+
+    // Inflections only, though. `believe` is not a form of `belie` but a
+    // different word seventy times as common, and someone typing `belie` is
+    // reaching for it.
+    const auto belie = words(lexicon.query("belie", 40U));
+    check(!belie.empty() && belie.front() == "believe",
+        "belie does not displace believe, which is not an inflection of it");
+    check(std::find(belie.begin(), belie.end(), "belie") != belie.end(),
+        "though the word itself is still in the list");
+
+    // And the rule holds one level up: believe outranks its own past tense.
+    const auto believe = words(lexicon.query("believe", 10U));
+    check(!believe.empty() && believe.front() == "believe",
+        "believe leads believed and believes");
+}
+
+// A hand-written preference means someone decided that completion is wanted,
+// which is a different claim from how often the word appears. The subsequence
+// cut is a frequency judgement and must not overrule it -- otherwise curating
+// an uncommon completion would silently do nothing, which is worse than not
+// offering the setting.
+void test_a_curated_preference_outranks_the_subsequence_cut() {
+    const auto directory = make_temp_directory("preference-cut");
+    const auto builtin = directory / "builtin.tsv";
+    const auto preferences = directory / "preferences.tsv";
+    // Far below the 1,000,000 cut, and reachable from `abcd` only by
+    // subsequence: abcd -> abxcd inserts one letter.
+    write_text(builtin, "abxcd\t500\nabcde\t2000000\n");
+    write_text(preferences, "abcd\tabxcd\t200\n");
+
+    piinput::EnglishLexicon lexicon;
+    check(lexicon.load_builtin_tsv(builtin) == 2U, "the fixture dictionary loads");
+    check(!contains_word(lexicon.query("abcd", 10U), "abxcd"),
+        "without a preference the cut drops it");
+    check(lexicon.load_completion_preferences_tsv(preferences) == 1U,
+        "the fixture preference loads");
+    check(contains_word(lexicon.query("abcd", 10U), "abxcd"),
+        "with a preference it comes through despite scoring 500");
+    std::filesystem::remove_all(directory);
+}
+
 void test_user_provided_market_paragraph_can_complete_every_word() {
     piinput::EnglishLexicon lexicon;
     const auto source = std::filesystem::path(PIINPUT_SOURCE_DIR);
@@ -347,7 +452,7 @@ void test_user_provided_market_paragraph_can_complete_every_word() {
     check(lexicon.load_builtin_tsv(source / "data/english_supplement.tsv") >= 8U,
         "market corpus test loads technical additions");
     check(lexicon.load_completion_preferences_tsv(
-              source / "data/english_completion_preferences.tsv") >= 15U,
+              source / "data/english_completion_preferences.tsv") >= 14U,
         "market corpus test loads prefix preferences");
 
     std::ifstream input(source / "tests/data/english_completion_corpus.txt", std::ios::binary);
@@ -391,7 +496,7 @@ void test_requested_progressive_prefix_examples_include_raw_and_many_completions
     check(lexicon.load_builtin_tsv(source / "data/english_supplement.tsv") >= 8U,
         "progressive examples load the supplement");
     check(lexicon.load_completion_preferences_tsv(
-              source / "data/english_completion_preferences.tsv") >= 15U,
+              source / "data/english_completion_preferences.tsv") >= 14U,
         "progressive examples load prefix preferences");
     piinput::EnglishSession session(lexicon, 90U);
 
@@ -444,7 +549,7 @@ void test_requested_progressive_prefix_examples_include_raw_and_many_completions
     verify("r", {"right", "really"});
     verify("re", {"really", "remember"});
     verify("rev", {"review", "reverse"});
-    verify("reve", {"revile", "reverse"});
+    verify("reve", {"reverse", "revealed"});
     verify("b", {"but", "because"});
     verify("bo", {"both"});
     verify("boo", {"book", "boom"});
@@ -671,6 +776,9 @@ int main() {
     test_independent_lexicons_merge_pending_learning_without_lost_updates();
     test_english_session_composition_editing_and_choice();
     test_bundled_english_dictionary_has_broad_frequency_coverage();
+    test_subsequence_matching_stays_inside_the_base_dictionary();
+    test_the_word_typed_outranks_what_is_built_on_it();
+    test_a_curated_preference_outranks_the_subsequence_cut();
     test_user_provided_market_paragraph_can_complete_every_word();
     test_requested_progressive_prefix_examples_include_raw_and_many_completions();
     test_english_session_can_disable_learning();

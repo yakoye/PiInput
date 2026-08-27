@@ -389,6 +389,43 @@ void type(piinput::HostSession& session, const std::string& text) {
     }
 }
 
+// Shift+letter mid-word is someone spelling something out, not choosing a
+// candidate. Typing keyDown must put keyD on screen -- the letters as typed
+// plus the capital -- and never 可以D, which is the first candidate for a
+// reading nobody asked to convert.
+void test_a_capital_commits_the_letters_rather_than_a_candidate() {
+    piinput::Engine engine;
+    const auto lexicon_path = write_chinese_lexicon();
+    engine.load_lexicon(lexicon_path);
+    piinput::HostSession session(engine, nullptr, piinput::default_settings(), "full");
+
+    type(session, "wo");
+    check(!session.snapshot().candidates.empty(),
+        "the reading has candidates waiting, which is what makes this a choice");
+
+    const auto reply = session.apply(text_key('D'));
+    check(reply.accepted && reply.action == piinput::HostAction::commit,
+        "a capital commits rather than extending the reading");
+    check(reply.text == "woD",
+        "and what commits is the letters typed plus the capital, not 我 plus D");
+    check(session.snapshot().raw.empty(),
+        "the composition is finished, so the next letter starts a new one");
+
+    // With nothing composing it is simply the letter, the same as before this
+    // path existed at all.
+    const auto alone = session.apply(text_key('Q'));
+    check(alone.accepted && alone.action == piinput::HostAction::commit &&
+            alone.text == "Q",
+        "a capital with no reading behind it commits just itself");
+
+    // Lower case is untouched: those letters are a reading and still compose.
+    type(session, "wo");
+    check(session.snapshot().raw == "wo",
+        "ordinary letters still build the reading they always did");
+
+    std::filesystem::remove(lexicon_path);
+}
+
 void test_chinese_session_generations_stale_selection_and_view_reset() {
     piinput::Engine engine;
     const auto lexicon_path = write_chinese_lexicon();
@@ -1618,6 +1655,7 @@ void test_candidate_two_launches_tools_without_committing_the_label() {
 
 int main() {
     test_configured_default_input_language_applies_to_new_sessions();
+    test_a_capital_commits_the_letters_rather_than_a_candidate();
     test_chinese_session_generations_stale_selection_and_view_reset();
     test_xiaohe_and_restart_resume_recompute_candidates();
     test_repeated_equals_enters_segment_selection_and_stages_until_final_commit();

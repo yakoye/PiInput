@@ -327,6 +327,22 @@ HostReply HostSession::apply(const HostKeyEvent& event) {
         return reply(composing, composing ? HostAction::cancel : HostAction::pass_through);
     }
 
+    // An upper-case letter in Chinese mode is Shift+letter, and it can be
+    // nothing else: ordinary keys arrive folded to lower case because they are
+    // a reading. Reaching for Shift mid-word says the letters are letters, so
+    // what commits is the raw input plus the capital -- `key` + Shift+D gives
+    // `keyD`, the text being spelled out, not 可以D, the candidate that was
+    // never chosen. Punctuation takes the candidate instead, and should: a
+    // full stop after `nihao` means 你好。
+    if (event.kind == HostKeyKind::text && mode_ == HostInputMode::chinese &&
+        event.character >= 'A' && event.character <= 'Z') {
+        std::string literal = current_raw();
+        literal.push_back(event.character);
+        chinese_.clear();
+        advance_generation(true);
+        return reply(true, HostAction::commit, std::move(literal));
+    }
+
     const bool changed = edit(event);
     if (!changed) return reply(false, HostAction::pass_through);
     advance_generation(true);

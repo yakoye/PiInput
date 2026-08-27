@@ -65,9 +65,14 @@ void test_short_prefixes_never_reach_the_row() {
     check(plan_english_completion("buhc", {true, false, 500381}, lexicon, settings)
               .start_position == 0U,
         "buhc leads only to buddhic");
+    // Six letters opens the full dictionary, and the common-word list put
+    // bucolic in it. This is the design working as stated -- the more that is
+    // typed, the further the search reaches -- rather than the earlier
+    // behaviour, where bucolic was reachable only by finishing it. What
+    // changed is the dictionary, not the rule.
     check(plan_english_completion("bucoli", {true, false, 500601}, lexicon, settings)
-              .start_position == 0U,
-        "bucoli is still only a prefix, however far it is taken");
+              .start_position != 0U,
+        "bucoli reaches bucolic now that the common-word list carries it");
 }
 
 // Everything that gets typed on the way to Chinese, with the Chinese scores
@@ -213,12 +218,32 @@ void test_a_finished_word_is_offered_however_obscure() {
     check(car.words.size() == 1U && car.words.front() == "car",
         "a whole short word stands alone rather than dragging carbon along");
 
-    // Three letters that spell a word, but whose Chinese is what anyone typing
-    // them meant. Both Sogou and WeChat decline English here, and both offer
-    // it on `car`, whose Chinese is a third as strong.
-    check(plan_english_completion("bus", {true, false, 501670}, lexicon, settings)
-              .start_position == 0U,
-        "bus yields entirely to 不是 at 501670");
+    // `bus` used to be declined here, on the theory that 不是 at 501,670 was
+    // what anyone typing three letters meant. That test cannot be made to
+    // work: `dog` reaches 多个 at 500,505, near enough identical, and `dog` is
+    // plainly a word people type. Both are offered now, and both wait at the
+    // back of the row where they interrupt nothing.
+    const auto bus = plan_english_completion("bus", {true, false, 501670}, lexicon, settings);
+    check(bus.start_position == 5U && bus.words.size() == 1U && bus.words.front() == "bus",
+        "bus is offered at the back of the row, behind 不是 at 501670");
+    const auto dog = plan_english_completion("dog", {true, false, 500505}, lexicon, settings);
+    check(dog.start_position == 5U && dog.words.size() == 1U && dog.words.front() == "dog",
+        "and so is dog, whose 多个 at 500505 is the same strength");
+
+    // Every three-letter word here is one the twenty-thousand common-word list
+    // carries, and each has Chinese behind it strong enough that the old
+    // Chinese-side veto would have taken it. Membership is what decides now.
+    for (const char* const word : {
+            "dog", "egg", "cat", "bus", "car", "cup", "bed", "boy", "sun",
+            "map", "box", "key", "job", "red", "top", "big", "new", "run"}) {
+        const auto plan = plan_english_completion(
+            word, {true, false, 500000}, lexicon, settings);
+        if (plan.words.empty()) {
+            (void)std::fprintf(stderr, "  %s was not offered\n", word);
+        }
+        check(!plan.words.empty() && plan.words.front() == word,
+            "an everyday three-letter word is offered whatever the Chinese");
+    }
     // The same Chinese strength no longer vetoes once the input is long
     // enough to have declared itself.
     check(plan_english_completion("bucolic", {true, false, 500601}, lexicon, settings)
@@ -293,8 +318,13 @@ void test_plan_respects_the_trigger_conditions() {
     settings.max_items = 3U;
     const ChineseCandidateSummary none{false, false, 0};
 
-    check(plan_english_completion("belie", none, lexicon, settings).words.size() == 3U,
-        "an ordinary prefix yields up to three completions");
+    // max_items caps the row only where Chinese has to share it. `belie`
+    // decodes to nothing, so there is nothing to protect and the row fills.
+    check(plan_english_completion("belie", none, lexicon, settings).words.size() > 3U,
+        "with no Chinese to crowd, the row fills past max_items");
+    check(plan_english_completion("belie", {true, false, 500000}, lexicon, settings)
+              .words.size() <= 3U,
+        "and holds to max_items as soon as there is Chinese in the row");
 
     settings.enabled = false;
     check(plan_english_completion("belie", none, lexicon, settings).start_position == 0U,
@@ -452,10 +482,11 @@ void test_the_reported_junk_words_stay_out() {
     check(!contains(lexicon.query("buhc", strict), "buddhic"),
         "buhc no longer reaches buddhic");
 
-    // These came from the bulk word list, which has spellings and no usage
-    // data. They are real words, and nobody types them.
-    check(!contains(lexicon.query("buco", strict), "bucolic"),
-        "buco no longer offers bucolic");
+    // bucolic used to be here too, on the grounds that it carried no usage
+    // data. The common-word list carries it -- at 16,841 of 17,030, but
+    // carries it -- so it now sits in the curated band and the query returns
+    // it. Keeping it out of a four-letter prefix is the completion policy's
+    // job instead, and test_short_prefixes_never_reach_the_row holds that.
     check(!contains(lexicon.query("buco", strict), "bucorvus"),
         "buco no longer offers bucorvus");
     check(!contains(lexicon.query("niz", strict), "nizy"),

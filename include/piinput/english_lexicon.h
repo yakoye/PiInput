@@ -18,6 +18,13 @@ enum class EnglishCandidateFlag : std::uint32_t {
     proper = 1U << 3U,
     typed = 1U << 4U,
     fuzzy = 1U << 5U,
+    // 收录于「最常用两万词」表。三字母输入靠它决定给不给英文候选：三个字母
+    // 在双拼下必然是词打到一半，只有确实常用的词才值得在那里出现。
+    //
+    // 用成员判定而不是权重阈值，是因为任何一条阈值都会在中间切出空集——把
+    // dog、egg 这类日常词误伤。这份表本身就是「最常用的两万个词」，判据和
+    // 问题是同一件事。
+    common = 1U << 6U,
 };
 
 struct EnglishCandidate {
@@ -42,6 +49,18 @@ struct EnglishQueryOptions {
     // 词条权重下限。词库最底下一层只有词形没有真实词频，混进中文候选行
     // 里的是 bucolic、tizwin、nizey 这类没人用的词，纯属噪音。
     std::uint64_t minimum_weight{0U};
+    // 子序列联想单独的权重下限，且默认就卡在基础词库那一段（高频层从
+    // 1,000,001 起）。
+    //
+    // 前缀匹配需要够到整个 25 万词，那正是扩库的目的：忘了怎么拼 palladium，
+    // 打 pallad 要能补出来。子序列匹配不需要——它是给缩写输入用的，而缩写
+    // 天然歧义，够得越远越容易凑出无关的词。
+    //
+    // 扩库前这一层只有 24,323 个精选词，子序列再怎么凑也只能凑到常用词。
+    // 扩库后 uuru 凑出了 uhuru（980,659，中频层），而英文模式本不该因为
+    // 扩库而改变行为。这条线正好落在旧词表的边界上：jimmy(1,020,907) 和
+    // tarzan(1,002,691) 留下，uhuru 和 buddhic(155,364) 剔除。
+    std::uint64_t subsequence_minimum_weight{1000000U};
 
     bool operator==(const EnglishQueryOptions&) const = default;
 };

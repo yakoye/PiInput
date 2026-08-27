@@ -888,14 +888,39 @@ STDMETHODIMP TextService::OnKeyDown(
     // character on the same synchronous path a plain keyboard would take. Any
     // request still in flight falls back to the ordered path so a letter cannot
     // overtake a pending punctuation commit.
+    //
+    // allow_async is false, and that is the whole point of this path. Letting
+    // request_edit fall back to TF_ES_ASYNC would queue the letter and return
+    // `pending`, which reads as success here -- and the next letter, granted a
+    // synchronous lock, would then be written ahead of the queued one. Key
+    // traces show deferred sessions running two to four seconds after they
+    // were queued, so the window is wide. pending_contexts_ cannot catch this:
+    // it tracks Host round-trips, not edit sessions.
+    //
+    // Refusing async keeps the ordering guarantee instead of the keystroke:
+    // request_edit reports failure, english_direct_ turns off, and the letter
+    // falls through to dispatch(), where the Host sequences it.
+    //
+    // No recorded trace has this path losing its lock -- edit_sync_refused
+    // never carries `commit` -- so this closes a hazard rather than a
+    // reproduced fault. It is not the explanation for `previewIdentity`
+    // arriving as `previewdI`; that one is still open.
     if (english_direct_ && english_mode_ && is_ascii_letter(wparam) && context != nullptr &&
         pending_contexts_.empty() && !final_edit_keys_.should_queue(true)) {
         const std::string character(1U, letter_for_key(wparam, true));
-        if (request_edit(context, character, character.size(), true, false) !=
-            EditRequestResult::failed) {
+        // This path writes straight to the document and never reaches the
+        // Host, so it produces no key_dispatch line. Without a trace of its
+        // own a direct letter is invisible except as a bare edit_sync, which
+        // is exactly the half of the picture a reordering question needs.
+        char labelled[16]{};
+        (void)std::snprintf(labelled, sizeof(labelled), "direct:%c", character.front());
+        trace_key("key_direct_en", labelled);
+        if (request_edit(context, character, character.size(), true, false,
+                nullptr, false) != EditRequestResult::failed) {
             return S_OK;
         }
         english_direct_ = false;
+        trace_key("key_direct_refused", labelled);
     }
     if (context != nullptr) (void)dispatch(context, map_key(wparam));
     return S_OK;
@@ -1021,7 +1046,23 @@ bool TextService::should_eat_key(const WPARAM wparam) const noexcept {
     // Activation queues a resume handshake on the background pipe worker. Keep
     // the very first Chinese letter behind that handshake instead of leaking it
     // as Latin text while a cold resident Host is still loading its dictionary.
-    if (is_ascii_letter(wparam)) return (GetKeyState(VK_SHIFT) & 0x8000) == 0 || english_mode_;
+    // Letters are ours, Shift or no Shift. Declining Shift+letter in Chinese
+    // mode used to let the application type the capital itself, which cost
+    // more than it saved: a declined key never reaches OnKeyDown, so
+    // shift_toggle_ never learned the press was a chord and read the release
+    // as a lone tap -- switching to English and committing the composition
+    // mid-word. map_key routes the capital through the Host instead.
+    //
+    // Ctrl is checked again here even though has_disallowed_modifier already
+    // covers it, because that check requires GetKeyState and GetAsyncKeyState
+    // to agree and can be defeated -- see its own comment. The Shift test this
+    // replaced happened to decline Ctrl+Shift+letter whenever that happened,
+    // and Ctrl+Shift+V and Ctrl+Shift+C are worth more than the margin costs.
+    // Either reading of Ctrl is enough to keep out of the way.
+    if (is_ascii_letter(wparam)) {
+        return (GetKeyState(VK_CONTROL) & 0x8000) == 0 &&
+               (GetAsyncKeyState(VK_CONTROL) & 0x8000) == 0;
+    }
     if (!mirror_.connected() && mirror_.raw().empty() && pending_contexts_.empty()) return false;
     const bool composing = !mirror_.raw().empty() || has_pending_key_request();
     if (is_punctuation_key(wparam)) return true;
@@ -1059,7 +1100,22 @@ HostKeyEvent TextService::map_key(const WPARAM wparam) const noexcept {
     HostKeyEvent event;
     if (is_ascii_letter(wparam)) {
         event.kind = HostKeyKind::text;
-        event.character = letter_for_key(wparam, english_mode_);
+        // Chinese mode folds letters to lower case, because they are a reading
+        // rather than text. Shift is how someone says otherwise mid-word, and
+        // the capital travels to the Host as itself: nothing else can put an
+        // upper-case letter on this path, so it needs no key kind of its own
+        // and no protocol version to carry it.
+        //
+        // This used to be declined and left to the application instead, which
+        // broke twice over. A declined key never reaches OnKeyDown, so the
+        // Shift press still looked like a lone tap when released and flipped
+        // to English mid-word; and the letter reached the document outside
+        // TSF, unordered against the composition that flip had just
+        // committed. `previewIdentity` arrived as `previewdI` that way.
+        const bool literal = !english_mode_ && shift_is_down() && !caps_lock_is_on();
+        event.character = literal
+            ? static_cast<char>(wparam)
+            : letter_for_key(wparam, english_mode_);
         return event;
     }
     const bool composing = !mirror_.raw().empty() || has_pending_key_request();
@@ -1278,7 +1334,18 @@ void TextService::replay_virtual_key(const WPARAM wparam) noexcept {
 }
 
 bool TextService::dispatch(ITfContext* const context, HostKeyEvent event) {
-    const char* const kind = key_kind_name(event.kind, english_mode_);
+    // The character goes into the trace alongside the kind. Without it a trace
+    // shows that seven letters were typed but not which, and the question
+    // being asked of these traces -- whether a letter came out in the wrong
+    // place -- cannot be answered from counts alone.
+    char labelled[16]{};
+    const char* const kind_name = key_kind_name(event.kind, english_mode_);
+    const char* kind = kind_name;
+    if (event.kind == HostKeyKind::text && event.character > 0x20 &&
+        event.character < 0x7F && event.character != ',') {
+        (void)std::snprintf(labelled, sizeof(labelled), "%s:%c", kind_name, event.character);
+        kind = labelled;
+    }
     if (final_edit_keys_.should_queue(
             key_may_begin_final_edit(event.kind, english_mode_))) {
         trace_key("key_queued", kind);
@@ -1357,10 +1424,17 @@ void TextService::handle_reply(HostEnvelope envelope) noexcept {
             // signature of direct English. With English candidates enabled the
             // same key returns a composition update instead, so this probe
             // re-answers itself after every mode switch.
+            const bool was_direct = english_direct_;
             english_direct_ = english_mode_ &&
                 reply->action == HostAction::commit &&
                 reply->snapshot.raw.empty() && reply->text.size() == 1U &&
                 (reply->text.front() >= 'A' && reply->text.front() <= 'z');
+            // Which path the next letter takes turns on this one flag, so a
+            // trace that shows letters without it cannot explain why one went
+            // to the Host and the next did not.
+            if (was_direct != english_direct_) {
+                trace_key("english_direct", english_direct_ ? "on" : "off");
+            }
             if (reply->action == HostAction::update) {
                 (void)update_candidate_ui(context, reply->snapshot);
                 (void)request_update_edit(

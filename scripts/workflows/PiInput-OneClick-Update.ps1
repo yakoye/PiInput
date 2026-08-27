@@ -16,7 +16,8 @@ param(
     [switch]$CleanReinstall,
     # 保留给既有调用方；覆盖升级现在是默认行为，这个开关不再改变任何事。
     [switch]$SkipUninstall,
-    # 供自动化调用：成功后不询问是否打开设置程序，只打印路径。
+    # 供自动化调用：安装器改为静默运行，不显示确认页和完成页，因此也不会打开
+    # 设置程序和配置目录。无人值守时必须加，否则会停在确认页等人点。
     [switch]$NoPrompt,
     [switch]$DryRun
 )
@@ -26,6 +27,13 @@ Set-StrictMode -Version Latest
 
 function Invoke-HiddenProcess([string]$FilePath, [string[]]$Arguments, [string]$Label) {
     $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -PassThru -Wait -WindowStyle Hidden
+    if ($process.ExitCode -ne 0) {
+        throw "$Label 失败，退出码 $($process.ExitCode)。"
+    }
+}
+
+function Invoke-VisibleProcess([string]$FilePath, [string[]]$Arguments, [string]$Label) {
+    $process = Start-Process -FilePath $FilePath -ArgumentList $Arguments -PassThru -Wait
     if ($process.ExitCode -ne 0) {
         throw "$Label 失败，退出码 $($process.ExitCode)。"
     }
@@ -141,8 +149,19 @@ try {
     # 不提升整个脚本。安装器仅在机器级稳定 Shim 的字节确实要换时才自行请求
     # UAC，避免标准用户输入另一管理员账户凭据后把 HKCU 安装到错误账户。
     # Shim 没变的升级一次 UAC 都不需要。
-    Write-Host "正在安装新版（覆盖升级，保留用户设置和词库）；如 Windows 请求权限，请确认……"
-    Invoke-HiddenProcess $installers[0].FullName @("--silent") "安装新版"
+    #
+    # 不加 --silent。那个开关是「一个窗口都不显示」，连完成页也一并跳过，于是
+    # 这个脚本得自己再实现一遍「装完打开设置和配置目录」——同一件事在 C++ 和
+    # PowerShell 里各写一份，迟早会漂移。让安装器把自己的界面显示出来：确认页
+    # 说明装到哪里，安装过程有进度条，完成页的勾选框负责收尾。脚本只管校验包
+    # 和核对结果。
+    if ($NoPrompt) {
+        Write-Host "正在静默安装（覆盖升级，保留用户设置和词库）……"
+        Invoke-HiddenProcess $installers[0].FullName @("--silent") "安装新版"
+    } else {
+        Write-Host "正在启动安装器（覆盖升级，保留用户设置和词库）；如 Windows 请求权限，请确认……"
+        Invoke-VisibleProcess $installers[0].FullName @() "安装新版"
+    }
 
     if (-not (Test-Path -LiteralPath $uninstallKey)) {
         throw "安装完成后没有生成 PiInput 安装记录。"
@@ -176,24 +195,11 @@ try {
     Write-Host "更新成功：$actualBuildId" -ForegroundColor Green
     Write-Host "验证日志：$logPath" -ForegroundColor DarkGray
 
-    # 安装器是以 --silent 跑的，一个窗口都不显示，因此完成页那个「打开设置」
-    # 的勾选框在这条路径上根本不存在。双击这个脚本的人就坐在电脑前等结果，
-    # 而默认关闭的新功能如果没人提起，他不会知道要去哪里打开——上一版的中文
-    # 模式英文候选就是这样被当成「没做」的。所以由脚本自己把话说完。
-    $settingsExe = Join-Path $installedRoot "bin\PiInput-Settings.exe"
+    # 打开设置程序和配置目录由安装器的完成页负责，那里有个默认勾选的勾选框。
+    # 这里只补一句它说不到的话：默认关闭的新功能，没人提起就不会有人去开——
+    # 上一版的中文模式英文候选就是这样被当成「没做」的。
     Write-Host ""
-    Write-Host "输入法已就位，不需要重启电脑。请重新打开要使用的程序，再用 Win+Space 选择 PiInput。" -ForegroundColor Cyan
-    if (Test-Path -LiteralPath $settingsExe -PathType Leaf) {
-        Write-Host "部分功能默认关闭，需要在设置程序里打开，例如「中文输入时也给出英文候选」。"
-        if (-not $NoPrompt -and [Environment]::UserInteractive) {
-            $answer = Read-Host "现在打开设置程序？(Y/N)"
-            if ($answer -match '^[Yy]') {
-                $null = Start-Process -FilePath $settingsExe -ErrorAction SilentlyContinue
-            }
-        } else {
-            Write-Host "设置程序：$settingsExe" -ForegroundColor DarkGray
-        }
-    }
+    Write-Host "部分功能默认关闭，需要在设置程序里打开，例如「中文输入时也给出英文候选」。" -ForegroundColor Cyan
 }
 finally {
     if (Test-Path -LiteralPath $stage) {

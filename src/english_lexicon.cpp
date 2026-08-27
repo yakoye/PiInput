@@ -89,6 +89,24 @@ private:
     return result;
 }
 
+// 判断 word 是不是 base 的词形变化，而不是碰巧同前缀的另一个词。
+//
+// 只认这几个屈折后缀，故意不做词干还原：目的不是语言学上正确，而是把
+// animal/animals 这类「同一个词的不同形态」与 belie/believe 这类「另一个词」
+// 分开。词干还原会把后者也算进来，那正是要避免的。
+[[nodiscard]] bool is_inflection_of(
+    const std::string_view base, const std::string_view word) noexcept {
+    if (word.size() <= base.size() || !word.starts_with(base)) return false;
+    const std::string_view suffix = word.substr(base.size());
+    // 含 y->ies、双写辅音等变体的形态不在此列：它们改动词干，前缀匹配本来
+    // 也够不到（animal -> animalies 不存在），列进来只会徒增误判。
+    for (const std::string_view known : {
+            "s", "es", "d", "ed", "ing", "er", "ers", "est", "ly", "ness"}) {
+        if (suffix == known) return true;
+    }
+    return false;
+}
+
 [[nodiscard]] bool is_bounded_subsequence_completion(
     const std::string_view typed,
     const std::string_view word) noexcept {
@@ -309,6 +327,28 @@ std::vector<EnglishCandidate> EnglishLexicon::query(
         if (left.user_entry != right.user_entry) {
             return left.user_entry;
         }
+        // The word that was typed outranks its own inflections. Sorting on
+        // weight alone put `animals` (1,022,992) ahead of `animal`
+        // (1,022,804), so typing the whole of `animal` offered the plural
+        // first -- the one thing the input had ruled out.
+        //
+        // Only inflections, though, and that limit is the point. `belie` is a
+        // word and `believe` is not an inflection of it but a different one,
+        // seventy times as common; someone typing `belie` is reaching for
+        // `believe` and should not have to step past `belie` to get there.
+        // Suffix-matching says exactly that: animal/animals yes, belie/believe
+        // no, and believe/believed yes again.
+        //
+        // Above the curated preferences deliberately -- a preference guesses
+        // where a prefix was heading, and finishing the word settles it.
+        const bool left_exact = left.word.size() == lowercase_prefix.size();
+        const bool right_exact = right.word.size() == lowercase_prefix.size();
+        if (left_exact != right_exact) {
+            const auto& longer = left_exact ? right : left;
+            if (is_inflection_of(lowercase_prefix, ascii_lower(longer.word))) {
+                return left_exact;
+            }
+        }
         if (left.learning_count != right.learning_count) {
             return left.learning_count > right.learning_count;
         }
@@ -337,13 +377,25 @@ std::vector<EnglishCandidate> EnglishLexicon::query(
         return left.word < right.word;
     };
     if (options.allow_subsequence && lowercase_prefix.size() >= 3U) {
+        // 子序列这一层用更高的下限，理由见 EnglishQueryOptions。
+        //
+        // 三类豁免，都是"有人明确要过"：用户词典、学习过的词，以及
+        // english_completion_preferences.tsv 里手工配的补全。最后一类不能漏
+        // ——reve -> revile 就是配在那里的，而 revile 只有词形没有词频，按
+        // 权重必然被剔掉。策展和词频是两回事，配过就说明确实想要。
+        const auto passes_subsequence_weight = [&](const EnglishCandidate& candidate) {
+            return candidate.user_entry || candidate.learning_count > 0U ||
+                   preference_for(candidate) > 0U ||
+                   candidate.base_weight >= (std::max)(
+                       options.minimum_weight, options.subsequence_minimum_weight);
+        };
         for (const std::size_t index : prefix_index_) {
             const auto& entry = entries_[index];
             if (entry.lowercase_word.starts_with(lowercase_prefix) ||
                 !is_bounded_subsequence_completion(lowercase_prefix, entry.lowercase_word)) {
                 continue;
             }
-            if (!passes_weight(entry.candidate)) continue;
+            if (!passes_subsequence_weight(entry.candidate)) continue;
             auto candidate = entry.candidate;
             candidate.flags |= static_cast<std::uint32_t>(EnglishCandidateFlag::fuzzy);
             result.push_back(std::move(candidate));

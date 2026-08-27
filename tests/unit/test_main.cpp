@@ -758,6 +758,19 @@ void test_shift_toggle_state() {
     check(!state.on_shift_up(),
         "Shift used as a physical modifier does not toggle on release");
 
+    // Typing Shift+I mid-composition. This only reads correctly because the
+    // service now eats Chinese-mode Shift+letter: a declined key never reaches
+    // OnKeyDown, on_other_key_down would never run, and the release would read
+    // as a lone tap -- switching to English and committing the composition.
+    // The state machine cannot detect that on its own, so the guarantee lives
+    // in should_eat_key and is held there by windows_source_regression.
+    piinput::ShiftToggleState chord;
+    chord.on_shift_down();
+    check(!chord.on_other_key_down(true), "Shift+letter records modifier use");
+    check(!chord.on_shift_up(), "and releasing Shift after it does not toggle");
+    chord.on_shift_down();
+    check(chord.on_shift_up(), "while a lone tap afterwards still toggles");
+
     piinput::ShiftToggleState missing_down;
     check(missing_down.on_shift_up(),
         "a standalone Shift release recovers when the host omitted KeyDown");

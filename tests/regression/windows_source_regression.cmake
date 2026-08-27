@@ -23,6 +23,9 @@ file(READ "${PIINPUT_SOURCE_DIR}/scripts/dev/repair-registration.ps1" repair_tex
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/dev/refresh-installed-dev.ps1" refresh_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/dev/uninstall-dev.ps1" uninstall_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/windows/resolve-installed-dev.ps1" resolver_text)
+file(READ "${PIINPUT_SOURCE_DIR}/tests/regression/installed_dev_resolver_regression.ps1"
+    resolver_regression_text)
+file(READ "${PIINPUT_SOURCE_DIR}/scripts/query-dictionary.ps1" query_dictionary_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/dev/install-dev.ps1" install_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/dev/set-candidate-page-size.ps1" candidate_settings_script_text)
 file(READ "${PIINPUT_SOURCE_DIR}/scripts/dev/setup-dev.ps1" setup_text)
@@ -177,6 +180,50 @@ if(NOT stable_text_service_text MATCHES "composition_edit_policy\\(commit, cance
    NOT composition_edit_policy_text MATCHES "selection_failure_is_fatal")
     message(FATAL_ERROR
         "Stable TSF commits must finalize text before optional caret placement")
+endif()
+# 直接英文路径同步写入字母，绕过 Host。它必须禁用 request_edit 的异步兜底：
+# 一旦拿不到同步锁就退化成 TF_ES_ASYNC，函数返回 pending（在那里被当成成功），
+# 排队中的字母就会被下一个拿到同步锁的字母抢先写入。按键 trace 里异步会话延
+# 后 2~4 秒执行，窗口相当宽。pending_contexts_ 拦不住，它跟踪的是 Host 往返
+# 而不是编辑会话。
+#
+# 这条是补隐患，不是复现过的故障：实测 trace 里 edit_sync_refused 从未带
+# commit，即这条路径没丢过锁。
+if(NOT stable_text_service_text MATCHES
+       "request_edit\\(context, character, character\\.size\\(\\), true, false,[ \n\t]*nullptr, false\\)")
+    message(FATAL_ERROR
+        "Direct English must refuse the async edit fallback, or letters reorder")
+endif()
+# 被拒绝的按键不会进入 OnKeyDown，所以 Shift 组合键必须在 OnTestKeyDown 里就
+# 记账。中文模式下 Shift+字母是有意放行的（直接打大写），于是状态机学不到这次
+# Shift 是当修饰键用的，松手时被当成单击——打 previewIdentity 打到一半就切成
+# 英文并把 preview 提交掉了。
+# 字母必须一律接管，不能因为按住 Shift 就放行给应用。放行的键不会进入
+# OnKeyDown，shift_toggle_ 学不到这次 Shift 是当修饰键用的，松手时被判成单击
+# ——打 previewIdentity 打到一半切成英文并把 preview 提交掉。而且那个字母会绕
+# 过 TSF 落到文档里，和刚提交的合成串抢顺序。
+#
+# OnTestKeyDown 必须无副作用（下方另有门禁），所以补记账不是可选路径：唯一的
+# 修法就是别放行。
+if(NOT stable_text_service_text MATCHES
+       "is_ascii_letter\\(wparam\\)\\) \\{[ \n\t]*return \\(GetKeyState\\(VK_CONTROL\\)")
+    message(FATAL_ERROR
+        "should_eat_key must claim every letter; declining Shift+letter makes the release read as a tap")
+endif()
+# 但不能把 Ctrl 组合一起吃掉。has_disallowed_modifier 要求两个 API 同时成立，
+# 会被 SendInput 打乱，原来那行的 Shift 判断顺带兜住了 Ctrl+Shift+字母；换成
+# 无条件接管就把这层兜底去掉了，Ctrl+Shift+V / Ctrl+Shift+C 首当其冲。
+if(NOT stable_text_service_text MATCHES
+       "GetKeyState\\(VK_CONTROL\\) & 0x8000\\) == 0 &&[ \n\t]*\\(GetAsyncKeyState\\(VK_CONTROL\\)")
+    message(FATAL_ERROR
+        "Letters must still yield to Ctrl by either reading, or Ctrl+Shift shortcuts get eaten")
+endif()
+# 接管之后还得把大写送到。中文模式一律折成小写（字母是读音），所以大写本身就是
+# 「这是 Shift+字母」的信号，不需要新的按键类型，也就不用升协议版本。
+if(NOT stable_text_service_text MATCHES
+       "shift_is_down\\(\\) && !caps_lock_is_on\\(\\)[^;]*;[ \n\t]*event\\.character = literal")
+    message(FATAL_ERROR
+        "Chinese-mode Shift+letter must reach the Host in upper case, or it folds into the reading")
 endif()
 foreach(required_focus_token IN ITEMS
         "thread_manager_->GetFocus"
@@ -1008,18 +1055,39 @@ if(NOT repair_text MATCHES "--status")
     message(FATAL_ERROR "Repair script must verify profile registration state")
 endif()
 
-foreach(installed_script IN ITEMS repair_text refresh_text uninstall_text)
+foreach(installed_script IN ITEMS
+        repair_text refresh_text uninstall_text query_dictionary_text)
     if(NOT "${${installed_script}}" MATCHES "resolve-installed-dev\\.ps1" OR
        NOT "${${installed_script}}" MATCHES "Resolve-PiInputInstalledDev")
         message(FATAL_ERROR "Installed-development script does not use the shared active-version resolver")
     endif()
 endforeach()
+# The installed layout the resolver has to describe is the one
+# make_stable_runtime_layout builds: programs in a single bin directory under
+# the product root, a marker that names a build rather than a directory, and
+# the registered Shim at a fixed machine-wide path.
 if(NOT resolver_text MATCHES "current\\.json" OR
    NOT resolver_text MATCHES "CurrentHostPath" OR
    NOT resolver_text MATCHES "InprocServer32" OR
-   NOT resolver_text MATCHES "Runtime" OR
-   NOT resolver_text MATCHES "versions")
-    message(FATAL_ERROR "Active-version resolver must validate the stable Shim and current Host under Runtime/versions")
+   NOT resolver_text MATCHES "Get-PiInputMachineShimPath" OR
+   NOT resolver_text MATCHES "PiInput/Runtime/Shim/PiInputTSF\\.dll" OR
+   NOT resolver_text MATCHES "bin/PiInputHost\\.exe")
+    message(FATAL_ERROR
+        "Active-version resolver must resolve the unified bin directory and the machine-wide Runtime Shim")
+endif()
+# The per-version tree these named the active build inside was abandoned with
+# the rest of Runtime\\versions. A resolver that reintroduces them rejects every
+# installation the current installer produces, which is exactly how the
+# developer scripts came to throw on real machines while their fixtures passed.
+if(resolver_text MATCHES "VersionsRoot" OR resolver_text MATCHES "ActiveVersionRoot")
+    message(FATAL_ERROR
+        "Active-version resolver must not resurrect the abandoned per-version runtime tree")
+endif()
+if(NOT resolver_regression_text MATCHES "PiInput/Runtime/Shim/PiInputTSF\\.dll" OR
+   NOT resolver_regression_text MATCHES "ProgramFilesRoot" OR
+   resolver_regression_text MATCHES "versions/")
+    message(FATAL_ERROR
+        "Active-version resolver fixtures must model the installed layout, not the abandoned one")
 endif()
 if(refresh_text MATCHES "Stop-Process" OR NOT refresh_text MATCHES "PiInput-Install\\.exe")
     message(FATAL_ERROR "Refresh must use the side-by-side installer without force-closing applications")
