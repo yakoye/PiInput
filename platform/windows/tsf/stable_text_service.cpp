@@ -303,6 +303,22 @@ private:
 // same document answered with the whole composition extent and reported the
 // wrong line. Applications that keep no system caret -- Chromium and anything
 // built on it -- return nothing here, and GetTextExt remains the fallback.
+// Whether a reported caret could belong to this window at all.
+//
+// Deliberately generous: the window's own rectangle plus a margin, because a
+// caret at the last column of a maximised editor legitimately sits on the
+// frame. This is not measuring accuracy, only catching an answer that cannot
+// be about this window -- a point on another monitor, or the corner of the
+// primary screen when the window is elsewhere.
+[[nodiscard]] bool rect_is_within_window(const RECT& rect, const HWND window) noexcept {
+    if (window == nullptr) return true;
+    RECT bounds{};
+    if (GetWindowRect(window, &bounds) == FALSE) return true;
+    constexpr LONG margin = 64;
+    return rect.left >= bounds.left - margin && rect.right <= bounds.right + margin &&
+           rect.top >= bounds.top - margin && rect.bottom <= bounds.bottom + margin;
+}
+
 [[nodiscard]] std::optional<RECT> system_caret_rect() noexcept {
     GUITHREADINFO info{};
     info.cbSize = sizeof(info);
@@ -2338,6 +2354,9 @@ void TextService::capture_composition_caret(
     update.has_text_caret = false;
     update.owner_window = 0U;
     update.show_candidate_window = show_custom_candidate_ui_;
+    // 拿不到任何位置也算「应用没在显示」：连插入点在哪都报不出来的文本存储，
+    // 不会把合成串画出来。
+    update.app_shows_composition = false;
     if (context == nullptr) return;
     ITfContextView* view = nullptr;
     if (FAILED(context->GetActiveView(&view)) || view == nullptr) {
@@ -2353,10 +2372,16 @@ void TextService::capture_composition_caret(
         SUCCEEDED(view->GetWnd(&view_window)) && view_window != nullptr;
     if (!has_reported_view_window) view_window = GetFocus();
     const bool has_view_window = view_window != nullptr;
+    // The top-level window, which is the one the caret has to be inside. The
+    // view window is whatever the text store chose to name and can be an
+    // internal child with no useful geometry -- MobaXterm reports one whose
+    // rectangle is a single point, so testing a caret against it rejected
+    // every position including the correct ones.
+    HWND owner_root = nullptr;
     if (has_view_window) {
         const HWND root = GetAncestor(view_window, GA_ROOT);
-        update.owner_window = reinterpret_cast<std::uintptr_t>(
-            root != nullptr ? root : view_window);
+        owner_root = root != nullptr ? root : view_window;
+        update.owner_window = reinterpret_cast<std::uintptr_t>(owner_root);
     }
 
     const auto query_rect = [&](ITfRange* const range) -> std::optional<RECT> {
@@ -2420,18 +2445,70 @@ void TextService::capture_composition_caret(
                     reported, converted, per_monitor_aware);
             }
         }
+        // A caret has to be inside the window whose text it belongs to.
+        //
+        // GetTextExt is allowed to fail, and code here handles that. What it is
+        // not prepared for is an application that answers with a number that
+        // was never a caret: MobaXterm returns a fixed point at the primary
+        // screen's bottom-right corner, the same 1919,1019 for every keystroke,
+        // while its own window is on another monitor. Nothing about the shape
+        // of that rectangle is wrong -- it is caret-sized and caret-shaped --
+        // so the existing plausibility test passed it and the candidates went
+        // to the corner of the wrong screen.
+        //
+        // The first keystroke after a window opens looked right because
+        // MobaXterm does keep a system caret briefly; once that goes, this took
+        // over. That is exactly the reported pattern: right once, wrong after
+        // committing, right again in a new session.
+        const bool inside_owner = rect_is_within_window(rect, owner_root);
+        // 应用说不出自己的合成串在哪，基本就等于它没在画。终端正是这样：
+        // MobaXterm 报的是另一个显示器上的一个固定点，而它的窗口里连你打的
+        // 字母都看不见。这个判断只有 Shim 做得了——光标是它拿的——所以结论要
+        // 传给 Host，候选窗是那边画的。
+        update.app_shows_composition = inside_owner;
+        if (!inside_owner && last_text_caret_.has_value()) {
+            // The remembered position is where the caret last genuinely was.
+            // In a terminal that is the same line, which is close enough to be
+            // useful and far better than another monitor.
+            rect = *last_text_caret_;
+        }
         update.has_text_caret = true;
         update.left = rect.left;
         update.top = rect.top;
         update.right = rect.right;
         update.bottom = rect.bottom;
+        // Which of the two sources answered, and where. Without this a trace
+        // shows the keys arriving and the edits landing but says nothing about
+        // why the candidate window went where it did.
+        {
+            RECT owner_bounds{};
+            if (owner_root == nullptr || GetWindowRect(owner_root, &owner_bounds) == FALSE) {
+                owner_bounds = RECT{};
+            }
+            char detail[128]{};
+            (void)std::snprintf(detail, sizeof(detail), "%s%s %ld.%ld in %ld.%ld-%ld.%ld",
+                caret.has_value() ? "syscaret" : "gettextext",
+                inside_owner ? "" : "-outside",
+                static_cast<long>(rect.left), static_cast<long>(rect.top),
+                static_cast<long>(owner_bounds.left), static_cast<long>(owner_bounds.top),
+                static_cast<long>(owner_bounds.right), static_cast<long>(owner_bounds.bottom));
+            trace_key("caret", detail);
+        }
         // Kept for the mode indicator, which has no document lock of its own
         // and so cannot ask GetTextExt when it needs a position. Without it
         // the indicator had only the system caret to go on, and Chromium and
         // everything built on it keep none -- so in ChatGPT and Codex it fell
         // back to centring on the window while the candidate row sat correctly
         // at the caret, because the candidate row comes through here.
-        last_text_caret_ = rect;
+        //
+        // Only remembered when it was inside the window. Remembering a
+        // rejected position would make it the fallback for the next one.
+        if (inside_owner) last_text_caret_ = rect;
+    } else {
+        // Neither source answered. The candidate window then has to guess, and
+        // knowing that it guessed is the difference between "the position is
+        // wrong" and "there was no position to have".
+        trace_key("caret", "none");
     }
     view->Release();
 }

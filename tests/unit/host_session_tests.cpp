@@ -389,6 +389,38 @@ void type(piinput::HostSession& session, const std::string& text) {
     }
 }
 
+// ü has two ASCII spellings and dictionaries disagree about which to use.
+// This project writes u throughout -- pinyin_syllables.inc carries lue and
+// nue, and the double-pinyin decoder turns `hult` into hu'lue accordingly.
+// Third-party dictionaries commonly write v, and one stored 忽略 as hu'lve;
+// `hult` then produced no candidate at all, and every word with lüe or nüe in
+// it became untypeable.
+void test_a_dictionary_may_spell_umlaut_with_v() {
+    const auto path = std::filesystem::temp_directory_path() / "piinput-umlaut.tsv";
+    {
+        std::ofstream output(path, std::ios::binary | std::ios::trunc);
+        // Spelled the way the imported dictionary spells it, not the way this
+        // project does.
+        output << "word\tpinyin\tweight\n"
+               << "忽略\thu'lve\t138550\n"
+               << "虐待\tnve'dai\t30741\n";
+    }
+    piinput::Engine engine;
+    engine.load_lexicon(path);
+
+    // Typed the way it is actually typed: 小鹤双拼, where t is the üe final,
+    // so `hult` is hu + lüe. That is the keystroke sequence that produced no
+    // candidate at all.
+    const auto ignore = engine.query("hult", "flypy", 4U);
+    check(!ignore.empty() && ignore.front().word == "忽略",
+        "hult finds 忽略, which the dictionary spelled hu'lve");
+    const auto abuse = engine.query("ntdd", "flypy", 4U);
+    check(!abuse.empty() && abuse.front().word == "虐待",
+        "and ntdd finds 虐待, spelled nve'dai");
+
+    std::filesystem::remove(path);
+}
+
 // Shift+letter mid-word is someone spelling something out, not choosing a
 // candidate. Typing keyDown must put keyD on screen -- the letters as typed
 // plus the capital -- and never 可以D, which is the first candidate for a
@@ -1657,6 +1689,7 @@ void test_candidate_two_launches_tools_without_committing_the_label() {
 
 int main() {
     test_configured_default_input_language_applies_to_new_sessions();
+    test_a_dictionary_may_spell_umlaut_with_v();
     test_a_capital_commits_the_letters_rather_than_a_candidate();
     test_chinese_session_generations_stale_selection_and_view_reset();
     test_xiaohe_and_restart_resume_recompute_candidates();

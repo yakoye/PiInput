@@ -133,8 +133,11 @@ void test_decoder_rejects_malformed_or_unsupported_envelopes() {
         "truncated header is rejected");
     check(error == piinput::ProtocolError::truncated_header, "truncation has a typed error");
 
+    // One past whatever ships, so this keeps meaning "unsupported" as versions
+    // are added. It was 0x06 until v6 became real and the assertion started
+    // testing that a supported version is rejected.
     auto unsupported = valid;
-    unsupported[8] = std::byte{0x06};
+    unsupported[8] = std::byte{piinput::host_protocol_current + 1U};
     check(!piinput::decode_host_envelope(unsupported, error).has_value(),
         "unsupported protocol major version is rejected");
     check(error == piinput::ProtocolError::unsupported_version,

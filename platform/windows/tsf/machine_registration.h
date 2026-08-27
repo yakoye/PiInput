@@ -46,13 +46,26 @@ inline std::wstring read_machine_com_server() {
     return value;
 }
 
+// 32 位进程只看得见 WOW6432Node 那个注册表视图，也只能加载 32 位 DLL。所以
+// CLSID -> DLL 这条映射两个视图各要一份，各自指向对应位数的文件。
+//
+// 输入法配置本身不用管：实测 SOFTWARE\Microsoft\CTF\TIP\{CLSID} 在两个视图下
+// 内容一致，Windows 自己镜像。缺的一直只有这条映射——MobaXterm 里能看到
+// PiInput，切过去却是灰的，就是因为它那个视图下查不到 DLL 在哪。
+enum class RegistryView : REGSAM {
+    native = KEY_WOW64_64KEY,
+    wow32 = KEY_WOW64_32KEY,
+};
+
 inline HRESULT write_machine_registry_string(
     const std::wstring& key_path,
     const wchar_t* const value_name,
-    const std::wstring_view value) {
+    const std::wstring_view value,
+    const RegistryView view = RegistryView::native) {
     HKEY key = nullptr;
     const LONG created = RegCreateKeyExW(HKEY_LOCAL_MACHINE, key_path.c_str(), 0U,
-        nullptr, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE | KEY_WOW64_64KEY,
+        nullptr, REG_OPTION_NON_VOLATILE,
+        KEY_SET_VALUE | static_cast<REGSAM>(view),
         nullptr, &key, nullptr);
     if (created != ERROR_SUCCESS) return HRESULT_FROM_WIN32(created);
     const std::wstring stored(value);
@@ -63,22 +76,42 @@ inline HRESULT write_machine_registry_string(
     return HRESULT_FROM_WIN32(written);
 }
 
-inline HRESULT register_machine_com_server(const std::wstring_view dll) {
+inline HRESULT register_machine_com_server(
+    const std::wstring_view dll, const RegistryView view = RegistryView::native) {
     if (dll.empty()) return E_INVALIDARG;
     const std::wstring base = machine_com_class_key();
     if (base.empty()) return E_FAIL;
     HRESULT result = write_machine_registry_string(
-        base, nullptr, L"PiInput Text Service");
+        base, nullptr, L"PiInput Text Service", view);
     if (FAILED(result)) return result;
-    result = write_machine_registry_string(base + L"\\InprocServer32", nullptr, dll);
+    result = write_machine_registry_string(base + L"\\InprocServer32", nullptr, dll, view);
     if (FAILED(result)) return result;
     return write_machine_registry_string(
-        base + L"\\InprocServer32", L"ThreadingModel", L"Apartment");
+        base + L"\\InprocServer32", L"ThreadingModel", L"Apartment", view);
+}
+
+// 32 位那条映射单独一个函数，因为它是可选的：没有 32 位 shim 时不注册，好过
+// 注册一条指向不存在文件的路径——那会让 32 位程序每次都去加载一个空路径。
+inline HRESULT register_machine_com_server_wow32(const std::wstring_view dll) {
+    return register_machine_com_server(dll, RegistryView::wow32);
 }
 
 inline HRESULT unregister_machine_com_server() {
     const std::wstring base = machine_com_class_key();
     if (base.empty()) return E_FAIL;
+    // 两个视图都要清。RegDeleteTreeW 走不了 WOW64 标志，所以 32 位那条要先用
+    // 带标志的 RegOpenKeyEx 拿到句柄再删——只删 64 位那份会在 WOW6432Node 下
+    // 留一条指向已卸载文件的映射，32 位程序此后每次都去加载一个不存在的 DLL。
+    HKEY wow32_classes = nullptr;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\Classes\\CLSID", 0U,
+            KEY_ALL_ACCESS | KEY_WOW64_32KEY, &wow32_classes) == ERROR_SUCCESS) {
+        std::array<wchar_t, 64U> text{};
+        if (StringFromGUID2(CLSID_PiInputTextService, text.data(),
+                static_cast<int>(text.size())) != 0) {
+            (void)RegDeleteTreeW(wow32_classes, text.data());
+        }
+        RegCloseKey(wow32_classes);
+    }
     const LONG removed = RegDeleteTreeW(HKEY_LOCAL_MACHINE, base.c_str());
     if (removed == ERROR_FILE_NOT_FOUND || removed == ERROR_PATH_NOT_FOUND) return S_FALSE;
     return HRESULT_FROM_WIN32(removed);

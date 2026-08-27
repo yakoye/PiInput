@@ -1,4 +1,4 @@
-﻿param(
+param(
     [Parameter(Mandatory = $true)]
     [string]$HostExe,
     [Parameter(Mandatory = $true)]
@@ -19,7 +19,7 @@ try {
         $ready = $false
         for ($attempt = 0; $attempt -lt 80; $attempt++) {
             $health = & $HostExe --health 2>&1
-            if ($LASTEXITCODE -eq 0 -and ($health -join "`n") -match "protocol=5") {
+            if ($LASTEXITCODE -eq 0 -and ($health -join "`n") -match "protocol=6") {
                 $ready = $true
                 break
             }

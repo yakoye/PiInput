@@ -1204,7 +1204,21 @@ if(candidate_window_text MATCHES "DT_END_ELLIPSIS" OR
    NOT candidate_window_text MATCHES "limit_candidate_window_width" OR
    NOT candidate_window_text MATCHES "candidate_window_height")
     message(FATAL_ERROR
-        "Candidate window must stay compact, omit the redundant Composition header, and never render ellipsis")
+        "Candidate window must stay compact, carry no unconditional Composition header, and never render ellipsis")
+endif()
+# 合成串那一行只能有条件地出现，不能变回当初被删掉的那个无条件表头。
+#
+# 当初删它的理由是「冗余」——应用自己会显示正在打的字母。那个理由在终端上不
+# 成立：MobaXterm 里候选正常而字母一个都看不见。所以它回来了，但由
+# composition_row_height 决定画不画，自动模式下只在应用没显示时才画。
+if(NOT candidate_window_text MATCHES "composition_row_height")
+    message(FATAL_ERROR
+        "The composition row must go through composition_row_height, not be drawn unconditionally")
+endif()
+if(NOT candidate_window_text MATCHES "CompositionDisplay::never" OR
+   NOT candidate_window_text MATCHES "app_shows_composition_")
+    message(FATAL_ERROR
+        "The composition row must honour both the user setting and whether the application shows it")
 endif()
 if(NOT candidate_window_text MATCHES "Microsoft YaHei UI" OR
    NOT candidate_window_text MATCHES "candidate_text_top" OR

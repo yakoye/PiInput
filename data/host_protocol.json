@@ -1,7 +1,7 @@
 {
   "product": "PiInput",
-  "protocol_version": 5,
-  "compatible_protocol_versions": [1, 2, 3, 4, 5],
+  "protocol_version": 6,
+  "compatible_protocol_versions": [1, 2, 3, 4, 5, 6],
   "stable_clsid": "{13EB305F-2DA3-4CF7-8C45-16B016B801B5}",
   "stable_profile_guid": "{4ED27B7C-678E-4240-827A-24DA597F8D4B}",
   "stable_shim": "Runtime/Shim/PiInputTSF.dll",

@@ -174,6 +174,21 @@ inline constexpr CLSID kLegacyPiInputTextService =
     return path;
 }
 
+// Where the 32-bit shim goes. FOLDERID_ProgramFilesX86 resolves to the same
+// place FOLDERID_ProgramFiles does on a 32-bit Windows, which is correct: there
+// is one Program Files there and one bitness to serve.
+[[nodiscard]] std::filesystem::path program_files_x86() {
+    PWSTR raw = nullptr;
+    const HRESULT result = SHGetKnownFolderPath(
+        FOLDERID_ProgramFilesX86, KF_FLAG_DEFAULT, nullptr, &raw);
+    if (FAILED(result) || raw == nullptr) {
+        throw std::runtime_error("Cannot locate Program Files (x86)");
+    }
+    const std::filesystem::path path(raw);
+    CoTaskMemFree(raw);
+    return path;
+}
+
 [[nodiscard]] std::wstring build_id() {
     SYSTEMTIME time{};
     GetSystemTime(&time);
@@ -509,6 +524,28 @@ void retire_previous_tsf_identities() noexcept {
     return checked != FALSE && member != FALSE;
 }
 
+// 32 位程序里的输入法。32 位进程只能加载 32 位 DLL，也只看得见 WOW6432Node
+// 那个注册表视图，所以这一份是独立的文件加独立的一条映射。
+//
+// 装不上不算安装失败。它是可选的——64 位程序不需要它——而为了一个 32 位程序
+// 把整次安装退回去，代价不成比例。返回 false，调用方记一条提示。
+[[nodiscard]] bool register_machine_shim_wow32(
+    const std::filesystem::path& bin_directory) noexcept {
+    try {
+        const auto source = bin_directory / L"x86" / L"PiInputTSF.dll";
+        std::error_code error;
+        if (!std::filesystem::is_regular_file(source, error) || error) return false;
+        const auto destination = machine_shim_path(program_files_x86());
+        const StableShimRefreshResult refreshed =
+            refresh_stable_shim(source, destination, build_id());
+        if (!refreshed.exact_bytes) return false;
+        return SUCCEEDED(
+            piinput::windows::tsf::register_machine_com_server_wow32(destination.wstring()));
+    } catch (...) {
+        return false;
+    }
+}
+
 [[nodiscard]] HRESULT register_machine_profile_current_process(
     const std::filesystem::path& dll) {
     const auto destination = machine_shim_path(program_files());
@@ -518,7 +555,11 @@ void retire_previous_tsf_identities() noexcept {
         return HRESULT_FROM_WIN32(
             refreshed.error == ERROR_SUCCESS ? ERROR_WRITE_FAULT : refreshed.error);
     }
-    return register_machine_tsf(destination.wstring()).result;
+    const HRESULT result = register_machine_tsf(destination.wstring()).result;
+    // 配置注册在两个视图下是同一份，Windows 自己镜像；只有 CLSID -> DLL 这条
+    // 映射要各写一份。所以这一步排在配置注册之后，且不影响它的结果。
+    if (SUCCEEDED(result)) (void)register_machine_shim_wow32(dll.parent_path());
+    return result;
 }
 
 [[nodiscard]] HRESULT run_elevated_machine_action(

@@ -252,16 +252,50 @@ std::vector<PinyinSegmentation> Engine::decode(
     return decode_full_pinyin(input, settings, limit, pinyin_).segmentations;
 }
 
+// ü 有两种 ASCII 写法，而不同来源的词库各选了一种。本项目内部一律用 u：
+// src/pinyin_syllables.inc 收的是 lue、nue，双拼解码器据此把 hult 解成
+// hu'lue。第三方词库常用 v——用户导入的那份把「忽略」存成 hu'lve——于是
+// hult 一个候选都出不来，凡是带 lüe、nüe 的词全打不出。
+//
+// 只有这两个韵母受影响：lv、nv 是独立音节，两边写法相同；jue、que、xue、yue
+// 本来就只有 u 一种写法。
+//
+// 返回空表示不需要换写法，调用方因此可以跳过第二次查询。
+[[nodiscard]] std::string umlaut_spelling_alias(const std::string& pinyin) {
+    static constexpr std::string_view pairs[][2] = {{"lue", "lve"}, {"nue", "nve"}};
+    std::string alias = pinyin;
+    bool changed = false;
+    for (const auto& pair : pairs) {
+        for (std::size_t at = alias.find(pair[0]); at != std::string::npos;
+             at = alias.find(pair[0], at + pair[1].size())) {
+            alias.replace(at, pair[0].size(), pair[1]);
+            changed = true;
+        }
+    }
+    return changed ? alias : std::string{};
+}
+
 std::vector<LexiconCandidate> Engine::query_exact_unlocked(
     const std::string& pinyin,
     const std::size_t limit) const {
-    if (const auto* tsv = std::get_if<DevLexicon>(&lexicon_)) {
-        return tsv->query_exact(pinyin, limit);
+    auto ask = [&](const std::string& key) {
+        if (const auto* tsv = std::get_if<DevLexicon>(&lexicon_)) {
+            return tsv->query_exact(key, limit);
+        }
+        if (const auto* binary = std::get_if<BinaryLexicon>(&lexicon_)) {
+            return binary->query_exact(key, limit);
+        }
+        throw std::runtime_error("No lexicon has been loaded");
+    };
+    auto found = ask(pinyin);
+    // 只在主查落空时才试另一种写法。绝大多数音节根本不含 lue/nue，
+    // umlaut_spelling_alias 直接返回空，这条路径不产生任何额外查询。
+    if (found.empty()) {
+        if (const auto alias = umlaut_spelling_alias(pinyin); !alias.empty()) {
+            found = ask(alias);
+        }
     }
-    if (const auto* binary = std::get_if<BinaryLexicon>(&lexicon_)) {
-        return binary->query_exact(pinyin, limit);
-    }
-    throw std::runtime_error("No lexicon has been loaded");
+    return found;
 }
 
 std::vector<LexiconCandidate> Engine::query_prefix_unlocked(
@@ -284,13 +318,21 @@ std::vector<LexiconCandidate> Engine::query_prefix_unlocked(
     if (cached != prefix_query_cache_->entries.end()) {
         return cached->second;
     }
-    std::vector<LexiconCandidate> result;
-    if (const auto* tsv = std::get_if<DevLexicon>(&lexicon_)) {
-        result = tsv->query_prefix(pinyin_prefix, limit, scan_limit, max_syllables);
-    } else if (const auto* binary = std::get_if<BinaryLexicon>(&lexicon_)) {
-        result = binary->query_prefix(pinyin_prefix, limit, scan_limit, max_syllables);
-    } else {
+    auto ask = [&](const std::string& key) {
+        if (const auto* tsv = std::get_if<DevLexicon>(&lexicon_)) {
+            return tsv->query_prefix(key, limit, scan_limit, max_syllables);
+        }
+        if (const auto* binary = std::get_if<BinaryLexicon>(&lexicon_)) {
+            return binary->query_prefix(key, limit, scan_limit, max_syllables);
+        }
         throw std::runtime_error("No lexicon has been loaded");
+    };
+    std::vector<LexiconCandidate> result = ask(pinyin_prefix);
+    // 同 query_exact_unlocked：词库可能用 v 写 ü，主查落空时换一种写法再试。
+    if (result.empty()) {
+        if (const auto alias = umlaut_spelling_alias(pinyin_prefix); !alias.empty()) {
+            result = ask(alias);
+        }
     }
     constexpr std::size_t cache_capacity = 128U;
     if (prefix_query_cache_->entries.size() == cache_capacity) {

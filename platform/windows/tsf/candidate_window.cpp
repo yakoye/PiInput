@@ -37,6 +37,9 @@ constexpr int kMenuButtonWidth = 40;
 constexpr int kToolbarWidth = kExpandButtonWidth + kMenuButtonWidth;
 constexpr int kToolbarMenuWidth = 168;
 constexpr int kToolbarMenuRowHeight = 36;
+// 合成串那一行的高度（DIP）。比候选行矮：它只放正在打的字母，不需要同样的
+// 视觉分量。
+constexpr int kCompositionRowHeight = 24;
 
 }  // namespace
 
@@ -449,20 +452,53 @@ void CandidateWindow::show_near_caret(const std::uint64_t owner_window) {
     const DWORD foreground_thread = foreground == nullptr
         ? 0U
         : GetWindowThreadProcessId(foreground, nullptr);
-    if (foreground_thread != 0U &&
-        GetGUIThreadInfo(foreground_thread, &info) != FALSE && info.hwndCaret != nullptr) {
+    const bool has_thread_info =
+        foreground_thread != 0U && GetGUIThreadInfo(foreground_thread, &info) != FALSE;
+    if (has_thread_info && info.hwndCaret != nullptr) {
         POINT top_left{info.rcCaret.left, info.rcCaret.top};
         POINT bottom_right{info.rcCaret.right, info.rcCaret.bottom};
         ClientToScreen(info.hwndCaret, &top_left);
         ClientToScreen(info.hwndCaret, &bottom_right);
         anchor = {top_left.x, top_left.y, bottom_right.x, bottom_right.y};
         show_at_anchor(anchor, 4, false, owner_window);
-    } else {
-        POINT point{};
-        GetCursorPos(&point);
-        anchor = {point.x, point.y, point.x, point.y};
-        show_at_anchor(anchor, 20, false, owner_window);
+        return;
     }
+
+    // No caret to be had. TSF reported no text position and the application
+    // keeps no system caret either -- MobaXterm is like this, and so is much
+    // of what is built on a custom-drawn terminal widget.
+    //
+    // Anchor to the bottom-left of whatever has focus. It is a guess, but a
+    // guess inside the right window, and for a terminal it is close to right:
+    // the prompt is at the bottom. The fallback used to be GetCursorPos, which
+    // put the candidates wherever the mouse happened to be resting -- another
+    // monitor, if that is where it was left.
+    const HWND focused = has_thread_info && info.hwndFocus != nullptr
+        ? info.hwndFocus
+        : foreground;
+    RECT client{};
+    if (focused != nullptr && GetClientRect(focused, &client) != FALSE &&
+        client.right > client.left && client.bottom > client.top) {
+        POINT bottom_left{client.left, client.bottom};
+        if (ClientToScreen(focused, &bottom_left) != FALSE) {
+            anchor = {bottom_left.x, bottom_left.y, bottom_left.x, bottom_left.y};
+            show_at_anchor(anchor, 4, false, owner_window);
+            return;
+        }
+    }
+
+    POINT point{};
+    GetCursorPos(&point);
+    anchor = {point.x, point.y, point.x, point.y};
+    show_at_anchor(anchor, 20, false, owner_window);
+}
+
+void CandidateWindow::set_app_shows_composition(const bool shown) noexcept {
+    if (app_shows_composition_ == shown) return;
+    app_shows_composition_ = shown;
+    // 这一行的有无会改变窗口高度，所以排版要重算——不标脏的话，窗口保持旧高度
+    // 而内容按新高度画，候选会被自己的边缘截掉。
+    layout_dirty_ = true;
 }
 
 void CandidateWindow::show_at_text_caret(
@@ -581,9 +617,33 @@ int CandidateWindow::desired_width() const {
     return (std::max)(scaled(320), width);
 }
 
+// 正在打的字母那一行。
+//
+// 应用负责显示合成串，绝大多数应用也确实显示了——但终端不。MobaXterm 里候选
+// 是对的，而你打的字母一个都看不见，只能靠候选去反推自己打了什么。合成串本来
+// 就传到这个窗口了（update 的第一个参数），只是从来没画过。
+//
+// 有合成串就画，不去猜应用显不显示：那件事没有可靠信号可查，实测 MobaXterm
+// 的 edit_sync 是成功的，它只是不把结果画出来而已。代价是应用自己显示时会重
+// 复一次，这也是多数中文输入法的做法。
+int CandidateWindow::composition_row_height() const noexcept {
+    if (composition_.empty()) return 0;
+    switch (visual_.composition_display) {
+    case piinput::CompositionDisplay::never:
+        return 0;
+    case piinput::CompositionDisplay::always:
+        return scaled(kCompositionRowHeight);
+    case piinput::CompositionDisplay::automatic:
+        break;
+    }
+    // 自动：应用自己显示了就不画，避免同一串字母出现两次。
+    return app_shows_composition_ ? 0 : scaled(kCompositionRowHeight);
+}
+
 int CandidateWindow::desired_height() const noexcept {
     int height = candidate_window_height(
         actual_visible_rows(), dpi_, visual_.window_height);
+    height += composition_row_height();
     if (toolbar_menu_open_) height += scaled(2 * kToolbarMenuRowHeight);
     return height;
 }
@@ -691,6 +751,23 @@ void CandidateWindow::paint() {
     const int first_row_height = scaled(static_cast<int>(visual_.window_height));
     const int toolbar_width = scaled(kToolbarWidth);
 
+    // 合成串行画在最上面，候选整体下移这一行的高度。命中测试用的
+    // visible_item_rects_ 就是在下面用偏移后的矩形建的，所以点击位置自动跟着走。
+    const int composition_height = composition_row_height();
+    if (composition_height > 0) {
+        const RECT row{padding, 0,
+                       (std::max)(padding, static_cast<int>(client.right) - padding),
+                       composition_height};
+        const COLORREF previous = SetTextColor(dc, RGB(96, 96, 96));
+        RECT text = row;
+        // 不加省略号：长输入截断成「hult…」看不出打了什么，而这一行存在的
+        // 唯一理由就是让人看见自己打了什么。超出就裁掉，DrawTextW 默认裁到
+        // 矩形内。
+        (void)DrawTextW(dc, composition_.c_str(), static_cast<int>(composition_.size()),
+            &text, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+        (void)SetTextColor(dc, previous);
+    }
+
     const std::size_t first = first_visible_row_ * items_per_row_;
     const std::size_t end = (std::min)(
         candidates_.size(), first + actual_visible_rows() * items_per_row_);
@@ -709,9 +786,9 @@ void CandidateWindow::paint() {
         const int fitted_width = widths[static_cast<std::size_t>(column)];
         const RECT row_bounds = candidate_row_rect(
             static_cast<std::size_t>(row), dpi_, visual_.window_height);
-        RECT item{left, row_bounds.top,
+        RECT item{left, row_bounds.top + composition_height,
                   left + fitted_width,
-                  row_bounds.bottom};
+                  row_bounds.bottom + composition_height};
         if (candidates_[index].empty()) continue;
         visible_item_rects_.push_back(item);
         visible_item_indexes_.push_back(index);

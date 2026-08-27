@@ -13,7 +13,10 @@ inline constexpr std::uint32_t host_protocol_v2 = 2U;
 inline constexpr std::uint32_t host_protocol_v3 = 3U;
 inline constexpr std::uint32_t host_protocol_v4 = 4U;
 inline constexpr std::uint32_t host_protocol_v5 = 5U;
-inline constexpr std::uint32_t host_protocol_current = host_protocol_v5;
+// v6 增加 app_shows_composition：应用自己有没有把正在打的字母显示出来。只有
+// Shim 判断得了这件事——它拿得到应用报的光标——而画候选窗的是 Host。
+inline constexpr std::uint32_t host_protocol_v6 = 6U;
+inline constexpr std::uint32_t host_protocol_current = host_protocol_v6;
 inline constexpr std::size_t host_header_bytes = 56U;
 inline constexpr std::size_t host_max_payload_bytes = 1024U * 1024U;
 

@@ -234,7 +234,7 @@ std::vector<std::byte> encode_host_caret_update(
     const std::uint32_t protocol_version) {
     if (protocol_version != host_protocol_v1 && protocol_version != host_protocol_v2 &&
         protocol_version != host_protocol_v3 && protocol_version != host_protocol_v4 &&
-        protocol_version != host_protocol_v5) {
+        protocol_version != host_protocol_v5 && protocol_version != host_protocol_v6) {
         throw std::invalid_argument("unsupported PiInput Host caret protocol version");
     }
     Writer writer;
@@ -248,6 +248,9 @@ std::vector<std::byte> encode_host_caret_update(
     if (protocol_version >= host_protocol_v5) {
         writer.integer(static_cast<std::uint32_t>(update.show_candidate_window ? 1U : 0U));
     }
+    if (protocol_version >= host_protocol_v6) {
+        writer.integer(static_cast<std::uint32_t>(update.app_shows_composition ? 1U : 0U));
+    }
     return std::move(writer).finish();
 }
 
@@ -258,7 +261,7 @@ std::optional<HostCaretUpdate> decode_host_caret_update(
     error = HostPayloadError::none;
     if (protocol_version != host_protocol_v1 && protocol_version != host_protocol_v2 &&
         protocol_version != host_protocol_v3 && protocol_version != host_protocol_v4 &&
-        protocol_version != host_protocol_v5) {
+        protocol_version != host_protocol_v5 && protocol_version != host_protocol_v6) {
         error = HostPayloadError::unknown_value;
         return std::nullopt;
     }
@@ -275,8 +278,12 @@ std::optional<HostCaretUpdate> decode_host_caret_update(
     const auto show_candidate_window = protocol_version >= host_protocol_v5
         ? reader.integer<std::uint32_t>()
         : std::optional<std::uint32_t>{1U};
+    // 默认 1：v6 之前的对端不发这个字段，而「应用自己显示了」正是那时候的行为。
+    const auto app_shows_composition = protocol_version >= host_protocol_v6
+        ? reader.integer<std::uint32_t>()
+        : std::optional<std::uint32_t>{1U};
     if (!generation || !flags || !left || !top || !right || !bottom ||
-        !owner_window || !show_candidate_window) {
+        !owner_window || !show_candidate_window || !app_shows_composition) {
         error = HostPayloadError::truncated;
         return std::nullopt;
     }
@@ -284,7 +291,8 @@ std::optional<HostCaretUpdate> decode_host_caret_update(
         error = HostPayloadError::trailing_bytes;
         return std::nullopt;
     }
-    if ((*flags & ~std::uint32_t{1U}) != 0U || *show_candidate_window > 1U) {
+    if ((*flags & ~std::uint32_t{1U}) != 0U || *show_candidate_window > 1U ||
+        *app_shows_composition > 1U) {
         error = HostPayloadError::unknown_value;
         return std::nullopt;
     }
@@ -297,6 +305,7 @@ std::optional<HostCaretUpdate> decode_host_caret_update(
         .bottom = std::bit_cast<std::int32_t>(*bottom),
         .owner_window = *owner_window,
         .show_candidate_window = *show_candidate_window != 0U,
+        .app_shows_composition = *app_shows_composition != 0U,
     };
     if (result.has_text_caret &&
         (result.right < result.left || result.bottom < result.top)) {
@@ -342,7 +351,7 @@ std::vector<std::byte> encode_host_reply(
     const std::uint32_t protocol_version) {
     if (protocol_version != host_protocol_v1 && protocol_version != host_protocol_v2 &&
         protocol_version != host_protocol_v3 && protocol_version != host_protocol_v4 &&
-        protocol_version != host_protocol_v5) {
+        protocol_version != host_protocol_v5 && protocol_version != host_protocol_v6) {
         throw std::invalid_argument("unsupported PiInput Host reply protocol version");
     }
     if (reply.snapshot.candidates.size() > host_max_candidates) {
