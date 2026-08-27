@@ -102,9 +102,12 @@ std::vector<std::string> normalize_full_pinyin_variants(
         if (!uses_v_for_umlaut(initial)) {
             return {};
         }
-        // The current core table stores lüe/nüe as lue/nue, while the
-        // standalone syllables remain lv/nv. ASCII lve/nve is ambiguous in
-        // continuous input: retain both lue/nue and lv'e/nv'e interpretations.
+        // This project's syllable table writes lüe/nüe as lue/nue, while the
+        // standalone syllables stay lv/nv. Dictionaries need not agree -- the
+        // imported one stores 忽略 as hu'lve -- and Engine::query_exact_unlocked
+        // covers that by retrying the other spelling when a lookup comes back
+        // empty. What is handled here is a different ambiguity: in continuous
+        // input ASCII lve/nve can also be lv + e, so both readings are kept.
         if (index + 1U < canonical.size() && canonical[index + 1U] == 'e') {
             if (ascii_v[index]) {
                 boundary_points.push_back(index);
