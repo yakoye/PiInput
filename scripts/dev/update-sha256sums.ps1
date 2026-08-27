@@ -56,6 +56,8 @@ Write-Host "将更新 $($updated.Count) 条："
 foreach ($item in $updated) { Write-Host "  $item" }
 
 if ($PSCmdlet.ShouldProcess($manifest, "重写校验和")) {
-    [System.IO.File]::WriteAllLines($manifest, $output)
+    # 明确写 LF：WriteAllLines 在 Windows 上用 CRLF，而仓库里存的是 LF，
+    # 每跑一次就把整个文件的行尾翻一遍，真正改了哪几行反而看不出来。
+    [System.IO.File]::WriteAllText($manifest, ($output -join "`n") + "`n")
     Write-Host "已写入 $manifest"
 }
