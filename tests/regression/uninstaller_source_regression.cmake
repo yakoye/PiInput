@@ -30,7 +30,7 @@ foreach(required IN ITEMS
     "unregister_machine_profile_current_process"
     "request_host_drain"
     "HostMessageType::drain"
-    "host_mutex, 3000U"
+    "host_mutex, 10000U"
     "remove_or_schedule_legacy_runtime"
     "delete_uninstall_registry"
     "topmost_task_dialog_callback"
@@ -41,8 +41,28 @@ foreach(required IN ITEMS
     endif()
 endforeach()
 
-if(source_text MATCHES "TerminateProcess" OR source_text MATCHES "taskkill")
-    message(FATAL_ERROR "Uninstaller must not terminate applications that may have loaded the TSF DLL")
+# 卸载器不得终止加载过 TSF DLL 的应用程序——那是用户的编辑器、浏览器和资源
+# 管理器，它们只是碰巧把输入法 DLL 映射了进来。这条不能松。
+#
+# PiInputHost.exe 是另一回事：它是 PiInput 自己的常驻进程，不是「加载了 DLL
+# 的应用」。原先只发 drain 请求、等 3 秒、然后不管结果继续走，于是实测卸载
+# 之后它还活着，拿着控制管道和一个已被改名的可执行文件——下一次安装起不来
+# Host，只能手工 kill。
+#
+# 所以允许终止，但只允许这一种，且必须按映像路径限定在正被卸载的安装目录内：
+# 另一个账户可能登录着自己的 Host，那不是这次卸载该碰的东西。
+if(source_text MATCHES "taskkill")
+    message(FATAL_ERROR "Uninstaller must not shell out to taskkill")
+endif()
+if(source_text MATCHES "TerminateProcess")
+    if(NOT source_text MATCHES "_wcsicmp\\(entry\\.szExeFile, L\"PiInputHost\\.exe\"\\)")
+        message(FATAL_ERROR
+            "Uninstaller may terminate only PiInputHost.exe, never an application that loaded the TSF DLL")
+    endif()
+    if(NOT source_text MATCHES "inside && TerminateProcess")
+        message(FATAL_ERROR
+            "Terminating a Host must be scoped by image path to the installation being removed")
+    endif()
 endif()
 if(NOT source_text MATCHES "if \\(!arguments\\.silent\\)")
     message(FATAL_ERROR "Silent uninstall failures must return an error without opening a hidden dialog")

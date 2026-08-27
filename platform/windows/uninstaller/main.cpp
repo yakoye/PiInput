@@ -12,6 +12,9 @@
 #include <commctrl.h>
 #include <shellapi.h>
 #include <shlobj.h>
+#include <tlhelp32.h>
+
+#include <array>
 
 #include <algorithm>
 #include <chrono>
@@ -152,14 +155,69 @@ void wait_for_parent(const DWORD process_id) {
     }
 }
 
+// Stops any PiInput Host still running out of `root` after the drain request
+// went unanswered.
+//
+// Scoped by image path on purpose. Another account can be signed in with its
+// own Host, and its files are not the ones being removed; killing it would
+// take down a session this uninstall has no business touching.
+[[nodiscard]] std::size_t terminate_hosts_under(
+    const std::filesystem::path& root) noexcept {
+    std::error_code error;
+    const auto canonical_root = std::filesystem::weakly_canonical(root, error);
+    if (error) return 0U;
+
+    const HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0U);
+    if (snapshot == INVALID_HANDLE_VALUE) return 0U;
+    std::size_t stopped = 0U;
+    PROCESSENTRY32W entry{};
+    entry.dwSize = sizeof(entry);
+    for (BOOL more = Process32FirstW(snapshot, &entry); more != FALSE;
+         more = Process32NextW(snapshot, &entry)) {
+        if (_wcsicmp(entry.szExeFile, L"PiInputHost.exe") != 0) continue;
+        const HANDLE process = OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_TERMINATE, FALSE,
+            entry.th32ProcessID);
+        if (process == nullptr) continue;
+        std::array<wchar_t, MAX_PATH> image{};
+        DWORD length = static_cast<DWORD>(image.size());
+        if (QueryFullProcessImageNameW(process, 0U, image.data(), &length) != FALSE) {
+            std::error_code compare_error;
+            const auto path = std::filesystem::weakly_canonical(
+                std::filesystem::path(std::wstring(image.data(), length)), compare_error);
+            const auto relative = std::filesystem::relative(
+                path, canonical_root, compare_error);
+            const bool inside = !compare_error && !relative.empty() &&
+                relative.native().rfind(L"..", 0U) != 0U;
+            if (inside && TerminateProcess(process, 0U) != FALSE) {
+                (void)WaitForSingleObject(process, 2000U);
+                ++stopped;
+            }
+        }
+        CloseHandle(process);
+    }
+    CloseHandle(snapshot);
+    return stopped;
+}
+
 // Ask the already-running Host to drain over its control pipe. Launching
 // PiInputHost.exe from a temporary unsigned uninstall worker is exactly the
 // child-process pattern Windows application control blocks. Speaking the
 // existing protocol directly is both quieter and allows its mapped files to be
 // removed without administrator-only delayed-delete registration.
-void request_host_drain() noexcept {
+//
+// Returns false when a Host was still running afterwards and could not be
+// stopped. The wait used to be discarded, so a Host that ignored the request
+// simply kept running: after one uninstall it was still alive, holding the
+// control pipe and an executable that had already been renamed out from under
+// it. Nothing else could then start a Host until it was killed by hand.
+[[nodiscard]] bool request_host_drain(const std::filesystem::path& program_root) noexcept {
     const auto endpoint = piinput::windows::current_host_endpoint_names();
-    if (!endpoint.has_value()) return;
+    if (!endpoint.has_value()) {
+        // No endpoint means no way to ask politely, not that nothing is
+        // running. Check anyway.
+        return terminate_hosts_under(program_root) == 0U;
+    }
 
     const HANDLE host_mutex = OpenMutexW(SYNCHRONIZE, FALSE, endpoint->mutex.c_str());
     HANDLE pipe = CreateFileW(endpoint->pipe.c_str(), GENERIC_WRITE, 0U, nullptr,
@@ -188,9 +246,16 @@ void request_host_drain() noexcept {
         CloseHandle(pipe);
     }
     if (host_mutex != nullptr) {
-        (void)WaitForSingleObject(host_mutex, 3000U);
+        // Ten seconds rather than three. Draining flushes what was learned this
+        // session, and the user dictionary here runs to tens of megabytes; the
+        // point of asking first is to let that finish rather than cut it off.
+        const DWORD waited = WaitForSingleObject(host_mutex, 10000U);
         CloseHandle(host_mutex);
+        if (waited == WAIT_OBJECT_0 || waited == WAIT_ABANDONED) return true;
     }
+    // It did not go. Terminating loses at most what this session learned since
+    // the last flush; leaving it running loses the ability to install again.
+    return terminate_hosts_under(program_root) == 0U;
 }
 
 // Unregistering still happens before anything is deleted, so a live TSF
@@ -262,8 +327,12 @@ void delete_runtime_registry() noexcept {
     // files that are already gone. Whatever fails here is reported, not fatal:
     // the files still have to go, or the user keeps an installation that no
     // uninstaller on the machine can remove.
-    request_host_drain();
+    const bool host_stopped = request_host_drain(layout.product_root);
     auto problems = unregister_user_tsf();
+    if (!host_stopped) {
+        problems.emplace_back(
+            L"PiInput Host 仍在运行，未能停止；请重启电脑后再安装");
+    }
 
     std::error_code ignored;
     std::filesystem::remove_all(layout.start_menu_root, ignored);
@@ -330,7 +399,12 @@ void launch_worker(const Arguments& arguments) {
     // Remove the keyboard entry while this process still has the original
     // user's token and while the machine profile still exists. The later
     // worker repeats this idempotently to cover races with the text service.
-    request_host_drain();
+    //
+    // Whether the Host went is not decided here. The worker repeats the
+    // request and is the one that reports, because it is the one that deletes.
+    (void)request_host_drain(make_uninstall_layout(
+        known_folder(FOLDERID_LocalAppData),
+        known_folder(FOLDERID_RoamingAppData)).product_root);
     (void)unregister_user_tsf();
     // Only the machine-wide TSF profile/categories need elevation. Run that
     // narrow action from the installed executable, wait for it, then let the
