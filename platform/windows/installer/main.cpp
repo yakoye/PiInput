@@ -1009,6 +1009,19 @@ HRESULT CALLBACK install_progress_callback(
     const std::optional<std::filesystem::path>& migration) {
     InstallProgressState state;
     std::thread worker([&state, &migration] {
+        // COM is per-thread, and this one is not the thread wWinMain
+        // initialized. install() registers the TSF profile through
+        // CoCreateInstance(CLSID_TF_InputProcessorProfiles), which fails with
+        // CO_E_NOTINITIALIZED on a thread that has no apartment -- so the
+        // progress dialog reported a failure for work the silent path did
+        // without complaint. Same install, different thread.
+        ScopedComApartment com;
+        if (FAILED(com.result()) && com.result() != RPC_E_CHANGED_MODE) {
+            state.failed.store(true);
+            state.error = L"无法在安装线程上初始化 COM";
+            state.finished.store(true);
+            return;
+        }
         try {
             state.result = install(migration, [&state](const InstallStage stage) {
                 const InstallStageInfo info = describe_install_stage(stage);

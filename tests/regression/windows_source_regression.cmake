@@ -194,6 +194,14 @@ if(NOT stable_text_service_text MATCHES
     message(FATAL_ERROR
         "Direct English must refuse the async edit fallback, or letters reorder")
 endif()
+# 带界面安装时 install() 跑在工作线程上，而 COM 是按线程初始化的。TSF 配置
+# 注册走 CoCreateInstance，没有套间就失败——同一次安装，静默模式成功、界面
+# 模式退出码 1。工作线程必须自己建套间。
+if(NOT installer_main_text MATCHES
+       "std::thread worker\\(\\[&state, &migration\\] \\{[^}]*ScopedComApartment")
+    message(FATAL_ERROR
+        "The progress-UI install thread must open its own COM apartment, or TSF registration fails there")
+endif()
 # 被拒绝的按键不会进入 OnKeyDown，所以 Shift 组合键必须在 OnTestKeyDown 里就
 # 记账。中文模式下 Shift+字母是有意放行的（直接打大写），于是状态机学不到这次
 # Shift 是当修饰键用的，松手时被当成单击——打 previewIdentity 打到一半就切成
