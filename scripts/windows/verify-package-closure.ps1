@@ -105,7 +105,8 @@ try {
     $package = $roots[0].FullName
     foreach ($required in @(
         "PiInput-Install.exe", "PiInput-Uninstall.exe", "PiInput-Test.exe",
-        "bin/PiInputTSF.dll", "bin/PiInputHost.exe", "bin/PiInput-Settings.exe",
+        "bin/PiInputTSF.dll", "bin/x86/PiInputTSF.dll",
+        "bin/PiInputHost.exe", "bin/PiInput-Settings.exe",
         "bin/yesymbol.exe", "bin/licenses/YeSymbol/LICENSE",
         "bin/licenses/YeSymbol/THIRD_PARTY_NOTICES.md", "bin/licenses/YeSymbol/PROVENANCE.md",
         "bin/licenses/YeTool/LICENSE",

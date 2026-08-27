@@ -38,6 +38,9 @@ foreach ($required in @(
     (Join-Path $Dist "bin/PiInput-Install.exe"),
     (Join-Path $Dist "bin/PiInput-Uninstall.exe"),
     (Join-Path $Dist "bin/PiInputTSF.dll"),
+    # 32 位程序只能加载 32 位 DLL。少了这一份，MobaXterm 这类程序里切过去等于
+    # 没装，而且不会有任何报错。
+    (Join-Path $Dist "bin/x86/PiInputTSF.dll"),
     (Join-Path $Dist "bin/PiInputHost.exe"),
     (Join-Path $Dist "bin/PiInput-Settings.exe"),
     (Join-Path $Dist "bin/yesymbol.exe"),

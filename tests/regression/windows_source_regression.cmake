@@ -1211,6 +1211,33 @@ endif()
 # 当初删它的理由是「冗余」——应用自己会显示正在打的字母。那个理由在终端上不
 # 成立：MobaXterm 里候选正常而字母一个都看不见。所以它回来了，但由
 # composition_row_height 决定画不画，自动模式下只在应用没显示时才画。
+# 32 位程序只能加载 32 位 DLL，也只看得见 WOW6432Node 那个注册表视图。三个环节
+# 缺一份都会表现为「MobaXterm 里切过去输入法是灰的」，而且没有任何报错：
+# 构建要出这一份、安装要把它装到 Program Files (x86) 并注册进 32 位视图、
+# 卸载要把两个 Program Files 下的都清掉。
+file(READ "${PIINPUT_SOURCE_DIR}/build.ps1" build_script_text)
+if(NOT build_script_text MATCHES "-A\", \"Win32\"" OR
+   NOT build_script_text MATCHES "0x014C")
+    message(FATAL_ERROR
+        "build.ps1 must produce the 32-bit shim and verify its PE machine type")
+endif()
+if(NOT installer_main_text MATCHES "register_machine_shim_wow32" OR
+   NOT installer_main_text MATCHES "program_files_x86")
+    message(FATAL_ERROR
+        "The installer must place and register the 32-bit shim, or 32-bit applications see nothing")
+endif()
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/machine_registration.h"
+    machine_registration_text)
+if(NOT machine_registration_text MATCHES "KEY_WOW64_32KEY")
+    message(FATAL_ERROR
+        "CLSID registration must reach the 32-bit registry view as well as the native one")
+endif()
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/uninstaller/main.cpp"
+    uninstaller_main_text)
+if(NOT uninstaller_main_text MATCHES "FOLDERID_ProgramFilesX86")
+    message(FATAL_ERROR
+        "Uninstall must clear the 32-bit shim as well, or its directory and DLL are left behind")
+endif()
 if(NOT candidate_window_text MATCHES "composition_row_height")
     message(FATAL_ERROR
         "The composition row must go through composition_row_height, not be drawn unconditionally")

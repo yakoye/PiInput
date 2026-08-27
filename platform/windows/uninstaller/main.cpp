@@ -102,12 +102,22 @@ struct Arguments {
     const HRESULT result = unregister_machine_tsf().result;
     if (FAILED(result)) return result;
     try {
-        const auto program_files = known_folder(FOLDERID_ProgramFiles);
-        const auto machine_root = machine_runtime_root(program_files);
-        if (!is_safe_machine_runtime_root(machine_root, program_files)) {
-            return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+        // 两个 Program Files 各有一份 shim：64 位程序加载前者，32 位程序加载
+        // 后者。只清一边会在另一边留下一个目录和一份 DLL，而 unregister_
+        // machine_tsf 已经把两个注册表视图都清了——文件却还在。
+        //
+        // 32 位那份可能根本不存在（旧版本没有它），所以缺席不算失败。
+        for (const KNOWNFOLDERID* const folder :
+             {&FOLDERID_ProgramFiles, &FOLDERID_ProgramFilesX86}) {
+            const auto program_files = known_folder(*folder);
+            const auto machine_root = machine_runtime_root(program_files);
+            if (!is_safe_machine_runtime_root(machine_root, program_files)) {
+                return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+            }
+            std::error_code error;
+            if (!std::filesystem::exists(machine_root, error) || error) continue;
+            remove_or_schedule_legacy_runtime(machine_root);
         }
-        remove_or_schedule_legacy_runtime(machine_root);
         return S_OK;
     } catch (...) {
         return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);
