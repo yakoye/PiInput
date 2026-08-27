@@ -55,9 +55,9 @@ namespace piinput::windows {
 struct CandidateVisualSettings final {
     std::uint32_t font_size{16U};
     std::uint32_t window_height{40U};
-    // 用户设置：自动 / 总是 / 从不。自动时由 app_shows_composition 决定。
-    piinput::CompositionDisplay composition_display{
-        piinput::CompositionDisplay::automatic};
+    // 用户设置：候选窗要不要把正在打的字母显示出来。没有「自动」挡，
+    // 理由见 CandidateSettings::show_composition。
+    bool show_composition{true};
 
     bool operator==(const CandidateVisualSettings&) const = default;
 };
@@ -135,9 +135,6 @@ public:
     // caret, so the first true caret of this composition may correct it once.
     void show_at_provisional_caret(const RECT& caret, std::uint64_t owner_window = 0U);
     void show_near_caret(std::uint64_t owner_window = 0U);
-    // 应用自己有没有把正在打的字母显示出来。Shim 判断，Host 转达；自动模式
-    // 下决定这一行画不画。
-    void set_app_shows_composition(bool shown) noexcept;
     void hide();
     [[nodiscard]] HWND native_handle() const noexcept { return window_; }
 
@@ -190,8 +187,6 @@ private:
     std::vector<RECT> visible_item_rects_;
     std::vector<std::size_t> visible_item_indexes_;
     bool toolbar_menu_open_{};
-    // 默认 true：等于此前的行为，也保证升级中途拿到旧协议时不会突然多画一行。
-    bool app_shows_composition_{true};
     RECT locked_rect_{};
     bool geometry_locked_{};
     bool locked_to_text_caret_{};

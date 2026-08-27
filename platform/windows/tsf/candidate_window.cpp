@@ -493,14 +493,6 @@ void CandidateWindow::show_near_caret(const std::uint64_t owner_window) {
     show_at_anchor(anchor, 20, false, owner_window);
 }
 
-void CandidateWindow::set_app_shows_composition(const bool shown) noexcept {
-    if (app_shows_composition_ == shown) return;
-    app_shows_composition_ = shown;
-    // 这一行的有无会改变窗口高度，所以排版要重算——不标脏的话，窗口保持旧高度
-    // 而内容按新高度画，候选会被自己的边缘截掉。
-    layout_dirty_ = true;
-}
-
 void CandidateWindow::show_at_text_caret(
     const RECT& caret,
     const std::uint64_t owner_window) {
@@ -627,17 +619,8 @@ int CandidateWindow::desired_width() const {
 // 的 edit_sync 是成功的，它只是不把结果画出来而已。代价是应用自己显示时会重
 // 复一次，这也是多数中文输入法的做法。
 int CandidateWindow::composition_row_height() const noexcept {
-    if (composition_.empty()) return 0;
-    switch (visual_.composition_display) {
-    case piinput::CompositionDisplay::never:
-        return 0;
-    case piinput::CompositionDisplay::always:
-        return scaled(kCompositionRowHeight);
-    case piinput::CompositionDisplay::automatic:
-        break;
-    }
-    // 自动：应用自己显示了就不画，避免同一串字母出现两次。
-    return app_shows_composition_ ? 0 : scaled(kCompositionRowHeight);
+    if (composition_.empty() || !visual_.show_composition) return 0;
+    return scaled(kCompositionRowHeight);
 }
 
 int CandidateWindow::desired_height() const noexcept {

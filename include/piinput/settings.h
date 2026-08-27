@@ -58,20 +58,16 @@ struct PinyinSettings {
     bool operator==(const PinyinSettings&) const = default;
 };
 
-// 候选窗要不要把正在打的字母显示出来。
-//
-// 显示合成串本来是应用的职责，绝大多数应用也做了。终端不做：MobaXterm 里候选
-// 正常，而你打的字母一个都看不见，只能靠候选反推。
-enum class CompositionDisplay : std::uint8_t {
-    // 应用没显示时才画。判据是应用报不报得出自己合成串的位置——报不出、或者
-    // 报到窗口外面去了，就当它没在画。
-    automatic,
-    always,
-    never,
-};
-
 struct CandidateSettings {
-    CompositionDisplay composition_display{CompositionDisplay::automatic};
+    // 候选窗要不要把正在打的字母显示出来。
+    //
+    // 显示合成串本来是应用的职责，绝大多数应用也做了。终端不做：MobaXterm 里
+    // 候选正常，而你打的字母一个都看不见，只能靠候选反推。
+    //
+    // 只有开和关，没有「自动」。自动挡判据是应用报不报得出自己合成串的位置，
+    // 而 Chromium 系会在系统光标和 TSF 两种来源之间摇摆，判定跟着翻来覆去，
+    // 在 ChatGPT 里这一行忽有忽无。一个稳定的错误也好过一个闪烁的正确。
+    bool show_composition{true};
     std::uint32_t items_per_row{6U};
     std::uint32_t visible_rows{5U};
     std::uint32_t max_items{90U};

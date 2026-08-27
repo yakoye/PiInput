@@ -1242,10 +1242,22 @@ if(NOT candidate_window_text MATCHES "composition_row_height")
     message(FATAL_ERROR
         "The composition row must go through composition_row_height, not be drawn unconditionally")
 endif()
-if(NOT candidate_window_text MATCHES "CompositionDisplay::never" OR
-   NOT candidate_window_text MATCHES "app_shows_composition_")
+if(NOT candidate_window_text MATCHES "visual_\\.show_composition")
     message(FATAL_ERROR
-        "The composition row must honour both the user setting and whether the application shows it")
+        "The composition row must honour the user setting")
+endif()
+file(READ "${PIINPUT_SOURCE_DIR}/include/piinput/settings.h" settings_header_text)
+if(NOT settings_header_text MATCHES "bool show_composition")
+    message(FATAL_ERROR
+        "The composition row must stay a plain on/off setting. It once had a third 'automatic' mode "
+        "keyed off whether the application reported its own composition position; Chromium flips "
+        "between the system caret and TSF, so the verdict flipped with it and the row appeared and "
+        "vanished while typing in ChatGPT")
+endif()
+file(READ "${PIINPUT_SOURCE_DIR}/src/settings.cpp" settings_source_text)
+if(NOT settings_source_text MATCHES "show_composition=true")
+    message(FATAL_ERROR
+        "show_composition must appear in the serialized defaults, or the setting is undiscoverable")
 endif()
 if(NOT candidate_window_text MATCHES "Microsoft YaHei UI" OR
    NOT candidate_window_text MATCHES "candidate_text_top" OR

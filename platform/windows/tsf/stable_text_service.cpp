@@ -2354,9 +2354,6 @@ void TextService::capture_composition_caret(
     update.has_text_caret = false;
     update.owner_window = 0U;
     update.show_candidate_window = show_custom_candidate_ui_;
-    // 拿不到任何位置也算「应用没在显示」：连插入点在哪都报不出来的文本存储，
-    // 不会把合成串画出来。
-    update.app_shows_composition = false;
     if (context == nullptr) return;
     ITfContextView* view = nullptr;
     if (FAILED(context->GetActiveView(&view)) || view == nullptr) {
@@ -2461,11 +2458,6 @@ void TextService::capture_composition_caret(
         // over. That is exactly the reported pattern: right once, wrong after
         // committing, right again in a new session.
         const bool inside_owner = rect_is_within_window(rect, owner_root);
-        // 应用说不出自己的合成串在哪，基本就等于它没在画。终端正是这样：
-        // MobaXterm 报的是另一个显示器上的一个固定点，而它的窗口里连你打的
-        // 字母都看不见。这个判断只有 Shim 做得了——光标是它拿的——所以结论要
-        // 传给 Host，候选窗是那边画的。
-        update.app_shows_composition = inside_owner;
         if (!inside_owner && last_text_caret_.has_value()) {
             // The remembered position is where the caret last genuinely was.
             // In a terminal that is the same line, which is close enough to be

@@ -102,6 +102,9 @@ void test_defaults_and_round_trip() {
     check(defaults.candidates.max_items == 90U, "default candidate max items");
     check(defaults.candidates.font_size == 16U, "default candidate font size");
     check(defaults.candidates.window_height == 40U, "default candidate window height");
+    check(defaults.candidates.show_composition,
+        "the composition row is on by default: a duplicated line is a nuisance, "
+        "but a terminal with no line at all leaves nothing to read");
     check(defaults.candidates.horizontal, "default candidate direction");
     check(defaults.candidates.equal_key == piinput::RowNavigationAction::next_row, "default equal key");
     check(defaults.candidates.minus_key == piinput::RowNavigationAction::previous_row, "default minus key");
@@ -158,6 +161,7 @@ void test_valid_values_and_boundaries() {
         "prefix_beam_width=8\n"
         "prefix_scan_limit=16384\n"
         "[candidates]\n"
+        "show_composition=false\n"
         "items_per_row=9\n"
         "visible_rows=6\n"
         "max_items=54\n"
@@ -206,6 +210,7 @@ void test_valid_values_and_boundaries() {
     check(parsed.settings.candidates.max_items == 54U, "one-screen max items accepted");
     check(parsed.settings.candidates.font_size == 28U, "maximum candidate font size");
     check(parsed.settings.candidates.window_height == 72U, "maximum candidate window height");
+    check(!parsed.settings.candidates.show_composition, "composition row switched off");
     check(!parsed.settings.candidates.horizontal, "vertical candidate layout");
     check(parsed.settings.candidates.equal_key == piinput::RowNavigationAction::previous_row,
         "equal key navigation");
@@ -416,6 +421,7 @@ void test_invalid_values_fallback_and_errors() {
         "prefix_beam_width=7\n"
         "prefix_scan_limit=999999999999999999999999\n"
         "[candidates]\n"
+        "show_composition=sometimes\n"
         "items_per_row=10\n"
         "visible_rows=0\n"
         "max_items=9\n"
@@ -428,7 +434,7 @@ void test_invalid_values_fallback_and_errors() {
         "[punctuation]\n"
         "mode=secret-punctuation-value\n",
         previous);
-    check(parsed.errors.size() == 13U, "all invalid known fields report errors");
+    check(parsed.errors.size() == 14U, "all invalid known fields report errors");
     check(!parsed.document_fatal, "known field errors are not document-fatal");
     check(parsed.settings == previous, "invalid known values preserve previous fields");
     for (const auto& error : parsed.errors) {

@@ -52,7 +52,7 @@ try {
         Start-Sleep -Milliseconds 50
     }
     $coldTimer.Stop()
-    if ($LASTEXITCODE -ne 0 -or ($health -join "`n") -notmatch "protocol=6" -or
+    if ($LASTEXITCODE -ne 0 -or ($health -join "`n") -notmatch "protocol=5" -or
         ($health -join "`n") -notmatch "startup_ms=[0-9]+" -or
         ($health -join "`n") -notmatch "version=[0-9]+\.[0-9]+\.[0-9]+" -or
         ($health -join "`n") -notmatch "lexicon_storage=(mmap|heap)" -or

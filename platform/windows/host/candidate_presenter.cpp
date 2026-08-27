@@ -370,9 +370,6 @@ bool CandidatePresenter::show_at(
         window_.hide();
         return true;
     }
-    // 在 update 之前设置：它会影响窗口高度，而高度是在 update 里连同内容一起
-    // 定下来的。
-    window_.set_app_shows_composition(update.app_shows_composition);
     const auto& candidates = wide_candidates(session_id, *snapshot);
     const std::size_t selected = snapshot->view.active_row *
         (std::max)(snapshot->view.items_per_row, std::size_t{1U}) +

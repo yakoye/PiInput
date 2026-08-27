@@ -179,6 +179,7 @@ int main(const int argc, char** const argv) {
     presenter.set_visual_settings({
         runtime.settings().candidates.font_size,
         runtime.settings().candidates.window_height,
+        runtime.settings().candidates.show_composition,
     });
     presenter.set_toolbar_handler([&](
         const std::uint64_t client_id,
@@ -258,6 +259,7 @@ int main(const int argc, char** const argv) {
         presenter.set_visual_settings({
             runtime.settings().candidates.font_size,
             runtime.settings().candidates.window_height,
+            runtime.settings().candidates.show_composition,
         });
     });
     return server.run();

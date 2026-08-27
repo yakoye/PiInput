@@ -300,6 +300,9 @@ void parse_candidates(
         }
     } else if (key == "horizontal") {
         assign_parsed(result, candidates.horizontal, parse_bool, value, line, "candidates", key);
+    } else if (key == "show_composition") {
+        assign_parsed(
+            result, candidates.show_composition, parse_bool, value, line, "candidates", key);
     } else if (key == "equal_key") {
         assign_parsed(result, candidates.equal_key, parse_navigation, value, line, "candidates", key);
     } else if (key == "minus_key") {
@@ -714,6 +717,7 @@ std::string serialize_default_settings() {
         "simplified_pinyin=true\n"
         "prefix_scan_limit=4096\n"
         "[candidates]\n"
+        "show_composition=true\n"
         "items_per_row=6\n"
         "visible_rows=5\n"
         "max_items=90\n"

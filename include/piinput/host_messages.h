@@ -36,16 +36,6 @@ struct HostCaretUpdate final {
     // False when the application accepted the TSF UIElement and will render
     // the candidate list itself (notably the Windows Search integration).
     bool show_candidate_window{true};
-    // Whether the application is showing the letters being typed. Only the
-    // in-process shim can tell: an application that cannot say where its own
-    // composition is almost certainly is not drawing it either, and a terminal
-    // answers with a fixed point on another monitor. The Host draws the
-    // candidate window and so needs to be told.
-    //
-    // True by default, because that is the behaviour every application had
-    // before this existed, and because an older Host that never reads the
-    // field must not start drawing a second copy.
-    bool app_shows_composition{true};
 
     bool operator==(const HostCaretUpdate&) const = default;
 };

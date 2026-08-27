@@ -90,7 +90,7 @@ std::optional<HostEnvelope> decode_host_envelope(
     envelope.version = read_little_endian<std::uint32_t>(input, 8U);
     if (envelope.version != host_protocol_v1 && envelope.version != host_protocol_v2 &&
         envelope.version != host_protocol_v3 && envelope.version != host_protocol_v4 &&
-        envelope.version != host_protocol_v5 && envelope.version != host_protocol_v6) {
+        envelope.version != host_protocol_v5) {
         error = ProtocolError::unsupported_version;
         return std::nullopt;
     }
