@@ -1547,11 +1547,13 @@ void test_symbol_center_and_semicolon_routing() {
             markdown_commit.text == "```",
         "Space commits a Markdown code fence instead of trapping the command prefix");
 
+    // 中文标点下这个键现在给间隔号。Markdown 的行内代码改由英文标点模式负责，
+    // 那里它仍然是反引号本身——写代码时标点模式本来就该是英文。
     type(session, "`");
-    const auto literal_grave = session.apply({.kind = piinput::HostKeyKind::space});
-    check(literal_grave.accepted && literal_grave.action == piinput::HostAction::commit &&
-            literal_grave.text == "`",
-        "a single grave key stays literal for Markdown inline code");
+    const auto lone_grave = session.apply({.kind = piinput::HostKeyKind::space});
+    check(lone_grave.accepted && lone_grave.action == piinput::HostAction::commit &&
+            lone_grave.text == "·",
+        "a lone grave key becomes the interpunct under Chinese punctuation");
 
     type(session, "`code`");
     const auto inline_code = session.apply({.kind = piinput::HostKeyKind::space});

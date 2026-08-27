@@ -62,10 +62,13 @@ std::string PunctuationTransformer::transform(
         return shift
             ? (bracket_style == PunctuationBracketStyle::wechat ? "」" : "}")
             : "】";
-    // Keep the grave accent literal so Markdown inline code and fenced code
-    // remain usable in Chinese mode. The symbol center is the explicit place
-    // to choose the middle dot.
-    case '`': return shift ? "~" : "`";
+    // 中文标点下这个键给间隔号，和其他中文输入法一致：它是「诺贝尔·奖」这类
+    // 名字里唯一需要的符号，而反引号本身在中文行文里用不到。
+    //
+    // 曾经保留字面反引号，理由是 Markdown 的行内代码和代码块。那个理由不成立
+    // ——写 Markdown 时标点模式本来就该切到英文，而英文标点下这个键仍然是反引号
+    // 本身，不受影响。
+    case '`': return shift ? "~" : "·";
     case '1': return shift ? "！" : "1";
     case '2': return shift ? "@" : "2";
     case '3': return shift ? "#" : "3";
