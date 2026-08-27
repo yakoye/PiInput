@@ -447,8 +447,14 @@ void test_shipped_dictionary_layers_do_not_overlap() {
             return candidate.word == "palladium";
         });
     check(covered, "a word the original table lacked is reachable within three");
-    check(palladium.empty() || palladium.front().base_weight < 1000000U,
-        "rare words stay below the everyday band");
+    // It used to be asserted that palladium stayed below the everyday band.
+    // The curated common-word list carries it, at 5,258, so it is in that band
+    // now -- and that is the list doing its job, not a regression. What the
+    // ranking still has to get right is the part that mattered: palladium
+    // ahead of palladia and palladic, which are shorter and have no usage data
+    // at all.
+    check(!palladium.empty() && palladium.front().word == "palladium",
+        "and it leads the shorter prefix-mates the original build put first");
 }
 
 // The reported words were not near-misses; they had nothing to do with what

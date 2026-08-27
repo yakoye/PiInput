@@ -549,7 +549,12 @@ void test_requested_progressive_prefix_examples_include_raw_and_many_completions
     verify("r", {"right", "really"});
     verify("re", {"really", "remember"});
     verify("rev", {"review", "reverse"});
-    verify("reve", {"reverse", "revealed"});
+    // Only the curated entry is pinned here. Which real word lands behind it
+    // -- revealed, revenue -- is dictionary data that moves whenever the word
+    // list is regenerated, and pinning it made an ordinary dictionary update
+    // look like a ranking regression. The rule under test is that the
+    // preference wins; verify already requires six candidates behind it.
+    verify("reve", {"reverse"});
     verify("b", {"but", "because"});
     verify("bo", {"both"});
     verify("boo", {"book", "boom"});
