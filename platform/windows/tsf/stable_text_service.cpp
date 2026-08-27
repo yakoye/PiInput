@@ -1125,12 +1125,9 @@ HostKeyEvent TextService::map_key(const WPARAM wparam) const noexcept {
         event.character = '\'';
         return event;
     }
-    if (!english_mode_ && !shifted && wparam == VK_OEM_3 &&
-        (mirror_.raw().empty() || mirror_.raw().front() == '`')) {
-        event.kind = HostKeyKind::text;
-        event.character = '`';
-        return event;
-    }
+    // The backtick used to open a composition of its own -- ``f, ``u and so on
+    // -- and it is gone. What is left is a punctuation key like any other, so
+    // it falls through to the punctuation branch below.
     if (is_punctuation_key(wparam) &&
         !(composing && !shifted && (wparam == VK_OEM_MINUS || wparam == VK_OEM_PLUS))) {
         event.kind = HostKeyKind::punctuation;
@@ -1854,8 +1851,15 @@ void TextService::send_commit_result(
 // caret a Shift press is only discovered after a word comes out in the wrong
 // language.
 void TextService::show_mode_popup() noexcept {
-    mode_indicator_.show(
-        mode_mark_for(english_mode_, caps_lock_is_on()), system_caret_rect());
+    // Same two sources the candidate window uses, in the same order: the
+    // system caret where the application keeps one, and the position
+    // GetTextExt reported otherwise. Consulting only the first left the
+    // indicator with nothing in Chromium and everything built on it, so it
+    // centred on the window -- in ChatGPT and Codex it landed in the middle of
+    // the screen while the candidate row sat correctly at the caret.
+    auto caret = system_caret_rect();
+    if (!caret.has_value()) caret = last_text_caret_;
+    mode_indicator_.show(mode_mark_for(english_mode_, caps_lock_is_on()), caret);
 }
 
 void TextService::refresh_lang_bar() noexcept {
@@ -2421,6 +2425,13 @@ void TextService::capture_composition_caret(
         update.top = rect.top;
         update.right = rect.right;
         update.bottom = rect.bottom;
+        // Kept for the mode indicator, which has no document lock of its own
+        // and so cannot ask GetTextExt when it needs a position. Without it
+        // the indicator had only the system caret to go on, and Chromium and
+        // everything built on it keep none -- so in ChatGPT and Codex it fell
+        // back to centring on the window while the candidate row sat correctly
+        // at the caret, because the candidate row comes through here.
+        last_text_caret_ = rect;
     }
     view->Release();
 }

@@ -677,7 +677,7 @@ void test_tool_shortcuts_are_always_candidate_two() {
         {"biaoq", "full", "😜表情", piinput::CandidateKind::launch_action},
         {"bnqk", "flypy", "😜表情", piinput::CandidateKind::launch_action},
         {"bnq", "flypy", "😜表情", piinput::CandidateKind::launch_action},
-        {"shizhi", "full", "⚙️设置", piinput::CandidateKind::launch_action},
+        {"shezhi", "full", "⚙️设置", piinput::CandidateKind::launch_action},
         {"uevi", "flypy", "⚙️设置", piinput::CandidateKind::launch_action},
         {"sz", "full", "⚙️设置", piinput::CandidateKind::launch_action},
         {"shiz", "full", "⚙️设置", piinput::CandidateKind::launch_action},
@@ -1069,6 +1069,59 @@ void test_smart_punctuation() {
                 decision.context_type == context,
             message);
     };
+
+    // Reported as `0.8.1` arriving as `0。8。1`, and the same shape for
+    // `12:32` and `apple.`. Each keystroke is decided against the text the
+    // one before it left, so the sequence is what has to be checked, not a
+    // single call.
+    {
+        const auto report = [&](const char symbol, const std::string_view left) {
+            const auto decision = decide(symbol, left, {});
+            (void)std::fprintf(stderr, "    '%c' after \"%.*s\" -> %s (%.*s)\n",
+                symbol, static_cast<int>(left.size()), left.data(),
+                decision.action == piinput::SmartPunctuationAction::literal ? "ASCII"
+                    : decision.action == piinput::SmartPunctuationAction::provisional
+                        ? "provisional" : "Chinese",
+                static_cast<int>(decision.rule_id.size()), decision.rule_id.data());
+            return decision;
+        };
+        (void)std::fprintf(stderr, "  smart punctuation sequences:\n");
+        check(report('.', "0").action == piinput::SmartPunctuationAction::literal,
+            "0. keeps the period ASCII");
+        check(report('.', "0.8").action == piinput::SmartPunctuationAction::literal,
+            "0.8. keeps the second period ASCII too");
+        check(report(':', "12").action != piinput::SmartPunctuationAction::transform,
+            "12: does not become a Chinese colon outright");
+
+        // The same three with a line ending after the caret, which is what
+        // Notepad++ reports: it hands back the whole rest of the document.
+        // Every rule that asks "is the caret inside text" used to read that as
+        // yes, and 0.8.1 came out 0。8。1 -- confirmed in a key trace, three
+        // PUNC-NUMERIC-INVALID decisions with the left context correctly
+        // reported as digit_tail.
+        const auto at_line_end = [&](const char symbol, const std::string_view left) {
+            return decide(symbol, left, "\r\n后面还有一行");
+        };
+        check(at_line_end('.', "0").action == piinput::SmartPunctuationAction::literal,
+            "0. at the end of a line keeps the period ASCII");
+        check(at_line_end('.', "0.8").action == piinput::SmartPunctuationAction::literal,
+            "and so does the second period in 0.8.1");
+        check(at_line_end(':', "12").action != piinput::SmartPunctuationAction::transform,
+            "12: at the end of a line is not a Chinese colon outright");
+        // Trailing blanks are not text in the way either.
+        check(decide('.', "0.8", "   ").action == piinput::SmartPunctuationAction::literal,
+            "trailing spaces do not count as text after the caret");
+        // Text genuinely on this line is still read. The 9 after the caret is
+        // what makes 0.8.9 a version rather than a trailing dot, so this
+        // failing would mean the trim had thrown the right side away entirely.
+        check(decide('.', "0.8", "9").rule_id == "PUNC-DOT-VERSION",
+            "a digit on the same line still joins the token");
+        // A period after a word is Chinese by design -- 这个是apple。 wants
+        // the full stop -- and that is recorded here rather than asserted
+        // either way, because it was reported as arriving ASCII in an
+        // application, which the engine alone cannot explain.
+        (void)report('.', "apple");
+    }
 
     check(decide('/', "2").action == piinput::SmartPunctuationAction::literal,
         "Physical slash stays ASCII for fractions");

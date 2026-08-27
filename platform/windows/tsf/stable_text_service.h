@@ -232,6 +232,12 @@ private:
     bool english_mode_{};
     LangBar lang_bar_;
     ModeIndicator mode_indicator_;
+    // Where the text caret was the last time a document lock let us ask. The
+    // mode indicator fires from key-up handlers, which hold no lock and so
+    // cannot call GetTextExt themselves; the system caret is all they could
+    // otherwise consult, and Chromium keeps none. Mutable because the capture
+    // happens inside a const query.
+    mutable std::optional<RECT> last_text_caret_;
     HICON lang_bar_icon_{nullptr};
     // Set once the Host has echoed a plain English letter straight back as a
     // one-character commit, which only happens when English candidates are off.

@@ -280,6 +280,9 @@ HostReply HostSession::apply(const HostKeyEvent& event) {
         if (index < current_candidate_count()) {
             return choose(candidate_id_at(index));
         }
+        // Still reachable: the toolbar's symbol centre opens by setting the
+        // raw text to ``f itself, without going through the keyboard. Only the
+        // keyboard route was removed.
         if (mode_ == HostInputMode::chinese &&
             current_raw().starts_with('`')) {
             std::string literal = current_raw();

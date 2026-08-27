@@ -194,6 +194,19 @@ if(NOT stable_text_service_text MATCHES
     message(FATAL_ERROR
         "Direct English must refuse the async edit fallback, or letters reorder")
 endif()
+# 模式提示窗必须和候选窗用同一套定位来源。只查系统光标时，Chromium 及基于它
+# 的程序（ChatGPT、Codex、搜索面板）根本不建系统光标，提示窗拿不到位置就居中
+# 到前台窗口——候选窗却是对的，因为它走 capture_composition_caret 的两级兜底。
+if(NOT stable_text_service_text MATCHES
+       "last_text_caret_ = rect;")
+    message(FATAL_ERROR
+        "capture_composition_caret must record the caret for the mode indicator to reuse")
+endif()
+if(NOT stable_text_service_text MATCHES
+       "if \\(!caret\\.has_value\\(\\)\\) caret = last_text_caret_;")
+    message(FATAL_ERROR
+        "show_mode_popup must fall back to the recorded caret, or it centres on the window")
+endif()
 # 带界面安装时 install() 跑在工作线程上，而 COM 是按线程初始化的。TSF 配置
 # 注册走 CoCreateInstance，没有套间就失败——同一次安装，静默模式成功、界面
 # 模式退出码 1。工作线程必须自己建套间。
@@ -1212,10 +1225,12 @@ if(NOT registration_text MATCHES "PiInput 中文输入法" OR
     message(FATAL_ERROR
         "The Windows input profile must use PiInput 中文输入法 without a developer suffix")
 endif()
-if(NOT stable_text_service_text MATCHES "wparam == VK_OEM_3" OR
-   NOT stable_text_service_text MATCHES "event.character = '`'")
+# 反引号不再从键盘起一段合成串。``f、``u 这类前缀命令已经撤掉，键上的反引号
+# 就是一个普通标点。工具栏的符号中心不走键盘——它自己把 raw 设成 ``f——所以
+# Host 侧那条路径保留着，只是没有按键会再触发它。
+if(stable_text_service_text MATCHES "event\\.character = '`'")
     message(FATAL_ERROR
-        "Stable TSF shim must forward the grave command prefix to the resident Host")
+        "The grave command prefix was removed; the keyboard must not open a composition with it")
 endif()
 if(stable_text_service_text MATCHES "last_passthrough_was_digit_")
     message(FATAL_ERROR

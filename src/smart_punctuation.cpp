@@ -275,6 +275,25 @@ struct LocalToken final {
         parse_unsigned(token.substr(colon + 1U), ignored);
 }
 
+// What actually sits after the caret, for the rules that ask whether it is
+// inside existing text rather than at the end of what has been written.
+//
+// Everything past a line ending belongs to another line and is not in the way.
+// Notepad++ hands back the whole rest of the document, so a period typed at
+// the end of a line arrived with right_text = "\r\n...", every such rule read
+// "yes, there is text after this", and `0.8.1` came out `0。8。1` -- the trace
+// shows PUNC-NUMERIC-INVALID three times with the left context correctly
+// reported as digit_tail.
+//
+// Blanks go the same way: a run of spaces before the line ends is not text the
+// punctuation has to fit between.
+[[nodiscard]] std::string_view right_on_this_line(std::string_view right) noexcept {
+    const std::size_t line_end = right.find_first_of("\r\n");
+    if (line_end != std::string_view::npos) right = right.substr(0U, line_end);
+    if (right.find_first_not_of(" \t") == std::string_view::npos) return {};
+    return right;
+}
+
 [[nodiscard]] bool is_numeric_punctuation_candidate(const std::string_view token) noexcept {
     bool has_digit = false;
     for (const char value : token) {
@@ -428,6 +447,21 @@ SmartPunctuationDecision SmartPunctuationEngine::decide(
         return {SmartPunctuationAction::transform, "PUNC-DEFAULT", chinese, "COMPOSITION"};
     }
 
+    // Every rule below that consults the right side means the same thing by it:
+    // is the caret inside text, or at the end of what has been written. A line
+    // ending answers "at the end", whatever follows it.
+    const SmartPunctuationContext local_context{
+        context.symbol,
+        context.left_text,
+        right_on_this_line(context.right_text),
+        context.composing,
+    };
+    return decide_on_line(local_context);
+}
+
+SmartPunctuationDecision SmartPunctuationEngine::decide_on_line(
+    const SmartPunctuationContext& context) const noexcept {
+    const std::string_view chinese = chinese_form(context.symbol);
     const LocalToken local = make_local_token(
         context.left_text, context.symbol, context.right_text);
     const std::string_view token = local.view();

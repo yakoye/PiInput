@@ -47,6 +47,13 @@ public:
         std::string_view accumulated_text = {}) const noexcept;
 
     [[nodiscard]] static bool is_ascii_digit(char value) noexcept;
+
+private:
+    // decide() trims the right context to this line before calling this, so
+    // every rule inside reads `right_text` as "text the caret sits in front
+    // of" rather than "anything at all after the caret".
+    [[nodiscard]] SmartPunctuationDecision decide_on_line(
+        const SmartPunctuationContext& context) const noexcept;
 };
 
 }  // namespace piinput

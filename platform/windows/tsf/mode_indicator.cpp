@@ -151,9 +151,14 @@ void ModeIndicator::place(const std::optional<RECT>& caret) noexcept {
     const int box = scaled(kBoxDip, dpi);
     const int gap = scaled(kCaretGapDip, dpi);
 
-    // Above the caret on purpose: the candidate window sits below it, and the
-    // two would otherwise cover each other when CapsLock is pressed mid-word.
-    int x = static_cast<int>(anchor.left);
+    // Up and to the left of the caret. Above alone was the original rule, on
+    // the reasoning that the candidate window sits below -- but it does not
+    // always: near the bottom of the screen, and in the Windows search panel,
+    // the candidate window flips above the caret and the two then landed on
+    // the same spot. Stepping left by the box clears it in that case and costs
+    // nothing in the ordinary one, where the space left of the caret is the
+    // text already typed.
+    int x = static_cast<int>(anchor.left) - box - gap;
     int y = static_cast<int>(anchor.top) - box - gap;
 
     MONITORINFO monitor{};

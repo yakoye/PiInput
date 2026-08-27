@@ -549,7 +549,7 @@ std::vector<CustomShortcutSettings> default_custom_shortcuts() {
     return {
         {"fh,fuhao,fuh,fuhc", 2U, "Ω", "符号", "system:symbol_tool"},
         {"bq,biaoqing,biaoq,bnqk,bnq", 2U, "😜", "表情", "system:symbol_tool"},
-        {"shizhi,uevi,sz,shiz,uev", 2U, "⚙️", "设置", "system:settings"},
+        {"shezhi,uevi,sz,shiz,uev", 2U, "⚙️", "设置", "system:settings"},
         {"jisuanqi,jisrqi,jsq,jisrq,calc,reg", 2U, "🖩", "计算器",
             "system:calculator"},
         {"jisuanqi,jisrqi,jsq,jisrq,calc,reg", 3U, "🖩", "程序员计算器",
