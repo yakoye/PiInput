@@ -1262,7 +1262,11 @@ foreach(smart_rule_token IN ITEMS
         "SmartPunctuationAction::provisional"
         "PUNC-SLASH-ASCII"
         "PUNC-DECIMAL-LIST"
-        "PUNC-NUMERIC-PENDING"
+        # PUNC-NUMERIC-PENDING 曾经在这里。冒号不再走 provisional——它和句号
+        # 用同一条两键规则，第一个跟在数字后的直接是 ASCII，再按一次才是中文，
+        # 而那第二次不需要状态：ASCII 那个落下之后，光标前面就不是数字了。
+        # 逗号仍然保留 provisional，见 smart_punctuation.cpp 里的理由。
+        "PUNC-COLON-AFTER-DIGIT"
         "PUNC-COMMA-GROUP-PENDING"
         "PUNC-PENDING-GROUP-DIGIT"
         "PUNC-PENDING-GROUP-COMPLETE"
@@ -1287,7 +1291,11 @@ foreach(smart_rule_token IN ITEMS
             "Smart punctuation semantic engine is missing ${smart_rule_token}")
     endif()
 endforeach()
-if(NOT smart_punctuation_text MATCHES "numeric_provisional_symbol" OR
+# 原来断言的是 numeric_provisional_symbol，那个变量随冒号的 provisional 一起
+# 去掉了。留下的 provisional 只有逗号一种，条件本身没变：跟在数字后、且右边
+# 这一行没有别的东西。
+if(NOT smart_punctuation_text MATCHES
+       "context\\.symbol == ','[ \n\t]*&&[ \n\t]*is_ascii_digit_local" OR
    NOT smart_punctuation_text MATCHES "right\.empty\(\)" OR
    NOT smart_punctuation_text MATCHES "has_technical_marker")
     message(FATAL_ERROR

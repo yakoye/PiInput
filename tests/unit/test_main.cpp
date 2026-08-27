@@ -1229,18 +1229,17 @@ void test_smart_punctuation() {
         "Active pinyin composition remains owned by the Host punctuation path");
     check(decide('.', "版本v1").action == piinput::SmartPunctuationAction::literal,
         "A trailing digit makes the first period immediately ASCII");
-    check(decide(':', "12").chinese_text == "：",
-        "Provisional colon carries its Chinese resolution");
-    check(engine.resolve_provisional('.', '0', "PUNC-NUMERIC-PENDING").keep_ascii,
-        "A digit resolves a provisional version dot to ASCII");
-    check(!engine.resolve_provisional('.', 'a', "PUNC-NUMERIC-PENDING").keep_ascii &&
-            engine.resolve_provisional('.', 'a', "PUNC-NUMERIC-PENDING").chinese_text == "。",
-        "A prose character resolves a provisional period to Chinese");
-    check(engine.resolve_provisional(':', '2', "PUNC-NUMERIC-PENDING").keep_ascii,
-        "A digit resolves a provisional time colon to ASCII");
-    check(!engine.resolve_provisional(':', '\0', "PUNC-NUMERIC-PENDING").keep_ascii &&
-            engine.resolve_provisional(':', '\0', "PUNC-NUMERIC-PENDING").chinese_text == "：",
-        "A boundary resolves a provisional colon to Chinese");
+    // The colon follows the period now: decided on the spot, not left
+    // provisional and rewritten. The four assertions that stood here drove
+    // resolve_provisional with PUNC-NUMERIC-PENDING, a rule id decide() no
+    // longer produces for any symbol.
+    check(decide(':', "12").action == piinput::SmartPunctuationAction::literal,
+        "the first colon after a digit is ASCII, so 12:32 types as written");
+    check(decide(':', "12").rule_id == "PUNC-COLON-AFTER-DIGIT",
+        "and it is the two-key rule that says so, not a pending decision");
+    check(decide(':', "12:").action == piinput::SmartPunctuationAction::transform &&
+            decide(':', "12:").chinese_text == "：",
+        "pressing it again gives the Chinese colon, because a colon is not a digit");
     check(engine.resolve_provisional(',', '2', "PUNC-COMMA-GROUP-PENDING").continue_provisional,
         "A grouped comma waits after the first following digit");
     check(engine.resolve_provisional(',', '9', "PUNC-COMMA-GROUP-PENDING", "2").continue_provisional,

@@ -519,13 +519,25 @@ SmartPunctuationDecision SmartPunctuationEngine::decide_on_line(
         return {SmartPunctuationAction::transform, "PUNC-NUMERIC-INVALID", chinese, "CHINESE_TEXT"};
     }
 
-    // The user's explicit two-key rule: the first period immediately after a
-    // digit is ASCII; pressing period again produces the Chinese full stop.
-    // Do not leave the first period provisional and rewrite it when prose is
-    // typed next -- that is exactly how `1.文本` regressed into `1。文本`.
-    if (context.symbol == '.' &&
+    // The two-key rule, and the colon works the same way as the period now.
+    //
+    // The first one straight after a digit is ASCII, so `0.8.1` and `12:32`
+    // come out as typed. Pressing it again gives the Chinese form, and that
+    // falls out of the same test rather than needing state: after the ASCII
+    // one is in, the character before the caret is no longer a digit.
+    //
+    // The colon used to be provisional -- insert ASCII, wait for the next key,
+    // rewrite if it turned out to be prose. That bought nothing here, since
+    // both outcomes are already reachable, and cost a visible rewrite. Do not
+    // put the period back on that path either: leaving it provisional and
+    // rewriting when prose follows is exactly how `1.文本` became `1。文本`.
+    if ((context.symbol == '.' || context.symbol == ':') &&
         is_ascii_digit_local(last_byte(context.left_text)) &&
         context.right_text.empty()) {
+        if (context.symbol == ':') {
+            return {SmartPunctuationAction::literal,
+                "PUNC-COLON-AFTER-DIGIT", chinese, "SEQUENCE"};
+        }
         return {SmartPunctuationAction::literal,
             is_decimal_list_prefix(context.left_text)
                 ? "PUNC-DECIMAL-LIST"
@@ -533,13 +545,16 @@ SmartPunctuationDecision SmartPunctuationEngine::decide_on_line(
             chinese, "SEQUENCE"};
     }
 
-    const bool numeric_provisional_symbol =
-        context.symbol == ':' || context.symbol == ',';
-    if (numeric_provisional_symbol &&
+    // The comma keeps its provisional, and it is the only symbol that still
+    // earns one. `1,234` and `第1，然后` are both ordinary, both start the
+    // same way, and the thousands separator is common enough that making it
+    // cost two keys would be worse than the one rewrite. The colon has no such
+    // pair -- `12:32` and a Chinese colon after a number are already served by
+    // the two-key rule above.
+    if (context.symbol == ',' &&
         is_ascii_digit_local(last_byte(context.left_text)) && context.right_text.empty()) {
         return {SmartPunctuationAction::provisional,
-            context.symbol == ',' ? "PUNC-COMMA-GROUP-PENDING" : "PUNC-NUMERIC-PENDING",
-            chinese, "AMBIGUOUS"};
+            "PUNC-COMMA-GROUP-PENDING", chinese, "AMBIGUOUS"};
     }
 
     if (!context.right_text.empty() &&
