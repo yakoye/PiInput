@@ -116,6 +116,10 @@ private:
     ~TextService();
 
     [[nodiscard]] bool should_eat_key(WPARAM wparam) const noexcept;
+    // What OnKeyDown does with a press it has decided to take.
+    void apply_eaten_key_down(ITfContext* context, WPARAM wparam);
+    // Runs a press the application claimed to hand over and then dropped.
+    void flush_dropped_key_down(ITfContext* context);
     [[nodiscard]] bool has_pending_key_request() const noexcept;
     [[nodiscard]] HostKeyEvent map_key(WPARAM wparam) const noexcept;
     [[nodiscard]] bool handle_smart_punctuation_key(
@@ -247,6 +251,10 @@ private:
     bool english_direct_{};
     ShiftToggleState shift_toggle_;
     WPARAM last_eaten_key_{};
+    // A press claimed in OnTestKeyDown whose OnKeyDown has not arrived. Zero
+    // once the application delivers it, which is nearly always immediate; what
+    // stays set is a press the application dropped after asking for it.
+    WPARAM claimed_without_keydown_{};
     HWND callback_window_{};
     std::uint64_t session_id_{};
     CompositionMirror mirror_;

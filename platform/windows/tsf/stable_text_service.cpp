@@ -855,15 +855,53 @@ STDMETHODIMP TextService::OnTestKeyDown(
     // returning FALSE means OnKeyDown will not be called. bind_context also
     // clears any ordinary-field composition/candidate state on that boundary.
     if (context != nullptr) (void)bind_context(context);
+    // Backstop for an application that drops the release too: a press still
+    // owed from an earlier key is run before this one is judged, so the two
+    // cannot arrive out of order.
+    flush_dropped_key_down(context);
     const bool sensitive = context != nullptr && sensitive_context_ &&
         same_com_identity(active_context_, context);
     *eaten = sensitive ? FALSE : (should_eat_key(wparam) ? TRUE : FALSE);
+    // Claimed but not yet delivered. OnKeyDown clears this the moment the
+    // application hands the press over, which is what almost every
+    // application does; what remains set is a press that was dropped.
+    if (*eaten != FALSE && !is_shift_key(wparam)) claimed_without_keydown_ = wparam;
+    // Which keys the application offers at all, and what was decided. Without
+    // this, a key the application never hands over and a key PiInput declines
+    // look identical in a trace -- both are simply absent -- and the boundary
+    // between "we chose wrong" and "we were never asked" cannot be drawn.
+    //
+    // MobaXterm is the case that needed it: Backspace never appears here while
+    // Enter, Space and Escape do, and those four share one branch of
+    // should_eat_key. Letters are logged as a class, not by character.
+    {
+        char detail[32]{};
+        if (is_ascii_letter(wparam)) {
+            (void)std::snprintf(detail, sizeof(detail), "letter=%d",
+                *eaten != FALSE ? 1 : 0);
+        } else {
+            (void)std::snprintf(detail, sizeof(detail), "vk%02lX=%d",
+                static_cast<unsigned long>(wparam), *eaten != FALSE ? 1 : 0);
+        }
+        trace_key("key_offered", detail);
+    }
     return S_OK;
 }
 
 STDMETHODIMP TextService::OnKeyDown(
     ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
+    // Paired with key_offered. A key claimed in OnTestKeyDown and never seen
+    // here was dropped by the application between the two calls: it asked
+    // whether we wanted the key, was told yes, and then neither delivered it
+    // nor handled it itself. Without both lines that is indistinguishable
+    // from PiInput swallowing the key on its own.
+    {
+        char detail[32]{};
+        (void)std::snprintf(detail, sizeof(detail), "vk%02lX",
+            static_cast<unsigned long>(wparam));
+        trace_key("key_down", detail);
+    }
     if (is_smart_punctuation_replay()) {
         *eaten = FALSE;
         return S_OK;
@@ -882,10 +920,23 @@ STDMETHODIMP TextService::OnKeyDown(
     const bool consume = should_eat_key(wparam);
     *eaten = consume ? TRUE : FALSE;
     if (!consume) return S_OK;
+    // The application delivered the press it was told we wanted, so there is
+    // nothing left to make good.
+    claimed_without_keydown_ = 0U;
+    apply_eaten_key_down(context, wparam);
+    return S_OK;
+}
+
+// The body of a press PiInput has decided to take. Split out of OnKeyDown so
+// that a press the application claimed to hand over and then dropped can still
+// be run, from whichever callback arrives next. See flush_dropped_key_down.
+void TextService::apply_eaten_key_down(
+    ITfContext* const context,
+    const WPARAM wparam) {
     last_eaten_key_ = wparam;
     if (is_shift_key(wparam)) {
         shift_toggle_.on_shift_down(has_disallowed_modifier());
-        return S_OK;
+        return;
     }
     if (!english_mode_ && mirror_.raw().empty() && !has_pending_key_request()) {
         const std::string punctuation_mode = settings_value("mode");
@@ -894,10 +945,10 @@ STDMETHODIMP TextService::OnKeyDown(
     }
     if (provisional_punctuation_.has_value() &&
         resolve_smart_punctuation_key(context, wparam)) {
-        return S_OK;
+        return;
     }
     if (!english_mode_ && handle_smart_punctuation_key(context, wparam)) {
-        return S_OK;
+        return;
     }
     // Direct English has no composition, no candidates and nothing for the Host
     // to decide: it echoes each letter straight back. Writing it here keeps the
@@ -933,13 +984,49 @@ STDMETHODIMP TextService::OnKeyDown(
         trace_key("key_direct_en", labelled);
         if (request_edit(context, character, character.size(), true, false,
                 nullptr, false) != EditRequestResult::failed) {
-            return S_OK;
+            return;
         }
         english_direct_ = false;
         trace_key("key_direct_refused", labelled);
     }
-    if (context != nullptr) (void)dispatch(context, map_key(wparam));
-    return S_OK;
+    // A key eaten here that reaches neither dispatch() nor one of the paths
+    // above vanishes: the application does not get it and the Host is never
+    // told. Naming the case makes that visible instead of silent.
+    if (context == nullptr) {
+        trace_key("key_dropped", "no_context");
+        return;
+    }
+    (void)dispatch(context, map_key(wparam));
+}
+
+// Runs a press the application asked about, was told we wanted, and then never
+// delivered.
+//
+// MobaXterm does this with Backspace, and only Backspace: its terminal handles
+// that one key in its own window procedure, so the message never reaches the
+// bridge that would call OnKeyDown. Having answered "yes" we are not given the
+// key, and having been answered "yes" the terminal does not act on it either.
+// The keystroke simply disappears -- the composition will not shrink and the
+// terminal shows nothing, which reads as the input method having frozen.
+//
+// Answering "no" instead is worse: the terminal would then delete its own text
+// while the composition it cannot see stays behind.
+//
+// So the press is run late, from the first callback that follows. The release
+// of the same key is the earliest of those and is what normally fires; the next
+// press is the backstop for an application that drops the release as well.
+void TextService::flush_dropped_key_down(ITfContext* const context) {
+    if (claimed_without_keydown_ == 0U) return;
+    const WPARAM missed = claimed_without_keydown_;
+    claimed_without_keydown_ = 0U;
+    char detail[32]{};
+    (void)std::snprintf(detail, sizeof(detail), "vk%02lX",
+        static_cast<unsigned long>(missed));
+    trace_key("key_down_recovered", detail);
+    ITfContext* target = context;
+    if (target == nullptr) target = active_context_;
+    if (target == nullptr) return;
+    apply_eaten_key_down(target, missed);
 }
 
 STDMETHODIMP TextService::OnTestKeyUp(
@@ -949,15 +1036,35 @@ STDMETHODIMP TextService::OnTestKeyUp(
         *eaten = FALSE;
         return S_OK;
     }
+    // A press still owed is claimed on its release as well, so that OnKeyUp is
+    // called and can run it. last_eaten_key_ cannot answer for it: that is set
+    // in the OnKeyDown which never happened.
     *eaten = context_has_sensitive_input_scope(context)
         ? FALSE
-        : ((is_shift_key(wparam) || wparam == last_eaten_key_) ? TRUE : FALSE);
+        : ((is_shift_key(wparam) || wparam == last_eaten_key_ ||
+            wparam == claimed_without_keydown_) ? TRUE : FALSE);
+    // Whether the release of a key arrives at all. It matters for a key whose
+    // press the application dropped: the release is the first callback after
+    // the missing OnKeyDown, and so the earliest place the press could be made
+    // good. If the release is dropped too, that recovery point does not exist.
+    {
+        char detail[32]{};
+        (void)std::snprintf(detail, sizeof(detail), "vk%02lX=%d",
+            static_cast<unsigned long>(wparam), *eaten != FALSE ? 1 : 0);
+        trace_key("key_up_offered", detail);
+    }
     return S_OK;
 }
 
 STDMETHODIMP TextService::OnKeyUp(
     ITfContext* const context, const WPARAM wparam, LPARAM, BOOL* const eaten) {
     if (eaten == nullptr) return E_POINTER;
+    {
+        char detail[32]{};
+        (void)std::snprintf(detail, sizeof(detail), "vk%02lX",
+            static_cast<unsigned long>(wparam));
+        trace_key("key_up", detail);
+    }
     if (is_smart_punctuation_replay()) {
         *eaten = FALSE;
         return S_OK;
@@ -965,9 +1072,14 @@ STDMETHODIMP TextService::OnKeyUp(
     if (context_has_sensitive_input_scope(context)) {
         *eaten = FALSE;
         last_eaten_key_ = 0U;
+        claimed_without_keydown_ = 0U;
         shift_toggle_.reset();
         return S_OK;
     }
+    // The usual recovery point: the release of a key whose press was dropped
+    // arrives within milliseconds of where OnKeyDown would have been, so the
+    // keystroke is made good before the user can notice it missing.
+    if (wparam == claimed_without_keydown_) flush_dropped_key_down(context);
     *eaten = (is_shift_key(wparam) || wparam == last_eaten_key_) ? TRUE : FALSE;
     if (is_shift_key(wparam) && shift_toggle_.on_shift_up(has_disallowed_modifier())) {
         toggle_input_mode(context);
@@ -2477,11 +2589,17 @@ void TextService::capture_composition_caret(
             if (owner_root == nullptr || GetWindowRect(owner_root, &owner_bounds) == FALSE) {
                 owner_bounds = RECT{};
             }
+            // All four edges of both rectangles. Printing only the top-left
+            // corner made an "-outside" verdict unreadable: the corner sat
+            // inside the window and the edge that actually failed the test was
+            // the one not shown.
             char detail[128]{};
-            (void)std::snprintf(detail, sizeof(detail), "%s%s %ld.%ld in %ld.%ld-%ld.%ld",
+            (void)std::snprintf(detail, sizeof(detail),
+                "%s%s %ld.%ld-%ld.%ld in %ld.%ld-%ld.%ld",
                 caret.has_value() ? "syscaret" : "gettextext",
                 inside_owner ? "" : "-outside",
                 static_cast<long>(rect.left), static_cast<long>(rect.top),
+                static_cast<long>(rect.right), static_cast<long>(rect.bottom),
                 static_cast<long>(owner_bounds.left), static_cast<long>(owner_bounds.top),
                 static_cast<long>(owner_bounds.right), static_cast<long>(owner_bounds.bottom));
             trace_key("caret", detail);
