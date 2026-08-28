@@ -100,6 +100,23 @@ void test_protocol_v5_accepts_integrated_candidate_visibility_messages() {
         "protocol v5 accepts TSF-integrated candidate visibility messages");
 }
 
+void test_retired_protocol_v6_is_still_accepted_on_the_wire() {
+    auto expected = sample_envelope();
+    expected.version = piinput::host_protocol_v6;
+    expected.type = piinput::HostMessageType::caret;
+    const auto encoded = piinput::encode_host_envelope(expected);
+    piinput::ProtocolError error = piinput::ProtocolError::none;
+    const auto decoded = piinput::decode_host_envelope(encoded, error);
+    // A shim is a DLL: once loaded into an application it stays until that
+    // application restarts, which users do not do because an IME updated. Drop
+    // v6 from the whitelist and every such process has its keys eaten with no
+    // reply -- typing simply stops. A published version is never withdrawn.
+    check(decoded.has_value() && decoded->version == piinput::host_protocol_v6,
+        "protocol v6 is still accepted after its only added field was retired");
+    check(piinput::host_protocol_current == piinput::host_protocol_v5,
+        "nothing sends v6 any more, because its field no longer means anything");
+}
+
 void test_decoder_rejects_untrusted_lengths_before_allocation() {
     auto envelope = sample_envelope();
     envelope.payload.assign(piinput::host_max_payload_bytes + 1U, std::byte{0x41});
@@ -133,11 +150,12 @@ void test_decoder_rejects_malformed_or_unsupported_envelopes() {
         "truncated header is rejected");
     check(error == piinput::ProtocolError::truncated_header, "truncation has a typed error");
 
-    // One past whatever ships, so this keeps meaning "unsupported" as versions
-    // are added. It was 0x06 until v6 became real and the assertion started
-    // testing that a supported version is rejected.
+    // One past the highest version still *accepted*, which is not the same as
+    // one past what ships: v6's only field was retired, so nothing sends v6 any
+    // more, but shims already loaded into running applications still do and the
+    // decoder must keep taking them.
     auto unsupported = valid;
-    unsupported[8] = std::byte{piinput::host_protocol_current + 1U};
+    unsupported[8] = std::byte{piinput::host_protocol_v6 + 1U};
     check(!piinput::decode_host_envelope(unsupported, error).has_value(),
         "unsupported protocol major version is rejected");
     check(error == piinput::ProtocolError::unsupported_version,
@@ -181,6 +199,7 @@ int main() {
     test_protocol_v3_accepts_commit_result_messages();
     test_protocol_v4_accepts_owned_candidate_caret_messages();
     test_protocol_v5_accepts_integrated_candidate_visibility_messages();
+    test_retired_protocol_v6_is_still_accepted_on_the_wire();
     test_decoder_rejects_untrusted_lengths_before_allocation();
     test_decoder_rejects_malformed_or_unsupported_envelopes();
     std::cout << "PiInput host protocol tests passed.\n";

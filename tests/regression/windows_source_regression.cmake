@@ -1254,6 +1254,18 @@ if(NOT settings_header_text MATCHES "bool show_composition")
         "between the system caret and TSF, so the verdict flipped with it and the row appeared and "
         "vanished while typing in ChatGPT")
 endif()
+file(READ "${PIINPUT_SOURCE_DIR}/include/piinput/host_protocol.h" host_protocol_header_text)
+file(READ "${PIINPUT_SOURCE_DIR}/src/host_protocol.cpp" host_protocol_source_text)
+if(NOT host_protocol_header_text MATCHES "host_protocol_v6" OR
+   NOT host_protocol_source_text MATCHES "host_protocol_v6")
+    message(FATAL_ERROR
+        "Protocol v6 must stay in the accepted-version whitelist even though nothing sends it. "
+        "The shim is a DLL that lives in the application process until that application restarts, "
+        "which users do not do because an IME updated. Removing v6 makes the Host discard those "
+        "messages whole, with no reply, so keys are eaten and no text appears until every open "
+        "application is restarted. A published version is never withdrawn -- retire the field, "
+        "keep the number")
+endif()
 file(READ "${PIINPUT_SOURCE_DIR}/src/settings.cpp" settings_source_text)
 if(NOT settings_source_text MATCHES "show_composition=true")
     message(FATAL_ERROR

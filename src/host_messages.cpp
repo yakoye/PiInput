@@ -258,7 +258,7 @@ std::optional<HostCaretUpdate> decode_host_caret_update(
     error = HostPayloadError::none;
     if (protocol_version != host_protocol_v1 && protocol_version != host_protocol_v2 &&
         protocol_version != host_protocol_v3 && protocol_version != host_protocol_v4 &&
-        protocol_version != host_protocol_v5) {
+        protocol_version != host_protocol_v5 && protocol_version != host_protocol_v6) {
         error = HostPayloadError::unknown_value;
         return std::nullopt;
     }
@@ -275,8 +275,14 @@ std::optional<HostCaretUpdate> decode_host_caret_update(
     const auto show_candidate_window = protocol_version >= host_protocol_v5
         ? reader.integer<std::uint32_t>()
         : std::optional<std::uint32_t>{1U};
+    // v6 在这里多一个 app_shows_composition。它的判据被证明不可靠，字段已经作废，
+    // 但仍然要读掉：还没重启的应用进程里跑的是 v6 的 Shim，它照旧会发。读出来不看，
+    // 也不校验取值——一个作废字段的取值不该成为拒收整条报文的理由。
+    const auto retired_app_shows_composition = protocol_version >= host_protocol_v6
+        ? reader.integer<std::uint32_t>()
+        : std::optional<std::uint32_t>{0U};
     if (!generation || !flags || !left || !top || !right || !bottom ||
-        !owner_window || !show_candidate_window) {
+        !owner_window || !show_candidate_window || !retired_app_shows_composition) {
         error = HostPayloadError::truncated;
         return std::nullopt;
     }

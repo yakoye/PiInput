@@ -150,6 +150,26 @@ void test_caret_update_round_trip_preserves_text_geometry_and_fallback() {
             owner_only->show_candidate_window,
         "protocol v4 owned caret defaults to the legacy custom candidate window");
 
+    // v6 曾在末尾多带一个 app_shows_composition。字段作废了，版本号不能作废：
+    // 用户装完更新不会把每个开着的应用都重启，那些进程里的 Shim 还在发 v6。整包
+    // 拒收的后果是键被吃掉而字打不出来，直到应用重启。
+    auto v6_payload = piinput::encode_host_caret_update(primary, piinput::host_protocol_v5);
+    for (int shift = 0; shift < 32; shift += 8) {
+        v6_payload.push_back(static_cast<std::byte>((1U >> shift) & 0xffU));
+    }
+    const auto from_v6 = piinput::decode_host_caret_update(
+        v6_payload, error, piinput::host_protocol_v6);
+    check(from_v6.has_value() && from_v6->owner_window == primary.owner_window &&
+            from_v6->left == primary.left && from_v6->bottom == primary.bottom &&
+            !from_v6->show_candidate_window,
+        "a v6 caret update still decodes after its extra field was retired");
+
+    // 作废字段的取值不该成为拒收整条报文的理由：老 Shim 发什么都得收下。
+    v6_payload.back() = static_cast<std::byte>(0x7fU);
+    check(piinput::decode_host_caret_update(v6_payload, error, piinput::host_protocol_v6)
+            .has_value(),
+        "the retired v6 field is ignored rather than validated");
+
     const piinput::HostCaretUpdate negative_monitor{
         .generation = 74U,
         .has_text_caret = true,
