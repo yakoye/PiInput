@@ -60,6 +60,7 @@ enum class Field : std::uint8_t {
     schema, default_language,
     uv_compatibility, accept_u_colon, incomplete_candidates, simplified_pinyin,
     pinyin_user_learning,
+    show_composition,
     items_per_row, visible_rows, max_items, font_size, window_height, horizontal,
     equal_key, minus_key, down_key, up_key,
     punctuation_mode, bracket_style, command_enabled, command_hotkey, middle_dot_alias,
@@ -83,7 +84,7 @@ constexpr std::array<const wchar_t*, 5U> kNone{};
 constexpr std::array<const wchar_t*, 5U> kRowKeys{
     L"下一行", L"上一行", nullptr, nullptr, nullptr};
 
-constexpr std::array<Row, 32U> kRows{{
+constexpr std::array<Row, 33U> kRows{{
     {0, Kind::choice, Field::schema, L"输入方案",
         {L"全拼", L"小鹤双拼", L"自然码", L"微软双拼", L"智能 ABC"}, 0U, 0U},
     {0, Kind::choice, Field::default_language, L"默认输入语言",
@@ -94,6 +95,7 @@ constexpr std::array<Row, 32U> kRows{{
     {0, Kind::toggle, Field::simplified_pinyin, L"简拼（全拼下只打声母）", kNone, 0U, 0U},
     {0, Kind::toggle, Field::pinyin_user_learning, L"记住用词习惯", kNone, 0U, 0U},
 
+    {1, Kind::toggle, Field::show_composition, L"候选框顶部显示正在打的字母", kNone, 0U, 0U},
     {1, Kind::number, Field::items_per_row, L"每行候选数", kNone, 5U, 9U},
     {1, Kind::number, Field::visible_rows, L"展开候选行数", kNone, 1U, 6U},
     {1, Kind::number, Field::max_items, L"候选总数上限", kNone, 9U, 180U},
@@ -864,6 +866,7 @@ void load_into_controls(AppState& state) {
             check(index, settings.pinyin.incomplete_candidates); break;
         case Field::simplified_pinyin: check(index, settings.pinyin.simplified_pinyin); break;
         case Field::pinyin_user_learning: check(index, settings.pinyin.user_learning); break;
+        case Field::show_composition: check(index, settings.candidates.show_composition); break;
         case Field::items_per_row: number(index, settings.candidates.items_per_row); break;
         case Field::visible_rows: number(index, settings.candidates.visible_rows); break;
         case Field::max_items: number(index, settings.candidates.max_items); break;
@@ -935,6 +938,7 @@ void store_from_controls(AppState& state) {
             settings.pinyin.incomplete_candidates = checked(index); break;
         case Field::simplified_pinyin: settings.pinyin.simplified_pinyin = checked(index); break;
         case Field::pinyin_user_learning: settings.pinyin.user_learning = checked(index); break;
+        case Field::show_composition: settings.candidates.show_composition = checked(index); break;
         case Field::items_per_row: settings.candidates.items_per_row = number(); break;
         case Field::visible_rows: settings.candidates.visible_rows = number(); break;
         case Field::max_items: settings.candidates.max_items = number(); break;

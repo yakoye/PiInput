@@ -433,6 +433,7 @@ bool save_all_settings_atomic(
         {"pinyin", "user_learning", boolean(settings.pinyin.user_learning)},
         {"pinyin", "prefix_beam_width", std::to_string(settings.pinyin.prefix_beam_width)},
         {"pinyin", "prefix_scan_limit", std::to_string(settings.pinyin.prefix_scan_limit)},
+        {"candidates", "show_composition", boolean(settings.candidates.show_composition)},
         {"candidates", "items_per_row", std::to_string(settings.candidates.items_per_row)},
         {"candidates", "visible_rows", std::to_string(settings.candidates.visible_rows)},
         {"candidates", "max_items", std::to_string(settings.candidates.max_items)},
