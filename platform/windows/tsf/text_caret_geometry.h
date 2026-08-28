@@ -8,6 +8,18 @@ namespace piinput::windows {
 
 [[nodiscard]] inline bool usable_text_caret_rect(const RECT& rect) noexcept {
     if (rect.right < rect.left || rect.bottom < rect.top) return false;
+    // An insertion point stands as tall as its line. A rectangle with no height
+    // is not a position the caret could be at, whatever else it looks like.
+    //
+    // MobaXterm answers GetTextExt with one fixed point of zero height, the
+    // same value on every keystroke, sitting just outside its own window at the
+    // bottom right. Taken as a caret it pinned the candidate bar to the corner
+    // of the screen for the whole session. Rejected, the bar falls through to
+    // the bottom-left of the focused window, which for a terminal is beside the
+    // prompt. Width is not tested here -- a caret drawn as a bare line
+    // legitimately reports zero width, and an over-wide extent is what
+    // caret_rect_is_plausible is for.
+    if (rect.bottom == rect.top) return false;
     return rect.left != 0 || rect.top != 0 || rect.right != 0 || rect.bottom != 0;
 }
 

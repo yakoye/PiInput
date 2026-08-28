@@ -670,6 +670,31 @@ void test_text_caret_geometry_uses_composition_only_as_a_valid_fallback() {
         "zero rectangles never masquerade as a text caret");
 }
 
+void test_a_caret_with_no_height_is_not_a_caret() {
+    // MobaXterm's exact answer: one fixed point, zero height, returned
+    // unchanged on every keystroke, sitting just outside its own window at the
+    // bottom right. Accepted as a caret it pinned the candidate bar to the
+    // corner of the screen for a whole session.
+    const RECT flat{1919, 1019, 1920, 1019};
+    check(!piinput::windows::usable_text_caret_rect(flat),
+        "a rectangle with no height is not a position the caret could be at");
+    check(!piinput::windows::caret_rect_is_plausible(flat),
+        "the flat rectangle is rejected by the narrower test as well");
+    const RECT real{770, 212, 780, 232};
+    check(piinput::windows::usable_text_caret_rect(real) &&
+            piinput::windows::caret_rect_is_plausible(real),
+        "the system caret the same application reports is still accepted");
+    // A caret drawn as a bare line has no width, and that is not the same
+    // defect: only height is required.
+    const RECT bar{770, 212, 770, 232};
+    check(piinput::windows::usable_text_caret_rect(bar) &&
+            piinput::windows::caret_rect_is_plausible(bar),
+        "a zero-width caret bar remains usable");
+    const RECT flat_only{1919, 1019, 1920, 1019};
+    check(!piinput::windows::choose_text_caret_geometry(&flat_only, &flat_only).has_value(),
+        "no source offering a flat rectangle produces a caret");
+}
+
 void test_text_caret_dpi_normalization_does_not_double_scale_per_monitor_apps() {
     const RECT reported{18, 24, 20, 48};
     const RECT converted{27, 36, 30, 72};
@@ -714,6 +739,7 @@ int main() {
     test_presenter_identity_keeps_same_session_number_isolated_per_process();
     test_text_caret_geometry_prefers_the_actual_selection_over_composition_extent();
     test_text_caret_geometry_uses_composition_only_as_a_valid_fallback();
+    test_a_caret_with_no_height_is_not_a_caret();
     test_text_caret_dpi_normalization_does_not_double_scale_per_monitor_apps();
     std::cout << "PiInput candidate presenter tests passed.\n";
     return 0;
