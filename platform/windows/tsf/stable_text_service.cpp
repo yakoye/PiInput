@@ -2619,6 +2619,30 @@ void TextService::capture_composition_caret(
         // knowing that it guessed is the difference between "the position is
         // wrong" and "there was no position to have".
         trace_key("caret", "none");
+        // What the application says its text area is. GetScreenExt asks a
+        // different question from GetTextExt -- not "where is this character"
+        // but "where is the surface text is drawn on" -- and an application
+        // that cannot answer the first may still answer the second. That
+        // rectangle is what the bar should be anchored inside when there is no
+        // caret, instead of guessing among window rectangles: MobaXterm reports
+        // a zero-size list box as its focused window, so the guess has nothing
+        // good to pick from.
+        //
+        // Measured before it is relied on. Sending it to the Host means a new
+        // protocol field, and a field is only worth adding once the value is
+        // known to be worth carrying.
+        RECT screen_ext{};
+        const HRESULT ext = view->GetScreenExt(&screen_ext);
+        char detail[96]{};
+        if (FAILED(ext)) {
+            (void)std::snprintf(detail, sizeof(detail), "failed:0x%08lX",
+                static_cast<unsigned long>(ext));
+        } else {
+            (void)std::snprintf(detail, sizeof(detail), "%ld.%ld-%ld.%ld",
+                static_cast<long>(screen_ext.left), static_cast<long>(screen_ext.top),
+                static_cast<long>(screen_ext.right), static_cast<long>(screen_ext.bottom));
+        }
+        trace_key("screen_ext", detail);
     }
     view->Release();
 }

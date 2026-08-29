@@ -26,6 +26,11 @@ constexpr wchar_t kCandidateClass[] = L"PiInputTsfCandidateWindow";
 // window rectangle includes a margin that paints nothing, so clearing it
 // exactly leaves the bar looking detached from the surface it belongs to.
 constexpr int kObstructionSink = 10;
+// How far in from the left edge of a text area the bar is placed when there is
+// no caret to place it at. The insertion point in a terminal sits after a
+// prompt, so column zero is never where the user is looking, and a bar flush
+// against the window frame reads as broken rather than as approximate.
+constexpr int kFallbackAnchorInset = 24;
 constexpr int kPadding = 8;
 constexpr int kCompactWindowHeight = 40;
 constexpr int kRowHeight = 30;
@@ -468,29 +473,59 @@ void CandidateWindow::show_near_caret(const std::uint64_t owner_window) {
     // keeps no system caret either -- MobaXterm is like this, and so is much
     // of what is built on a custom-drawn terminal widget.
     //
-    // Anchor to the bottom-left of whatever has focus. It is a guess, but a
-    // guess inside the right window, and for a terminal it is close to right:
-    // the prompt is at the bottom. The fallback used to be GetCursorPos, which
-    // put the candidates wherever the mouse happened to be resting -- another
-    // monitor, if that is where it was left.
+    // Anchor near the bottom-left of the text area. It is a guess, but a guess
+    // inside the right window, and for a terminal it is close to right: the
+    // prompt is at the bottom.
+    //
+    // Which window that is takes care. MobaXterm reports its session list as
+    // the focused window, and that list has a client area of zero size; the
+    // owner and the top-level window are the ones with a real text area behind
+    // them. A window is only accepted here if its client area could hold a line
+    // of text at all, and the search widens outwards until one does.
     const HWND focused = has_thread_info && info.hwndFocus != nullptr
         ? info.hwndFocus
         : foreground;
-    RECT client{};
-    if (focused != nullptr && GetClientRect(focused, &client) != FALSE &&
-        client.right > client.left && client.bottom > client.top) {
-        POINT bottom_left{client.left, client.bottom};
-        if (ClientToScreen(focused, &bottom_left) != FALSE) {
-            anchor = {bottom_left.x, bottom_left.y, bottom_left.x, bottom_left.y};
-            show_at_anchor(anchor, 4, false, owner_window);
-            return;
+    const HWND candidates[] = {
+        focused,
+        focused == nullptr ? nullptr : GetAncestor(focused, GA_ROOT),
+        owner_window_,
+        foreground,
+    };
+    for (const HWND window : candidates) {
+        if (window == nullptr) continue;
+        RECT client{};
+        if (GetClientRect(window, &client) == FALSE) continue;
+        // Narrower than a few characters or shorter than a line is not a text
+        // area, whatever the application calls it.
+        if (client.right - client.left < scaled(64) ||
+            client.bottom - client.top < scaled(16)) {
+            continue;
         }
+        // Not flush against the left edge. The insertion point in a terminal
+        // sits after a prompt, never at column zero, and a bar hard against the
+        // frame reads as misplaced rather than as approximate.
+        const int inset = (std::min)(
+            scaled(kFallbackAnchorInset),
+            static_cast<int>((client.right - client.left) / 8));
+        POINT bottom_left{client.left + inset, client.bottom};
+        if (ClientToScreen(window, &bottom_left) == FALSE) continue;
+        anchor = {bottom_left.x, bottom_left.y, bottom_left.x, bottom_left.y};
+        show_at_anchor(anchor, 4, false, owner_window);
+        return;
     }
 
-    POINT point{};
-    GetCursorPos(&point);
-    anchor = {point.x, point.y, point.x, point.y};
-    show_at_anchor(anchor, 20, false, owner_window);
+    // Nothing on screen to anchor to. GetCursorPos is deliberately not the
+    // answer here: the mouse has nothing to do with where text is being typed,
+    // so the bar would move whenever the mouse did and never when the caret
+    // did -- and if the mouse was left on another monitor, that is where the
+    // candidates would appear. Anchoring to the work area at least keeps them
+    // somewhere predictable.
+    RECT work_area{};
+    if (SystemParametersInfoW(SPI_GETWORKAREA, 0U, &work_area, 0U) != FALSE) {
+        anchor = {work_area.left + scaled(kFallbackAnchorInset), work_area.bottom,
+                  work_area.left + scaled(kFallbackAnchorInset), work_area.bottom};
+        show_at_anchor(anchor, 4, false, owner_window);
+    }
 }
 
 void CandidateWindow::show_at_text_caret(
