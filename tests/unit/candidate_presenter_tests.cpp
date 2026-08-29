@@ -670,6 +670,47 @@ void test_text_caret_geometry_uses_composition_only_as_a_valid_fallback() {
         "zero rectangles never masquerade as a text caret");
 }
 
+void test_the_no_caret_anchor_lands_where_a_terminal_prompt_is() {
+    // MobaXterm's own client area, measured from outside the process while it
+    // had focus. Its session sidebar ends about a quarter of the way across and
+    // the prompt sits above a status strip, so neither corner is where the user
+    // is looking.
+    const RECT moba{275, 95, 1535, 791};
+    const POINT spot = piinput::windows::fallback_candidate_anchor(moba, 96U);
+    // 1260 wide, so a quarter would be 315 and the 300px cap is what applies --
+    // which is where that window's sidebar ends.
+    check(spot.x == 275 + 300, "clears the session sidebar");
+    // 696 tall, so 18% is 125 and the cap does not apply.
+    check(spot.y == 791 - 125, "sits above the status strip");
+    check(spot.x > moba.left && spot.x < moba.right &&
+            spot.y > moba.top && spot.y < moba.bottom,
+        "the anchor stays inside the window it was derived from");
+
+    // A wide window must not push the bar a quarter of the way across a 4K
+    // screen: the sidebar it is clearing does not grow with the window.
+    const RECT wide{0, 0, 3840, 2160};
+    const POINT capped = piinput::windows::fallback_candidate_anchor(wide, 96U);
+    check(capped.x == 300, "the horizontal inset is capped in pixels");
+    check(capped.y == 2160 - 150, "the vertical lift is capped in pixels");
+
+    // And a small window must not have the whole cap applied to it.
+    const RECT small{10, 20, 410, 220};
+    const POINT modest = piinput::windows::fallback_candidate_anchor(small, 96U);
+    check(modest.x == 10 + 100 && modest.y == 220 - 36,
+        "a small window scales down instead of taking the cap");
+
+    // DPI scales the caps, not the percentages.
+    const POINT dense = piinput::windows::fallback_candidate_anchor(wide, 192U);
+    check(dense.x == 600 && dense.y == 2160 - 300, "the caps follow the DPI");
+
+    // A degenerate rectangle must still produce a point rather than a
+    // nonsensical one: MobaXterm reports zero-size windows in several places.
+    const RECT empty{500, 400, 500, 400};
+    const POINT degenerate = piinput::windows::fallback_candidate_anchor(empty, 96U);
+    check(degenerate.x == 500 && degenerate.y == 400,
+        "a zero-size rectangle collapses to its own corner rather than off-screen");
+}
+
 void test_a_caret_with_no_height_is_not_a_caret() {
     // MobaXterm's exact answer: one fixed point, zero height, returned
     // unchanged on every keystroke, sitting just outside its own window at the
@@ -740,6 +781,7 @@ int main() {
     test_text_caret_geometry_prefers_the_actual_selection_over_composition_extent();
     test_text_caret_geometry_uses_composition_only_as_a_valid_fallback();
     test_a_caret_with_no_height_is_not_a_caret();
+    test_the_no_caret_anchor_lands_where_a_terminal_prompt_is();
     test_text_caret_dpi_normalization_does_not_double_scale_per_monitor_apps();
     std::cout << "PiInput candidate presenter tests passed.\n";
     return 0;

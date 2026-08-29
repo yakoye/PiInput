@@ -40,6 +40,23 @@ namespace piinput::windows {
 
 [[nodiscard]] int limit_candidate_window_width(int desired_width, UINT dpi) noexcept;
 
+// Where to put the bar inside a window whose caret cannot be known. Terminals
+// are the case: MobaXterm answers both GetTextExt and GetScreenExt with a fixed
+// 1x1 rectangle and keeps no system caret, so there is no position to be had --
+// only a window to put the bar somewhere sensible inside.
+//
+// Not the corner. A bar flush against the frame reads as broken rather than as
+// approximate, and the corner is behind the session sidebar and the status
+// strip anyway. Measured against MobaXterm's own layout: the terminal text
+// starts about a quarter of the way across, and the prompt sits roughly 150px
+// above the bottom edge.
+//
+// Both offsets are capped in absolute pixels as well as proportionally. The
+// sidebar is a fixed-width panel, so a pure percentage overshoots it badly on a
+// large screen; the prompt sits at the bottom whatever the window height, so a
+// pure percentage rises away from it on a tall one.
+[[nodiscard]] POINT fallback_candidate_anchor(const RECT& client, UINT dpi) noexcept;
+
 [[nodiscard]] int candidate_window_height(
     std::size_t visible_rows,
     UINT dpi,

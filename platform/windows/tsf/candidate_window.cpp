@@ -26,11 +26,18 @@ constexpr wchar_t kCandidateClass[] = L"PiInputTsfCandidateWindow";
 // window rectangle includes a margin that paints nothing, so clearing it
 // exactly leaves the bar looking detached from the surface it belongs to.
 constexpr int kObstructionSink = 10;
-// How far in from the left edge of a text area the bar is placed when there is
-// no caret to place it at. The insertion point in a terminal sits after a
-// prompt, so column zero is never where the user is looking, and a bar flush
-// against the window frame reads as broken rather than as approximate.
-constexpr int kFallbackAnchorInset = 24;
+// Where the bar goes inside a window whose caret cannot be known. Measured
+// against MobaXterm's own layout: its terminal text begins about a quarter of
+// the way across, behind a fixed-width session sidebar, and the prompt sits
+// roughly 150px above the bottom edge, above the status strip.
+//
+// Capped in pixels as well as proportionally: the sidebar does not grow with
+// the window, so a pure percentage overshoots it on a large screen, and the
+// prompt stays at the bottom however tall the window is.
+constexpr int kFallbackAnchorPercentX = 25;
+constexpr int kFallbackAnchorMaxX = 300;
+constexpr int kFallbackAnchorPercentY = 18;
+constexpr int kFallbackAnchorMaxY = 150;
 constexpr int kPadding = 8;
 constexpr int kCompactWindowHeight = 40;
 constexpr int kRowHeight = 30;
@@ -52,6 +59,17 @@ int limit_candidate_window_width(const int desired_width, const UINT dpi) noexce
     const int maximum = MulDiv(
         kMaximumWindowWidth, static_cast<int>((std::max)(dpi, 96U)), 96);
     return (std::clamp)(desired_width, 1, (std::max)(maximum, 1));
+}
+
+POINT fallback_candidate_anchor(const RECT& client, const UINT dpi) noexcept {
+    const int scale = static_cast<int>((std::max)(dpi, 96U));
+    const int width = (std::max)(static_cast<int>(client.right - client.left), 0);
+    const int height = (std::max)(static_cast<int>(client.bottom - client.top), 0);
+    const int inset_x = (std::min)(
+        width * kFallbackAnchorPercentX / 100, MulDiv(kFallbackAnchorMaxX, scale, 96));
+    const int lift_y = (std::min)(
+        height * kFallbackAnchorPercentY / 100, MulDiv(kFallbackAnchorMaxY, scale, 96));
+    return POINT{client.left + inset_x, client.bottom - lift_y};
 }
 
 int candidate_window_height(
@@ -501,15 +519,9 @@ void CandidateWindow::show_near_caret(const std::uint64_t owner_window) {
             client.bottom - client.top < scaled(16)) {
             continue;
         }
-        // Not flush against the left edge. The insertion point in a terminal
-        // sits after a prompt, never at column zero, and a bar hard against the
-        // frame reads as misplaced rather than as approximate.
-        const int inset = (std::min)(
-            scaled(kFallbackAnchorInset),
-            static_cast<int>((client.right - client.left) / 8));
-        POINT bottom_left{client.left + inset, client.bottom};
-        if (ClientToScreen(window, &bottom_left) == FALSE) continue;
-        anchor = {bottom_left.x, bottom_left.y, bottom_left.x, bottom_left.y};
+        POINT spot = fallback_candidate_anchor(client, dpi_);
+        if (ClientToScreen(window, &spot) == FALSE) continue;
+        anchor = {spot.x, spot.y, spot.x, spot.y};
         show_at_anchor(anchor, 4, false, owner_window);
         return;
     }
@@ -522,8 +534,8 @@ void CandidateWindow::show_near_caret(const std::uint64_t owner_window) {
     // somewhere predictable.
     RECT work_area{};
     if (SystemParametersInfoW(SPI_GETWORKAREA, 0U, &work_area, 0U) != FALSE) {
-        anchor = {work_area.left + scaled(kFallbackAnchorInset), work_area.bottom,
-                  work_area.left + scaled(kFallbackAnchorInset), work_area.bottom};
+        const POINT spot = fallback_candidate_anchor(work_area, dpi_);
+        anchor = {spot.x, spot.y, spot.x, spot.y};
         show_at_anchor(anchor, 4, false, owner_window);
     }
 }
