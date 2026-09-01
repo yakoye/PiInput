@@ -125,16 +125,32 @@ inline void restore_machine_com_server(const std::wstring& previous) {
     }
 }
 
-inline constexpr std::array<const GUID*, 5U> kPiInputTsfCategories = {
+inline constexpr std::array<const GUID*, 6U> kPiInputTsfCategories = {
     // Keyboard makes this a TIP; the capability categories cover the taskbar,
     // UI-element/immersive hosts and the 中/英 conversion-mode compartment.
-    // COMLESS and SECUREMODE are intentionally absent because PiInput does not
-    // implement those activation contracts.
     &GUID_TFCAT_TIP_KEYBOARD,
     &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
     &GUID_TFCAT_TIPCAP_UIELEMENTENABLED,
     &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
     &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT,
+    // COMLESS is what lets TSF load this text service on a UI thread that is a
+    // multi-threaded apartment. There, activating an Apartment-model class
+    // through COM would construct it on some other thread entirely, which is
+    // useless for a text service that has to run where the window is -- so TSF
+    // skips any TIP that has not said it can be loaded without COM. Silently:
+    // ActivateProfile still returns S_OK and the DLL simply never loads.
+    //
+    // Measured in an otherwise identical MTA process: Sogou, WeType and Weasel
+    // all loaded and PiInput did not, and those three declare this category
+    // while PiInput did not. It costs nothing to declare, because COM-less
+    // activation uses DllGetClassObject -- already this DLL's entry point, and
+    // it only constructs a class factory. Nothing on the input path creates COM
+    // objects; the CoCreateInstance calls in this file belong to registration.
+    //
+    // SECUREMODE stays absent, and that one is a real decision rather than an
+    // oversight: it would put PiInput on the secure desktop, where the UAC
+    // prompt and the lock screen take their input.
+    &GUID_TFCAT_TIPCAP_COMLESS,
 };
 
 inline HRESULT category_is_registered(

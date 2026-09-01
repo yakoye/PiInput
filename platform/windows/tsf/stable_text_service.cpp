@@ -91,9 +91,16 @@ public:
                     if (SUCCEEDED(input_scope->GetInputScopes(&scopes, &count)) &&
                         scopes != nullptr) {
                         for (UINT index = 0U; index < count; ++index) {
-                            if (sensitive_input_scope(scopes[index])) {
+                            if (input_scope_refuses_conversion(scopes[index])) {
                                 sensitive_ = true;
-                                break;
+                            }
+                            // Kept for the trace. Which scope an application
+                            // reports is the whole answer when typing stops
+                            // working in one field and not another, and it is
+                            // not otherwise visible from outside the process.
+                            if (scope_count_ < kTracedScopes) {
+                                scopes_[scope_count_++] =
+                                    static_cast<int>(scopes[index]);
                             }
                         }
                         CoTaskMemFree(scopes);
@@ -110,14 +117,20 @@ public:
 
     [[nodiscard]] bool resolved() const noexcept { return resolved_; }
     [[nodiscard]] bool sensitive() const noexcept { return sensitive_; }
+    [[nodiscard]] const int* scopes() const noexcept { return scopes_; }
+    [[nodiscard]] UINT scope_count() const noexcept { return scope_count_; }
 
 private:
     ~InputScopeQuerySession() { context_->Release(); }
+
+    static constexpr UINT kTracedScopes = 4U;
 
     std::atomic<ULONG> ref_count_{1U};
     ITfContext* context_{};
     bool resolved_{};
     bool sensitive_{};
+    int scopes_[kTracedScopes]{};
+    UINT scope_count_{};
 };
 
 class SurroundingTextQuerySession final : public ITfEditSession {
@@ -927,7 +940,15 @@ STDMETHODIMP TextService::OnKeyDown(
             static_cast<unsigned long>(wparam));
         trace_key("key_down", detail);
     }
+    // Why a key was not taken. There are five ways to refuse one and none of
+    // them said so, which left "PiInput stopped converting" looking the same
+    // whichever it was -- and three of the five are sticky, so the difference
+    // is the whole diagnosis.
     if (is_smart_punctuation_replay()) {
+        // GetMessageExtraInfo is per-thread and holds its value until another
+        // message replaces it. If it is still carrying the replay tag when a
+        // real keystroke arrives, every key is refused from here on.
+        trace_key("key_refused", "replay_tag");
         *eaten = FALSE;
         return S_OK;
     }
@@ -942,6 +963,7 @@ STDMETHODIMP TextService::OnKeyDown(
         return S_OK;
     }
     if (sensitive_context_ && same_com_identity(active_context_, context)) {
+        trace_key("key_refused", "sensitive_scope");
         *eaten = FALSE;
         last_eaten_key_ = 0U;
         shift_toggle_.reset();
@@ -953,7 +975,23 @@ STDMETHODIMP TextService::OnKeyDown(
     }
     const bool consume = should_eat_key(wparam);
     *eaten = consume ? TRUE : FALSE;
-    if (!consume) return S_OK;
+    if (!consume) {
+        // Which of should_eat_key's reasons applied. The two modifier ones are
+        // the dangerous pair: a modifier the thread believes is still held does
+        // not time out, so every letter after it reaches the application as
+        // Latin text while the indicator still reads 中.
+        const char* reason = "not_wanted";
+        if (has_disallowed_modifier()) {
+            reason = "modifier_held";
+        } else if (is_ascii_letter(wparam)) {
+            const bool queue_ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+            const bool physical_ctrl = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+            reason = queue_ctrl && physical_ctrl ? "ctrl_both"
+                : (queue_ctrl ? "ctrl_queue_only" : "ctrl_physical_only");
+        }
+        trace_key("key_refused", reason);
+        return S_OK;
+    }
     // The application delivered the press it was told we wanted, so there is
     // nothing left to make good.
     claimed_without_keydown_ = 0U;
@@ -1694,6 +1732,17 @@ bool TextService::context_has_sensitive_input_scope(
         client_id_, session, TF_ES_SYNC | TF_ES_READ, &session_result);
     const bool sensitive = SUCCEEDED(request_result) && SUCCEEDED(session_result) &&
         session->resolved() && session->sensitive();
+    if (session->scope_count() != 0U) {
+        char detail[64]{};
+        int written = std::snprintf(detail, sizeof(detail), "%s:",
+            sensitive ? "refuse" : "allow");
+        for (UINT index = 0U; index < session->scope_count() && written > 0 &&
+                 static_cast<std::size_t>(written) < sizeof(detail); ++index) {
+            written += std::snprintf(detail + written, sizeof(detail) - written,
+                "%d ", session->scopes()[index]);
+        }
+        trace_key("input_scope", detail);
+    }
     session->Release();
     return sensitive;
 }

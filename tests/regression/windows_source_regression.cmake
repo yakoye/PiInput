@@ -865,7 +865,34 @@ foreach(sensitive_scope_token IN ITEMS
         "${sensitive_scope_token}" sensitive_scope_position)
     if(sensitive_scope_position LESS 0)
         message(FATAL_ERROR
-            "Stable TSF Shim must bypass Host/candidate/learning paths for ${sensitive_scope_token}")
+            "Stable TSF Shim must recognise the input scope ${sensitive_scope_token}")
+    endif()
+endforeach()
+# Recognising a scope and refusing input are different things, and conflating
+# them is what broke Chrome's tab-rename box: IS_PRIVATE marks text that must
+# not be remembered, not a field that refuses input, and treating it as a
+# password meant every letter reached the application as Latin text while the
+# indicator still read 中. Only the secret-entry scopes decline keystrokes.
+string(REGEX MATCH
+    "input_scope_refuses_conversion[^{]*{[^}]*}"
+    refuses_conversion_body "${input_scope_policy_text}")
+if(refuses_conversion_body STREQUAL "")
+    message(FATAL_ERROR "input_scope_refuses_conversion must exist and be readable")
+endif()
+if(refuses_conversion_body MATCHES "IS_PRIVATE")
+    message(FATAL_ERROR
+        "IS_PRIVATE must not refuse keystrokes: it means do not remember this text, "
+        "not do not accept it. Chrome puts it on ordinary textfields")
+endif()
+foreach(secret_scope_token IN ITEMS
+        "IS_PASSWORD"
+        "IS_NUMERIC_PASSWORD"
+        "IS_NUMERIC_PIN"
+        "IS_ALPHANUMERIC_PIN")
+    if(NOT refuses_conversion_body MATCHES "${secret_scope_token}")
+        message(FATAL_ERROR
+            "${secret_scope_token} must still refuse keystrokes: converting in a secret "
+            "field would show candidates for it and commit converted text into it")
     endif()
 endforeach()
 math(EXPR activate_length "${deactivate_start} - ${activate_start}")
@@ -1051,6 +1078,17 @@ endif()
 
 if(NOT machine_registration_text MATCHES "GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT")
     message(FATAL_ERROR "PiInput must declare Windows system-tray compatibility")
+endif()
+if(NOT machine_registration_text MATCHES "GUID_TFCAT_TIPCAP_COMLESS")
+    message(FATAL_ERROR
+        "PiInput must declare COM-less activation. Without it TSF will not load the text service "
+        "into a UI thread that is a multi-threaded apartment -- silently, with ActivateProfile "
+        "still returning S_OK -- and no Chinese can be typed anywhere in such an application")
+endif()
+if(machine_registration_text MATCHES "GUID_TFCAT_TIPCAP_SECUREMODE")
+    message(FATAL_ERROR
+        "PiInput must not declare secure-mode support: that puts it on the secure desktop, where "
+        "the UAC prompt and the lock screen take their input")
 endif()
 
 foreach(machine_com_token IN ITEMS
