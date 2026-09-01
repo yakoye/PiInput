@@ -859,9 +859,34 @@ STDMETHODIMP TextService::OnTestKeyDown(
     // owed from an earlier key is run before this one is judged, so the two
     // cannot arrive out of order.
     flush_dropped_key_down(context);
+    // Shift is a chord here, not a tap -- and this is the only place that can
+    // know it. OnKeyDown runs only for keys PiInput claims, so a chord built on
+    // a key it declines was invisible to the toggle: Shift+Insert, Shift+Delete
+    // and Shift+arrow to select text all reached the Shift release looking like
+    // a bare tap, and flipped the input mode. OnTestKeyDown is asked about every
+    // key, claimed or not, which is what makes the chord observable.
+    //
+    // note_chord_key records and returns nothing, so a probe -- which TSF may
+    // repeat, or never follow with a real event -- cannot decide to switch
+    // modes here. That is what keeps this callback free of side effects.
+    if (!is_shift_key(wparam) && shift_is_down()) shift_toggle_.note_chord_key();
     const bool sensitive = context != nullptr && sensitive_context_ &&
         same_com_identity(active_context_, context);
-    *eaten = sensitive ? FALSE : (should_eat_key(wparam) ? TRUE : FALSE);
+    // Nothing to type into. A key claimed here with no context behind it is
+    // eaten and then dropped -- the application never sees it and the Host is
+    // never told -- which is the worst of both: the field stays empty and the
+    // user has no way to tell an input method from a broken keyboard. Letting
+    // it through at least types the letter, the way it would with no input
+    // method installed at all.
+    //
+    // active_context_ is deliberately not used as a stand-in. It belongs to
+    // whichever window was focused before, and writing there would put the text
+    // in a different field from the one being looked at.
+    const bool nowhere_to_put_it = context == nullptr;
+    *eaten = (sensitive || nowhere_to_put_it)
+        ? FALSE
+        : (should_eat_key(wparam) ? TRUE : FALSE);
+    if (nowhere_to_put_it) trace_key("key_declined", "no_context");
     // Claimed but not yet delivered. OnKeyDown clears this the moment the
     // application hands the press over, which is what almost every
     // application does; what remains set is a press that was dropped.
@@ -907,6 +932,15 @@ STDMETHODIMP TextService::OnKeyDown(
         return S_OK;
     }
     if (context != nullptr) (void)bind_context(context);
+    // Same reasoning as OnTestKeyDown: a key with no context behind it can only
+    // be dropped, and dropping is worse than never claiming it.
+    if (context == nullptr) {
+        *eaten = FALSE;
+        last_eaten_key_ = 0U;
+        claimed_without_keydown_ = 0U;
+        trace_key("key_declined", "no_context");
+        return S_OK;
+    }
     if (sensitive_context_ && same_com_identity(active_context_, context)) {
         *eaten = FALSE;
         last_eaten_key_ = 0U;

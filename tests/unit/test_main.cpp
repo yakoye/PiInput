@@ -771,6 +771,29 @@ void test_shift_toggle_state() {
     chord.on_shift_down();
     check(chord.on_shift_up(), "while a lone tap afterwards still toggles");
 
+    // Shift+Insert to paste, Shift+Delete to cut, Shift+arrow to select. None of
+    // those keys are claimed by PiInput, so applications that only deliver
+    // claimed keys never report them -- and the Shift release then read as a
+    // bare tap and flipped the input mode mid-paste. note_chord_key is what the
+    // probe callback can record instead.
+    piinput::ShiftToggleState unclaimed_chord;
+    unclaimed_chord.on_shift_down();
+    unclaimed_chord.note_chord_key();
+    check(!unclaimed_chord.on_shift_up(),
+        "Shift+an unclaimed key is a chord, not a tap, and must not toggle");
+    unclaimed_chord.on_shift_down();
+    check(unclaimed_chord.on_shift_up(),
+        "and a lone Shift tap after it still toggles");
+
+    // A probe may be repeated for one keystroke, or never followed by the real
+    // event. Recording twice must mean the same as recording once.
+    piinput::ShiftToggleState repeated_probe;
+    repeated_probe.on_shift_down();
+    repeated_probe.note_chord_key();
+    repeated_probe.note_chord_key();
+    repeated_probe.note_chord_key();
+    check(!repeated_probe.on_shift_up(), "repeated probes decide nothing extra");
+
     piinput::ShiftToggleState missing_down;
     check(missing_down.on_shift_up(),
         "a standalone Shift release recovers when the host omitted KeyDown");

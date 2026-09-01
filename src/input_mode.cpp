@@ -24,6 +24,16 @@ bool ShiftToggleState::on_other_key_down(const bool shift_still_down) noexcept {
     return toggle;
 }
 
+void ShiftToggleState::note_chord_key() noexcept {
+    // Deliberately the shift_still_down branch of on_other_key_down, with the
+    // return value removed so no caller can turn an observation into a switch.
+    if (!pressed_) {
+        suppress_unmatched_release_ = true;
+        return;
+    }
+    used_as_modifier_ = true;
+}
+
 bool ShiftToggleState::on_shift_up(const bool modifier_down) noexcept {
     // A chord, not a tap. This covers both the ordinary Ctrl+Shift press and the
     // case where the input-method switch happened mid-chord and this method was

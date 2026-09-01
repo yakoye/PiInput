@@ -887,8 +887,23 @@ if(key_down_start LESS 0 OR test_key_up_start LESS 0 OR
 endif()
 math(EXPR test_key_down_length "${key_down_start} - ${test_key_start}")
 string(SUBSTRING "${text_service_text}" ${test_key_start} ${test_key_down_length} test_key_down_text)
+# OnTestKeyDown is a probe: TSF may call it more than once for a keystroke, and
+# may never follow it with the real event. Anything that decides or changes what
+# the user sees therefore has to happen elsewhere.
+#
+# shift_toggle_.note_chord_key is the one exception and is listed by name rather
+# than by omission. It records that a key went down while Shift was held, and
+# returns nothing, so it cannot decide to switch modes; setting the same flag
+# twice is the same as setting it once. It has to be here because some
+# applications make no other callback for a key they will not hand over --
+# MobaXterm asks about every key and delivers only the claimed ones, which left
+# Shift+Insert, Shift+Delete and Shift+arrow looking like bare Shift taps. The
+# state-changing entry points stay forbidden.
 foreach(forbidden_probe_call IN ITEMS
-        "shift_toggle_"
+        "shift_toggle_.on_other_key_down"
+        "shift_toggle_.on_shift_down"
+        "shift_toggle_.on_shift_up"
+        "shift_toggle_.reset"
         "ensure_engine_loaded_for_key"
         "navigate_chinese_rows"
         "candidate_grid_.move_row"
