@@ -153,9 +153,10 @@ void layout_page(WizardState& state) {
     std::wstring body = text.body;
     std::wstring detail;
     if (state.page == Page::location && state.context != nullptr) {
-        detail = L"程序文件\n" + state.context->program_root +
-            L"\n\n用户设置和词库\n" + state.context->user_data +
-            L"\n\n安装过程中 Windows 会请求一次管理员权限，用来把输入法入口注册到"
+        // 多行 EDIT 只认 \r\n。只给 \n 会把每一段首尾接在一起，路径和正文连成一片。
+        detail = L"程序文件\r\n" + state.context->program_root +
+            L"\r\n\r\n用户设置和词库\r\n" + state.context->user_data +
+            L"\r\n\r\n安装过程中 Windows 会请求一次管理员权限，用来把输入法入口注册到"
             L"系统。那一步只写系统范围的输入法注册信息；你的设置和词库始终留在"
             L"当前账户下，卸载时默认保留。";
     } else if (state.page == Page::failed) {
@@ -167,6 +168,17 @@ void layout_page(WizardState& state) {
 
     const bool progress_page = state.page == Page::progress;
     const bool finished_page = state.page == Page::finished;
+    // 正文框按有没有 detail 伸缩。固定高度装不下安全提示那一页——它有十几行，
+    // 被裁在半句话上，而被裁掉的恰好是「智能应用控制关掉之后不可逆」这种必须读到
+    // 的内容。
+    constexpr int kBodyTop = 74;
+    constexpr int kBodyTall = 318;
+    constexpr int kBodyShort = 86;
+    constexpr int kDetailTop = kBodyTop + kBodyShort + 10;
+    SetWindowPos(state.body, nullptr, kContentLeft, kBodyTop, kContentWidth,
+        detail.empty() ? kBodyTall : kBodyShort, SWP_NOZORDER);
+    SetWindowPos(state.detail, nullptr, kContentLeft, kDetailTop, kContentWidth,
+        kBodyTop + kBodyTall - kDetailTop, SWP_NOZORDER);
     ShowWindow(state.detail, detail.empty() ? SW_HIDE : SW_SHOW);
     ShowWindow(state.progress, progress_page ? SW_SHOW : SW_HIDE);
     ShowWindow(state.progress_text, progress_page ? SW_SHOW : SW_HIDE);
@@ -179,6 +191,9 @@ void layout_page(WizardState& state) {
     ShowWindow(state.back,
         state.page == Page::progress || finished_page || state.page == Page::failed
             ? SW_HIDE : SW_SHOW);
+    // 「下一步」在每一页都在，只有安装进行中不可按。它必须显式 Show：控件建出来
+    // 时没有 WS_VISIBLE，光 Enable 是看不见的。
+    ShowWindow(state.next, SW_SHOW);
     EnableWindow(state.next, !progress_page);
     const wchar_t* next_label = L"下一步";
     if (state.page == Page::location) next_label = upgrade ? L"开始升级" : L"开始安装";

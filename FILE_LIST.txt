@@ -298,6 +298,7 @@ docs/release_notes_v0.8.3.md
 docs/release_notes_v0.8.4.md
 docs/release_notes_v0.8.5.md
 docs/release_notes_v0.8.6.md
+docs/release_notes_v0.9.0.md
 docs/superpowers/plans/2026-08-26-中文模式英文候选.md
 docs/superpowers/specs/2026-08-26-中文模式英文候选设计.md
 docs/TSF_DEVELOPER_TEST.md
@@ -309,6 +310,7 @@ docs/v0.8.3安装、使用与测试.md
 docs/v0.8.4安装、使用与测试.md
 docs/v0.8.5安装、使用与测试.md
 docs/v0.8.6安装、使用与测试.md
+docs/v0.9.0安装、使用与测试.md
 docs/VERIFICATION_v0.7.15.md
 docs/VERIFICATION_v0.7.16.md
 docs/VERIFICATION_v0.8.0.md
@@ -318,6 +320,7 @@ docs/VERIFICATION_v0.8.3.md
 docs/VERIFICATION_v0.8.4.md
 docs/VERIFICATION_v0.8.5.md
 docs/VERIFICATION_v0.8.6.md
+docs/VERIFICATION_v0.9.0.md
 docs/WORKSPACE_LAYOUT.md
 docs/三个长文本打字测试_v0.7.15.md
 docs/三个长文本打字测试_v0.7.16.md

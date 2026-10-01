@@ -1853,6 +1853,17 @@ void test_digit_runs_suggest_the_rest_of_a_stored_number() {
     type(session, "wo");
     check(!run("158").accepted,
         "a digit run while composing never takes over the candidate row");
+
+    // 填了触发码就按触发码走。否则存了证件号之后，在任何地方打出它开头那几位都会
+    // 把号码弹上屏幕，而用户没有关掉它的办法——留空与否正好同时是开关和默认行为。
+    auto aliased_settings = piinput::default_settings();
+    aliased_settings.custom_phrases = {{"sfz", 2U, "", "622322199005012219"}};
+    piinput::HostSession aliased(engine, nullptr, aliased_settings, "full");
+    piinput::HostKeyEvent digits;
+    digits.kind = piinput::HostKeyKind::digit_run;
+    digits.text_payload = "622";
+    check(!aliased.apply(digits).accepted,
+        "a phrase with an explicit alias is not also offered by its digits");
     std::filesystem::remove(lexicon_path);
 }
 

@@ -133,6 +133,10 @@ HostReply HostSession::apply_digit_run(const std::string& run) {
 
     std::vector<std::string> found;
     for (const auto& phrase : settings_.custom_phrases) {
+        // 填了触发码就按触发码走，不再额外做数字建议。否则存了证件号之后，在任何
+        // 地方打出它开头那几位都会把号码弹到屏幕上，而用户没有关掉它的办法——
+        // 「留空才按前几位触发」正好同时是开关和默认行为。
+        if (!phrase.aliases.empty()) continue;
         const std::string digits = leading_digit_run(phrase.text);
         // 严格前缀：已经打完的号码不必再建议补全。
         if (digits.size() <= run.size() || !digits.starts_with(run)) continue;
