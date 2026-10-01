@@ -30,6 +30,33 @@ void test_key_event_and_resume_round_trip() {
             decoded_key->resume == key.resume,
         "host key event round trips");
 
+    // v7 的文本载荷：digit_run 用它把刚打出的数字串交给 Host。
+    piinput::HostKeyEvent digits;
+    digits.kind = piinput::HostKeyKind::digit_run;
+    digits.text_payload = "158";
+    const auto decoded_digits = piinput::decode_host_key_event(
+        piinput::encode_host_key_event(digits, piinput::host_protocol_v7), error,
+        piinput::host_protocol_v7);
+    check(decoded_digits.has_value() &&
+            decoded_digits->kind == piinput::HostKeyKind::digit_run &&
+            decoded_digits->text_payload == "158",
+        "a v7 key event round trips its text payload");
+
+    // v5 不写这一段，也不读。信封版本与载荷编码必须一致，否则 Host 会把报文判成
+    // 截断或多余字节而整包拒收——那等于那个应用彻底打不出字。
+    const auto v5_bytes = piinput::encode_host_key_event(digits, piinput::host_protocol_v5);
+    const auto v5_decoded = piinput::decode_host_key_event(
+        v5_bytes, error, piinput::host_protocol_v5);
+    check(v5_decoded.has_value() && v5_decoded->text_payload.empty(),
+        "a v5 key event carries no text payload in either direction");
+    check(!piinput::decode_host_key_event(v5_bytes, error, piinput::host_protocol_v7)
+            .has_value(),
+        "reading a v5 key event as v7 is rejected rather than guessed at");
+    check(!piinput::decode_host_key_event(
+            piinput::encode_host_key_event(digits, piinput::host_protocol_v7), error,
+            piinput::host_protocol_v5).has_value(),
+        "reading a v7 key event as v5 is rejected rather than silently truncated");
+
     const piinput::HostResumeState resume{91U, "hlheruhdlq", 6U, piinput::HostInputMode::chinese};
     const auto decoded_resume = piinput::decode_host_resume_state(
         piinput::encode_host_resume_state(resume), error);

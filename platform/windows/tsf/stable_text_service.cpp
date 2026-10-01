@@ -990,6 +990,8 @@ STDMETHODIMP TextService::OnKeyDown(
                 : (queue_ctrl ? "ctrl_queue_only" : "ctrl_physical_only");
         }
         trace_key("key_refused", reason);
+        // 键是透传出去的，但「透传了什么」是数字建议唯一的信息来源。
+        note_passthrough_key(context, wparam);
         return S_OK;
     }
     // The application delivered the press it was told we wanted, so there is
@@ -1068,7 +1070,52 @@ void TextService::apply_eaten_key_down(
         trace_key("key_dropped", "no_context");
         return;
     }
+    // Tab 只会在数字建议显示时被接管，此时它的含义是「取第一条建议」。
+    if (wparam == VK_TAB && digit_suggestion_visible()) {
+        HostKeyEvent event;
+        event.kind = HostKeyKind::select_candidate;
+        event.candidate_id = mirror_.snapshot().candidates.front().id;
+        digit_run_.clear();
+        trace_key("key_digit_accept", "tab");
+        (void)dispatch(context, std::move(event));
+        return;
+    }
     (void)dispatch(context, map_key(wparam));
+}
+
+bool TextService::digit_suggestion_visible() const noexcept {
+    return mirror_.raw().empty() && !mirror_.snapshot().candidates.empty();
+}
+
+void TextService::note_passthrough_key(ITfContext* const context, const WPARAM wparam) {
+    // 有合成串时不碰：那时候用户在打字，数字串没有意义。
+    if (!mirror_.raw().empty() || has_pending_key_request()) {
+        digit_run_.clear();
+        return;
+    }
+    const bool digit = wparam >= static_cast<WPARAM>('0') &&
+        wparam <= static_cast<WPARAM>('9') && !shift_is_down();
+    if (!digit) {
+        // 数字串断了。断在建议显示着的时候，要让 Host 把候选窗收掉；否则只清本地
+        // 状态就够了，一个字节都不必上线。
+        const bool had_run = !digit_run_.empty();
+        digit_run_.clear();
+        if (had_run && digit_suggestion_visible() && context != nullptr) {
+            HostKeyEvent event;
+            event.kind = HostKeyKind::digit_run;
+            (void)dispatch(context, std::move(event));
+        }
+        return;
+    }
+    // 上限只是防止一串极长的数字无限增长；超过最长常用语之后再长也不可能匹配。
+    constexpr std::size_t max_tracked_digits = 64U;
+    if (digit_run_.size() >= max_tracked_digits) digit_run_.clear();
+    digit_run_.push_back(static_cast<char>(wparam));
+    if (digit_run_.size() < min_digit_suggestion_length || context == nullptr) return;
+    HostKeyEvent event;
+    event.kind = HostKeyKind::digit_run;
+    event.text_payload = digit_run_;
+    (void)dispatch(context, std::move(event));
 }
 
 // Runs a press the application asked about, was told we wanted, and then never
@@ -1243,6 +1290,12 @@ bool TextService::should_eat_key(const WPARAM wparam) const noexcept {
     if (has_disallowed_modifier()) return false;
     if (is_shift_key(wparam)) return true;
     if (provisional_punctuation_.has_value()) return true;
+    // Tab 接受数字建议，而且只在建议正在显示的那一瞬间接管它。
+    //
+    // 用 Tab 而不是空格或回车：数字串打到一半时，空格和回车的意思是「这个数字输
+    // 完了」，拿它们去接受建议会把只想打 158 的人变成打出整个号码。Tab 在任何地
+    // 方都是「补全」键，没人会在号码中间误按。
+    if (wparam == VK_TAB) return digit_suggestion_visible();
     // Activation queues a resume handshake on the background pipe worker. Keep
     // the very first Chinese letter behind that handshake instead of leaking it
     // as Latin text while a cold resident Host is still loading its dictionary.
@@ -2418,10 +2471,22 @@ void TextService::on_lang_bar_command(const LangBarCommand command) noexcept {
         return;
     }
     case LangBarCommand::help: {
-        const auto guide = sibling_program(module_, L"").parent_path() / L"安装与使用指南.md";
-        const auto target = std::filesystem::is_regular_file(guide)
-            ? guide
-            : sibling_program(module_, L"").parent_path();
+        // 先找随包的 HTML 操作指引。此前这里打开的是一份 markdown，而 markdown 在
+        // Windows 上通常没有默认程序，点开要么弹「用什么打开」要么直接是记事本里
+        // 一堆井号——等于没有指引。退路保留那份 md 和安装目录本身。
+        const auto root = sibling_program(module_, L"").parent_path();
+        const std::array<std::filesystem::path, 2U> candidates{
+            root / L"piinput-guide.html",
+            root / L"安装与使用指南.md",
+        };
+        std::filesystem::path target = root;
+        for (const auto& candidate : candidates) {
+            std::error_code ignored;
+            if (std::filesystem::is_regular_file(candidate, ignored)) {
+                target = candidate;
+                break;
+            }
+        }
         (void)ShellExecuteW(nullptr, L"open", target.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
         return;
     }

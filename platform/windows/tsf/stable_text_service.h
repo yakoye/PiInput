@@ -131,6 +131,17 @@ private:
     void clear_smart_punctuation() noexcept;
     void replay_virtual_key(WPARAM wparam) noexcept;
     void toggle_input_mode(ITfContext* context);
+    // 数字常用语建议。数字键本身一个字节都没改——它们照旧直接透传进文档。这里
+    // 只是在透传之后记下「刚打出的那串数字」，并把它报给 Host，让 Host 决定要不
+    // 要在候选窗里给出补全。
+    //
+    // 判断「建议正在显示」用的是「有候选但没有合成串」这个状态，不额外存标志位：
+    // 合成串为空而候选非空，只会是这一种情形，多一个标志就多一个可能与真相不符
+    // 的地方。
+    void note_passthrough_key(ITfContext* context, WPARAM wparam);
+    [[nodiscard]] bool digit_suggestion_visible() const noexcept;
+    std::string digit_run_;
+
     [[nodiscard]] bool dispatch(ITfContext* context, HostKeyEvent event);
     [[nodiscard]] bool dispatch_now(
         ITfContext* context,

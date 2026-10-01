@@ -47,10 +47,13 @@ struct HostCommitResult final {
     bool operator==(const HostCommitResult&) const = default;
 };
 
-[[nodiscard]] std::vector<std::byte> encode_host_key_event(const HostKeyEvent& event);
+[[nodiscard]] std::vector<std::byte> encode_host_key_event(
+    const HostKeyEvent& event,
+    std::uint32_t protocol_version = host_protocol_current);
 [[nodiscard]] std::optional<HostKeyEvent> decode_host_key_event(
     std::span<const std::byte> input,
-    HostPayloadError& error);
+    HostPayloadError& error,
+    std::uint32_t protocol_version = host_protocol_current);
 
 [[nodiscard]] std::vector<std::byte> encode_host_resume_state(const HostResumeState& state);
 [[nodiscard]] std::optional<HostResumeState> decode_host_resume_state(

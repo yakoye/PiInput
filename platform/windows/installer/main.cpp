@@ -2,6 +2,7 @@
 #include "migration.h"
 #include "stable_runtime.h"
 #include "uninstall_layout.h"
+#include "wizard.h"
 #include "piinput_tsf_guids.h"
 #include "machine_registration.h"
 #include "profile_registration.h"
@@ -34,6 +35,12 @@
 #include <vector>
 
 namespace {
+
+using piinput::windows::WizardContext;
+using piinput::windows::WizardInstallAction;
+using piinput::windows::WizardOutcome;
+using piinput::windows::WizardProgressReport;
+using piinput::windows::run_install_wizard;
 
 using piinput::windows::installer::current_marker_value;
 using piinput::windows::installer::can_reuse_registered_stable_shim;
@@ -941,213 +948,37 @@ struct InstallResult {
     return value;
 }
 
-// Every dialog here comes up in front. An installer launched from a script or
-// from Explorer otherwise lands behind the window the user was looking at, and
-// a confirmation nobody sees reads as a hang.
-HRESULT CALLBACK topmost_dialog_callback(
-    const HWND dialog, const UINT notification, WPARAM, LPARAM, LONG_PTR) {
-    if (notification == TDN_CREATED) {
-        (void)SetWindowPos(dialog, HWND_TOPMOST, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-        (void)SetForegroundWindow(dialog);
-    }
-    return S_OK;
-}
 
-[[nodiscard]] bool confirm_install(
-    const std::filesystem::path& program_root,
-    const std::filesystem::path& user_data,
-    const bool upgrade) {
-    const std::wstring content =
-        std::wstring(upgrade
-            ? L"检测到已安装的 PiInput，本次为覆盖升级。用户词库、设置和学习记录都会保留。\n\n"
-            : L"将在下面两个位置安装 PiInput：\n\n") +
-        L"程序文件：\n" + program_root.wstring() +
-        L"\n\n用户设置和词库：\n" + user_data.wstring() +
-        L"\n\n安装过程中 Windows 可能请求一次管理员权限，用于把输入法入口注册到系统。"
-        L"这一步只写系统范围的输入法注册信息，你的设置和词库始终留在当前账户下。\n\n"
-        L"不需要关闭正在使用的程序。";
-
-    TASKDIALOGCONFIG config{};
-    config.cbSize = sizeof(config);
-    config.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_EXPAND_FOOTER_AREA;
-    config.dwCommonButtons = TDCBF_CANCEL_BUTTON;
-    config.pszWindowTitle = L"安装 PiInput";
-    config.pszMainIcon = TD_INFORMATION_ICON;
-    config.pszMainInstruction = upgrade ? L"升级 PiInput 输入法" : L"安装 PiInput 输入法";
-    config.pszContent = content.c_str();
-    const TASKDIALOG_BUTTON buttons[] = {
-        {IDOK, upgrade ? L"开始升级" : L"开始安装"},
-    };
-    config.pButtons = buttons;
-    config.cButtons = static_cast<UINT>(std::size(buttons));
-    config.nDefaultButton = IDOK;
-    config.pfCallback = topmost_dialog_callback;
-
-    int button = IDCANCEL;
-    if (FAILED(TaskDialogIndirect(&config, &button, nullptr, nullptr))) {
-        // No dialog means no way to ask. Refusing is the safe answer: an
-        // install the user never approved must not proceed silently.
-        return false;
-    }
-    return button == IDOK;
-}
-
-// Shared between the worker thread that installs and the dialog thread that
-// draws. Only the atomics cross the boundary while the work is running; the
-// result and the error text are read after the worker has been joined.
-struct InstallProgressState {
-    std::atomic<int> percent{0};
-    std::atomic<bool> finished{false};
-    std::atomic<bool> failed{false};
-    std::mutex text_mutex;
-    std::wstring text{L"正在准备……"};
-    std::wstring error;
-    InstallResult result;
-};
-
-HRESULT CALLBACK install_progress_callback(
-    const HWND dialog,
-    const UINT notification,
-    WPARAM,
-    LPARAM,
-    const LONG_PTR data) {
-    auto* const state = reinterpret_cast<InstallProgressState*>(data);
-    if (state == nullptr) return S_OK;
-    switch (notification) {
-    case TDN_CREATED:
-        (void)SetWindowPos(dialog, HWND_TOPMOST, 0, 0, 0, 0,
-            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
-        (void)SetForegroundWindow(dialog);
-        (void)SendMessageW(dialog, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(0, 100));
-        break;
-    case TDN_TIMER: {
-        (void)SendMessageW(dialog, TDM_SET_PROGRESS_BAR_POS,
-            static_cast<WPARAM>(state->percent.load()), 0);
-        std::wstring text;
-        {
-            const std::lock_guard<std::mutex> lock(state->text_mutex);
-            text = state->text;
-        }
-        (void)SendMessageW(dialog, TDM_SET_ELEMENT_TEXT, TDE_CONTENT,
-            reinterpret_cast<LPARAM>(text.c_str()));
-        if (state->finished.load()) {
-            // Closing from the timer rather than from the worker keeps every
-            // window message on the thread that owns the dialog.
-            (void)SendMessageW(dialog, TDM_CLICK_BUTTON, IDCANCEL, 0);
-        }
-        break;
-    }
-    default:
-        break;
-    }
-    return S_OK;
-}
-
-// Runs the install on a worker thread while a progress dialog stays responsive.
-// Rethrows on the calling thread so the existing error handling is unchanged.
-[[nodiscard]] InstallResult install_with_progress_ui(
-    const std::optional<std::filesystem::path>& migration) {
-    InstallProgressState state;
-    std::thread worker([&state, &migration] {
-        // COM is per-thread, and this one is not the thread wWinMain
-        // initialized. install() registers the TSF profile through
-        // CoCreateInstance(CLSID_TF_InputProcessorProfiles), which fails with
-        // CO_E_NOTINITIALIZED on a thread that has no apartment -- so the
-        // progress dialog reported a failure for work the silent path did
-        // without complaint. Same install, different thread.
-        ScopedComApartment com;
-        if (FAILED(com.result()) && com.result() != RPC_E_CHANGED_MODE) {
-            state.failed.store(true);
-            state.error = L"无法在安装线程上初始化 COM";
-            state.finished.store(true);
-            return;
-        }
-        try {
-            state.result = install(migration, [&state](const InstallStage stage) {
-                const InstallStageInfo info = describe_install_stage(stage);
-                state.percent.store(info.percent);
-                const std::lock_guard<std::mutex> lock(state.text_mutex);
-                state.text = info.text;
-            });
-            state.percent.store(100);
-        } catch (const std::exception& error) {
-            state.failed.store(true);
-            const std::string text(error.what());
-            state.error.assign(text.begin(), text.end());
-        } catch (...) {
-            state.failed.store(true);
-            state.error = L"未知错误";
-        }
-        state.finished.store(true);
-    });
-
-    TASKDIALOGCONFIG config{};
-    config.cbSize = sizeof(config);
-    // No cancel button: the steps past the file copy leave TSF registration
-    // half-written if they are interrupted, and there is no partial state worth
-    // exposing to a stop request that could not be honoured anyway.
-    config.dwFlags = TDF_SHOW_PROGRESS_BAR | TDF_CALLBACK_TIMER;
-    config.pszWindowTitle = L"安装 PiInput";
-    config.pszMainIcon = TD_INFORMATION_ICON;
-    config.pszMainInstruction = L"正在安装 PiInput……";
-    config.pszContent = L"正在准备……";
-    config.pfCallback = install_progress_callback;
-    config.lpCallbackData = reinterpret_cast<LONG_PTR>(&state);
-    int button = 0;
-    const HRESULT shown = TaskDialogIndirect(&config, &button, nullptr, nullptr);
-    worker.join();
-    if (FAILED(shown)) {
-        // The dialog failed, not the install. The work already ran to
-        // completion on the worker, so report its outcome, not the UI's.
-        if (state.failed.load()) throw std::runtime_error("install failed");
-    }
-    if (state.failed.load()) {
-        const std::wstring& detail = state.error;
-        throw std::runtime_error(std::string(detail.begin(), detail.end()));
-    }
-    return state.result;
-}
-
-// Offers the follow-up actions instead of forcing them. The silent installer
-// opened the configuration folder and the settings program unconditionally,
-// which put two windows in front of whatever the user was doing.
-void show_install_completed(const InstallResult& result) {
-    const std::wstring content =
-        L"输入法已就位，不需要重启电脑。\n\n"
-        L"安装器没有自动切换输入法，也没有关闭任何程序。请重新打开要使用的程序，"
-        L"再用 Win+Space 选择 PiInput。\n\n程序文件：\n" + result.program_root.wstring() +
-        L"\n\n用户设置和词库：\n" + result.user_data.wstring();
-
-    BOOL open_settings = TRUE;
-    TASKDIALOGCONFIG config{};
-    config.cbSize = sizeof(config);
-    config.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION | TDF_VERIFICATION_FLAG_CHECKED;
-    config.dwCommonButtons = TDCBF_OK_BUTTON;
-    config.pszWindowTitle = L"PiInput 安装完成";
-    config.pszMainIcon = TD_INFORMATION_ICON;
-    config.pszMainInstruction = L"PiInput 安装完成";
-    config.pszContent = content.c_str();
-    config.pszVerificationText = L"打开设置程序和配置目录";
-    config.pfCallback = topmost_dialog_callback;
-    int button = IDOK;
-    if (FAILED(TaskDialogIndirect(&config, &button, nullptr, &open_settings))) {
-        // Fall back to the plain message box rather than finishing silently.
-        (void)MessageBoxW(nullptr, content.c_str(), L"PiInput 安装完成",
-            MB_OK | MB_ICONINFORMATION | kForegroundMessageBox);
-        return;
-    }
-    if (open_settings == FALSE) return;
-
+// 完成页上勾了什么就做什么，一件都不强加。此前的静默安装无条件打开设置程序和
+// 配置目录，等于在用户正在做的事前面摆了两个窗口。
+void run_post_install_choices(
+    const InstallResult& result,
+    const WizardOutcome& outcome) {
     const auto launch = make_post_install_launch_targets(
         result.program_root, result.user_data);
-    (void)ShellExecuteW(nullptr, L"open", launch.user_data_directory.c_str(),
-        nullptr, nullptr, SW_SHOWNORMAL);
-    const std::wstring settings_arguments =
-        L"--settings " + quote_windows_argument(launch.settings_file.wstring());
-    (void)ShellExecuteW(nullptr, L"open", launch.settings_executable.c_str(),
-        settings_arguments.c_str(), launch.settings_executable.parent_path().c_str(),
-        SW_SHOWNORMAL);
+    if (outcome.activate_profile) {
+        // profile 刚注册完有时并不在前台生效，而用户看到的只是任务栏里找不到输入法。
+        // 这一步把 ACTIVE 位补上，省掉「装好了却用不了」这一类求助。
+        const auto profile_tool = result.program_root / L"piinput-profile.exe";
+        if (std::filesystem::is_regular_file(profile_tool)) {
+            (void)ShellExecuteW(nullptr, L"open", profile_tool.c_str(), L"--activate",
+                result.program_root.c_str(), SW_HIDE);
+        }
+    }
+    if (outcome.open_guide) {
+        const auto guide = result.program_root / L"piinput-guide.html";
+        if (std::filesystem::is_regular_file(guide)) {
+            (void)ShellExecuteW(nullptr, L"open", guide.c_str(), nullptr,
+                result.program_root.c_str(), SW_SHOWNORMAL);
+        }
+    }
+    if (outcome.open_settings) {
+        const std::wstring settings_arguments =
+            L"--settings " + quote_windows_argument(launch.settings_file.wstring());
+        (void)ShellExecuteW(nullptr, L"open", launch.settings_executable.c_str(),
+            settings_arguments.c_str(), launch.settings_executable.parent_path().c_str(),
+            SW_SHOWNORMAL);
+    }
 }
 
 }  // namespace
@@ -1201,13 +1032,44 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         const auto piinput_root = local_root / L"PiInput";
         const bool upgrade = std::filesystem::exists(
             piinput_root / L"bin" / L"PiInputHost.exe");
-        if (!confirm_install(piinput_root / L"bin", piinput_root / L"UserData", upgrade)) {
-            // Cancelling before anything was written is a normal outcome, not
-            // a failure: nothing has been touched yet.
-            return 0;
+        // 确认这一步现在是向导的前三页。取消发生在任何写入之前，是正常结果。
+        WizardContext wizard{
+            .program_root = (piinput_root / L"bin").wstring(),
+            .user_data = (piinput_root / L"UserData").wstring(),
+            .version = PIINPUT_INSTALLER_VERSION,
+            .upgrade = upgrade,
+        };
+        InstallResult result;
+        const auto outcome = run_install_wizard(GetModuleHandleW(nullptr), wizard,
+            [&](const WizardProgressReport& report, std::wstring& error) {
+                // COM 是按线程的，而这里不是 wWinMain 初始化过的那个线程。
+                // install() 会经 CoCreateInstance 注册 TSF profile，在没有套间的
+                // 线程上会以 CO_E_NOTINITIALIZED 失败——同一个安装，换个线程就报错。
+                ScopedComApartment com;
+                if (FAILED(com.result()) && com.result() != RPC_E_CHANGED_MODE) {
+                    error = L"无法在安装线程上初始化 COM。";
+                    return false;
+                }
+                try {
+                    result = install(migration_path, [&report](const InstallStage stage) {
+                        const auto info = describe_install_stage(stage);
+                        report(info.percent, info.text);
+                    });
+                    report(100, L"安装完成。");
+                    return true;
+                } catch (const std::filesystem::filesystem_error& failure) {
+                    error = widen_error(failure);
+                    return false;
+                } catch (const std::exception& failure) {
+                    error = widen_error(failure);
+                    return false;
+                }
+            });
+        if (!outcome.started || !outcome.succeeded) {
+            // 取消是正常结果，失败的原因已经在向导的最后一页上说明过了。
+            return outcome.started && !outcome.succeeded ? 1 : 0;
         }
-        const auto result = install_with_progress_ui(migration_path);
-        show_install_completed(result);
+        run_post_install_choices(result, outcome);
         return 0;
     } catch (const std::filesystem::filesystem_error& error) {
         const std::wstring detail = widen_error(error);

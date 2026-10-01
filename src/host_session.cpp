@@ -36,6 +36,7 @@ struct SymbolRequest final {
            kind == CandidateKind::emoji_tool_action ||
            kind == CandidateKind::settings_action ||
            kind == CandidateKind::launch_action ||
+           kind == CandidateKind::phrase ||
            kind == CandidateKind::datetime_group;
 }
 
@@ -103,7 +104,109 @@ HostSession::HostSession(
     }
 }
 
+void HostSession::clear_digit_suggestions() {
+    if (digit_suggestions_.empty() && digit_run_.empty()) return;
+    digit_suggestions_.clear();
+    digit_run_.clear();
+}
+
+// 数字常用语的建议：数字照常落进文档，这里只负责「要不要给出补全」。
+//
+// 每条建议存的是没打完的那段后缀。已经打了 158，建议就是 01616544，选中时只插入
+// 它——不删除、不重写周边文本。这一条决定了这个功能在终端里也能用，而且失败形态
+// 只有「建议没出现」，永远不会把文档改坏。
+HostReply HostSession::apply_digit_run(const std::string& run) {
+    // 有合成串时不出建议：那时候用户在打字，不在输号码，候选窗归合成串用。
+    if (!current_raw().empty() || !datetime_menu_.empty()) {
+        clear_digit_suggestions();
+        return reply(false, HostAction::none);
+    }
+    if (run.size() < min_digit_suggestion_length) {
+        const bool had = !digit_suggestions_.empty();
+        clear_digit_suggestions();
+        // 建议刚刚还在、现在不该在了，要回一个 cancel 把候选窗收掉。
+        return had ? reply(true, HostAction::cancel) : reply(false, HostAction::none);
+    }
+    if (run == digit_run_ && !digit_suggestions_.empty()) {
+        return reply(true, HostAction::update);
+    }
+
+    std::vector<std::string> found;
+    for (const auto& phrase : settings_.custom_phrases) {
+        const std::string digits = leading_digit_run(phrase.text);
+        // 严格前缀：已经打完的号码不必再建议补全。
+        if (digits.size() <= run.size() || !digits.starts_with(run)) continue;
+        std::string suffix = phrase.text.substr(run.size());
+        if (std::find(found.begin(), found.end(), suffix) == found.end()) {
+            found.push_back(std::move(suffix));
+        }
+        if (found.size() >= settings_.candidates.max_items) break;
+    }
+    if (found.empty()) {
+        const bool had = !digit_suggestions_.empty();
+        clear_digit_suggestions();
+        return had ? reply(true, HostAction::cancel) : reply(false, HostAction::none);
+    }
+    digit_run_ = run;
+    digit_suggestions_ = std::move(found);
+    advance_generation(true);
+    candidate_grid_.select_index(0U);
+    return reply(true, HostAction::update);
+}
+
 HostReply HostSession::apply(const HostKeyEvent& event) {
+    if (event.kind == HostKeyKind::digit_run) {
+        return apply_digit_run(event.text_payload);
+    }
+    // 任何别的按键都结束建议。数字串由 Shim 维护，它只在仍然连着打数字时才把
+    // digit_run 报过来，所以走到这里就说明那串数字断了。
+    if (!digit_suggestions_.empty()) {
+        const bool selecting = event.kind == HostKeyKind::select_digit ||
+            event.kind == HostKeyKind::select_candidate;
+        if (selecting) {
+            // select_candidate 带的是候选 id，低 32 位是 1 起的序号；select_digit
+            // 带的是按下的那个数字字符。两种都要落到同一个下标上。
+            std::size_t index = 0U;
+            if (event.kind == HostKeyKind::select_candidate) {
+                if ((event.candidate_id >> 32U) != generation_) {
+                    clear_digit_suggestions();
+                    return reply(true, HostAction::cancel);
+                }
+                const auto ordinal = event.candidate_id & 0xFFFFFFFFULL;
+                if (ordinal == 0U) {
+                    clear_digit_suggestions();
+                    return reply(true, HostAction::cancel);
+                }
+                index = static_cast<std::size_t>(ordinal - 1U);
+            } else {
+                if (event.character < '1' || event.character > '9') {
+                    clear_digit_suggestions();
+                    return reply(true, HostAction::cancel);
+                }
+                index = static_cast<std::size_t>(event.character - '1');
+            }
+            if (index < digit_suggestions_.size()) {
+                std::string suffix = digit_suggestions_[index];
+                clear_digit_suggestions();
+                advance_generation(true);
+                return reply(true, HostAction::commit, std::move(suffix));
+            }
+            clear_digit_suggestions();
+            return reply(true, HostAction::cancel);
+        }
+        clear_digit_suggestions();
+        if (event.kind == HostKeyKind::escape) {
+            advance_generation(true);
+            return reply(true, HostAction::cancel);
+        }
+        // 其他键照常处理，只是候选窗要先收掉。不吃键，所以数字、字母、标点全都
+        // 按原来的路径走。
+        advance_generation(true);
+    }
+    return apply_after_digit_suggestions(event);
+}
+
+HostReply HostSession::apply_after_digit_suggestions(const HostKeyEvent& event) {
     if (event.kind == HostKeyKind::open_symbol_center) {
         if (symbol_index_ == nullptr) return reply(false, HostAction::none);
         if (english_ != nullptr) english_->clear();
@@ -412,6 +515,21 @@ HostSnapshot HostSession::snapshot() const {
     }
 
     const auto& source = chinese_.snapshot();
+    // 数字建议：候选列表是建议，而 raw 和 composition_text 都留空。那串数字已经在
+    // 文档里了，这里一个字符都不该再出现在合成串上——否则屏幕上会多出一份。
+    if (!digit_suggestions_.empty()) {
+        result.view.mode = HostCandidateMode::normal;
+        result.candidates.reserve(digit_suggestions_.size());
+        for (std::size_t index = 0; index < digit_suggestions_.size(); ++index) {
+            result.candidates.push_back({
+                (generation_ << 32U) | static_cast<std::uint64_t>(index + 1U),
+                digit_run_ + digit_suggestions_[index],
+                {},
+                0,
+            });
+        }
+        return result;
+    }
     if (!datetime_menu_.empty()) {
         result.raw = source.input;
         result.composition_text = source.input;
@@ -696,6 +814,18 @@ HostReply HostSession::choose(const std::uint64_t candidate_id) {
                         ? HostAction::launch_settings
                         : HostAction::launch_symbol_tool);
             }
+            // A stored phrase commits its text and nothing else. Handled here
+            // rather than down the ordinary candidate path so that it cannot
+            // reach the learning bookkeeping at all: an alias and the text
+            // behind it are not a pinyin/word fact, and a row that got learned
+            // would come back as a second, unexplained copy of itself.
+            if (kind == CandidateKind::phrase) {
+                const std::string text = listed[index].candidate.evidence.commit_text;
+                if (text.empty()) return reply(false, HostAction::none);
+                chinese_.clear();
+                advance_generation(true);
+                return reply(true, HostAction::commit, text);
+            }
         }
         if (index < listed.size() &&
             listed[index].candidate.evidence.kind == CandidateKind::datetime_group &&
@@ -846,6 +976,18 @@ void HostSession::rebuild_candidate_grid(const bool collapse_view) {
             leading.emplace_back(text_of(items[index]));
         }
     };
+    // 数字建议自己一列。它们是号码，并排既放不下也没法比对，而且通常只有一两条。
+    // 注意这一支不受 collapse_view 影响：建议的生命周期由 clear_digit_suggestions()
+    // 显式管理，不能被一次视图折叠顺手清掉。
+    if (!digit_suggestions_.empty()) {
+        take_leading(digit_suggestions_,
+            [](const std::string& text) -> const std::string& { return text; });
+        candidate_grid_.set_items_per_row(1U);
+        candidate_grid_.set_visible_rows(digit_suggestions_.size());
+        candidate_grid_.set_candidate_count(digit_suggestions_.size());
+        candidate_grid_.expand();
+        return;
+    }
     if (!datetime_menu_.empty()) {
         take_leading(datetime_menu_,
             [](const std::string& text) -> const std::string& { return text; });

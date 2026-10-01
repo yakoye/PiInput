@@ -91,7 +91,7 @@ private:
 };
 
 bool known_key_kind(const HostKeyKind kind) noexcept {
-    return kind >= HostKeyKind::text && kind <= HostKeyKind::open_symbol_center;
+    return kind >= HostKeyKind::text && kind <= HostKeyKind::digit_run;
 }
 
 bool known_action(const HostAction action) noexcept {
@@ -112,7 +112,9 @@ Integer checked_size(const std::size_t value) {
 
 }  // namespace
 
-std::vector<std::byte> encode_host_key_event(const HostKeyEvent& event) {
+std::vector<std::byte> encode_host_key_event(
+    const HostKeyEvent& event,
+    const std::uint32_t protocol_version) {
     Writer writer;
     writer.integer(static_cast<std::uint8_t>(event.kind));
     writer.integer(static_cast<std::uint8_t>(event.character));
@@ -127,12 +129,14 @@ std::vector<std::byte> encode_host_key_event(const HostKeyEvent& event) {
     writer.integer(static_cast<std::uint64_t>(
         event.resume.has_value() ? event.resume->caret : 0U));
     writer.text(event.resume.has_value() ? event.resume->raw : std::string_view{});
+    if (protocol_version >= host_protocol_v7) writer.text(event.text_payload);
     return std::move(writer).finish();
 }
 
 std::optional<HostKeyEvent> decode_host_key_event(
     const std::span<const std::byte> input,
-    HostPayloadError& error) {
+    HostPayloadError& error,
+    const std::uint32_t protocol_version) {
     error = HostPayloadError::none;
     Reader reader(input);
     const auto kind = reader.integer<std::uint8_t>();
@@ -146,9 +150,15 @@ std::optional<HostKeyEvent> decode_host_key_event(
     const auto resume_generation = reader.integer<std::uint64_t>();
     const auto resume_caret = reader.integer<std::uint64_t>();
     const auto resume_raw = reader.text(error);
+    std::optional<std::string> text_payload;
+    if (protocol_version >= host_protocol_v7) {
+        text_payload = reader.text(error);
+    } else {
+        text_payload.emplace();
+    }
     if (!kind || !character || !flags || !reserved32 || !candidate_id ||
         !has_resume || !resume_mode || !resume_reserved || !resume_generation ||
-        !resume_caret || !resume_raw) {
+        !resume_caret || !resume_raw || !text_payload) {
         error = HostPayloadError::truncated;
         return std::nullopt;
     }
@@ -185,6 +195,7 @@ std::optional<HostKeyEvent> decode_host_key_event(
             static_cast<HostInputMode>(*resume_mode),
         };
     }
+    result.text_payload = std::move(*text_payload);
     return result;
 }
 
@@ -346,9 +357,12 @@ std::optional<HostCommitResult> decode_host_commit_result(
 std::vector<std::byte> encode_host_reply(
     const HostReply& reply,
     const std::uint32_t protocol_version) {
+    // v7 的回复格式与 v5 逐字节相同——v7 只给按键事件加了一个字段，回复没动。
+    // 必须显式列进来：这个函数是 throw 而不是返回错误，漏一个版本就会让那次按键
+    // 的回复整个发不出去，而键已经被吃掉了。
     if (protocol_version != host_protocol_v1 && protocol_version != host_protocol_v2 &&
         protocol_version != host_protocol_v3 && protocol_version != host_protocol_v4 &&
-        protocol_version != host_protocol_v5) {
+        protocol_version != host_protocol_v5 && protocol_version != host_protocol_v7) {
         throw std::invalid_argument("unsupported PiInput Host reply protocol version");
     }
     if (reply.snapshot.candidates.size() > host_max_candidates) {

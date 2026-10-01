@@ -72,7 +72,9 @@ std::optional<HostEnvelope> SessionManager::dispatch(
     HostReply reply;
     if (request.type == HostMessageType::key_event) {
         HostPayloadError error = HostPayloadError::none;
-        const auto event = decode_host_key_event(request.payload, error);
+        // 按发送方声明的版本解码：v7 之前的 Shim 不写 text_payload 那一段，
+        // 按 v7 去读会把它判成截断，结果是整包拒收——也就是那个应用彻底打不出字。
+        const auto event = decode_host_key_event(request.payload, error, request.version);
         if (!event.has_value()) return std::nullopt;
         if (created && event->resume.has_value()) {
             managed.session->restore(*event->resume);

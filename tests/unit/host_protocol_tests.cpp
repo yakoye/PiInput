@@ -151,11 +151,11 @@ void test_decoder_rejects_malformed_or_unsupported_envelopes() {
     check(error == piinput::ProtocolError::truncated_header, "truncation has a typed error");
 
     // One past the highest version still *accepted*, which is not the same as
-    // one past what ships: v6's only field was retired, so nothing sends v6 any
-    // more, but shims already loaded into running applications still do and the
-    // decoder must keep taking them.
+    // one past what ships by default: v6's only field was retired, and v7 goes
+    // out on digit_run messages alone, but shims already loaded into running
+    // applications send both and the decoder must keep taking them.
     auto unsupported = valid;
-    unsupported[8] = std::byte{piinput::host_protocol_v6 + 1U};
+    unsupported[8] = std::byte{piinput::host_protocol_v7 + 1U};
     check(!piinput::decode_host_envelope(unsupported, error).has_value(),
         "unsupported protocol major version is rejected");
     check(error == piinput::ProtocolError::unsupported_version,

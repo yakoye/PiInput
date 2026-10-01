@@ -39,6 +39,31 @@ namespace {
     }
 }
 
+// A phrase row with no alias and Chinese text gets its trigger derived from the
+// reading of its leading characters, so 北京市海淀区… answers to bj, bjs, bjsh.
+//
+// Done here, once per settings load, and written straight into `aliases`. The
+// derivation costs one lexicon lookup per character; doing it on the keystroke
+// path would mean hundreds of lookups per key against a 15000us budget, and the
+// result never changes until the user edits the row. By the time the engine sees
+// these rows their triggers are spelled out like any hand-typed alias.
+void fill_derived_phrase_aliases(SettingsSnapshot& settings, const Engine& engine) {
+    for (auto& phrase : settings.custom_phrases) {
+        if (!phrase.aliases.empty() || phrase.text.empty()) continue;
+        if (phrase_trigger_for(phrase.text) != PhraseTrigger::chinese) continue;
+        const std::string initials =
+            engine.leading_reading_initials(phrase.text, max_derived_alias_length);
+        if (initials.size() < min_derived_alias_length) continue;
+        std::string aliases;
+        for (std::size_t length = min_derived_alias_length;
+             length <= initials.size(); ++length) {
+            if (!aliases.empty()) aliases.push_back(',');
+            aliases.append(initials, 0U, length);
+        }
+        phrase.aliases = std::move(aliases);
+    }
+}
+
 }  // namespace
 
 bool HostRuntime::load(const HostRuntimePaths& paths, std::string& error) noexcept {
@@ -74,6 +99,9 @@ bool HostRuntime::load(const HostRuntimePaths& paths, std::string& error) noexce
 
         user_model_path_ = paths.user_data / L"user_model.tsv";
         if (path_exists(user_model_path_)) engine_.load_user_model(user_model_path_);
+
+        // After the lexicon, because the derivation reads it.
+        fill_derived_phrase_aliases(settings_, engine_);
 
         if (settings_.english.builtin_dictionary) {
             (void)english_.load_builtin_tsv(paths.package_data / L"english_lexicon.tsv");
@@ -139,6 +167,7 @@ void HostRuntime::poll_settings_at_composition_boundary() noexcept {
     if (const auto current = settings_manager_->current(); current != nullptr) {
         settings_ = *current;
         schema_ = schema_name(settings_.general.schema);
+        fill_derived_phrase_aliases(settings_, engine_);
     }
 }
 

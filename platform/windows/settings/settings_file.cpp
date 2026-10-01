@@ -387,6 +387,10 @@ bool save_all_settings_atomic(
         error = "Too many shortcut rows.";
         return false;
     }
+    if (settings.custom_phrases.size() > max_custom_phrases) {
+        error = "Too many phrase rows.";
+        return false;
+    }
     const auto boolean = [](const bool value) -> std::string {
         return value ? "true" : "false";
     };
@@ -470,6 +474,17 @@ bool save_all_settings_atomic(
         assignments.push_back({"shortcuts", "icon_" + suffix, shortcut.icon});
         assignments.push_back({"shortcuts", "name_" + suffix, shortcut.name});
         assignments.push_back({"shortcuts", "target_" + suffix, shortcut.target});
+    }
+    assignments.push_back(
+        {"phrases", "count", std::to_string(settings.custom_phrases.size())});
+    for (std::size_t index = 0U; index < settings.custom_phrases.size(); ++index) {
+        const auto& phrase = settings.custom_phrases[index];
+        const std::string suffix = std::to_string(index + 1U);
+        assignments.push_back({"phrases", "aliases_" + suffix, phrase.aliases});
+        assignments.push_back(
+            {"phrases", "position_" + suffix, std::to_string(phrase.position)});
+        assignments.push_back({"phrases", "label_" + suffix, phrase.label});
+        assignments.push_back({"phrases", "text_" + suffix, phrase.text});
     }
 
     try {

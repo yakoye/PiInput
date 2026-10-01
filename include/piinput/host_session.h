@@ -45,6 +45,13 @@ enum class HostKeyKind : std::uint8_t {
     switch_to_english,
     literal_punctuation,
     open_symbol_center,
+    // 刚刚透传出去的那串数字，用来给数字常用语出补全建议。
+    //
+    // 数字键的处理一个字节都没改：没有合成串时它们照旧直接落进文档。这个事件
+    // 是叠在上面的一层——Shim 把已经打出去的数字串报过来，Host 据此决定要不要
+    // 在候选窗里给出建议，选中时只补齐没打完的那部分。所以它不吃键、不改文档，
+    // 最坏情况只是建议没出现。
+    digit_run,
 };
 
 enum class HostAction : std::uint8_t {
@@ -79,6 +86,9 @@ struct HostKeyEvent final {
     std::uint64_t candidate_id{};
     bool shifted{};
     std::optional<HostResumeState> resume;
+    // 只有 digit_run 用它，装的是刚打出去的数字串。协议 v7 起才上线，
+    // 旧版本不编码也不解码。
+    std::string text_payload;
 };
 
 struct HostCandidate final {
@@ -175,6 +185,12 @@ private:
     // entry. False when there are none, which leaves the entry acting as an
     // ordinary candidate.
     [[nodiscard]] bool open_datetime_menu(const std::string& reading);
+    // 按刚打出的数字串重算建议。
+    [[nodiscard]] HostReply apply_digit_run(const std::string& run);
+    void clear_digit_suggestions();
+    // apply() 的其余部分。拆出来是为了让「先把数字建议处理掉」成为一道没有例外
+    // 的前置关卡，而不是散落在后面每个分支里各自记得清一次。
+    [[nodiscard]] HostReply apply_after_digit_suggestions(const HostKeyEvent& event);
     void close_datetime_menu() noexcept;
     [[nodiscard]] const std::string& current_raw() const noexcept;
     // 合成串整体上屏时该写出的文本。分段选择状态下 current_raw() 只剩未处理的
@@ -194,6 +210,14 @@ private:
     // than the dictionary. The reading says which set it is.
     std::vector<std::string> datetime_menu_;
     std::string datetime_reading_;
+    // 数字常用语的补全建议。非空时候选列表就是这些建议，而**合成串是空的**——
+    // 数字早已落进文档，这里只是叠在上面的一层提示。每条存的是「还没打完的那
+    // 部分」，选中时只插入它，所以既不需要删除已上屏的数字，也不需要重写周边
+    // 文本，在 TSF 支持差的终端里一样成立。
+    std::vector<std::string> digit_suggestions_;
+    // 产生这批建议的那串数字。换了串就要重算，相同就不动，免得每个数字键都把
+    // 候选窗重建一次。
+    std::string digit_run_;
     EnglishLexicon* english_lexicon_{};
     SymbolIndex* symbol_index_{};
     std::unique_ptr<EnglishSession> english_;

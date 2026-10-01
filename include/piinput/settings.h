@@ -120,6 +120,62 @@ struct CustomShortcutSettings final {
     bool operator==(const CustomShortcutSettings&) const = default;
 };
 
+// Phrases outnumber launchers by a lot. A person accumulates addresses, ID
+// numbers, mail addresses and stock replies until there are dozens; the 64 that
+// suffice for programs do not suffice here.
+inline constexpr std::size_t max_custom_phrases = 128U;
+
+// A stored piece of text reached from the candidate row. Deliberately a
+// separate table from CustomShortcutSettings rather than another meaning for
+// its `target`: that field is "a file, URL or executable opened by Windows", so
+// an address stored there would be handed to the shell to launch, and a command
+// line stored as a phrase would be typed into the document. Neither mistake is
+// cheap, and separate tables make both impossible.
+struct CustomPhraseSettings final {
+    // Comma-separated Latin aliases, for example "dzjl". Empty means the
+    // trigger is derived from `text` itself -- see derived_phrase_aliases and
+    // leading_digit_run.
+    std::string aliases;
+    std::uint32_t position{2U};
+    // Shown in the candidate row in place of the text. Empty shows the text.
+    std::string label;
+    std::string text;
+
+    bool operator==(const CustomPhraseSettings&) const = default;
+};
+
+// What an empty `aliases` field falls back to, decided by how `text` begins.
+enum class PhraseTrigger : std::uint8_t {
+    // Nothing can be derived -- a symbol or an unreadable character leads. The
+    // row needs an alias typed by hand; the settings UI says so.
+    none,
+    // Leading ASCII letters are their own trigger: "github.com" fires on gi,
+    // git, gith...
+    latin,
+    // Leading Chinese characters: the reading's initials fire it, so
+    // 北京市海淀区… answers to b, bj, bjs. Derived in the Engine, which is
+    // where the lexicon lives.
+    chinese,
+    // Leading digits. These never open a composition -- see the digit
+    // suggestion path -- so the trigger is the typed run itself.
+    digits,
+};
+
+[[nodiscard]] PhraseTrigger phrase_trigger_for(std::string_view text) noexcept;
+
+// Every Latin prefix of `text` that should fire it, shortest first. Two
+// characters is the floor: a single letter would fire on most of the alphabet.
+inline constexpr std::size_t min_derived_alias_length = 2U;
+inline constexpr std::size_t max_derived_alias_length = 8U;
+[[nodiscard]] std::vector<std::string> derived_phrase_aliases(std::string_view text);
+
+// The leading run of ASCII digits, empty when `text` does not start with one.
+[[nodiscard]] std::string leading_digit_run(std::string_view text);
+
+// Below this many typed digits the suggestion stays closed. One or two would
+// fire constantly -- dates, prices and version numbers are full of short runs.
+inline constexpr std::size_t min_digit_suggestion_length = 3U;
+
 struct SettingsSnapshot {
     std::uint64_t generation{0U};
     GeneralSettings general;
@@ -128,6 +184,7 @@ struct SettingsSnapshot {
     EnglishSettings english;
     CommandSettings commands;
     std::vector<CustomShortcutSettings> custom_shortcuts;
+    std::vector<CustomPhraseSettings> custom_phrases;
     PunctuationMode punctuation{PunctuationMode::chinese};
     PunctuationBracketStyle punctuation_bracket_style{PunctuationBracketStyle::sogou};
 
@@ -142,6 +199,21 @@ struct SettingsParseResult {
 
 [[nodiscard]] SettingsSnapshot default_settings();
 [[nodiscard]] std::vector<CustomShortcutSettings> default_custom_shortcuts();
+[[nodiscard]] std::vector<CustomPhraseSettings> default_custom_phrases();
+// What the candidate row shows: the label when there is one, else the text.
+[[nodiscard]] std::string phrase_candidate_label(const CustomPhraseSettings& phrase);
+
+// Whether `key` -- one keystroke-built reading or raw input -- fires this phrase.
+//
+// Pure string work, deliberately: this runs for every phrase row on every
+// keystroke, and the table holds up to 128 rows. Deriving a trigger for Chinese
+// text needs the lexicon, which would mean hundreds of reverse lookups per
+// keystroke against a 15000us budget -- so that derivation happens once, in the
+// settings process, which writes the result into `aliases`. By the time a row
+// reaches here its trigger is already spelled out.
+[[nodiscard]] bool phrase_matches_key(
+    const CustomPhraseSettings& phrase,
+    std::string_view key) noexcept;
 [[nodiscard]] bool shortcut_alias_matches(
     std::string_view aliases,
     std::string_view key) noexcept;

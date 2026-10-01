@@ -302,6 +302,7 @@ if(WIN32)
     add_executable(PiInput-Install WIN32
         platform/windows/installer/main.cpp
         platform/windows/installer/install_layout.cpp
+        platform/windows/installer/wizard.cpp
         platform/windows/installer/migration.cpp
         platform/windows/installer/stable_runtime.cpp
         platform/windows/installer/uninstall_layout.cpp
@@ -406,6 +407,9 @@ if(WIN32)
         third_party/regcalc/shared-ui.js
         DESTINATION bin
     )
+    # 操作指引做成随包 HTML 而不是一个 Win32 窗口：排版、表格、滚动、可复制，
+    # HTML 全都免费拿到，自绘窗口每一项都要写。安装器完成页和托盘菜单都打开它。
+    install(FILES docs/piinput-guide.html DESTINATION bin)
 endif()
 if(PIINPUT_BUNDLED_LEXICON)
     install(FILES "${PIINPUT_BUNDLED_LEXICON}" DESTINATION data)

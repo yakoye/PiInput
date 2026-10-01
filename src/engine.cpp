@@ -27,13 +27,20 @@ enum class DatetimeShortcutKind {
     time,
 };
 
-struct LaunchShortcut final {
+// An entry whose candidate number the user chose: a launcher from [shortcuts] or
+// a stored phrase from [phrases]. One struct and one insertion pass for both, so
+// that two entries asking for the same number keep a stable, explainable order
+// instead of racing two separate loops for the same slot.
+struct PositionedShortcut final {
+    CandidateKind kind{CandidateKind::launch_action};
     std::string label;
     std::string reading;
-    std::string target;
+    std::string target;       // launch_action only
+    std::string commit_text;  // phrase only
     std::string fallback_text;
     std::size_t position{};  // one-based candidate number
 };
+
 
 [[nodiscard]] DatetimeShortcutKind datetime_shortcut_kind(
     const std::string_view key) noexcept {
@@ -63,6 +70,32 @@ struct FullPinyinDecodeResult {
         if ((ch & 0xC0U) != 0x80U) ++count;
     }
     return count;
+}
+
+// Cuts on a codepoint boundary, never mid-sequence: a half-written UTF-8
+// character would render as a replacement glyph in the candidate row.
+[[nodiscard]] std::string utf8_prefix_by_codepoints(
+    const std::string_view text,
+    const std::size_t limit) {
+    std::size_t count = 0U;
+    for (std::size_t offset = 0U; offset < text.size(); ++offset) {
+        if ((static_cast<unsigned char>(text[offset]) & 0xC0U) == 0x80U) continue;
+        if (count == limit) return std::string(text.substr(0U, offset));
+        ++count;
+    }
+    return std::string(text);
+}
+
+// What the candidate row shows for a stored phrase. The full text is committed
+// either way; this only keeps a long one from taking over its row -- the window
+// aligns columns across rows and shrinks them all to fit, so one thirty-character
+// address renders every short word beside it unreadable.
+[[nodiscard]] std::string phrase_row_text(
+    const std::string& text,
+    const std::size_t budget_codepoints) {
+    if (budget_codepoints == 0U) return text;
+    if (utf8_codepoint_count(text) <= budget_codepoints) return text;
+    return utf8_prefix_by_codepoints(text, budget_codepoints - 1U) + "…";
 }
 
 [[nodiscard]] std::size_t pinyin_syllable_count(
@@ -726,13 +759,16 @@ void Engine::splice_symbol_shortcuts(
     // which is what every other input method does with them.
     std::string datetime_reading;
     std::string datetime_label;
-    std::vector<LaunchShortcut> launch_shortcuts;
-    const auto add_launch = [&](LaunchShortcut shortcut) {
-        const bool exists = std::any_of(launch_shortcuts.begin(), launch_shortcuts.end(),
-            [&](const LaunchShortcut& current) {
-                return current.target == shortcut.target && current.label == shortcut.label;
+    std::vector<PositionedShortcut> positioned;
+    const auto add_positioned = [&](PositionedShortcut shortcut) {
+        const bool exists = std::any_of(positioned.begin(), positioned.end(),
+            [&](const PositionedShortcut& current) {
+                return current.kind == shortcut.kind &&
+                    current.target == shortcut.target &&
+                    current.commit_text == shortcut.commit_text &&
+                    current.label == shortcut.label;
             });
-        if (!exists) launch_shortcuts.push_back(std::move(shortcut));
+        if (!exists) positioned.push_back(std::move(shortcut));
     };
     const auto collect = [&](const std::string& key) {
         if (key.empty()) return;
@@ -749,9 +785,19 @@ void Engine::splice_symbol_shortcuts(
                 !shortcut_alias_matches(shortcut.aliases, key)) {
                 continue;
             }
-            add_launch({shortcut_candidate_label(shortcut), key,
-                shortcut_action_target(shortcut), shortcut.name,
+            add_positioned({CandidateKind::launch_action,
+                shortcut_candidate_label(shortcut), key,
+                shortcut_action_target(shortcut), {}, shortcut.name,
                 static_cast<std::size_t>(shortcut.position)});
+        }
+        for (const auto& phrase : settings.custom_phrases) {
+            if (phrase.text.empty()) continue;
+            if (!phrase_matches_key(phrase, key)) continue;
+            const std::string shown = phrase.label.empty()
+                ? phrase_row_text(phrase.text, inline_candidate_codepoints)
+                : phrase.label;
+            add_positioned({CandidateKind::phrase, shown, key, {}, phrase.text, key,
+                static_cast<std::size_t>(phrase.position)});
         }
         const auto found = symbol_shortcuts_.find(key);
         if (found == symbol_shortcuts_.end()) return;
@@ -763,7 +809,7 @@ void Engine::splice_symbol_shortcuts(
     };
     collect(reading);
     if (input != reading) collect(input);
-    if (wanted.empty() && datetime_label.empty() && launch_shortcuts.empty()) return;
+    if (wanted.empty() && datetime_label.empty() && positioned.empty()) return;
 
     // A symbol the dictionary already offered stays where the ranking put it.
     std::erase_if(wanted, [&](const std::string& symbol) {
@@ -817,7 +863,7 @@ void Engine::splice_symbol_shortcuts(
     inline_candidates.resize(take_inline);
     trailing.resize(take_trailing);
     const std::size_t added = take_inline + take_trailing;
-    if (added == 0U && launch_shortcuts.empty()) return;
+    if (added == 0U && positioned.empty()) return;
     const std::size_t keep_ordinary = result_limit - added;
     if (results.size() > keep_ordinary) results.resize(keep_ordinary);
 
@@ -829,25 +875,25 @@ void Engine::splice_symbol_shortcuts(
         std::make_move_iterator(trailing.begin()),
         std::make_move_iterator(trailing.end()));
 
-    if (!launch_shortcuts.empty() && results.empty() && result_limit >= 2U) {
-        EngineCandidate fallback = make(launch_shortcuts.front().fallback_text);
+    if (!positioned.empty() && results.empty() && result_limit >= 2U) {
+        EngineCandidate fallback = make(positioned.front().fallback_text);
         fallback.evidence.kind = CandidateKind::exact_lexicon;
         results.push_back(std::move(fallback));
     }
-    std::stable_sort(launch_shortcuts.begin(), launch_shortcuts.end(),
-        [](const LaunchShortcut& left, const LaunchShortcut& right) {
+    std::stable_sort(positioned.begin(), positioned.end(),
+        [](const PositionedShortcut& left, const PositionedShortcut& right) {
             return left.position < right.position;
         });
     // Insert from the farthest/later row back towards the front. When two
     // entries request the same position this preserves their table order.
-    for (auto iterator = launch_shortcuts.rbegin();
-         iterator != launch_shortcuts.rend(); ++iterator) {
+    for (auto iterator = positioned.rbegin(); iterator != positioned.rend(); ++iterator) {
         const auto& shortcut = *iterator;
         if (shortcut.position == 0U || shortcut.position > result_limit) continue;
         EngineCandidate action = make(shortcut.label);
         action.pinyin = shortcut.reading;
-        action.evidence.kind = CandidateKind::launch_action;
+        action.evidence.kind = shortcut.kind;
         action.evidence.action_target = shortcut.target;
+        action.evidence.commit_text = shortcut.commit_text;
         if (results.size() >= result_limit) results.pop_back();
         const std::size_t action_at =
             (std::min)(shortcut.position - 1U, results.size());
@@ -877,6 +923,30 @@ std::vector<LexiconCandidate> Engine::lookup_word(
         return binary->query_word(word, limit);
     }
     return {};
+}
+
+std::string Engine::leading_reading_initials(
+    const std::string_view text,
+    const std::size_t characters) const {
+    std::string initials;
+    std::size_t offset = 0U;
+    while (offset < text.size() && initials.size() < characters) {
+        // One UTF-8 sequence: the lead byte plus every continuation after it.
+        std::size_t length = 1U;
+        while (offset + length < text.size() &&
+               (static_cast<unsigned char>(text[offset + length]) & 0xC0U) == 0x80U) {
+            ++length;
+        }
+        const std::string_view character = text.substr(offset, length);
+        offset += length;
+        if (static_cast<unsigned char>(character.front()) < 0x80U) break;
+        const auto readings = lookup_word(character, 1U);
+        if (readings.empty() || readings.front().pinyin.empty()) break;
+        const char initial = readings.front().pinyin.front();
+        if (initial < 'a' || initial > 'z') break;
+        initials.push_back(initial);
+    }
+    return initials;
 }
 
 std::vector<LexiconCandidate> Engine::lookup_pinyin(

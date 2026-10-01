@@ -255,6 +255,87 @@ void test_valid_values_and_boundaries() {
             migrated_programmer.settings.punctuation == piinput::PunctuationMode::english,
         "removed programmer punctuation migrates to its identical English behavior");
 
+    // 常用语：别名、位置、显示名、内容四个字段一起解析。
+    const auto phrases = piinput::parse_settings_text(
+        "[phrases]\n"
+        "count=2\n"
+        "aliases_1=dzjl\n"
+        "position_1=2\n"
+        "label_1=家庭地址\n"
+        "text_1=北京市海淀区xx街道xx小区\n"
+        "aliases_2=sfz\n"
+        "position_2=3\n"
+        "text_2=622322199005012219\n",
+        previous);
+    check(phrases.errors.empty() &&
+            phrases.settings.custom_phrases.size() == 2U &&
+            phrases.settings.custom_phrases[0].aliases == "dzjl" &&
+            phrases.settings.custom_phrases[0].position == 2U &&
+            phrases.settings.custom_phrases[0].label == "家庭地址" &&
+            phrases.settings.custom_phrases[0].text == "北京市海淀区xx街道xx小区" &&
+            phrases.settings.custom_phrases[1].aliases == "sfz" &&
+            phrases.settings.custom_phrases[1].position == 3U &&
+            phrases.settings.custom_phrases[1].label.empty() &&
+            phrases.settings.custom_phrases[1].text == "622322199005012219",
+        "custom phrase aliases, position, label and text parse together");
+
+    // 默认不带任何常用语：这张表装的是个人信息，不该预置别人的地址和证件号。
+    check(piinput::default_settings().custom_phrases.empty(),
+        "the phrase table ships empty rather than with example personal data");
+
+    const auto invalid_phrase = piinput::parse_settings_text(
+        "[phrases]\ncount=1\naliases_1=bad!alias\nposition_1=1\n", previous);
+    check(invalid_phrase.errors.size() == 2U,
+        "invalid phrase aliases and out-of-range positions are both reported");
+
+    // 空别名是合法的——它选择「按内容推导触发串」，不是把这一行关掉。
+    const auto derived_phrase = piinput::parse_settings_text(
+        "[phrases]\ncount=1\naliases_1=\ntext_1=github.com/yakoye\n", previous);
+    check(derived_phrase.errors.empty() &&
+            derived_phrase.settings.custom_phrases.size() == 1U &&
+            derived_phrase.settings.custom_phrases[0].aliases.empty(),
+        "an empty phrase alias is accepted and selects the derived trigger");
+
+    // 触发方式由内容的第一个字符决定。
+    check(piinput::phrase_trigger_for("15801616544") == piinput::PhraseTrigger::digits &&
+            piinput::phrase_trigger_for("github.com") == piinput::PhraseTrigger::latin &&
+            piinput::phrase_trigger_for("北京市") == piinput::PhraseTrigger::chinese &&
+            piinput::phrase_trigger_for("") == piinput::PhraseTrigger::none &&
+            piinput::phrase_trigger_for("@home") == piinput::PhraseTrigger::none,
+        "the phrase trigger kind follows the first character of the text");
+
+    // 拉丁内容的自动触发串是它自己的前几个字母，两个字母起步。
+    const auto latin_aliases = piinput::derived_phrase_aliases("GitHub.com/yakoye");
+    check(latin_aliases.size() == 5U && latin_aliases.front() == "gi" &&
+            latin_aliases.back() == "github",
+        "Latin phrase text derives its own lowercase prefixes as triggers");
+    check(piinput::derived_phrase_aliases("北京市").empty() &&
+            piinput::derived_phrase_aliases("15801616544").empty(),
+        "only Latin text derives aliases; digits and Chinese use other paths");
+
+    piinput::CustomPhraseSettings aliased{"dzjl", 2U, "家庭地址", "北京市海淀区"};
+    check(piinput::phrase_matches_key(aliased, "dzjl") &&
+            piinput::phrase_matches_key(aliased, "DZJL") &&
+            !piinput::phrase_matches_key(aliased, "dz"),
+        "an explicit phrase alias matches case-insensitively and in full only");
+
+    piinput::CustomPhraseSettings derived{"", 2U, "", "github.com/yakoye"};
+    check(piinput::phrase_matches_key(derived, "git") &&
+            piinput::phrase_matches_key(derived, "gi") &&
+            !piinput::phrase_matches_key(derived, "g") &&
+            !piinput::phrase_matches_key(derived, "gitx"),
+        "a phrase with no alias fires on its own leading letters, two at minimum");
+
+    // 中文内容留空别名时，热路径不做任何词库反查——推导是设置程序保存时做的。
+    piinput::CustomPhraseSettings chinese_no_alias{"", 2U, "", "北京市海淀区"};
+    check(!piinput::phrase_matches_key(chinese_no_alias, "bjs"),
+        "Chinese phrase text with no alias does not match in the keystroke path");
+
+    check(piinput::leading_digit_run("15801616544") == "15801616544" &&
+            piinput::leading_digit_run("158-0161") == "158" &&
+            piinput::leading_digit_run("abc123").empty(),
+        "the leading digit run stops at the first non-digit");
+
     const auto invalid_shortcut = piinput::parse_settings_text(
         "[shortcuts]\ncount=1\naliases_1=bad!alias\nposition_1=10\n", previous);
     check(invalid_shortcut.errors.size() == 2U &&

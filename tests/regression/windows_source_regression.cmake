@@ -211,9 +211,40 @@ endif()
 # 注册走 CoCreateInstance，没有套间就失败——同一次安装，静默模式成功、界面
 # 模式退出码 1。工作线程必须自己建套间。
 if(NOT installer_main_text MATCHES
-       "std::thread worker\\(\\[&state, &migration\\] \\{[^}]*ScopedComApartment")
+       "run_install_wizard\\([^}]*ScopedComApartment")
     message(FATAL_ERROR
-        "The progress-UI install thread must open its own COM apartment, or TSF registration fails there")
+        "The wizard's install action must open its own COM apartment, or TSF registration fails there")
+endif()
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/installer/wizard.cpp" installer_wizard_text)
+# 向导必须把安装放在工作线程上。界面线程同时负责进度条和「安装中不让关窗」，
+# 在它上面跑安装会让整个窗口在复制词库那几秒里变成白板，看起来就是卡死。
+if(NOT installer_wizard_text MATCHES "state\\.worker = std::thread")
+    message(FATAL_ERROR
+        "The wizard must run the install on a worker thread, or the window freezes while it copies")
+endif()
+# 安装进行中必须吞掉 WM_CLOSE：工作线程正在写文件和注册表，半途撤掉窗口会留下
+# 一个装了一半的状态。
+if(NOT installer_wizard_text MATCHES
+       "if \\(state->page == Page::progress\\) return 0;")
+    message(FATAL_ERROR
+        "The wizard must refuse WM_CLOSE while installing, or a half-written install is left behind")
+endif()
+# --silent 的行为一个字节都不能动：脚本、一键更新和提权子步骤全都依赖它完全
+# 没有窗口。向导只在非静默路径上出现。
+if(NOT installer_main_text MATCHES "if \\(silent\\) \\{[^}]*install\\(migration_path\\)")
+    message(FATAL_ERROR
+        "--silent must still install with no windows at all; scripts and the elevated sub-steps rely on it")
+endif()
+# 随包的操作指引。装完之后用户不知道怎么用，是这一版安装器改动的原因；指引文件
+# 不进包，完成页那个勾选项就指向一个不存在的文件。
+file(READ "${PIINPUT_SOURCE_DIR}/CMakeLists.txt" root_cmake_text)
+if(NOT root_cmake_text MATCHES "docs/piinput-guide\\.html")
+    message(FATAL_ERROR
+        "The operation guide must be installed beside the binaries, or the finish page opens nothing")
+endif()
+if(NOT stable_text_service_text MATCHES "piinput-guide\\.html")
+    message(FATAL_ERROR
+        "The language bar's help entry must open the packaged HTML guide")
 endif()
 # 被拒绝的按键不会进入 OnKeyDown，所以 Shift 组合键必须在 OnTestKeyDown 里就
 # 记账。中文模式下 Shift+字母是有意放行的（直接打大写），于是状态机学不到这次
@@ -1328,6 +1359,35 @@ if(NOT host_protocol_header_text MATCHES "host_protocol_v6" OR
         "application is restarted. A published version is never withdrawn -- retire the field, "
         "keep the number")
 endif()
+if(NOT host_protocol_source_text MATCHES "host_protocol_v7")
+    message(FATAL_ERROR
+        "Protocol v7 must stay in the accepted-version whitelist, for the same reason as v6: "
+        "shims already loaded into running applications send it on digit_run messages")
+endif()
+if(NOT host_protocol_header_text MATCHES
+   "host_protocol_current = host_protocol_v5")
+    message(FATAL_ERROR
+        "host_protocol_current must stay at v5. The shim does no version negotiation -- it sends "
+        "whatever this constant says -- and after an upgrade the previous Host may still be "
+        "running without v7 in its whitelist, which makes it discard those messages whole with no "
+        "reply: every key eaten, no text, until that application restarts. v7 goes out on "
+        "digit_run alone, where a rejection costs only a missing suggestion")
+endif()
+file(READ "${PIINPUT_SOURCE_DIR}/src/host_messages.cpp" host_messages_source_text)
+if(NOT host_messages_source_text MATCHES
+   "protocol_version != host_protocol_v5 && protocol_version != host_protocol_v7")
+    message(FATAL_ERROR
+        "encode_host_reply must accept v7. It throws rather than returning an error, so a missing "
+        "version means the reply to that keystroke is never written at all -- and the key has "
+        "already been eaten by then")
+endif()
+file(READ "${PIINPUT_SOURCE_DIR}/platform/windows/tsf/pipe_client.cpp" pipe_client_text)
+if(NOT pipe_client_text MATCHES "encode_host_key_event\\(event, version\\)")
+    message(FATAL_ERROR
+        "The key-event envelope version and its payload encoding must come from the same value. "
+        "The Host decodes by the version the envelope declares; a mismatch reads as truncation or "
+        "trailing bytes and the whole message is rejected")
+endif()
 file(READ "${PIINPUT_SOURCE_DIR}/src/settings.cpp" settings_source_text)
 if(NOT settings_source_text MATCHES "show_composition=true")
     message(FATAL_ERROR
@@ -1756,11 +1816,17 @@ endif()
 if(NOT cmake_text MATCHES "MANIFESTUAC:level='asInvoker'")
     message(FATAL_ERROR "The per-user installer must run asInvoker instead of changing HKCU under an administrator account")
 endif()
+# 装完之后做什么，由完成页上勾了什么决定，一件都不强加。此前是无条件打开设置
+# 程序和配置目录两个窗口，摆在用户正在做的事前面；配置目录尤其少有人要，它的
+# 位置写在操作指引里就够了。
 if(NOT installer_text MATCHES "make_post_install_launch_targets" OR
-   NOT installer_text MATCHES "launch\.user_data_directory" OR
    NOT installer_text MATCHES "launch\.settings_executable" OR
-   NOT installer_text MATCHES "--settings")
-    message(FATAL_ERROR "Interactive installation must open both UserData and PiInput Settings")
+   NOT installer_text MATCHES "--settings" OR
+   NOT installer_text MATCHES "outcome\.open_settings" OR
+   NOT installer_text MATCHES "outcome\.open_guide" OR
+   NOT installer_text MATCHES "outcome\.activate_profile")
+    message(FATAL_ERROR
+        "The finish page must gate every follow-up action on its own checkbox: settings, guide, activate")
 endif()
 if(installer_text MATCHES "LoadLibraryExW\\(new_dll" OR
    NOT installer_text MATCHES "lpVerb = L\"runas\"" OR

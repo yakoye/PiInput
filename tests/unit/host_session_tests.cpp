@@ -1729,6 +1729,133 @@ void test_candidate_two_launches_tools_without_committing_the_label() {
     std::filesystem::remove(lexicon_path);
 }
 
+// 常用语：按别名弹出、按配置的位置排、上屏完整内容，并且不进学习。
+void test_stored_phrases_commit_their_text_without_being_learned() {
+    piinput::Engine engine;
+    const auto lexicon_path = write_chinese_lexicon();
+    engine.load_lexicon(lexicon_path);
+
+    auto settings = piinput::default_settings();
+    settings.custom_phrases = {
+        {"dzjl", 2U, "", "北京市海淀区xx街道xx小区"},
+        // wo 在测试词库里有五个候选，sfz 一个都没有。同一条常用语挂在两个别名上，
+        // 正好把「行排得下」和「行排不下」两种情形都走到。
+        {"wo,sfz", 3U, "", "622322199005012219"},
+    };
+    piinput::HostSession session(engine, nullptr, settings, "full");
+
+    type(session, "dzjl");
+    const auto& rows = session.snapshot().candidates;
+    check(rows.size() >= 2U, "an aliased phrase puts a candidate on the row");
+    // 行里显示的是截短形式，上屏的必须是完整内容——两者故意不同。
+    const auto address = session.apply({
+        .kind = piinput::HostKeyKind::select_digit,
+        .character = '2',
+    });
+    check(address.accepted && address.action == piinput::HostAction::commit &&
+            address.text == "北京市海淀区xx街道xx小区" && address.snapshot.raw.empty(),
+        "candidate 2 for dzjl commits the phrase in full and clears the composition");
+
+    // 配置了位置 3 且行里排得下时，就落在第 3 位，前两位留给词库。
+    type(session, "wo");
+    const auto& with_words = session.snapshot().candidates;
+    check(with_words.size() >= 3U && with_words[0].text == "我" &&
+            with_words[1].text == "窝" &&
+            with_words[2].text.starts_with("62232219900") &&
+            with_words[2].text.ends_with("…"),
+        "a phrase configured for position three sits there with words ahead of it");
+    // 行里显示的是截短形式，上屏的是完整内容——两者故意不同，否则一条三十字的
+    // 地址会把同一行的词挤到不可读。要区分两条长内容就填 label。
+    check(with_words[2].text != "622322199005012219",
+        "a long phrase is shortened for the row rather than taking it over");
+    const auto identity = session.apply({
+        .kind = piinput::HostKeyKind::select_digit,
+        .character = '3',
+    });
+    check(identity.accepted && identity.action == piinput::HostAction::commit &&
+            identity.text == "622322199005012219",
+        "candidate 3 commits the stored digits");
+
+    // 词库一个候选都给不出时，位置 3 排不出来。此时贴到行尾而不是留个空洞——
+    // 没有第 3 位可占就取能占的最后一位，这样这一行永远不会出现按不到的号码。
+    type(session, "sfz");
+    const auto& short_row = session.snapshot().candidates;
+    check(!short_row.empty() && short_row.back().text.starts_with("62232219900"),
+        "a configured position past the end of a short row lands at the end of it");
+
+    // 不进学习：确认提交之后再打同一个别名，内容只能有一份，不能冒出第二个来源
+    // 不明的候选。confirm_commit 对常用语应当没有待学习记录可认。
+    check(!session.confirm_commit(identity.snapshot.generation, true),
+        "a committed phrase leaves no pending learning record to confirm");
+    type(session, "dzjl");
+    const auto repeats = std::count_if(
+        session.snapshot().candidates.begin(), session.snapshot().candidates.end(),
+        [](const piinput::HostCandidate& item) {
+            return item.text == "北京市海淀区xx街道xx小区";
+        });
+    check(repeats == 0,
+        "a committed phrase never comes back as a learned full-text candidate");
+    std::filesystem::remove(lexicon_path);
+}
+
+// 数字常用语：数字照常落进文档，建议只补齐没打完的那部分。
+void test_digit_runs_suggest_the_rest_of_a_stored_number() {
+    piinput::Engine engine;
+    const auto lexicon_path = write_chinese_lexicon();
+    engine.load_lexicon(lexicon_path);
+
+    auto settings = piinput::default_settings();
+    settings.custom_phrases = {{"", 2U, "", "15801616544"}};
+    piinput::HostSession session(engine, nullptr, settings, "full");
+
+    const auto run = [&](const std::string& digits) {
+        piinput::HostKeyEvent event;
+        event.kind = piinput::HostKeyKind::digit_run;
+        event.text_payload = digits;
+        return session.apply(event);
+    };
+
+    // 门槛以下不出建议：一两位数字到处都是，日期、价格、编号里全都有。
+    check(!run("1").accepted && !run("15").accepted,
+        "fewer than three digits never opens a suggestion");
+
+    const auto opened = run("158");
+    check(opened.accepted && opened.action == piinput::HostAction::update &&
+            opened.snapshot.candidates.size() == 1U &&
+            opened.snapshot.candidates[0].text == "15801616544",
+        "three matching digits suggest the whole stored number");
+    // 合成串必须是空的——那串数字已经在文档里了，再显示一份就是重复。
+    check(opened.snapshot.raw.empty() && opened.snapshot.composition_text.empty(),
+        "a digit suggestion carries no composition of its own");
+
+    // 选中只插入没打完的那部分：不删除已上屏的数字，也不重写周边文本。
+    piinput::HostKeyEvent accept;
+    accept.kind = piinput::HostKeyKind::select_candidate;
+    accept.candidate_id = opened.snapshot.candidates[0].id;
+    const auto committed = session.apply(accept);
+    check(committed.accepted && committed.action == piinput::HostAction::commit &&
+            committed.text == "01616544",
+        "accepting a digit suggestion inserts only the untyped remainder");
+
+    // 不匹配时把候选窗收掉，而不是留着上一次的建议。
+    check(run("158").accepted, "the suggestion can be reopened");
+    const auto missed = run("999");
+    check(missed.accepted && missed.action == piinput::HostAction::cancel,
+        "a run that stops matching closes the suggestion");
+    check(!run("999").accepted,
+        "a run that never matched does not keep reporting a change");
+
+    // 已经打完整个号码就不该再建议补全——严格前缀才算。
+    check(!run("15801616544").accepted,
+        "a fully typed number has nothing left to suggest");
+
+    // 有合成串时不出建议：候选窗归正在打的字用。
+    type(session, "wo");
+    check(!run("158").accepted,
+        "a digit run while composing never takes over the candidate row");
+    std::filesystem::remove(lexicon_path);
+}
+
 }  // namespace
 
 int main() {
@@ -1766,6 +1893,8 @@ int main() {
     test_chinese_input_can_use_english_punctuation();
     test_symbol_center_and_semicolon_routing();
     test_candidate_two_launches_tools_without_committing_the_label();
+    test_stored_phrases_commit_their_text_without_being_learned();
+    test_digit_runs_suggest_the_rest_of_a_stored_number();
     test_english_completion_is_off_unless_asked_for();
     test_english_completion_never_renumbers_a_shortcut();
     test_english_completion_commits_and_learns();

@@ -546,6 +546,106 @@ void apply_shortcut_assignments(
     result.settings.custom_shortcuts = std::move(rows);
 }
 
+struct PhraseAssignment final {
+    bool touched{};
+    std::optional<std::string> aliases;
+    std::optional<std::uint32_t> position;
+    std::optional<std::string> label;
+    std::optional<std::string> text;
+};
+
+struct PhraseAssignments final {
+    std::optional<std::size_t> count;
+    bool saw_indexed_key{};
+    std::array<PhraseAssignment, max_custom_phrases> rows;
+};
+
+void parse_phrases(
+    SettingsParseResult& result,
+    const std::string_view key,
+    const std::string_view value,
+    const std::size_t line,
+    PhraseAssignments& assignments) {
+    if (key == "count") {
+        const auto parsed = parse_integer(value);
+        if (!parsed || *parsed > max_custom_phrases) {
+            add_error(result, line, "phrases", key, "count must be 0 through 128");
+        } else {
+            assignments.count = static_cast<std::size_t>(*parsed);
+        }
+        return;
+    }
+
+    const auto separator = key.rfind('_');
+    if (separator == std::string_view::npos || separator + 1U == key.size()) return;
+    const auto parsed_index = parse_integer(key.substr(separator + 1U));
+    if (!parsed_index || *parsed_index == 0U || *parsed_index > max_custom_phrases) {
+        add_error(result, line, "phrases", key, "phrase index must be 1 through 128");
+        return;
+    }
+    const std::string_view field = key.substr(0U, separator);
+    auto& row = assignments.rows[static_cast<std::size_t>(*parsed_index - 1U)];
+    assignments.saw_indexed_key = true;
+    row.touched = true;
+    if (field == "aliases") {
+        // Empty is legitimate here, unlike in the launcher table: it selects the
+        // derived trigger rather than disabling the row.
+        if (!valid_shortcut_aliases(value)) {
+            add_error(result, line, "phrases", key, "invalid aliases");
+        } else {
+            row.aliases = std::string(value);
+        }
+    } else if (field == "position") {
+        const auto parsed = parse_integer(value);
+        if (!parsed || *parsed < 2U || *parsed > 9U) {
+            add_error(result, line, "phrases", key, "position must be 2 through 9");
+        } else {
+            row.position = *parsed;
+        }
+    } else if (field == "label") {
+        if (value.size() > 96U) {
+            add_error(result, line, "phrases", key, "label is too long");
+        } else {
+            row.label = std::string(value);
+        }
+    } else if (field == "text") {
+        if (value.size() > 2048U) {
+            add_error(result, line, "phrases", key, "text is too long");
+        } else {
+            row.text = std::string(value);
+        }
+    }
+}
+
+void apply_phrase_assignments(
+    SettingsParseResult& result,
+    const SettingsSnapshot& previous,
+    const PhraseAssignments& assignments) {
+    if (!assignments.count.has_value() && !assignments.saw_indexed_key) return;
+
+    // No legacy countless layout to rescue: the table is new in this version, so
+    // a file without `count` has no phrase rows to preserve.
+    std::vector<CustomPhraseSettings> rows;
+    rows.resize(assignments.count.value_or(0U));
+    for (std::size_t index = 0U; index < rows.size(); ++index) {
+        if (index < previous.custom_phrases.size()) {
+            rows[index] = previous.custom_phrases[index];
+        }
+    }
+
+    for (std::size_t index = 0U; index < rows.size(); ++index) {
+        const auto& source = assignments.rows[index];
+        if (!source.touched) continue;
+        CustomPhraseSettings value = rows[index];
+        if (source.aliases) value.aliases = *source.aliases;
+        if (source.position) value.position = *source.position;
+        if (source.label) value.label = *source.label;
+        if (source.text) value.text = *source.text;
+        rows[index] = std::move(value);
+    }
+    result.settings.custom_phrases = std::move(rows);
+}
+
 }  // namespace
 
 std::vector<CustomShortcutSettings> default_custom_shortcuts() {
@@ -598,6 +698,76 @@ std::string shortcut_action_target(const CustomShortcutSettings& shortcut) {
     return "custom:" + shortcut.target;
 }
 
+std::vector<CustomPhraseSettings> default_custom_phrases() {
+    // Empty on purpose. A phrase table holds personal data -- an address, an ID
+    // number -- so shipping example rows would put a stranger's details into
+    // everybody's candidate row, and clearing them would be the first chore
+    // every user had.
+    return {};
+}
+
+std::string phrase_candidate_label(const CustomPhraseSettings& phrase) {
+    return phrase.label.empty() ? phrase.text : phrase.label;
+}
+
+PhraseTrigger phrase_trigger_for(const std::string_view text) noexcept {
+    if (text.empty()) return PhraseTrigger::none;
+    const auto lead = static_cast<unsigned char>(text.front());
+    if (lead >= '0' && lead <= '9') return PhraseTrigger::digits;
+    if ((lead >= 'a' && lead <= 'z') || (lead >= 'A' && lead <= 'Z')) {
+        return PhraseTrigger::latin;
+    }
+    // Any lead byte with the high bit set is a multi-byte UTF-8 sequence. The
+    // text has already been validated as UTF-8 by the time it gets here, so this
+    // is Chinese (or at least something with a reading to look up).
+    if (lead >= 0x80U) return PhraseTrigger::chinese;
+    return PhraseTrigger::none;
+}
+
+std::vector<std::string> derived_phrase_aliases(const std::string_view text) {
+    if (phrase_trigger_for(text) != PhraseTrigger::latin) return {};
+    std::string letters;
+    for (const char ch : text) {
+        const auto value = static_cast<unsigned char>(ch);
+        const bool letter = (value >= 'a' && value <= 'z') || (value >= 'A' && value <= 'Z');
+        if (!letter) break;
+        letters.push_back(static_cast<char>(
+            value >= 'A' && value <= 'Z' ? value - 'A' + 'a' : value));
+        if (letters.size() >= max_derived_alias_length) break;
+    }
+    std::vector<std::string> result;
+    for (std::size_t length = min_derived_alias_length; length <= letters.size(); ++length) {
+        result.push_back(letters.substr(0U, length));
+    }
+    return result;
+}
+
+bool phrase_matches_key(
+    const CustomPhraseSettings& phrase,
+    const std::string_view key) noexcept {
+    if (phrase.text.empty() || key.empty()) return false;
+    if (!phrase.aliases.empty()) return shortcut_alias_matches(phrase.aliases, key);
+    // No alias and Latin text: the text's own leading letters are the trigger, so
+    // "github.com/yakoye" answers to gi, git, gith and so on.
+    if (phrase_trigger_for(phrase.text) != PhraseTrigger::latin) return false;
+    std::string normalized(key);
+    std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+        [](const unsigned char ch) {
+            return static_cast<char>(ch >= 'A' && ch <= 'Z' ? ch - 'A' + 'a' : ch);
+        });
+    const auto derived = derived_phrase_aliases(phrase.text);
+    return std::find(derived.begin(), derived.end(), normalized) != derived.end();
+}
+
+std::string leading_digit_run(const std::string_view text) {
+    std::string result;
+    for (const char ch : text) {
+        if (ch < '0' || ch > '9') break;
+        result.push_back(ch);
+    }
+    return result;
+}
+
 SettingsSnapshot default_settings() {
     SettingsSnapshot result;
     result.custom_shortcuts = default_custom_shortcuts();
@@ -624,6 +794,7 @@ SettingsParseResult parse_settings_text(
         {previous.candidates.max_items, std::nullopt},
     }};
     ShortcutAssignments shortcut_assignments;
+    PhraseAssignments phrase_assignments;
     std::size_t line_number = 0U;
     while (!text.empty()) {
         ++line_number;
@@ -649,7 +820,7 @@ SettingsParseResult parse_settings_text(
             if (parsed_section == "general" || parsed_section == "pinyin" ||
                 parsed_section == "candidates" || parsed_section == "english" ||
                 parsed_section == "commands" || parsed_section == "punctuation" ||
-                parsed_section == "shortcuts") {
+                parsed_section == "shortcuts" || parsed_section == "phrases") {
                 section.assign(parsed_section);
             } else {
                 section = "<unknown-section>";
@@ -685,6 +856,8 @@ SettingsParseResult parse_settings_text(
             parse_commands(result, key, value, line_number);
         } else if (section == "shortcuts") {
             parse_shortcuts(result, key, value, line_number, shortcut_assignments);
+        } else if (section == "phrases") {
+            parse_phrases(result, key, value, line_number, phrase_assignments);
         } else if (section == "punctuation" && key == "mode") {
             assign_parsed(
                 result, result.settings.punctuation, parse_punctuation, value, line_number, "punctuation", key);
@@ -698,6 +871,7 @@ SettingsParseResult parse_settings_text(
     } else {
         enforce_candidate_screen_size(result, candidate_assignments);
         apply_shortcut_assignments(result, previous, shortcut_assignments);
+        apply_phrase_assignments(result, previous, phrase_assignments);
     }
     return result;
 }
@@ -749,6 +923,20 @@ std::string serialize_default_settings() {
         text += "icon_" + suffix + "=" + shortcuts[index].icon + "\n";
         text += "name_" + suffix + "=" + shortcuts[index].name + "\n";
         text += "target_" + suffix + "=" + shortcuts[index].target + "\n";
+    }
+    // The phrase table ships empty, but the section header and count must be
+    // present: that is what tells apply_phrase_assignments a file was written by
+    // a build that knows about phrases, and it gives users somewhere obvious to
+    // add rows by hand.
+    text += "[phrases]\n";
+    const auto phrases = default_custom_phrases();
+    text += "count=" + std::to_string(phrases.size()) + "\n";
+    for (std::size_t index = 0U; index < phrases.size(); ++index) {
+        const std::string suffix = std::to_string(index + 1U);
+        text += "aliases_" + suffix + "=" + phrases[index].aliases + "\n";
+        text += "position_" + suffix + "=" + std::to_string(phrases[index].position) + "\n";
+        text += "label_" + suffix + "=" + phrases[index].label + "\n";
+        text += "text_" + suffix + "=" + phrases[index].text + "\n";
     }
     text +=
         "[punctuation]\n"

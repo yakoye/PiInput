@@ -18,14 +18,20 @@ PipeClient::~PipeClient() {
 bool PipeClient::send_key(
     const MirrorRequest& request,
     const HostKeyEvent& event) {
+    // 信封版本与载荷编码必须一致：Host 按信封声明的版本解码，对不上会被判成
+    // 截断或多余字节，整包拒收。digit_run 需要 v7 才有的文本字段，其余报文继续
+    // 走 v5 —— 理由见 host_protocol.h 里 v7 的注释。
+    const std::uint32_t version = event.kind == HostKeyKind::digit_run
+        ? host_protocol_v7
+        : host_protocol_current;
     return enqueue({
-        .version = host_protocol_current,
+        .version = version,
         .client_id = request.client_id,
         .session_id = request.session_id,
         .sequence = request.sequence,
         .generation = request.generation,
         .type = HostMessageType::key_event,
-        .payload = encode_host_key_event(event),
+        .payload = encode_host_key_event(event, version),
     });
 }
 

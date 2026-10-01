@@ -21,6 +21,7 @@ namespace {
 constexpr wchar_t kWindowClass[] = L"PiInputSettingsWindow";
 constexpr wchar_t kShortcutEditorClass[] = L"PiInputShortcutEditorWindow";
 constexpr wchar_t kToolTemplatesClass[] = L"PiInputWindowsToolTemplatesWindow";
+constexpr wchar_t kPhraseEditorClass[] = L"PiInputPhraseEditorWindow";
 constexpr wchar_t kMutexName[] = L"Local\\PiInputSettingsWindow";
 
 constexpr int kTab = 1000;
@@ -35,6 +36,11 @@ constexpr int kShortcutEdit = 1012;
 constexpr int kShortcutDelete = 1013;
 constexpr int kShortcutTemplates = 1014;
 constexpr int kShortcutHint = 1015;
+constexpr int kPhraseList = 1020;
+constexpr int kPhraseAdd = 1021;
+constexpr int kPhraseEdit = 1022;
+constexpr int kPhraseDelete = 1023;
+constexpr int kPhraseHint = 1024;
 constexpr int kFirstField = 1100;
 constexpr int kEditorAliases = 1200;
 constexpr int kEditorPosition = 1201;
@@ -48,6 +54,12 @@ constexpr int kTemplateCategory = 1301;
 constexpr int kTemplateList = 1302;
 constexpr int kTemplateAdd = 1303;
 constexpr int kTemplateCancel = 1304;
+constexpr int kPhraseEditorAliases = 1400;
+constexpr int kPhraseEditorPosition = 1401;
+constexpr int kPhraseEditorLabel = 1402;
+constexpr int kPhraseEditorText = 1403;
+constexpr int kPhraseEditorOk = 1404;
+constexpr int kPhraseEditorCancel = 1405;
 
 // Every option the engine reads, described as data rather than as thirty
 // near-identical blocks of control creation. Adding an option means adding a
@@ -129,8 +141,11 @@ constexpr std::array<Row, 33U> kRows{{
     {4, Kind::number, Field::prefix_scan_limit, L"前缀扫描上限", kNone, 128U, 16384U},
 }};
 
-constexpr std::array<const wchar_t*, 6U> kPages{
-    L"输入", L"候选窗", L"标点符号", L"英文", L"高级", L"快捷调用"};
+constexpr std::array<const wchar_t*, 7U> kPages{
+    L"输入", L"候选窗", L"标点符号", L"英文", L"高级", L"快捷调用", L"常用语"};
+
+constexpr int kShortcutPage = 5;
+constexpr int kPhrasePage = 6;
 
 struct AppState final {
     std::filesystem::path settings_path;
@@ -146,6 +161,21 @@ struct AppState final {
     HWND shortcut_delete{};
     HWND shortcut_templates{};
     HWND shortcut_hint{};
+    HWND phrase_list{};
+    HWND phrase_add{};
+    HWND phrase_edit{};
+    HWND phrase_delete{};
+    HWND phrase_hint{};
+};
+
+struct PhraseEditorState final {
+    piinput::CustomPhraseSettings value;
+    bool accepted{};
+    bool done{};
+    HWND aliases{};
+    HWND position{};
+    HWND label{};
+    HWND text{};
 };
 
 struct ShortcutEditorState final {
@@ -406,6 +436,184 @@ LRESULT CALLBACK shortcut_editor_proc(
     return state.accepted;
 }
 
+// The trigger a row will actually answer to, spelled out for the user instead of
+// left to be guessed. An empty alias box does not mean "disabled" here, and the
+// only way to make that legible is to show what it resolves to.
+[[nodiscard]] std::wstring describe_phrase_trigger(
+    const piinput::CustomPhraseSettings& phrase) {
+    if (!phrase.aliases.empty()) return piinput::utf8_to_wide(phrase.aliases);
+    switch (piinput::phrase_trigger_for(phrase.text)) {
+    case piinput::PhraseTrigger::latin: {
+        const auto derived = piinput::derived_phrase_aliases(phrase.text);
+        if (derived.empty()) break;
+        std::string joined;
+        for (const auto& alias : derived) {
+            if (!joined.empty()) joined.push_back(',');
+            joined += alias;
+        }
+        return L"（自动）" + piinput::utf8_to_wide(joined);
+    }
+    case piinput::PhraseTrigger::chinese:
+        // Derived from the reading when the Host loads settings, which is the
+        // only place the lexicon is available. The exact letters are not known
+        // here, so promise the rule rather than inventing the result.
+        return L"（自动）按首字拼音声母";
+    case piinput::PhraseTrigger::digits:
+        return L"（自动）前 " +
+            std::to_wstring(piinput::min_digit_suggestion_length) + L" 位数字后按 Tab";
+    case piinput::PhraseTrigger::none:
+    default:
+        break;
+    }
+    return L"需要填触发码";
+}
+
+LRESULT CALLBACK phrase_editor_proc(
+    const HWND window,
+    const UINT message,
+    const WPARAM wparam,
+    const LPARAM lparam) {
+    auto* state = reinterpret_cast<PhraseEditorState*>(
+        GetWindowLongPtrW(window, GWLP_USERDATA));
+    if (message == WM_NCCREATE) {
+        const auto* create = reinterpret_cast<const CREATESTRUCTW*>(lparam);
+        state = static_cast<PhraseEditorState*>(create->lpCreateParams);
+        SetWindowLongPtrW(window, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
+    }
+    if (message == WM_CREATE && state != nullptr) {
+        constexpr int left = 120;
+        constexpr int width = 390;
+        editor_label(window, L"内容", 18);
+        editor_label(window, L"触发码", 92);
+        editor_label(window, L"候选位置", 124);
+        editor_label(window, L"备注名", 156);
+        // Multi-line, because the content is the point here: an address or a
+        // stock reply does not fit a single-line box, and a box that visibly
+        // cannot hold what the user is pasting reads as a length limit.
+        state->text = control(L"EDIT", L"", WS_VISIBLE | WS_TABSTOP | WS_BORDER |
+            ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL,
+            left, 18, width, 66, window, kPhraseEditorText);
+        state->aliases = control(L"EDIT", L"", WS_VISIBLE | WS_TABSTOP |
+            WS_BORDER | ES_AUTOHSCROLL, left, 92, width, 24, window,
+            kPhraseEditorAliases);
+        state->position = control(L"COMBOBOX", L"", WS_VISIBLE | WS_TABSTOP |
+            CBS_DROPDOWNLIST, left, 124, 100, 200, window, kPhraseEditorPosition);
+        for (unsigned position = 2U; position <= 9U; ++position) {
+            const auto text = std::to_wstring(position);
+            SendMessageW(state->position, CB_ADDSTRING, 0U,
+                reinterpret_cast<LPARAM>(text.c_str()));
+        }
+        state->label = control(L"EDIT", L"", WS_VISIBLE | WS_TABSTOP |
+            WS_BORDER | ES_AUTOHSCROLL, left, 156, width, 24, window,
+            kPhraseEditorLabel);
+        (void)control(L"STATIC",
+            L"触发码留空时自动推导：拉丁内容用它自己的前几个字母，中文内容用首字声母，"
+            L"数字内容在打出前几位后出现。备注名留空时候选框直接显示内容。",
+            WS_VISIBLE | SS_LEFT, 18, 190, 492, 40, window, 0);
+        (void)control(L"BUTTON", L"确定", WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+            326, 238, 88, 28, window, kPhraseEditorOk);
+        (void)control(L"BUTTON", L"取消", WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+            422, 238, 88, 28, window, kPhraseEditorCancel);
+        SetWindowTextW(state->text, piinput::utf8_to_wide(state->value.text).c_str());
+        SetWindowTextW(state->aliases, piinput::utf8_to_wide(state->value.aliases).c_str());
+        SendMessageW(state->position, CB_SETCURSEL,
+            static_cast<WPARAM>((std::clamp)(state->value.position, 2U, 9U) - 2U), 0U);
+        SetWindowTextW(state->label, piinput::utf8_to_wide(state->value.label).c_str());
+        EnumChildWindows(window, apply_gui_font, 0);
+        SetFocus(state->text);
+        return 0;
+    }
+    if (message == WM_COMMAND && state != nullptr) {
+        const int id = LOWORD(wparam);
+        if (id == kPhraseEditorCancel) {
+            DestroyWindow(window);
+            return 0;
+        }
+        if (id == kPhraseEditorOk) {
+            piinput::CustomPhraseSettings value;
+            value.text = control_text_utf8(state->text);
+            value.aliases = control_text_utf8(state->aliases);
+            const auto selected = SendMessageW(state->position, CB_GETCURSEL, 0U, 0U);
+            value.position = selected == CB_ERR ? 2U
+                : static_cast<std::uint32_t>(selected + 2U);
+            value.label = control_text_utf8(state->label);
+            if (value.text.empty() || value.text.size() > 2048U) {
+                MessageBoxW(window, L"请填写常用语内容（最多 2048 字节）。",
+                    L"PiInput", MB_OK | MB_ICONWARNING);
+                SetFocus(state->text);
+                return 0;
+            }
+            // Empty is allowed and means "derive it" -- but only when the content
+            // gives something to derive from. A row that can never fire is worse
+            // than a refused save, because nothing later explains the silence.
+            if (!value.aliases.empty() && !valid_alias_text(value.aliases)) {
+                MessageBoxW(window, L"触发码只能用英文字母；多个触发码用逗号分隔。",
+                    L"PiInput", MB_OK | MB_ICONWARNING);
+                SetFocus(state->aliases);
+                return 0;
+            }
+            if (value.aliases.empty() &&
+                piinput::phrase_trigger_for(value.text) == piinput::PhraseTrigger::none) {
+                MessageBoxW(window,
+                    L"这段内容的开头推导不出触发码，请填写触发码。",
+                    L"PiInput", MB_OK | MB_ICONWARNING);
+                SetFocus(state->aliases);
+                return 0;
+            }
+            if (value.label.size() > 96U) {
+                MessageBoxW(window, L"备注名过长。", L"PiInput", MB_OK | MB_ICONWARNING);
+                SetFocus(state->label);
+                return 0;
+            }
+            state->value = std::move(value);
+            state->accepted = true;
+            DestroyWindow(window);
+            return 0;
+        }
+    }
+    if (message == WM_CLOSE) {
+        DestroyWindow(window);
+        return 0;
+    }
+    if (message == WM_DESTROY && state != nullptr) {
+        state->done = true;
+        return 0;
+    }
+    return DefWindowProcW(window, message, wparam, lparam);
+}
+
+[[nodiscard]] bool edit_phrase(
+    const HWND owner,
+    piinput::CustomPhraseSettings& value,
+    const bool adding) {
+    PhraseEditorState state{.value = value};
+    RECT owner_rect{};
+    GetWindowRect(owner, &owner_rect);
+    constexpr int width = 548;
+    constexpr int height = 320;
+    const int x = owner_rect.left + ((owner_rect.right - owner_rect.left) - width) / 2;
+    const int y = owner_rect.top + ((owner_rect.bottom - owner_rect.top) - height) / 2;
+    const HWND window = CreateWindowExW(
+        WS_EX_DLGMODALFRAME | WS_EX_CONTROLPARENT,
+        kPhraseEditorClass,
+        adding ? L"添加常用语" : L"编辑常用语",
+        WS_POPUP | WS_CAPTION | WS_SYSMENU,
+        x, y, width, height, owner, nullptr, GetModuleHandleW(nullptr), &state);
+    if (window == nullptr) return false;
+    EnableWindow(owner, FALSE);
+    ShowWindow(window, SW_SHOW);
+    MSG message{};
+    while (!state.done && GetMessageW(&message, nullptr, 0U, 0U) > 0) {
+        if (IsDialogMessageW(window, &message) != FALSE) continue;
+        TranslateMessage(&message);
+        DispatchMessageW(&message);
+    }
+    EnableWindow(owner, TRUE);
+    SetActiveWindow(owner);
+    if (state.accepted) value = std::move(state.value);
+    return state.accepted;
+}
+
 [[nodiscard]] std::wstring lowercase(std::wstring value) {
     std::transform(value.begin(), value.end(), value.begin(), [](const wchar_t ch) {
         return static_cast<wchar_t>(std::towlower(ch));
@@ -638,6 +846,43 @@ void refresh_shortcut_list(AppState& state) {
     refresh_shortcut_buttons(state);
 }
 
+void refresh_phrase_buttons(AppState& state) {
+    const bool selected = state.phrase_list != nullptr &&
+        ListView_GetNextItem(state.phrase_list, -1, LVNI_SELECTED) >= 0;
+    if (state.phrase_edit != nullptr) EnableWindow(state.phrase_edit, selected);
+    if (state.phrase_delete != nullptr) EnableWindow(state.phrase_delete, selected);
+}
+
+void refresh_phrase_list(AppState& state) {
+    if (state.phrase_list == nullptr) return;
+    ListView_DeleteAllItems(state.phrase_list);
+    for (std::size_t index = 0U; index < state.settings.custom_phrases.size(); ++index) {
+        const auto& phrase = state.settings.custom_phrases[index];
+        // Newlines would be drawn as boxes in a report-view row. The stored text
+        // keeps them; only this preview flattens them.
+        std::wstring preview = piinput::utf8_to_wide(phrase.text);
+        std::replace(preview.begin(), preview.end(), L'\r', L' ');
+        std::replace(preview.begin(), preview.end(), L'\n', L' ');
+        const std::array<std::wstring, 4U> values{
+            describe_phrase_trigger(phrase),
+            std::to_wstring(phrase.position),
+            piinput::utf8_to_wide(phrase.label),
+            std::move(preview),
+        };
+        LVITEMW item{};
+        item.mask = LVIF_TEXT | LVIF_PARAM;
+        item.iItem = static_cast<int>(index);
+        item.pszText = const_cast<wchar_t*>(values[0].c_str());
+        item.lParam = static_cast<LPARAM>(index);
+        const int inserted = ListView_InsertItem(state.phrase_list, &item);
+        for (int column = 1; inserted >= 0 && column < 4; ++column) {
+            ListView_SetItemText(state.phrase_list, inserted, column,
+                const_cast<wchar_t*>(values[static_cast<std::size_t>(column)].c_str()));
+        }
+    }
+    refresh_phrase_buttons(state);
+}
+
 BOOL CALLBACK apply_gui_font(const HWND child, LPARAM) {
     SendMessageW(child, WM_SETFONT,
         reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
@@ -772,11 +1017,16 @@ void show_page(AppState& state, const int page) {
     if (state.preview != nullptr) {
         ShowWindow(state.preview, page == 1 ? SW_SHOW : SW_HIDE);
     }
-    const int shortcut_mode = page == 5 ? SW_SHOW : SW_HIDE;
+    const int shortcut_mode = page == kShortcutPage ? SW_SHOW : SW_HIDE;
     for (const HWND item : {state.shortcut_list, state.shortcut_add,
              state.shortcut_edit, state.shortcut_delete,
              state.shortcut_templates, state.shortcut_hint}) {
         if (item != nullptr) ShowWindow(item, shortcut_mode);
+    }
+    const int phrase_mode = page == kPhrasePage ? SW_SHOW : SW_HIDE;
+    for (const HWND item : {state.phrase_list, state.phrase_add,
+             state.phrase_edit, state.phrase_delete, state.phrase_hint}) {
+        if (item != nullptr) ShowWindow(item, phrase_mode);
     }
 }
 
@@ -1049,6 +1299,37 @@ LRESULT CALLBACK window_proc(
             L"多个触发码用逗号分隔。英文候选开启时可在英文状态调用；关闭时请按 Shift 切到中文。",
             SS_LEFT, 24, 424, 660, 34, window, kShortcutHint);
 
+        state->phrase_list = CreateWindowExW(
+            WS_EX_CLIENTEDGE, WC_LISTVIEWW, L"",
+            WS_CHILD | WS_TABSTOP | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
+            24, 60, 650, 355, window,
+            reinterpret_cast<HMENU>(static_cast<INT_PTR>(kPhraseList)),
+            GetModuleHandleW(nullptr), nullptr);
+        ListView_SetExtendedListViewStyle(state->phrase_list,
+            LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES | LVS_EX_DOUBLEBUFFER);
+        const std::array<std::pair<const wchar_t*, int>, 4U> phrase_columns{{
+            {L"触发码", 190}, {L"候选位置", 76}, {L"备注名", 110}, {L"内容", 268},
+        }};
+        for (std::size_t index = 0U; index < phrase_columns.size(); ++index) {
+            LVCOLUMNW column{};
+            column.mask = LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+            column.pszText = const_cast<wchar_t*>(phrase_columns[index].first);
+            column.cx = phrase_columns[index].second;
+            column.iSubItem = static_cast<int>(index);
+            ListView_InsertColumn(state->phrase_list, static_cast<int>(index), &column);
+        }
+        state->phrase_add = control(L"BUTTON", L"添加", BS_PUSHBUTTON | WS_TABSTOP,
+            690, 62, 102, 28, window, kPhraseAdd);
+        state->phrase_edit = control(L"BUTTON", L"编辑", BS_PUSHBUTTON | WS_TABSTOP,
+            690, 98, 102, 28, window, kPhraseEdit);
+        state->phrase_delete = control(L"BUTTON", L"删除", BS_PUSHBUTTON | WS_TABSTOP,
+            690, 134, 102, 28, window, kPhraseDelete);
+        state->phrase_hint = control(L"STATIC",
+            L"常用语上屏文本，不启动程序。触发码留空时按内容自动推导。"
+            L"数字内容在打出前 3 位后出现在候选框，按 Tab 补齐剩下的部分——"
+            L"数字键照常输入，不会被候选框接管。",
+            SS_LEFT, 24, 424, 660, 34, window, kPhraseHint);
+
         const int button_y = kWindowHeight - 38;
         const int button_right = kWindowWidth - 24;
         control(L"BUTTON", L"保存", BS_DEFPUSHBUTTON | WS_TABSTOP | WS_VISIBLE,
@@ -1062,6 +1343,7 @@ LRESULT CALLBACK window_proc(
         state->settings = piinput::windows::load_all_settings(state->settings_path, error);
         load_into_controls(*state);
         refresh_shortcut_list(*state);
+        refresh_phrase_list(*state);
         EnumChildWindows(window, apply_gui_font, 0);
         update_preview(*state);
         show_page(*state, 0);
@@ -1093,6 +1375,17 @@ LRESULT CALLBACK window_proc(
                 return 0;
             }
         }
+        if (header != nullptr && header->hwndFrom == state->phrase_list) {
+            if (header->code == LVN_ITEMCHANGED) {
+                refresh_phrase_buttons(*state);
+                return 0;
+            }
+            if (header->code == NM_DBLCLK) {
+                SendMessageW(window, WM_COMMAND, MAKEWPARAM(kPhraseEdit, BN_CLICKED),
+                    reinterpret_cast<LPARAM>(state->phrase_edit));
+                return 0;
+            }
+        }
     }
     if (message == WM_CTLCOLORSTATIC) {
         // Labels and checkboxes sit on the dialog itself rather than on the tab
@@ -1116,6 +1409,7 @@ LRESULT CALLBACK window_proc(
             state->settings = piinput::default_settings();
             load_into_controls(*state);
             refresh_shortcut_list(*state);
+            refresh_phrase_list(*state);
             update_preview(*state);
             return 0;
         }
@@ -1160,6 +1454,50 @@ LRESULT CALLBACK window_proc(
                 state->settings.custom_shortcuts.erase(
                     state->settings.custom_shortcuts.begin() + row);
                 refresh_shortcut_list(*state);
+            }
+            return 0;
+        }
+        if (id == kPhraseAdd) {
+            if (state->settings.custom_phrases.size() >= piinput::max_custom_phrases) {
+                MessageBoxW(window, L"常用语最多 128 条。", L"PiInput",
+                    MB_OK | MB_ICONWARNING);
+                return 0;
+            }
+            piinput::CustomPhraseSettings value;
+            if (edit_phrase(window, value, true)) {
+                state->settings.custom_phrases.push_back(std::move(value));
+                refresh_phrase_list(*state);
+                const int row = static_cast<int>(state->settings.custom_phrases.size() - 1U);
+                ListView_SetItemState(state->phrase_list, row,
+                    LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+                ListView_EnsureVisible(state->phrase_list, row, FALSE);
+            }
+            return 0;
+        }
+        if (id == kPhraseEdit) {
+            const int row = ListView_GetNextItem(state->phrase_list, -1, LVNI_SELECTED);
+            if (row >= 0 && static_cast<std::size_t>(row) <
+                    state->settings.custom_phrases.size()) {
+                auto value = state->settings.custom_phrases[static_cast<std::size_t>(row)];
+                if (edit_phrase(window, value, false)) {
+                    state->settings.custom_phrases[static_cast<std::size_t>(row)] =
+                        std::move(value);
+                    refresh_phrase_list(*state);
+                    ListView_SetItemState(state->phrase_list, row,
+                        LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
+                }
+            }
+            return 0;
+        }
+        if (id == kPhraseDelete) {
+            const int row = ListView_GetNextItem(state->phrase_list, -1, LVNI_SELECTED);
+            if (row >= 0 && static_cast<std::size_t>(row) <
+                    state->settings.custom_phrases.size() &&
+                MessageBoxW(window, L"删除选中的常用语？", L"PiInput",
+                    MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES) {
+                state->settings.custom_phrases.erase(
+                    state->settings.custom_phrases.begin() + row);
+                refresh_phrase_list(*state);
             }
             return 0;
         }
@@ -1267,6 +1605,14 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
     templates_class.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     templates_class.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
     if (RegisterClassExW(&templates_class) == 0U) return 1;
+    WNDCLASSEXW phrase_class{};
+    phrase_class.cbSize = sizeof(phrase_class);
+    phrase_class.hInstance = instance;
+    phrase_class.lpfnWndProc = phrase_editor_proc;
+    phrase_class.lpszClassName = kPhraseEditorClass;
+    phrase_class.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+    phrase_class.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+    if (RegisterClassExW(&phrase_class) == 0U) return 1;
 
     AppState state{.settings_path = command_line_settings_path()};
     RECT frame{0, 0, kWindowWidth, kWindowHeight};

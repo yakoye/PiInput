@@ -120,6 +120,18 @@ public:
     [[nodiscard]] std::size_t lexicon_mapped_bytes() const noexcept;
     [[nodiscard]] const ShuangpinDecoder& shuangpin() const noexcept;
 
+    // The reading initials of the leading characters of `text`: 北京市海淀区
+    // becomes "bjshd". Empty when the first character has no reading, and
+    // truncated at the first one that does not -- a trigger built from a guess
+    // would fire on something the user never typed.
+    //
+    // For deriving a phrase trigger once, when settings load. Never on the
+    // keystroke path: this is one lexicon lookup per character, and the phrase
+    // table holds up to 128 rows.
+    [[nodiscard]] std::string leading_reading_initials(
+        std::string_view text,
+        std::size_t characters) const;
+
 private:
     // Placed just after the top candidate rather than first: someone typing
     // "pai" usually wants 拍 or 派, and a symbol that displaced them would be

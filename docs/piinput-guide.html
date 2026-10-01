@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PiInput 操作指引</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #1b1f24;
+    --muted: #5b6672;
+    --rule: #dfe4ea;
+    --ground: #ffffff;
+    --panel: #f5f7f9;
+    --accent: #204e78;
+    --warn-ground: #fff8e6;
+    --warn-rule: #e6c86a;
+    --key-ground: #eef1f4;
+    --key-rule: #c6cdd5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #e6e9ec;
+      --muted: #9aa5b1;
+      --rule: #333a42;
+      --ground: #15181b;
+      --panel: #1d2227;
+      --accent: #7fb2e0;
+      --warn-ground: #2a2415;
+      --warn-rule: #6b5a20;
+      --key-ground: #262c33;
+      --key-rule: #3d454e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font: 16px/1.75 "Microsoft YaHei UI", "Microsoft YaHei", system-ui, sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 28px 96px; }
+  header { border-bottom: 2px solid var(--accent); padding-bottom: 18px; margin-bottom: 8px; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: .5px; }
+  .lede { color: var(--muted); margin: 0; }
+  h2 {
+    font-size: 21px;
+    margin: 42px 0 10px;
+    padding-left: 12px;
+    border-left: 4px solid var(--accent);
+  }
+  h3 { font-size: 17px; margin: 26px 0 8px; }
+  p, li { margin: 8px 0; }
+  ol, ul { padding-left: 24px; }
+  kbd {
+    display: inline-block;
+    padding: 1px 7px;
+    border: 1px solid var(--key-rule);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--key-ground);
+    font: 14px/1.6 ui-monospace, Consolas, monospace;
+    white-space: nowrap;
+  }
+  code {
+    background: var(--panel);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font: 14px/1.6 ui-monospace, Consolas, monospace;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; }
+  th, td { border: 1px solid var(--rule); padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: var(--panel); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  .note, .warn {
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent);
+    background: var(--panel);
+    padding: 12px 16px;
+    margin: 16px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .warn { border-left-color: var(--warn-rule); background: var(--warn-ground); }
+  .toc { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 18px; margin: 24px 0 8px; }
+  .toc ol { margin: 6px 0 0; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>PiInput 操作指引</h1>
+  <p class="lede">按「第一次用会卡在哪」排序，不是按功能清单。读完前两节就能正常打字。</p>
+</header>
+
+<div class="toc">
+  <strong>目录</strong>
+  <ol>
+    <li><a href="#switch">切换到 PiInput</a></li>
+    <li><a href="#basics">打字与选词</a></li>
+    <li><a href="#punct">标点符号</a></li>
+    <li><a href="#phrases">常用语：地址、证件号、电话</a></li>
+    <li><a href="#tools">候选框里的工具入口</a></li>
+    <li><a href="#trouble">装不上 / 打不出字</a></li>
+  </ol>
+</div>
+
+<h2 id="switch">1. 切换到 PiInput</h2>
+
+<p>按 <kbd>Win</kbd> + <kbd>空格</kbd> 在已安装的输入法之间轮换，直到任务栏右下角出现 <strong>π</strong> 标记。</p>
+
+<div class="warn">
+  <strong>刚装完，已经打开的程序里用不了，这是正常的。</strong>
+  输入法组件是一个 DLL，程序不重启就还是加载着旧版本或者根本没加载。把要用的程序关掉重开一次即可——不需要重启电脑，也不需要重新登录。
+</div>
+
+<h3>怎么确认真的切过去了</h3>
+<p>任务栏的输入法指示器会显示 <strong>中</strong> 或 <strong>英</strong>。看不到指示器时，先确认光标在一个可以输入文字的地方——没有输入焦点时 Windows 不显示它。</p>
+
+<h2 id="basics">2. 打字与选词</h2>
+
+<table>
+  <tr><th>操作</th><th>键</th></tr>
+  <tr><td>中英文切换</td><td><kbd>Shift</kbd> 单击（不与其他键组合时）</td></tr>
+  <tr><td>选第 n 个候选</td><td><kbd>1</kbd> – <kbd>9</kbd></td></tr>
+  <tr><td>选第一个候选</td><td><kbd>空格</kbd></td></tr>
+  <tr><td>展开候选 / 下一行</td><td><kbd>=</kbd> 或 <kbd>↓</kbd></td></tr>
+  <tr><td>上一行</td><td><kbd>-</kbd> 或 <kbd>↑</kbd></td></tr>
+  <tr><td>在候选之间移动</td><td><kbd>←</kbd> <kbd>→</kbd></td></tr>
+  <tr><td>放弃当前输入</td><td><kbd>Esc</kbd></td></tr>
+  <tr><td>原样上屏（不转换）</td><td><kbd>Enter</kbd></td></tr>
+</table>
+
+<div class="note">
+  <strong><kbd>Shift</kbd> 只在单独按下时切换中英文。</strong>
+  <kbd>Shift</kbd>+<kbd>Insert</kbd> 粘贴、<kbd>Shift</kbd>+<kbd>Delete</kbd> 剪切、<kbd>Shift</kbd>+方向键选择文本，这些组合都不会误触切换。
+</div>
+
+<h3>候选框的位置</h3>
+<p>候选框跟随光标。<strong>终端类程序是例外</strong>：MobaXterm 这类程序不向系统报告插入点位置，它维护的不是文本文档而是自己绘制的字符网格，没有任何接口能问出光标在第几行第几列。那里的候选框会稳定地落在输入区附近，但不跟随——这是原理上的限制，不是缺陷。</p>
+
+<h2 id="punct">3. 标点符号</h2>
+
+<p>中文标点模式下，<strong>紧跟在字母或数字后面的第一个句号是 ASCII 句点</strong>，再按一次才是中文句号。冒号同理。</p>
+
+<div class="scroll">
+<table>
+  <tr><th>输入</th><th>得到</th><th>说明</th></tr>
+  <tr><td><code>0.8</code></td><td><code>0.8</code></td><td>版本号、小数照常</td></tr>
+  <tr><td><code>geek</code> 然后句号</td><td><code>geek.</code></td><td>英文单词后是 ASCII 句点</td></tr>
+  <tr><td>再按一次句号</td><td><code>geek.。</code></td><td>第二次才是中文句号</td></tr>
+  <tr><td>中文后按句号</td><td><code>你好。</code></td><td>中文行文不受影响，一次就对</td></tr>
+  <tr><td><code>apple-book</code></td><td><code>apple-book</code></td><td>横杠在合成串里也能正常输入</td></tr>
+</table>
+</div>
+
+<p>要长期使用英文标点，在设置的「标点符号」页把模式改成英文即可。</p>
+
+<h2 id="phrases">4. 常用语：地址、证件号、电话</h2>
+
+<p>把常用的长文本存起来，打几个字母就能从候选框取出来。在<strong>设置 → 常用语</strong>里添加。</p>
+
+<div class="scroll">
+<table>
+  <tr><th>内容</th><th>触发码</th><th>怎么用</th></tr>
+  <tr><td>北京市海淀区xx街道xx小区</td><td><code>dzjl</code></td><td>打 <code>dzjl</code>，候选框第 2 位就是它</td></tr>
+  <tr><td>622322199005012219</td><td><code>sfz</code></td><td>打 <code>sfz</code> 取用</td></tr>
+  <tr><td>15801616544</td><td>留空</td><td>打前 3 位 <code>158</code>，按 <kbd>Tab</kbd> 补齐剩下的</td></tr>
+</table>
+</div>
+
+<h3>触发码留空会怎样</h3>
+<p>留空就按内容自动推导，规则取决于内容的第一个字符：</p>
+<ul>
+  <li><strong>中文</strong>开头 → 首字拼音声母。<code>北京市海淀区…</code> 可用 <code>bj</code>、<code>bjs</code>、<code>bjsh</code> 触发。</li>
+  <li><strong>拉丁字母</strong>开头 → 它自己的前几个字母。<code>github.com/…</code> 可用 <code>gi</code>、<code>git</code>、<code>gith</code> 触发。</li>
+  <li><strong>数字</strong>开头 → 打出前 3 位后候选框给出补全，按 <kbd>Tab</kbd> 接受。</li>
+</ul>
+
+<div class="note">
+  <strong>数字键不会被候选框接管。</strong>
+  数字照常直接输入，建议只是叠在上面的一层提示；按 <kbd>Tab</kbd> 才会补齐，按其他任何键都是正常输入。所以存了电话号码，也不影响你手打任何数字。
+</div>
+
+<p>候选框里显示的是内容本身（过长会截短）。同时存了几条长内容而分不清时，给它们各填一个<strong>备注名</strong>，候选框就显示备注名。</p>
+
+<p>常用语<strong>不会进入学习记录</strong>——它不是一条「拼音—词」事实，学进去会污染词库并产生来源不明的重复候选。</p>
+
+<h2 id="tools">5. 候选框里的工具入口</h2>
+
+<div class="scroll">
+<table>
+  <tr><th>打这个</th><th>候选位置</th><th>打开</th></tr>
+  <tr><td><code>fh</code></td><td>2</td><td>符号面板</td></tr>
+  <tr><td><code>bq</code></td><td>2</td><td>表情面板</td></tr>
+  <tr><td><code>sz</code></td><td>2</td><td>PiInput 设置</td></tr>
+  <tr><td><code>jsq</code></td><td>2 / 3</td><td>Windows 计算器 / 随包程序员计算器</td></tr>
+  <tr><td><code>msp</code></td><td>2</td><td>Windows 画图</td></tr>
+  <tr><td><code>riq</code> / <code>sj</code></td><td>2</td><td>日期 / 时间的各种写法</td></tr>
+</table>
+</div>
+
+<p>这些都在<strong>设置 → 快捷调用</strong>里，可以改触发码、改候选位置，也可以加你自己的程序、文件、网址。注意它与常用语的区别：快捷调用<strong>启动程序</strong>，常用语<strong>上屏文本</strong>。</p>
+
+<h2 id="trouble">6. 装不上 / 打不出字</h2>
+
+<h3>安装器被 Windows 拦下</h3>
+<p>PiInput 目前<strong>没有代码签名证书</strong>，所以在开启了防护的机器上会被拦。这不是程序有问题，是 Windows 无法验证发布者。</p>
+<ul>
+  <li><strong>SmartScreen</strong>（弹窗标题「Windows 已保护你的电脑」）：点「更多信息」→「仍要运行」。</li>
+  <li><strong>智能应用控制</strong>（弹窗标题「已阻止可能不安全的应用」）：强制模式下<strong>不提供放行入口</strong>，只能到「设置 → 隐私和安全性 → Windows 安全中心 → 应用和浏览器控制 → 智能应用控制」里关闭。<strong>这个操作不可逆</strong>，关掉之后除非重装系统无法重新开启，请自行权衡。</li>
+</ul>
+<p>弹窗上的「正常」按钮<strong>不是放行</strong>，它只是关掉弹窗，应用依旧不会运行。改名、换目录、用命令行启动都无效。</p>
+
+<h3>图标还在，但一个字也打不出来</h3>
+<p>这种形态通常是 <strong>Defender 把引擎进程当成木马隔离了</strong>（常见判定是 <code>Trojan:Win32/Wacatac.C!ml</code>，属于无签名可执行文件的通用误报）。输入法的 shim 是 DLL，不会被查杀，所以语言栏照常显示，但按键送不到引擎。</p>
+<p>先跑诊断确认：</p>
+<p><code>%LOCALAPPDATA%\PiInput\bin\piinput-diagnostics.exe</code></p>
+<p>如果 <code>host_exists</code> 是 <code>false</code> 而 <code>shim_exists</code> 是 <code>true</code>，就是这个问题。恢复办法：以<strong>管理员身份</strong>打开终端，为安装目录加一条排除项，然后重新运行一次安装器。</p>
+<p><code>Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\PiInput\bin"</code></p>
+<p>加排除项意味着 Defender 不再扫描该目录，请确认你了解这个取舍。</p>
+
+<h3>某个程序里打不出中文，别的程序正常</h3>
+<ul>
+  <li>先把那个程序<strong>完全退出重开</strong>——输入法是 DLL，程序不重启就加载不到。</li>
+  <li>密码框和 PIN 输入框会主动拒绝转换，这是刻意的。</li>
+  <li>少数程序调用了 <code>ImmDisableIME</code> 主动禁用输入法，那之后 Windows 不会把<strong>任何</strong>输入法加载进该进程——换哪个输入法都一样，需要那个程序自己改。</li>
+</ul>
+
+<h3>还要再深一层</h3>
+<p>在临时目录（<code>%TEMP%</code>）放一个空文件开启对应日志，排查完请删掉：</p>
+<div class="scroll">
+<table>
+  <tr><th>放这个文件</th><th>得到</th><th>看什么</th></tr>
+  <tr><td><code>piinput-key-trace.on</code></td><td><code>piinput-key-trace-&lt;pid&gt;.csv</code></td><td>每个按键的去向：应用交没交出来、有没有送达</td></tr>
+  <tr><td><code>piinput-caret-trace.on</code></td><td><code>piinput-caret-trace.csv</code></td><td>候选窗定位的来源与实际落点</td></tr>
+  <tr><td><code>piinput-candidate-trace.on</code></td><td><code>piinput-candidate.log</code></td><td>引擎是否接管了候选显示</td></tr>
+</table>
+</div>
+<p>按键追踪只记录「这个键发生了什么」，不记录输入的文本内容。</p>
+
+<footer>
+  PiInput · 本指引随安装包分发，可在安装目录下重新打开：<code>%LOCALAPPDATA%\PiInput\bin\piinput-guide.html</code>
+</footer>
+
+</div>
+</body>
+</html>
