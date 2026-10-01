@@ -1,5 +1,7 @@
 ﻿param(
-    [switch]$VerifyOnly
+    [switch]$VerifyOnly,
+    # 清单变短时的显式确认。见下面的收缩保险。
+    [switch]$AllowShrink
 )
 
 # 重建 FILE_LIST.txt 和 SHA256SUMS.txt。
@@ -30,16 +32,52 @@ try {
     $git = Get-Command git -ErrorAction SilentlyContinue
     if (-not $git) { throw "找不到 git，无法枚举源码文件。" }
 
-    $tracked = & git ls-files --cached --others --exclude-standard
+    # core.quotepath=false 与 -z 缺一不可，否则中文文件名会被静默漏收。
+    #
+    # git 默认 core.quotepath=true，对非 ASCII 路径输出 "docs/\345\276\205...\.md"
+    # 这种带引号的八进制转义形式；下面的 Test-Path 对它一律失败，而 Where-Object
+    # 把失败的条目直接滤掉——于是 docs/ 下所有中文名文件消失，脚本照常报告成功。
+    # 实测这会把 FILE_LIST.txt 从 711 条削到 462 条。-z 则避免路径里的换行被当成
+    # 分隔符，顺带省掉 git 对含特殊字符路径的加引号处理。
+    $previousEncoding = [Console]::OutputEncoding
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    try {
+        $raw = & git -c core.quotepath=false ls-files -z --cached --others --exclude-standard
+    } finally {
+        [Console]::OutputEncoding = $previousEncoding
+    }
     if ($LASTEXITCODE -ne 0) { throw "git ls-files 失败，退出码 $LASTEXITCODE。" }
+    $tracked = ($raw -join "") -split "`0"
 
+    $skipped = @()
     $paths = @($tracked |
+        Where-Object { $_ -ne "" -and $_ -ne "SHA256SUMS.txt" } |
         Where-Object {
-            $_ -ne "" -and $_ -ne "SHA256SUMS.txt" -and
-            (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf)
-        } |
-        Sort-Object)
+            if (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Leaf) { return $true }
+            # 目录条目（子模块）会走到这里，是正常的；路径解析不了也会走到这里，
+            # 那就不正常。两者都记下来，下面的收缩保险负责判断要不要拦。
+            $script:skipped += $_
+            return $false
+        })
+    # 序数排序，不用 Sort-Object 的区域感知比较：那会让同一个仓库在不同语言环境
+    # 的机器上生成顺序不同的清单，文件无谓地来回变动。
+    [System.Array]::Sort($paths, [System.StringComparer]::Ordinal)
     if ($paths.Count -eq 0) { throw "枚举到 0 个源码文件，拒绝写出空清单。" }
+
+    # 收缩保险。上面那个缺陷最糟的地方不是算错，是**报告成功**——清单少了 249 条
+    # 而没有任何提示，要等到别人校验失败才发现。清单变短一律先拦下来。
+    if (-not $VerifyOnly -and (Test-Path -LiteralPath $FileList)) {
+        $existing = @([System.IO.File]::ReadAllLines($FileList) | Where-Object { $_ -ne "" })
+        if ($paths.Count -lt $existing.Count -and -not $AllowShrink) {
+            $lost = @(Compare-Object $existing $paths |
+                Where-Object { $_.SideIndicator -eq "<=" } |
+                ForEach-Object { $_.InputObject })
+            $sample = ($lost | Select-Object -First 5) -join "`n    "
+            throw ("清单会从 $($existing.Count) 条缩到 $($paths.Count) 条，拒绝写出。`n" +
+                "  少掉的前几条：`n    $sample`n" +
+                "  确属有意删除文件就加 -AllowShrink 重跑。")
+        }
+    }
 
     $checksumLines = foreach ($path in $paths) {
         $absolute = Join-Path $Root $path
