@@ -103,6 +103,7 @@
     <li><a href="#basics">打字与选词</a></li>
     <li><a href="#punct">标点符号</a></li>
     <li><a href="#phrases">常用语：地址、证件号、电话</a></li>
+    <li><a href="#theme">配色：浅色、暗色、跟随系统</a></li>
     <li><a href="#tools">候选框里的工具入口</a></li>
     <li><a href="#trouble">装不上 / 打不出字</a></li>
   </ol>
@@ -159,6 +160,11 @@
 
 <p>要长期使用英文标点，在设置的「标点符号」页把模式改成英文即可。</p>
 
+<div class="note">
+  <strong>有些程序不告诉输入法光标前面是什么。</strong>
+  飞书是一例。这条规则要看光标左边的字符才能成立，而那类程序读不出来——以前在它们里面打 <code>geek</code> 再按句号只会得到 <code>geek。</code>，没有办法得到 <code>geek.</code>。现在输入法改用「自己刚上屏了什么」来判断，在这些程序里规则同样成立。
+</div>
+
 <h2 id="phrases">4. 常用语：地址、证件号、电话</h2>
 
 <p>把常用的长文本存起来，打几个字母就能从候选框取出来。在<strong>设置 → 常用语</strong>里添加。</p>
@@ -191,7 +197,27 @@
 
 <p>常用语<strong>不会进入学习记录</strong>——它不是一条「拼音—词」事实，学进去会污染词库并产生来源不明的重复候选。</p>
 
-<h2 id="tools">5. 候选框里的工具入口</h2>
+<h2 id="theme">5. 配色：浅色、暗色、跟随系统</h2>
+
+<p>打 <code>zt</code>、<code>zhuti</code> 或 <code>vuti</code>，候选框第 2 到 4 位就是三挡配色：</p>
+
+<div class="scroll">
+<table>
+  <tr><th>候选</th><th>配色</th><th>含义</th></tr>
+  <tr><td>2</td><td>🌗 跟随系统</td><td><strong>默认</strong>。跟着 Windows 的浅色／暗色设置走</td></tr>
+  <tr><td>3</td><td>☀ 浅色</td><td>始终浅色</td></tr>
+  <tr><td>4</td><td>🌙 暗色</td><td>始终暗色</td></tr>
+</table>
+</div>
+
+<p>也可以在<strong>设置 → 候选窗 → 配色</strong>里改，两处是同一个设置。改完立即生效，不用重启程序。</p>
+
+<div class="note">
+  <strong>跟随系统读的是 Windows 的「应用模式」。</strong>
+  在「设置 → 个性化 → 颜色 → 选择默认应用模式」里改成深色，候选框会在下一次打字时跟上。注意这与「Windows 模式」（任务栏那一项）是两个独立开关。
+</div>
+
+<h2 id="tools">6. 候选框里的工具入口</h2>
 
 <div class="scroll">
 <table>
@@ -207,7 +233,7 @@
 
 <p>这些都在<strong>设置 → 快捷调用</strong>里，可以改触发码、改候选位置，也可以加你自己的程序、文件、网址。注意它与常用语的区别：快捷调用<strong>启动程序</strong>，常用语<strong>上屏文本</strong>。</p>
 
-<h2 id="trouble">6. 装不上 / 打不出字</h2>
+<h2 id="trouble">7. 装不上 / 打不出字</h2>
 
 <h3>安装器被 Windows 拦下</h3>
 <p>PiInput 目前<strong>没有代码签名证书</strong>，所以在开启了防护的机器上会被拦。这不是程序有问题，是 Windows 无法验证发布者。</p>
