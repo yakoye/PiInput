@@ -8,6 +8,7 @@
 #include "profile_registration.h"
 #include "user_keyboard_registration.h"
 #include "piinput/host_protocol.h"
+#include "piinput/utf.h"
 
 #include "piinput/windows_compat.h"
 
@@ -826,6 +827,19 @@ struct InstallResult {
             // remain in the original user's unelevated process.
             const HRESULT registration = register_machine_profile_elevated(user_shim);
             if (FAILED(registration)) {
+                // 提权被拒是迄今唯一真正出现过的失败原因，而「HRESULT 0x800704C7」
+                // 对看到它的人毫无用处：它既没说发生了什么，也没说该怎么办。更坏
+                // 的是这一条经常不是「点了否」，而是 UAC 提示框**没人理会、约两
+                // 分钟后自动消失**——用户甚至不知道自己拒绝过什么。所以这一种单独
+                // 说人话，其余的保留 HRESULT 供排查。
+                if (registration == HRESULT_FROM_WIN32(ERROR_CANCELLED)) {
+                    throw std::runtime_error(
+                        "需要管理员权限的那一步没有完成：提权确认框被取消了，"
+                        "或者无人确认、超时自动消失。\n\n"
+                        "程序文件已经装好，但输入法还没注册到系统，所以暂时不能用。"
+                        "重新运行一次安装器，在提权确认框出现时点「是」即可——"
+                        "它会把屏幕变暗并独占前台，请不要切走。");
+                }
                 std::ostringstream message;
                 message << "TSF system registration failed: HRESULT 0x"
                         << std::hex << std::uppercase << std::setw(8) << std::setfill('0')
@@ -910,8 +924,10 @@ struct InstallResult {
 }
 
 [[nodiscard]] std::wstring widen_error(const std::exception& error) {
-    const std::string text(error.what());
-    return std::wstring(text.begin(), text.end());
+    // 按 UTF-8 解码，不要逐字节拷贝。原来那种写法把每个 UTF-8 字节单独塞进一个
+    // wchar_t，ASCII 文本看着没事，中文则直接变成乱码——而现在确实有中文的错误
+    // 文案要经过这里。
+    return piinput::utf8_to_wide(error.what());
 }
 
 [[nodiscard]] bool has_argument(const std::wstring_view expected) {

@@ -162,6 +162,15 @@ void layout_page(WizardState& state) {
     } else if (state.page == Page::failed) {
         const std::lock_guard lock(state.text_mutex);
         detail = state.error.empty() ? L"未知错误。" : state.error;
+        // 失败文案来自异常消息，里面用的是 \n。多行 EDIT 只认 \r\n，不补的话
+        // 整段会挤成一行——而这正是最需要读清楚的一段。
+        std::wstring normalized;
+        normalized.reserve(detail.size() + 16U);
+        for (const wchar_t character : detail) {
+            if (character == L'\n') normalized.push_back(L'\r');
+            normalized.push_back(character);
+        }
+        detail = std::move(normalized);
     }
     SetWindowTextW(state.body, body.c_str());
     SetWindowTextW(state.detail, detail.c_str());
