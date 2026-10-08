@@ -138,6 +138,24 @@ private:
     // 判断「建议正在显示」用的是「有候选但没有合成串」这个状态，不额外存标志位：
     // 合成串为空而候选非空，只会是这一种情形，多一个标志就多一个可能与真相不符
     // 的地方。
+    // 应用不肯说光标左边是什么时，用「我们自己刚上屏了什么」顶上。
+    //
+    // 两键规则（字母或数字后面第一个句号是 ASCII）靠读取周边文本成立。飞书这类
+    // 应用的 RequestEditSession 读不出周边文本，于是 left 永远为空、规则永远不
+    // 成立——打 geek 再按句号得到的是「geek。」而不是「geek.」，而且没有任何办法
+    // 绕开，因为用户看不到判定依据。
+    //
+    // 但有一件事我们自己知道得一清二楚：上一次是我们把什么写进去的。这个兜底只
+    // 在真的读不到周边文本时启用，读得到就以文档为准。
+    //
+    // 生命周期刻意很短：只活到下一个非标点按键。字母会开新的合成串、方向键会移动
+    // 光标，那之后就不能再断定光标还跟在那段文本后面。标点键不清除，于是「第二次
+    // 按句号得到中文形式」自然成立——第一次按完之后，记住的尾字符变成了 ASCII 句
+    // 点，它不是字母数字，规则自己就不再命中。
+    void note_committed_text(std::string_view text);
+    void clear_committed_tail() noexcept;
+    std::string committed_tail_;
+
     void note_passthrough_key(ITfContext* context, WPARAM wparam);
     [[nodiscard]] bool digit_suggestion_visible() const noexcept;
     std::string digit_run_;
@@ -207,6 +225,8 @@ private:
     void launch_symbol_tool() noexcept;
     void launch_settings() noexcept;
     void launch_program(std::string_view target) noexcept;
+    // 把 settings.ini 的 [candidates] theme= 改成给定值。候选框里的主题开关用它。
+    void write_candidate_theme(std::string_view value) noexcept;
     void complete_candidate_action(
         HostAction action, std::string_view target, bool edit_succeeded) noexcept;
     [[nodiscard]] std::wstring schema_display_name() const;

@@ -69,12 +69,44 @@ namespace piinput::windows {
 
 [[nodiscard]] int candidate_text_top(const RECT& row, int text_height) noexcept;
 
+// 候选窗用到的每一个颜色。此前这些值是散在 paint() 里的 RGB 字面量，加暗色主题
+// 等于把它们逐个找出来——收成一张表之后，换主题只是换一张表，而且「哪些颜色构成
+// 一套外观」这件事第一次变得看得见。
+struct CandidatePalette final {
+    COLORREF background{};
+    COLORREF border{};
+    COLORREF composition_text{};
+    COLORREF candidate_text{};
+    COLORREF index_text{};
+    COLORREF selected_index_text{};
+    COLORREF selected_background{};
+    COLORREF separator{};
+    COLORREF glyph{};
+    COLORREF grid{};
+    COLORREF menu_background{};
+    COLORREF menu_text{};
+    COLORREF menu_divider{};
+
+    bool operator==(const CandidatePalette&) const = default;
+};
+
+[[nodiscard]] CandidatePalette light_candidate_palette() noexcept;
+[[nodiscard]] CandidatePalette dark_candidate_palette() noexcept;
+
+// 系统当前是不是暗色。读 HKCU 的 AppsUseLightTheme —— 这是 Windows 自己用来回答
+// 「应用该用哪套外观」的那个值，比 GetSysColor 可靠：后者在暗色模式下仍然返回浅
+// 色，因为经典系统颜色从来没跟着个性化设置走过。
+[[nodiscard]] bool system_prefers_dark_theme() noexcept;
+
 struct CandidateVisualSettings final {
     std::uint32_t font_size{16U};
     std::uint32_t window_height{40U};
     // 用户设置：候选窗要不要把正在打的字母显示出来。没有「自动」挡，
     // 理由见 CandidateSettings::show_composition。
     bool show_composition{true};
+    // 解析之后的配色。跟随系统这一挡在读设置时就被解析成具体的浅色或暗色，
+    // 窗口这一层不需要知道用户选的是哪一挡。
+    CandidatePalette palette{light_candidate_palette()};
 
     bool operator==(const CandidateVisualSettings&) const = default;
 };

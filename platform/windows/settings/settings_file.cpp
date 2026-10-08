@@ -397,6 +397,14 @@ bool save_all_settings_atomic(
     const auto row_key = [](const RowNavigationAction action) -> std::string {
         return action == RowNavigationAction::previous_row ? "previous_row" : "next_row";
     };
+    const auto theme_name = [](const CandidateTheme theme) -> std::string {
+        switch (theme) {
+        case CandidateTheme::light: return "light";
+        case CandidateTheme::dark: return "dark";
+        case CandidateTheme::system: break;
+        }
+        return "system";
+    };
     const auto schema_name = [](const InputSchema schema) -> std::string {
         switch (schema) {
         case InputSchema::full: return "full";
@@ -438,6 +446,7 @@ bool save_all_settings_atomic(
         {"pinyin", "prefix_beam_width", std::to_string(settings.pinyin.prefix_beam_width)},
         {"pinyin", "prefix_scan_limit", std::to_string(settings.pinyin.prefix_scan_limit)},
         {"candidates", "show_composition", boolean(settings.candidates.show_composition)},
+        {"candidates", "theme", theme_name(settings.candidates.theme)},
         {"candidates", "items_per_row", std::to_string(settings.candidates.items_per_row)},
         {"candidates", "visible_rows", std::to_string(settings.candidates.visible_rows)},
         {"candidates", "max_items", std::to_string(settings.candidates.max_items)},

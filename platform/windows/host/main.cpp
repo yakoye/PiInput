@@ -106,6 +106,25 @@ void open_help(const std::filesystem::path& program_directory) {
 }
 
 
+// 把设置里的主题挡位解析成具体的一套颜色。
+//
+// 「跟随系统」在这里就被解析掉，候选窗那一层只拿到一张调色板、不需要知道用户选的
+// 是哪一挡。好处是窗口代码里没有任何分支，也不会出现「设置说跟随、窗口自己又判了
+// 一次」这种两处各判一次的局面。
+[[nodiscard]] piinput::windows::CandidateVisualSettings visual_settings_for(
+    const piinput::SettingsSnapshot& settings) noexcept {
+    const bool dark = settings.candidates.theme == piinput::CandidateTheme::dark ||
+        (settings.candidates.theme == piinput::CandidateTheme::system &&
+            piinput::windows::system_prefers_dark_theme());
+    return {
+        settings.candidates.font_size,
+        settings.candidates.window_height,
+        settings.candidates.show_composition,
+        dark ? piinput::windows::dark_candidate_palette()
+             : piinput::windows::light_candidate_palette(),
+    };
+}
+
 }  // namespace
 
 int main(const int argc, char** const argv) {
@@ -176,11 +195,7 @@ int main(const int argc, char** const argv) {
         [&](std::string& error) { return runtime.save_user_model(error); });
     sessions.set_user_model_dirty_handler([&] { user_model_persistence.mark_dirty(); });
     piinput::windows::CandidatePresenter presenter;
-    presenter.set_visual_settings({
-        runtime.settings().candidates.font_size,
-        runtime.settings().candidates.window_height,
-        runtime.settings().candidates.show_composition,
-    });
+    presenter.set_visual_settings(visual_settings_for(runtime.settings()));
     presenter.set_toolbar_handler([&](
         const std::uint64_t client_id,
         const std::uint64_t session_id,
@@ -256,11 +271,10 @@ int main(const int argc, char** const argv) {
     server.set_composition_boundary_handler([&] {
         runtime.poll_settings_at_composition_boundary();
         sessions.update_settings(runtime.settings(), runtime.schema());
-        presenter.set_visual_settings({
-            runtime.settings().candidates.font_size,
-            runtime.settings().candidates.window_height,
-            runtime.settings().candidates.show_composition,
-        });
+        // 每个合成边界重算一次。跟随系统那一挡要靠这里才能在用户改了 Windows
+        // 的浅色/暗色之后跟上——注册表没有便宜的变更通知，而这个点本来就要重读
+        // 设置，顺带读一个 DWORD 的代价可以忽略。
+        presenter.set_visual_settings(visual_settings_for(runtime.settings()));
     });
     return server.run();
 }

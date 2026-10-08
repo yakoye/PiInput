@@ -28,6 +28,15 @@ enum class RowNavigationAction {
     previous_row,
 };
 
+// 候选窗外观。`system` 读 Windows 的 AppsUseLightTheme，并在用户改系统设置时
+// 跟着变——它是默认挡，因为一个浮在别人窗口上的小面板，跟宿主环境一致是最不
+// 容易出错的选择。
+enum class CandidateTheme : std::uint8_t {
+    light,
+    dark,
+    system,
+};
+
 enum class CommandHotkey : std::uint8_t {
     ctrl_alt_grave,
     ctrl_grave,
@@ -68,6 +77,7 @@ struct CandidateSettings {
     // 而 Chromium 系会在系统光标和 TSF 两种来源之间摇摆，判定跟着翻来覆去，
     // 在 ChatGPT 里这一行忽有忽无。一个稳定的错误也好过一个闪烁的正确。
     bool show_composition{true};
+    CandidateTheme theme{CandidateTheme::system};
     std::uint32_t items_per_row{6U};
     std::uint32_t visible_rows{5U};
     std::uint32_t max_items{90U};

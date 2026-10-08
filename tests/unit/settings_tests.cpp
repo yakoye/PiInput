@@ -8,9 +8,11 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <stdexcept>
+#include <utility>
 #include <string>
 #include <thread>
 #include <vector>
@@ -125,12 +127,25 @@ void test_defaults_and_round_trip() {
         "default command hotkey avoids the VS Code terminal shortcut");
     check(!defaults.commands.middle_dot_alias,
         "middle-dot command aliases are opt-in");
-    check(defaults.custom_shortcuts.size() == 6U &&
+    check(defaults.custom_shortcuts.size() == 9U &&
             defaults.custom_shortcuts[0].aliases == "fh,fuhao,fuh,fuhc" &&
             defaults.custom_shortcuts[0].icon == "Ω" &&
             defaults.custom_shortcuts[3].target == "system:calculator" &&
             defaults.custom_shortcuts[5].target == "system:mspaint",
         "default shortcut table exposes all built-in tools as editable rows");
+    // 配色三挡各占一个候选位，而且三种拼法都要能到：zt/zhuti 是全拼与简拼，
+    // vuti 是小鹤双拼下「主题」的拼法。换了方案的人找不到它等于这个功能不存在。
+    check(defaults.custom_shortcuts[6].target == "system:theme_system" &&
+            defaults.custom_shortcuts[7].target == "system:theme_light" &&
+            defaults.custom_shortcuts[8].target == "system:theme_dark" &&
+            defaults.custom_shortcuts[6].position == 2U &&
+            defaults.custom_shortcuts[7].position == 3U &&
+            defaults.custom_shortcuts[8].position == 4U,
+        "the three theme rows sit at candidates two through four");
+    for (const auto& spelling : {"zt", "zhuti", "vuti"}) {
+        check(piinput::shortcut_alias_matches(defaults.custom_shortcuts[6].aliases, spelling),
+            "every supported spelling of 主题 reaches the theme rows");
+    }
     check(defaults.punctuation == piinput::PunctuationMode::chinese, "default punctuation mode");
     check(defaults.punctuation_bracket_style == piinput::PunctuationBracketStyle::sogou,
         "default Chinese bracket style follows Sogou");
@@ -255,6 +270,28 @@ void test_valid_values_and_boundaries() {
             migrated_programmer.settings.punctuation == piinput::PunctuationMode::english,
         "removed programmer punctuation migrates to its identical English behavior");
 
+    // 配色三挡。默认是跟随系统——候选框是浮在别人窗口上的一条小面板，跟宿主环境
+    // 一致是最不容易出错的选择。
+    check(piinput::default_settings().candidates.theme == piinput::CandidateTheme::system,
+        "the candidate theme follows the system by default");
+    for (const auto& [text, expected] : std::initializer_list<
+             std::pair<const char*, piinput::CandidateTheme>>{
+             {"light", piinput::CandidateTheme::light},
+             {"dark", piinput::CandidateTheme::dark},
+             {"system", piinput::CandidateTheme::system}}) {
+        const auto parsed = piinput::parse_settings_text(
+            std::string("[candidates]\ntheme=") + text + "\n", previous);
+        check(parsed.errors.empty() && parsed.settings.candidates.theme == expected,
+            "every candidate theme name parses to its own value");
+    }
+    const auto bad_theme = piinput::parse_settings_text(
+        "[candidates]\ntheme=midnight\n", previous);
+    check(bad_theme.errors.size() == 1U &&
+            bad_theme.settings.candidates.theme == previous.candidates.theme,
+        "an unknown theme name is reported and leaves the previous value alone");
+    check(piinput::serialize_default_settings().find("theme=system") != std::string::npos,
+        "the theme appears in the serialized defaults, or the setting is undiscoverable");
+
     // 常用语：别名、位置、显示名、内容四个字段一起解析。
     const auto phrases = piinput::parse_settings_text(
         "[phrases]\n"
@@ -351,7 +388,7 @@ void test_valid_values_and_boundaries() {
         "target_1=https://github.com\n",
         previous);
     check(legacy_shortcut.errors.empty() &&
-            legacy_shortcut.settings.custom_shortcuts.size() == 7U &&
+            legacy_shortcut.settings.custom_shortcuts.size() == 10U &&
             legacy_shortcut.settings.custom_shortcuts.back().aliases == "github,gh" &&
             legacy_shortcut.settings.custom_shortcuts.back().target == "https://github.com",
         "legacy three-slot settings append user rows after the new built-in table");

@@ -220,7 +220,7 @@ void test_every_option_round_trips_without_disturbing_the_file() {
     check(text.find("[punctuation]") != std::string::npos,
         "a section the file never had is appended");
     check(text.find("[shortcuts]") != std::string::npos &&
-            text.find("count=6") != std::string::npos &&
+            text.find("count=9") != std::string::npos &&
             text.find("icon_1=🧮") != std::string::npos &&
             text.find("target_1=D:/tools/calc.html") != std::string::npos,
         "custom shortcut section is appended with its launch target");

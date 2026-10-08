@@ -140,6 +140,59 @@ CandidateToolbarAction candidate_toolbar_hit_test(
            first.top < second.bottom && second.top < first.bottom;
 }
 
+CandidatePalette light_candidate_palette() noexcept {
+    // 原本散在 paint() 里的那组值，一个都没动——换主题不该顺手改掉现有外观。
+    return {
+        .background = RGB(255, 255, 255),
+        .border = RGB(214, 212, 220),
+        .composition_text = RGB(96, 96, 96),
+        .candidate_text = RGB(30, 28, 35),
+        .index_text = RGB(105, 105, 116),
+        .selected_index_text = RGB(112, 63, 190),
+        .selected_background = RGB(241, 235, 255),
+        .separator = RGB(232, 230, 236),
+        .glyph = RGB(92, 87, 101),
+        .grid = RGB(95, 95, 95),
+        .menu_background = RGB(250, 250, 252),
+        .menu_text = RGB(25, 25, 25),
+        .menu_divider = RGB(224, 222, 230),
+    };
+}
+
+CandidatePalette dark_candidate_palette() noexcept {
+    // 不是把浅色取反。候选窗是浮在别人窗口上的一条小面板，纯黑会在深色应用上糊成
+    // 一片、在浅色应用上又过于刺眼，所以底色取深灰并保留一圈比它更亮的描边，让它
+    // 在两种背景上都有边界。选中色沿用同一支紫，只是换成在深底上可读的亮度。
+    return {
+        .background = RGB(32, 31, 36),
+        .border = RGB(72, 70, 80),
+        .composition_text = RGB(166, 164, 174),
+        .candidate_text = RGB(236, 234, 240),
+        .index_text = RGB(150, 148, 160),
+        .selected_index_text = RGB(190, 150, 255),
+        .selected_background = RGB(58, 48, 78),
+        .separator = RGB(56, 54, 64),
+        .glyph = RGB(176, 172, 186),
+        .grid = RGB(140, 140, 140),
+        .menu_background = RGB(42, 41, 47),
+        .menu_text = RGB(234, 232, 238),
+        .menu_divider = RGB(66, 64, 74),
+    };
+}
+
+bool system_prefers_dark_theme() noexcept {
+    DWORD value = 1U;
+    DWORD size = sizeof(value);
+    const LSTATUS status = RegGetValueW(
+        HKEY_CURRENT_USER,
+        L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+        L"AppsUseLightTheme", RRF_RT_REG_DWORD, nullptr, &value, &size);
+    // 读不到就当浅色。这个值在个性化设置从未被动过的机器上确实可能不存在，而
+    // 浅色是 Windows 自己的默认。
+    if (status != ERROR_SUCCESS) return false;
+    return value == 0U;
+}
+
 RECT place_candidate_window(
     const RECT& caret,
     SIZE desired,
@@ -771,7 +824,7 @@ void CandidateWindow::paint() {
     }
     RECT client{};
     GetClientRect(window_, &client);
-    HBRUSH background_brush = CreateSolidBrush(RGB(255, 255, 255));
+    HBRUSH background_brush = CreateSolidBrush(visual_.palette.background);
     FillRect(dc, &client, background_brush);
     DeleteObject(background_brush);
     SetBkMode(dc, TRANSPARENT);
@@ -788,7 +841,7 @@ void CandidateWindow::paint() {
         const RECT row{padding, 0,
                        (std::max)(padding, static_cast<int>(client.right) - padding),
                        composition_height};
-        const COLORREF previous = SetTextColor(dc, RGB(96, 96, 96));
+        const COLORREF previous = SetTextColor(dc, visual_.palette.composition_text);
         RECT text = row;
         // 不加省略号：长输入截断成「hult…」看不出打了什么，而这一行存在的
         // 唯一理由就是让人看见自己打了什么。超出就裁掉，DrawTextW 默认裁到
@@ -829,8 +882,8 @@ void CandidateWindow::paint() {
                 item.right - scaled(2),
                 item.bottom - scaled(5),
             };
-            HBRUSH selected_brush = CreateSolidBrush(RGB(241, 235, 255));
-            HPEN selected_pen = CreatePen(PS_NULL, 0, RGB(241, 235, 255));
+            HBRUSH selected_brush = CreateSolidBrush(visual_.palette.selected_background);
+            HPEN selected_pen = CreatePen(PS_NULL, 0, visual_.palette.selected_background);
             const auto old_brush = SelectObject(dc, selected_brush);
             const auto old_pen = SelectObject(dc, selected_pen);
             RoundRect(dc, highlight.left, highlight.top, highlight.right, highlight.bottom,
@@ -849,7 +902,7 @@ void CandidateWindow::paint() {
         TEXTMETRICW metrics{};
         GetTextMetricsW(dc, &metrics);
         const int text_top = candidate_text_top(item, metrics.tmHeight);
-        SetTextColor(dc, index == selected_ ? RGB(112, 63, 190) : RGB(105, 105, 116));
+        SetTextColor(dc, index == selected_ ? visual_.palette.selected_index_text : visual_.palette.index_text);
         if (show_number) {
             TextOutW(dc, item.left, text_top,
                 number.c_str(), static_cast<int>(number.size()));
@@ -858,7 +911,7 @@ void CandidateWindow::paint() {
         GetTextExtentPoint32W(dc, number.c_str(), static_cast<int>(number.size()),
             &number_extent);
         item.left += number_extent.cx;
-        SetTextColor(dc, RGB(30, 28, 35));
+        SetTextColor(dc, visual_.palette.candidate_text);
         TextOutW(dc, item.left, text_top,
             candidates_[index].c_str(), static_cast<int>(candidates_[index].size()));
     }
@@ -869,7 +922,7 @@ void CandidateWindow::paint() {
         client.right,
         client.top + first_row_height,
     };
-    HPEN separator = CreatePen(PS_SOLID, 1, RGB(232, 230, 236));
+    HPEN separator = CreatePen(PS_SOLID, 1, visual_.palette.separator);
     const auto previous_pen = SelectObject(dc, separator);
     MoveToEx(dc, toolbar.left, toolbar.top + scaled(6), nullptr);
     LineTo(dc, toolbar.left, toolbar.bottom - scaled(6));
@@ -879,7 +932,7 @@ void CandidateWindow::paint() {
     const int expand_right = toolbar.left + scaled(kExpandButtonWidth);
     const int chevron_center_x = toolbar.left + scaled(kExpandButtonWidth) / 2;
     const int chevron_center_y = toolbar.top + first_row_height / 2;
-    HPEN glyph_pen = CreatePen(PS_SOLID, scaled(2), RGB(92, 87, 101));
+    HPEN glyph_pen = CreatePen(PS_SOLID, scaled(2), visual_.palette.glyph);
     const auto previous_glyph_pen = SelectObject(dc, glyph_pen);
     MoveToEx(dc, chevron_center_x - scaled(4), chevron_center_y - scaled(2), nullptr);
     LineTo(dc, chevron_center_x, chevron_center_y + scaled(2));
@@ -895,7 +948,7 @@ void CandidateWindow::paint() {
     const int grid_height = 2 * square + square_gap;
     const int grid_left = expand_right + (scaled(kMenuButtonWidth) - grid_width) / 2;
     const int grid_top = toolbar.top + (first_row_height - grid_height) / 2;
-    HBRUSH grid_brush = CreateSolidBrush(RGB(95, 95, 95));
+    HBRUSH grid_brush = CreateSolidBrush(visual_.palette.grid);
     for (int row = 0; row < 2; ++row) {
         for (int column = 0; column < 2; ++column) {
             RECT square_rect{
@@ -909,7 +962,7 @@ void CandidateWindow::paint() {
     }
     DeleteObject(grid_brush);
 
-    HBRUSH border_brush = CreateSolidBrush(RGB(214, 212, 220));
+    HBRUSH border_brush = CreateSolidBrush(visual_.palette.border);
     FrameRect(dc, &client, border_brush);
     DeleteObject(border_brush);
 
@@ -918,16 +971,24 @@ void CandidateWindow::paint() {
         const int menu_row_height = scaled(kToolbarMenuRowHeight);
         const int menu_top = client.bottom - 2 * menu_row_height;
         RECT menu{client.right - menu_width, menu_top, client.right, client.bottom};
-        FillRect(dc, &menu, reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1));
-        FrameRect(dc, &menu, reinterpret_cast<HBRUSH>(COLOR_3DSHADOW + 1));
+        // 菜单此前用的是系统画刷，而经典系统颜色从不跟随个性化设置：暗色模式下
+        // 它依旧返回浅色，于是菜单会在深色候选框上糊出一块白。
+        HBRUSH menu_brush = CreateSolidBrush(visual_.palette.menu_background);
+        HBRUSH menu_frame = CreateSolidBrush(visual_.palette.border);
+        HBRUSH menu_divider_brush = CreateSolidBrush(visual_.palette.menu_divider);
+        FillRect(dc, &menu, menu_brush);
+        FrameRect(dc, &menu, menu_frame);
         RECT divider{menu.left, menu.top + menu_row_height,
                      menu.right, menu.top + menu_row_height + 1};
-        FillRect(dc, &divider, reinterpret_cast<HBRUSH>(COLOR_3DFACE + 1));
+        FillRect(dc, &divider, menu_divider_brush);
+        DeleteObject(menu_brush);
+        DeleteObject(menu_frame);
+        DeleteObject(menu_divider_brush);
         RECT symbols{menu.left + scaled(14), menu.top,
                      menu.right - scaled(8), menu.top + menu_row_height};
         RECT settings{menu.left + scaled(14), menu.top + menu_row_height,
                       menu.right - scaled(8), menu.bottom};
-        SetTextColor(dc, RGB(25, 25, 25));
+        SetTextColor(dc, visual_.palette.menu_text);
         DrawTextW(dc, L"符号", -1, &symbols,
             DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
         DrawTextW(dc, L"设置", -1, &settings,

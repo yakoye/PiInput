@@ -1207,6 +1207,39 @@ void test_smart_punctuation() {
     check(!SmartPunctuationEngine::first_key_is_ascii("geek", ','),
         "the rule covers the period and the colon, not every symbol");
 
+    // 冒号与句号完全对称，这里把两边都钉死。此前冒号只有「时间」「比例」这些
+    // 专用规则有用例，两键规则本身一条都没有——而它才是日常最常撞到的那条。
+    expect(':', "文件apple", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-COLON-AFTER-DIGIT", "SEQUENCE",
+        "The first colon after a letter remains ASCII immediately");
+    expect(':', "文件apple:", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT",
+        "The second colon after a letter becomes a Chinese colon");
+    expect(':', "注意", {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT",
+        "A colon after Chinese text is Chinese on the first key");
+    expect(':', "第3", {}, piinput::SmartPunctuationAction::literal,
+        "PUNC-COLON-AFTER-DIGIT", "SEQUENCE",
+        "The first colon after a digit remains ASCII immediately");
+    check(SmartPunctuationEngine::first_key_is_ascii("note:", ':') == false,
+        "an ASCII colon already in front of the caret ends the two-key sequence");
+    check(SmartPunctuationEngine::first_key_is_ascii("Step2", ':'),
+        "a digit closing a Latin word still opens the colon sequence");
+
+    // 左侧文本为空时规则不成立——这正是飞书那类应用里的故障形态。它们的
+    // RequestEditSession 读不出周边文本，于是 Shim 交来的 left 永远是空的，
+    // 「geek。」怎么都变不成「geek.」。
+    //
+    // 引擎这一侧的行为是对的：没有依据就不能断言前面是字母。修法在 Shim ——
+    // 它记住自己刚上屏的尾字符当兜底，见 note_committed_text。这两条用例把
+    // 「为什么引擎不该自己猜」钉住，免得以后有人在这里加一条默认 ASCII 的捷径。
+    expect('.', {}, {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT",
+        "With no left context the period cannot claim to follow a letter");
+    expect(':', {}, {}, piinput::SmartPunctuationAction::transform,
+        "PUNC-CHINESE", "CHINESE_TEXT",
+        "and the colon behaves the same way");
+
     expect(':', "12", "23", piinput::SmartPunctuationAction::literal,
         "PUNC-COLON-TIME", "TIME", "A valid time colon stays ASCII");
     expect(':', "24", "99", piinput::SmartPunctuationAction::literal,

@@ -146,6 +146,14 @@ namespace {
     return std::nullopt;
 }
 
+[[nodiscard]] std::optional<CandidateTheme> parse_candidate_theme(
+    const std::string_view value) noexcept {
+    if (value == "light") return CandidateTheme::light;
+    if (value == "dark") return CandidateTheme::dark;
+    if (value == "system") return CandidateTheme::system;
+    return std::nullopt;
+}
+
 [[nodiscard]] std::optional<CommandHotkey> parse_command_hotkey(
     const std::string_view value) noexcept {
     if (value == "ctrl_alt_grave") return CommandHotkey::ctrl_alt_grave;
@@ -303,6 +311,9 @@ void parse_candidates(
     } else if (key == "show_composition") {
         assign_parsed(
             result, candidates.show_composition, parse_bool, value, line, "candidates", key);
+    } else if (key == "theme") {
+        assign_parsed(
+            result, candidates.theme, parse_candidate_theme, value, line, "candidates", key);
     } else if (key == "equal_key") {
         assign_parsed(result, candidates.equal_key, parse_navigation, value, line, "candidates", key);
     } else if (key == "minus_key") {
@@ -658,6 +669,12 @@ std::vector<CustomShortcutSettings> default_custom_shortcuts() {
         {"jisuanqi,jisrqi,jsq,jisrq,calc,reg", 3U, "🖩", "程序员计算器",
             "package:regcalc64"},
         {"hxtu,ht,huatu,mspaint,msp", 2U, "🎨", "画图", "system:mspaint"},
+        // 配色开关。zt / zhuti 是全拼与简拼，vuti 是小鹤双拼下「主题」的拼法——
+        // 三种打法都要能到，否则换了方案的人就找不到它。三挡各占一个候选位，
+        // 省掉「打开设置、翻到候选窗页、改完保存」这一串。
+        {"zt,zhuti,zhut,vuti,vut", 2U, "🌗", "配色：跟随系统", "system:theme_system"},
+        {"zt,zhuti,zhut,vuti,vut", 3U, "☀", "配色：浅色", "system:theme_light"},
+        {"zt,zhuti,zhut,vuti,vut", 4U, "🌙", "配色：暗色", "system:theme_dark"},
     };
 }
 
@@ -892,6 +909,7 @@ std::string serialize_default_settings() {
         "prefix_scan_limit=4096\n"
         "[candidates]\n"
         "show_composition=true\n"
+        "theme=system\n"
         "items_per_row=6\n"
         "visible_rows=5\n"
         "max_items=90\n"

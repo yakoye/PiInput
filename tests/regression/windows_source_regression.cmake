@@ -246,6 +246,41 @@ if(NOT stable_text_service_text MATCHES "piinput-guide\\.html")
     message(FATAL_ERROR
         "The language bar's help entry must open the packaged HTML guide")
 endif()
+# 周边文本读不出来时，两键规则要靠「我们自己刚上屏了什么」兜底。飞书这类应用的
+# RequestEditSession 读不出周边文本，没有这个兜底，字母数字后的第一个句号永远是
+# 中文形式，而用户没有任何办法绕开。
+if(NOT stable_text_service_text MATCHES "note_committed_text" OR
+   NOT stable_text_service_text MATCHES "committed_tail")
+    message(FATAL_ERROR
+        "Smart punctuation must fall back to the text the Shim itself last committed; "
+        "applications that refuse to report surrounding text otherwise never satisfy the "
+        "two-key rule and 'geek.' cannot be typed at all")
+endif()
+# 兜底的寿命只到下一个非标点按键。去掉这一条，光标早已移走之后按下的句号还会
+# 沿用上一次上屏的尾字符。
+if(NOT stable_text_service_text MATCHES
+   "if \\(!is_punctuation_key\\(wparam\\)\\) clear_committed_tail\\(\\)")
+    message(FATAL_ERROR
+        "The remembered commit tail must expire on the next non-punctuation key")
+endif()
+# 候选窗的颜色必须全部来自调色板。paint() 里只要留下一个 RGB 字面量，暗色主题就
+# 会在那一处漏出浅色——而那种缺陷只有在暗色下才看得见，最容易漏过去。
+string(REGEX MATCHALL "RGB\\([0-9]" candidate_window_literals "${candidate_window_text}")
+list(LENGTH candidate_window_literals candidate_window_literal_count)
+# 调色板自己那两张表里的字面量是允许的，正好 26 个（浅色 13 + 暗色 13）。
+if(NOT candidate_window_literal_count EQUAL 26)
+    message(FATAL_ERROR
+        "Candidate window colours must all come from CandidatePalette. Found "
+        "${candidate_window_literal_count} RGB literals where only the two palette "
+        "definitions (13 each) may have them -- a literal left in paint() shows through "
+        "as a light patch that is only visible in the dark theme")
+endif()
+if(NOT candidate_window_text MATCHES "AppsUseLightTheme")
+    message(FATAL_ERROR
+        "Following the system theme must read AppsUseLightTheme; GetSysColor still "
+        "answers light in dark mode because the classic system colours never tracked "
+        "the personalisation setting")
+endif()
 # 被拒绝的按键不会进入 OnKeyDown，所以 Shift 组合键必须在 OnTestKeyDown 里就
 # 记账。中文模式下 Shift+字母是有意放行的（直接打大写），于是状态机学不到这次
 # Shift 是当修饰键用的，松手时被当成单击——打 previewIdentity 打到一半就切成

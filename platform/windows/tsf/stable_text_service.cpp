@@ -832,6 +832,8 @@ STDMETHODIMP TextService::Deactivate() {
 
 STDMETHODIMP TextService::OnSetFocus(const BOOL foreground) {
     foreground_ = foreground != FALSE;
+    // 焦点一变，上一次上屏的位置就与现在的光标无关了。
+    clear_committed_tail();
     if (pipe_client_ == nullptr) return S_OK;
     if (!foreground_) {
         const auto request = mirror_.begin_request();
@@ -1017,6 +1019,11 @@ void TextService::apply_eaten_key_down(
         smart_punctuation_enabled_ = punctuation_mode != "english" &&
             punctuation_mode != "programmer";
     }
+    // 记住的尾字符只活到下一个非标点按键：字母会开新的合成串、方向键会移动光标，
+    // 那之后就不能再断定光标还跟在那段文本后面。标点键不清除，于是「第二次按句号
+    // 得到中文形式」自然成立——第一次按完之后尾字符变成 ASCII 句点，不是字母数字，
+    // 规则自己就不再命中。
+    if (!is_punctuation_key(wparam)) clear_committed_tail();
     if (provisional_punctuation_.has_value() &&
         resolve_smart_punctuation_key(context, wparam)) {
         return;
@@ -1082,6 +1089,21 @@ void TextService::apply_eaten_key_down(
     }
     (void)dispatch(context, map_key(wparam));
 }
+
+void TextService::note_committed_text(const std::string_view text) {
+    committed_tail_.clear();
+    if (text.empty()) return;
+    // 只留最后一个 UTF-8 字符。规则只看紧挨着光标的那一个，多留没有用处，而留着
+    // 一整段上屏文本等于在 Shim 里囤用户打的内容。
+    std::size_t start = text.size() - 1U;
+    while (start > 0U &&
+           (static_cast<unsigned char>(text[start]) & 0xC0U) == 0x80U) {
+        --start;
+    }
+    committed_tail_.assign(text.substr(start));
+}
+
+void TextService::clear_committed_tail() noexcept { committed_tail_.clear(); }
 
 bool TextService::digit_suggestion_visible() const noexcept {
     return mirror_.raw().empty() && !mirror_.snapshot().candidates.empty();
@@ -1451,7 +1473,16 @@ bool TextService::handle_smart_punctuation_key(
         const bool scintilla_snapshot = left.empty() &&
             query_scintilla_surrounding_text(left, right);
         snapshot_available = snapshot_available || scintilla_snapshot;
-        trace_key("smart_context_source", scintilla_snapshot ? "scintilla" : "tsf");
+        const char* source = scintilla_snapshot ? "scintilla" : "tsf";
+        // 文档问不出来时，拿我们自己刚上屏的尾字符顶上。飞书这类应用读不出周边
+        // 文本，没有这一步两键规则在那里永远不成立——打 geek 再按句号只会得到
+        // 「geek。」。读得到就以文档为准，这一支只在真的读不到时启用。
+        if (left.empty() && !committed_tail_.empty()) {
+            left = committed_tail_;
+            source = "committed_tail";
+            snapshot_available = true;
+        }
+        trace_key("smart_context_source", source);
         const char* const context_class = !snapshot_available
             ? "unavailable"
             : (left.empty()
@@ -1995,6 +2026,8 @@ EditRequestResult TextService::request_edit(
     const MirrorRequest* const request,
     const bool smart_punctuation_completion) {
     if (context == nullptr || client_id_ == TF_CLIENTID_NULL) return EditRequestResult::failed;
+    // 这里是 Shim 写进文档的唯一入口，也是唯一知道「刚上屏了什么」的地方。
+    if (commit) note_committed_text(text);
     const std::wstring wide = utf8_to_wide_local(text);
     const std::size_t wide_caret = utf16_caret_for_utf8(text, caret);
     auto* session = new (std::nothrow) EditSession(
@@ -2313,7 +2346,59 @@ void TextService::launch_settings() noexcept {
     }
 }
 
+// settings.ini 里的 `theme=` 改写。
+//
+// 刻意只认 [candidates] 段里的那一个 key：托盘切换输入方案用的是「全文找第一个
+// schema=」，那在 schema 只出现一次时没问题，但 theme 这个词太常见，将来多一个
+// 同名 key 就会改错地方。找不到 [candidates] 段就补一个，而不是往文件头乱插。
+void TextService::write_candidate_theme(const std::string_view value) noexcept try {
+    const auto path = user_settings_path();
+    if (path.empty()) return;
+    std::ifstream input(path, std::ios::binary);
+    std::string text{
+        std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
+    input.close();
+
+    const auto section = text.find("[candidates]");
+    if (section == std::string::npos) {
+        if (!text.empty() && text.back() != '\n') text.push_back('\n');
+        text += "[candidates]\ntheme=";
+        text += value;
+        text.push_back('\n');
+    } else {
+        // 下一个段头之前的范围，就是 [candidates] 段。
+        const auto section_end = text.find("\n[", section + 1U);
+        const auto limit = section_end == std::string::npos ? text.size() : section_end;
+        const auto key = text.find("theme=", section);
+        if (key != std::string::npos && key < limit) {
+            const auto end = text.find('\n', key);
+            text.replace(key, (end == std::string::npos ? text.size() : end) - key,
+                "theme=" + std::string(value));
+        } else {
+            const auto insert_at = text.find('\n', section);
+            const std::string line = "\ntheme=" + std::string(value);
+            if (insert_at == std::string::npos) {
+                text += line;
+            } else {
+                text.insert(insert_at, line);
+            }
+        }
+    }
+    std::ofstream output(path, std::ios::binary | std::ios::trunc);
+    output << text;
+} catch (...) {
+    // 写不进去就保持原样。换个配色不值得让输入法出任何动静。
+}
+
 void TextService::launch_program(const std::string_view target) noexcept {
+    // 候选框里的主题开关。写进 settings.ini，Host 在下一个合成边界重读——托盘、
+    // 设置窗口和这里走的是同一条路，三处改出来的结果一样。
+    if (target.starts_with("system:theme_")) {
+        const std::string_view wanted = target.substr(std::string_view("system:theme_").size());
+        if (wanted != "light" && wanted != "dark" && wanted != "system") return;
+        write_candidate_theme(wanted);
+        return;
+    }
     if (target == "system:calculator") {
         (void)ShellExecuteW(nullptr, L"open", L"calc.exe", nullptr, nullptr, SW_SHOWNORMAL);
         return;
