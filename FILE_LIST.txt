@@ -1,6 +1,7 @@
 .gitattributes
 .github/workflows/windows-release.yml
 .gitignore
+assets/piinput-donate.png
 build.cmd
 build.ps1
 CMakeLists.txt

@@ -242,7 +242,15 @@ if(WIN32)
         platform/windows/settings/windows_tool_templates.cpp
     )
     target_include_directories(PiInput-Settings PRIVATE platform/windows/settings)
-    target_link_libraries(PiInput-Settings PRIVATE piinput_core comctl32 shell32 user32)
+    target_compile_definitions(PiInput-Settings PRIVATE
+        PIINPUT_BUILD_TIME_UTC="${PIINPUT_BUILD_TIME_UTC}"
+        PIINPUT_GIT_COMMIT_ID="${PIINPUT_GIT_COMMIT_ID}"
+        PIINPUT_CONTACT="${PIINPUT_CONTACT}"
+        PIINPUT_BUILD_ID_TEXT="${PIINPUT_BUILD_ID}")
+    # GDI+ 只为「关于」页里那张二维码图。设置程序是独立 exe，不是注进别人进程的
+    # DLL，所以多一个 GDI+ 依赖没有活动上下文方面的风险。
+    target_link_libraries(PiInput-Settings PRIVATE
+        piinput_core comctl32 shell32 user32 gdiplus)
     piinput_enable_warnings(PiInput-Settings)
 
     add_library(PiInputTSF SHARED
@@ -410,6 +418,9 @@ if(WIN32)
     # 操作指引做成随包 HTML 而不是一个 Win32 窗口：排版、表格、滚动、可复制，
     # HTML 全都免费拿到，自绘窗口每一项都要写。安装器完成页和托盘菜单都打开它。
     install(FILES docs/piinput-guide.html DESTINATION bin)
+    # 「设置 → 关于」页底部那张收款码。装在 bin 下，设置程序按相对路径找它；
+    # 找不到就整块不画，不弹错——赞赏入口缺席不该打扰任何人。
+    install(FILES assets/piinput-donate.png DESTINATION bin)
 endif()
 if(PIINPUT_BUNDLED_LEXICON)
     install(FILES "${PIINPUT_BUNDLED_LEXICON}" DESTINATION data)

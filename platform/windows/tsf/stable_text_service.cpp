@@ -2466,7 +2466,11 @@ void TextService::on_lang_bar_command(const LangBarCommand command) noexcept {
             L"Git Commit：" + widen_ascii(PIINPUT_GIT_COMMIT_ID) + L"\n"
             L"联系方式：" + widen_ascii(PIINPUT_CONTACT) + L"\n\n"
             L"轻量、快速、纯离线的中文输入法。\n"
-            L"不含 AI、语音、广告与云端联想。";
+            L"不含 AI、语音、广告与云端联想。\n\n"
+            // 收款码在设置的「关于」页里。这里只留一句指路，不画图也不放链接：
+            // 这个消息框是右键菜单弹出来的，塞进二维码会让一个查版本号的动作
+            // 变成一次劝捐。
+            L"赞赏作者：设置 → 关于";
         MessageBoxW(nullptr, about.c_str(), L"关于 PiInput", MB_OK | MB_ICONINFORMATION);
         return;
     }

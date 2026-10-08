@@ -7,12 +7,19 @@
 #include <commctrl.h>
 #include <shlobj.h>
 #include <shellapi.h>
+// min/max 宏会把 Gdiplus 头里的 std::min/std::max 调用打碎，所以先挡掉。
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <objidl.h>
+#include <gdiplus.h>
 
 #include <algorithm>
 #include <array>
 #include <cstdlib>
 #include <cwctype>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -41,6 +48,9 @@ constexpr int kPhraseAdd = 1021;
 constexpr int kPhraseEdit = 1022;
 constexpr int kPhraseDelete = 1023;
 constexpr int kPhraseHint = 1024;
+constexpr int kAboutInfo = 1030;
+constexpr int kAboutThanks = 1031;
+constexpr int kAboutDonate = 1032;
 constexpr int kFirstField = 1100;
 constexpr int kEditorAliases = 1200;
 constexpr int kEditorPosition = 1201;
@@ -141,11 +151,12 @@ constexpr std::array<Row, 33U> kRows{{
     {4, Kind::number, Field::prefix_scan_limit, L"前缀扫描上限", kNone, 128U, 16384U},
 }};
 
-constexpr std::array<const wchar_t*, 7U> kPages{
-    L"输入", L"候选窗", L"标点符号", L"英文", L"高级", L"快捷调用", L"常用语"};
+constexpr std::array<const wchar_t*, 8U> kPages{
+    L"输入", L"候选窗", L"标点符号", L"英文", L"高级", L"快捷调用", L"常用语", L"关于"};
 
 constexpr int kShortcutPage = 5;
 constexpr int kPhrasePage = 6;
+constexpr int kAboutPage = 7;
 
 struct AppState final {
     std::filesystem::path settings_path;
@@ -166,6 +177,13 @@ struct AppState final {
     HWND phrase_edit{};
     HWND phrase_delete{};
     HWND phrase_hint{};
+    HWND about_info{};
+    HWND about_thanks{};
+    HWND about_donate{};
+    // 收款码。加载不到就保持空，「关于」页少一块，不报错——赞赏入口缺席不该
+    // 打扰任何人。
+    ULONG_PTR gdiplus_token{};
+    std::unique_ptr<Gdiplus::Image> donate_image;
 };
 
 struct PhraseEditorState final {
@@ -1007,6 +1025,48 @@ void draw_preview(AppState& state, const DRAWITEMSTRUCT& item) {
     SelectObject(item.hDC, previous);
 }
 
+// 「关于」页上的版本信息。编译期常量，不查注册表也不问宿主——它要回答的是
+// 「我手上这个构建是哪一个」，而不是「现在跑着的是哪一个」。
+[[nodiscard]] std::wstring about_text() {
+    const auto widen_ascii = [](const char* const value) {
+        const std::string text(value);
+        return std::wstring(text.begin(), text.end());
+    };
+    return L"PiInput " + widen_ascii(PIINPUT_VERSION) + L"\r\n\r\n"
+        L"构建标识：" + widen_ascii(PIINPUT_BUILD_ID_TEXT) + L"\r\n"
+        L"构建时间：" + widen_ascii(PIINPUT_BUILD_TIME_UTC) + L"\r\n"
+        L"Git Commit：" + widen_ascii(PIINPUT_GIT_COMMIT_ID) + L"\r\n"
+        L"项目地址：" + widen_ascii(PIINPUT_CONTACT) + L"\r\n\r\n"
+        L"轻量、快速、纯离线的中文输入法。\r\n"
+        L"不含 AI、语音、广告与云端联想。";
+}
+
+[[nodiscard]] std::filesystem::path donate_image_path() {
+    std::array<wchar_t, MAX_PATH> buffer{};
+    if (GetModuleFileNameW(nullptr, buffer.data(), MAX_PATH) == 0U) return {};
+    return std::filesystem::path(buffer.data()).parent_path() / L"piinput-donate.png";
+}
+
+// 二维码画在这里。刻意画得小、放在页面下方、配一行轻描淡写的说明——这是个
+// 可以完全无视的东西，不该在任何一屏里抢视线。
+void draw_donate(const AppState& state, const DRAWITEMSTRUCT& item) {
+    if (state.donate_image == nullptr) return;
+    const int width = item.rcItem.right - item.rcItem.left;
+    const int height = item.rcItem.bottom - item.rcItem.top;
+    if (width <= 0 || height <= 0) return;
+    const auto source_width = static_cast<int>(state.donate_image->GetWidth());
+    const auto source_height = static_cast<int>(state.donate_image->GetHeight());
+    if (source_width <= 0 || source_height <= 0) return;
+    // 等比缩放后靠左放，不铺满：铺满会让它变成页面的主角。
+    const int drawn_height = height;
+    const int drawn_width = MulDiv(source_width, drawn_height, source_height);
+    Gdiplus::Graphics graphics(item.hDC);
+    graphics.SetInterpolationMode(Gdiplus::InterpolationModeHighQualityBicubic);
+    graphics.DrawImage(state.donate_image.get(),
+        Gdiplus::Rect(item.rcItem.left, item.rcItem.top,
+            (std::min)(drawn_width, width), drawn_height));
+}
+
 void show_page(AppState& state, const int page) {
     for (std::size_t index = 0U; index < kRows.size(); ++index) {
         const int mode = kRows[index].page == page ? SW_SHOW : SW_HIDE;
@@ -1027,6 +1087,15 @@ void show_page(AppState& state, const int page) {
     for (const HWND item : {state.phrase_list, state.phrase_add,
              state.phrase_edit, state.phrase_delete, state.phrase_hint}) {
         if (item != nullptr) ShowWindow(item, phrase_mode);
+    }
+    const int about_mode = page == kAboutPage ? SW_SHOW : SW_HIDE;
+    for (const HWND item : {state.about_info, state.about_thanks}) {
+        if (item != nullptr) ShowWindow(item, about_mode);
+    }
+    // 图加载不到就连占位都不显示，而不是留一个空框。
+    if (state.about_donate != nullptr) {
+        ShowWindow(state.about_donate,
+            page == kAboutPage && state.donate_image != nullptr ? SW_SHOW : SW_HIDE);
     }
 }
 
@@ -1324,6 +1393,33 @@ LRESULT CALLBACK window_proc(
             690, 98, 102, 28, window, kPhraseEdit);
         state->phrase_delete = control(L"BUTTON", L"删除", BS_PUSHBUTTON | WS_TABSTOP,
             690, 134, 102, 28, window, kPhraseDelete);
+        state->about_info = control(L"EDIT", about_text().c_str(),
+            ES_MULTILINE | ES_READONLY | WS_VSCROLL,
+            24, 60, 660, 160, window, kAboutInfo);
+        state->about_thanks = control(L"STATIC",
+            L"PiInput 免费、无广告、不联网。觉得好用的话，可以请我喝杯咖啡——"
+            L"扫下面任意一个即可，随意就好。",
+            SS_LEFT, 24, 232, 660, 36, window, kAboutThanks);
+        // 画得小，放在页面下方。这是个可以完全无视的东西，不该在任何一屏里抢
+        // 视线；两个码各约 100px，手机扫屏幕这个尺寸足够。
+        state->about_donate = control(L"STATIC", L"", SS_OWNERDRAW,
+            24, 272, 240, 130, window, kAboutDonate);
+        {
+            const Gdiplus::GdiplusStartupInput startup;
+            if (Gdiplus::GdiplusStartup(&state->gdiplus_token, &startup, nullptr) ==
+                Gdiplus::Ok) {
+                const auto path = donate_image_path();
+                std::error_code ignored;
+                if (!path.empty() && std::filesystem::is_regular_file(path, ignored)) {
+                    auto image = std::make_unique<Gdiplus::Image>(path.c_str());
+                    // 解码失败也算没有图：这一块整个不画，不弹任何提示。
+                    if (image->GetLastStatus() == Gdiplus::Ok) {
+                        state->donate_image = std::move(image);
+                    }
+                }
+            }
+        }
+
         state->phrase_hint = control(L"STATIC",
             L"常用语上屏文本，不启动程序。触发码留空时按内容自动推导。"
             L"数字内容在打出前 3 位后出现在候选框，按 Tab 补齐剩下的部分——"
@@ -1353,6 +1449,10 @@ LRESULT CALLBACK window_proc(
         const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(lparam);
         if (item != nullptr && item->CtlID == static_cast<UINT>(kPreview)) {
             draw_preview(*state, *item);
+            return TRUE;
+        }
+        if (item != nullptr && item->CtlID == static_cast<UINT>(kAboutDonate)) {
+            draw_donate(*state, *item);
             return TRUE;
         }
     }
@@ -1548,6 +1648,14 @@ LRESULT CALLBACK window_proc(
         if (state != nullptr && state->preview_font != nullptr) {
             DeleteObject(state->preview_font);
             state->preview_font = nullptr;
+        }
+        if (state != nullptr) {
+            // 图必须在 GdiplusShutdown 之前析构：反过来是对已经关掉的 GDI+ 调用。
+            state->donate_image.reset();
+            if (state->gdiplus_token != 0U) {
+                Gdiplus::GdiplusShutdown(state->gdiplus_token);
+                state->gdiplus_token = 0U;
+            }
         }
         PostQuitMessage(0);
         return 0;
