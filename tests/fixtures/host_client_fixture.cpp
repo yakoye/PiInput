@@ -522,6 +522,69 @@ int main(const int argc, char** const argv) {
                   << "punctuation_chain_max_us=" << elapsed_us.back() << '\n';
         return 0;
     }
+    // 数字常用语的端到端检查。此前这条路只有 host_session 层的单元测试，而它
+    // 恰恰是唯一走协议 v7 的报文——信封版本、文本载荷、Host 的解码分支，全都
+    // 只被编解码单测覆盖过，从没在真实管道上跑通一次。
+    const bool digit_run_mode = argc == 3 &&
+        std::string_view(argv[1]) == "--digit-run";
+    if (digit_run_mode) {
+        const std::uint64_t client_id = piinput::windows::process_client_id();
+        constexpr std::uint64_t session_id = 1U;
+        std::uint64_t sequence = 1U;
+
+        piinput::HostKeyEvent event;
+        event.kind = piinput::HostKeyKind::digit_run;
+        event.text_payload = argv[2];
+
+        // 信封与载荷都必须是 v7：Host 按信封声明的版本解码，对不上会整包拒收。
+        const auto response = piinput::windows::request_host(
+            piinput::HostMessageType::key_event,
+            piinput::encode_host_key_event(event, piinput::host_protocol_v7),
+            client_id, session_id, sequence++, 0U, piinput::host_protocol_v7);
+        if (!response.has_value()) {
+            std::cout << "digit_run_reachable=false\n";
+            return 30;
+        }
+        piinput::HostPayloadError error = piinput::HostPayloadError::none;
+        const auto reply = piinput::decode_host_reply(
+            response->payload, error, response->version);
+        if (!reply.has_value()) {
+            std::cout << "digit_run_reachable=true\ndigit_run_decoded=false\n";
+            return 31;
+        }
+        std::cout << "digit_run_reachable=true\n"
+                  << "digit_run_decoded=true\n"
+                  << "digit_run_accepted=" << (reply->accepted ? "true" : "false") << '\n'
+                  << "digit_run_action=" << static_cast<int>(reply->action) << '\n'
+                  // 建议必须不带合成串：那串数字已经在文档里了。
+                  << "digit_run_raw=" << reply->snapshot.raw << '\n'
+                  << "digit_run_candidates=" << reply->snapshot.candidates.size() << '\n';
+        for (std::size_t index = 0U; index < reply->snapshot.candidates.size(); ++index) {
+            std::cout << "digit_run_candidate_" << index << '='
+                      << reply->snapshot.candidates[index].text << '\n';
+        }
+        if (!reply->snapshot.candidates.empty()) {
+            // 选中它：提交的必须只是没打完的那段后缀。
+            piinput::HostKeyEvent accept;
+            accept.kind = piinput::HostKeyKind::select_candidate;
+            accept.candidate_id = reply->snapshot.candidates.front().id;
+            const auto accepted = piinput::windows::request_host(
+                piinput::HostMessageType::key_event,
+                piinput::encode_host_key_event(accept),
+                client_id, session_id, sequence++, reply->snapshot.generation,
+                piinput::host_protocol_current);
+            if (accepted.has_value()) {
+                const auto committed = piinput::decode_host_reply(
+                    accepted->payload, error, accepted->version);
+                if (committed.has_value()) {
+                    std::cout << "digit_run_commit_action="
+                              << static_cast<int>(committed->action) << '\n'
+                              << "digit_run_commit_text=" << committed->text << '\n';
+                }
+            }
+        }
+        return 0;
+    }
     const bool resume_mode = argc == 4 && std::string_view(argv[1]) == "--resume";
     const bool caret_mode = argc == 3 && std::string_view(argv[1]) == "--caret";
     const bool toolbar_mode = argc == 3 && std::string_view(argv[1]) == "--toolbar-responsive";
@@ -698,6 +761,14 @@ int main(const int argc, char** const argv) {
               << "candidates=" << last.snapshot.candidates.size() << '\n';
     if (!last.snapshot.candidates.empty()) {
         std::cout << "first=" << last.snapshot.candidates.front().text << '\n';
+    }
+    // 前几条逐条列出来。`first=` 只够验证首选，而常用语和快捷调用都按配置的位置
+    // 落在第 2、3 位——检查它们是否在该在的位置上，首选一个字段看不出来。
+    constexpr std::size_t listed = 6U;
+    for (std::size_t index = 0U;
+         index < (std::min)(listed, last.snapshot.candidates.size()); ++index) {
+        std::cout << "candidate_" << index << '='
+                  << last.snapshot.candidates[index].text << '\n';
     }
     return 0;
 }

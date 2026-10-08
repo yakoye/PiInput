@@ -906,6 +906,18 @@ if(PIINPUT_BUILD_TESTS)
                 -DataDir "${CMAKE_SOURCE_DIR}/data"
             )
         endif()
+        # 常用语端到端。数字建议是唯一走协议 v7 的报文，而信封版本与载荷编码对不
+        # 上会让整条报文被拒收——那是「应用彻底打不出字」的形态，单测发现不了。
+        add_test(
+            NAME piinput-phrase-regression
+            COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"
+                -NoProfile
+                -ExecutionPolicy Bypass
+                -File ${CMAKE_SOURCE_DIR}/tests/regression/phrase_tests.ps1
+                -HostExe $<TARGET_FILE:PiInputHost>
+                -ClientExe $<TARGET_FILE:piinput-host-client-fixture>
+                -DataDir "${CMAKE_SOURCE_DIR}/data"
+        )
         add_test(
             NAME piinput-host-process
             COMMAND "${PIINPUT_POWERSHELL_EXECUTABLE}"

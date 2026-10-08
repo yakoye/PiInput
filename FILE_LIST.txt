@@ -652,6 +652,7 @@ tests/regression/human_input_scenario_regression.ps1
 tests/regression/installed_dev_resolver_regression.ps1
 tests/regression/native_command_capture_regression.ps1
 tests/regression/one_click_update_regression.ps1
+tests/regression/phrase_tests.ps1
 tests/regression/portable_package_regression.ps1
 tests/regression/query_dictionary_cmd_regression.ps1
 tests/regression/release_metadata_regression.cmake
