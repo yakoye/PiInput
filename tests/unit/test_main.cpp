@@ -690,8 +690,13 @@ void test_tool_shortcuts_are_always_candidate_two() {
             std::string("工具快捷码应固定在候选 2：") + shortcut.input);
     }
 
+    // 原始快捷码按当前方案解析不出来时，词库一个候选都给不出，于是要插一个占位
+    // 候选把动作项顶到它配置的位置上。占位的内容是**用户打的那几个字母**，不是
+    // 快捷项的名字：后者会让候选 1 变成「设置」这两个字的纯文本，选中它就打进文档
+    // 了，而且与候选 2 的「⚙️设置」几乎分不出来。打出去的字母本来就是用户输入的
+    // 东西，拿它占位既不重复也不会误伤。
     const auto cross_schema = engine.query("uevi", "full", 8U);
-    check(cross_schema.size() >= 2U && cross_schema.front().word == "设置" &&
+    check(cross_schema.size() >= 2U && cross_schema.front().word == "uevi" &&
             cross_schema[1U].word == "⚙️设置",
         "原始快捷码无法按当前方案解析时仍应保留候选 2 的设置入口");
     const auto one_slot = engine.query("uevi", "full", 1U);

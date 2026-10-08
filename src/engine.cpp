@@ -785,9 +785,15 @@ void Engine::splice_symbol_shortcuts(
                 !shortcut_alias_matches(shortcut.aliases, key)) {
                 continue;
             }
+            // 占位候选用「用户打的那几个字母」，不用快捷项的名字。
+            //
+            // 它只在词库一个候选都给不出时出现，用来把快捷项顶到它配置的位置上。
+            // 原来放的是 shortcut.name，于是打 zt 时第 1 位是「配色：跟随系统」这
+            // 串纯文本——选中它会把这几个字打进文档，而它和第 2 位的动作项长得几乎
+            // 一样。打出去的字母本来就是用户输入的东西，拿它占位既不重复也不会误伤。
             add_positioned({CandidateKind::launch_action,
                 shortcut_candidate_label(shortcut), key,
-                shortcut_action_target(shortcut), {}, shortcut.name,
+                shortcut_action_target(shortcut), {}, key,
                 static_cast<std::size_t>(shortcut.position)});
         }
         for (const auto& phrase : settings.custom_phrases) {
@@ -884,10 +890,17 @@ void Engine::splice_symbol_shortcuts(
         [](const PositionedShortcut& left, const PositionedShortcut& right) {
             return left.position < right.position;
         });
-    // Insert from the farthest/later row back towards the front. When two
-    // entries request the same position this preserves their table order.
-    for (auto iterator = positioned.rbegin(); iterator != positioned.rend(); ++iterator) {
-        const auto& shortcut = *iterator;
+    // 按位置从前往后插，并且记住上一条插在哪：下一条至少要排在它后面。
+    //
+    // 原来是从后往前插的，为的是让「两条都要第 2 位」时保持表里的先后。但那在行
+    // 比配置的位置短时会把顺序弄反：三条分别要 2、3、4 位而行里只有 1 条时，第 4
+    // 位那条先插到了下标 1，第 3 位那条再插到下标 2，于是 3 和 4 对调——打 zt 看到
+    // 的就是「跟随系统、暗色、浅色」。
+    //
+    // 从前往后插加上 last_at 这一条，两种情形同时成立：位置够用时各就各位，位置
+    // 不够时按配置顺序依次贴在行尾，而相同位置的多条仍按表里的先后排列。
+    std::ptrdiff_t last_at = -1;
+    for (const auto& shortcut : positioned) {
         if (shortcut.position == 0U || shortcut.position > result_limit) continue;
         EngineCandidate action = make(shortcut.label);
         action.pinyin = shortcut.reading;
@@ -895,10 +908,12 @@ void Engine::splice_symbol_shortcuts(
         action.evidence.action_target = shortcut.target;
         action.evidence.commit_text = shortcut.commit_text;
         if (results.size() >= result_limit) results.pop_back();
-        const std::size_t action_at =
-            (std::min)(shortcut.position - 1U, results.size());
-        results.insert(results.begin() + static_cast<std::ptrdiff_t>(action_at),
-            std::move(action));
+        const auto wanted = static_cast<std::ptrdiff_t>(
+            (std::min)(shortcut.position - 1U, results.size()));
+        const std::ptrdiff_t action_at = (std::max)(wanted, last_at + 1);
+        if (action_at > static_cast<std::ptrdiff_t>(results.size())) break;
+        results.insert(results.begin() + action_at, std::move(action));
+        last_at = action_at;
     }
 }
 

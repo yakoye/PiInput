@@ -1729,6 +1729,34 @@ void test_candidate_two_launches_tools_without_committing_the_label() {
     std::filesystem::remove(lexicon_path);
 }
 
+// 配色三挡：按配置的位置依次排列，选中发出的是切换主题的动作而不是把标签打进文档。
+void test_theme_rows_sit_in_configured_order_and_switch_rather_than_commit() {
+    piinput::Engine engine;
+    const auto lexicon_path = write_chinese_lexicon();
+    engine.load_lexicon(lexicon_path);
+    const auto settings = piinput::default_settings();
+    piinput::HostSession session(engine, nullptr, settings, "full");
+
+    type(session, "zt");
+    const auto& rows = session.snapshot().candidates;
+    check(rows.size() >= 4U, "the theme rows reach candidates two through four");
+    // 第 1 位留给词库的首选词，三挡配色从第 2 位起——普通打字的手感一点不动。
+    // （词库一个候选都给不出时才会插占位候选，那条路由 test_main 里的 uevi 用例覆盖。）
+    check(rows[1].text.find("跟随系统") != std::string::npos &&
+            rows[2].text.find("浅色") != std::string::npos &&
+            rows[3].text.find("暗色") != std::string::npos,
+        "the three themes keep the order their positions ask for");
+
+    const auto chosen = session.apply({
+        .kind = piinput::HostKeyKind::select_digit,
+        .character = '4',
+    });
+    check(chosen.accepted && chosen.action == piinput::HostAction::launch_program &&
+            chosen.text == "system:theme_dark" && chosen.snapshot.raw.empty(),
+        "candidate 4 asks for the dark theme instead of committing its label");
+    std::filesystem::remove(lexicon_path);
+}
+
 // 常用语：按别名弹出、按配置的位置排、上屏完整内容，并且不进学习。
 void test_stored_phrases_commit_their_text_without_being_learned() {
     piinput::Engine engine;
@@ -1904,6 +1932,7 @@ int main() {
     test_chinese_input_can_use_english_punctuation();
     test_symbol_center_and_semicolon_routing();
     test_candidate_two_launches_tools_without_committing_the_label();
+    test_theme_rows_sit_in_configured_order_and_switch_rather_than_commit();
     test_stored_phrases_commit_their_text_without_being_learned();
     test_digit_runs_suggest_the_rest_of_a_stored_number();
     test_english_completion_is_off_unless_asked_for();

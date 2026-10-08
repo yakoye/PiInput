@@ -146,6 +146,12 @@ void test_defaults_and_round_trip() {
         check(piinput::shortcut_alias_matches(defaults.custom_shortcuts[6].aliases, spelling),
             "every supported spelling of 主题 reaches the theme rows");
     }
+    // 三条的位置必须严格递增且各不相同。此前按位置插入是从后往前走的，行比配置的
+    // 位置短时会把顺序弄反——三条要 2、3、4 位而行里只有一条占位候选时，浅色和暗色
+    // 对调了。这条断言钉住「配置的顺序就是看到的顺序」。
+    check(defaults.custom_shortcuts[6].position < defaults.custom_shortcuts[7].position &&
+            defaults.custom_shortcuts[7].position < defaults.custom_shortcuts[8].position,
+        "the theme rows ask for strictly increasing candidate numbers");
     check(defaults.punctuation == piinput::PunctuationMode::chinese, "default punctuation mode");
     check(defaults.punctuation_bracket_style == piinput::PunctuationBracketStyle::sogou,
         "default Chinese bracket style follows Sogou");
