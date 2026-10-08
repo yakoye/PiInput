@@ -1047,6 +1047,43 @@ void draw_preview(AppState& state, const DRAWITEMSTRUCT& item) {
     return std::filesystem::path(buffer.data()).parent_path() / L"piinput-donate.png";
 }
 
+// 赞赏那一行：红心配蓝字。
+//
+// 一行两种颜色，WM_CTLCOLORSTATIC 做不到——它给整个控件设一个颜色。所以这一行
+// 自绘：先用红色画心，量出宽度，再用蓝色接着画文字。
+//
+// 心用 U+2665（♥）而不是带变体选择符的 U+2764 U+FE0F。后者会被当成 emoji 交给
+// Segoe UI Emoji 彩色渲染，那条路上我们设的颜色不起作用，红不红要看字体脸色；
+// 前者是普通字形，SetTextColor 说红就是红。
+void draw_thanks(const DRAWITEMSTRUCT& item) {
+    constexpr COLORREF kHeartRed = RGB(216, 48, 48);
+    constexpr COLORREF kTextBlue = RGB(0, 102, 204);
+    constexpr wchar_t kHeart[] = L"♥";
+    // 末尾用全角 ～ 而不是 ASCII ~：后者在中文字体里被画成上标位置的小波浪，
+    // 跟在汉字后面像渲染出了问题；全角的那个在中文行里居中对齐。
+    constexpr wchar_t kMessage[] = L" 觉得不错？请作者喝杯咖啡～";
+
+    const HGDIOBJ previous_font = SelectObject(item.hDC, GetStockObject(DEFAULT_GUI_FONT));
+    const int previous_mode = SetBkMode(item.hDC, TRANSPARENT);
+    const COLORREF previous_colour = SetTextColor(item.hDC, kHeartRed);
+
+    SIZE heart{};
+    (void)GetTextExtentPoint32W(item.hDC, kHeart,
+        static_cast<int>(std::size(kHeart)) - 1, &heart);
+    RECT bounds = item.rcItem;
+    DrawTextW(item.hDC, kHeart, -1, &bounds,
+        DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_NOPREFIX);
+
+    (void)SetTextColor(item.hDC, kTextBlue);
+    bounds.left += heart.cx;
+    DrawTextW(item.hDC, kMessage, -1, &bounds,
+        DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_NOPREFIX);
+
+    (void)SetTextColor(item.hDC, previous_colour);
+    (void)SetBkMode(item.hDC, previous_mode);
+    SelectObject(item.hDC, previous_font);
+}
+
 // 二维码画在这里。刻意画得小、放在页面下方、配一行轻描淡写的说明——这是个
 // 可以完全无视的东西，不该在任何一屏里抢视线。
 void draw_donate(const AppState& state, const DRAWITEMSTRUCT& item) {
@@ -1396,10 +1433,8 @@ LRESULT CALLBACK window_proc(
         state->about_info = control(L"EDIT", about_text().c_str(),
             ES_MULTILINE | ES_READONLY | WS_VSCROLL,
             24, 60, 660, 160, window, kAboutInfo);
-        state->about_thanks = control(L"STATIC",
-            L"PiInput 免费、无广告、不联网。觉得好用的话，可以请我喝杯咖啡——"
-            L"扫下面任意一个即可，随意就好。",
-            SS_LEFT, 24, 232, 660, 36, window, kAboutThanks);
+        state->about_thanks = control(L"STATIC", L"", SS_OWNERDRAW,
+            24, 240, 400, 24, window, kAboutThanks);
         // 画得小，放在页面下方。这是个可以完全无视的东西，不该在任何一屏里抢
         // 视线；两个码各约 100px，手机扫屏幕这个尺寸足够。
         state->about_donate = control(L"STATIC", L"", SS_OWNERDRAW,
@@ -1449,6 +1484,10 @@ LRESULT CALLBACK window_proc(
         const auto* item = reinterpret_cast<const DRAWITEMSTRUCT*>(lparam);
         if (item != nullptr && item->CtlID == static_cast<UINT>(kPreview)) {
             draw_preview(*state, *item);
+            return TRUE;
+        }
+        if (item != nullptr && item->CtlID == static_cast<UINT>(kAboutThanks)) {
+            draw_thanks(*item);
             return TRUE;
         }
         if (item != nullptr && item->CtlID == static_cast<UINT>(kAboutDonate)) {
