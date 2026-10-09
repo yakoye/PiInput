@@ -4,8 +4,10 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <array>
 #include <string>
 #include <string_view>
+#include <span>
 #include <vector>
 
 namespace piinput {
@@ -206,6 +208,18 @@ struct SettingsParseResult {
     std::vector<std::string> errors;
     bool document_fatal{false};
 };
+
+// 候选框里的配色开关。内置项，不进用户可编辑的快捷表：[shortcuts] 段一旦被保存
+// 过就带着 count=，解析时会把表截成那个长度，于是新增的内置行永远到不了存过设置
+// 的用户手上。日期时间那组入口建在引擎里也是同一个理由。
+struct ThemeShortcut final {
+    std::uint32_t position;
+    std::string_view label;
+    std::string_view target;
+};
+
+[[nodiscard]] bool is_theme_shortcut(std::string_view key) noexcept;
+[[nodiscard]] std::span<const ThemeShortcut> theme_shortcuts() noexcept;
 
 [[nodiscard]] SettingsSnapshot default_settings();
 [[nodiscard]] std::vector<CustomShortcutSettings> default_custom_shortcuts();

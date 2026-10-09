@@ -275,6 +275,18 @@ if(NOT candidate_window_literal_count EQUAL 26)
         "definitions (13 each) may have them -- a literal left in paint() shows through "
         "as a light patch that is only visible in the dark theme")
 endif()
+# 配色开关必须是内置项，不许回到用户可编辑的快捷表里。[shortcuts] 段被保存过
+# 之后带着 count=，解析时把表截成那个长度——新增的内置行永远到不了存过设置的
+# 用户手上，而那恰好是所有老用户。
+file(READ "${PIINPUT_SOURCE_DIR}/src/settings.cpp" settings_source_for_theme)
+string(REGEX MATCH "default_custom_shortcuts\\(\\)[^}]*}" default_shortcut_body
+    "${settings_source_for_theme}")
+if(default_shortcut_body MATCHES "theme_")
+    message(FATAL_ERROR
+        "Theme switching must stay a built-in entry, never a row in the user-editable "
+        "shortcut table: a saved [shortcuts] count truncates that table, so new built-in "
+        "rows never reach anyone who has ever opened the settings window")
+endif()
 if(NOT candidate_window_text MATCHES "AppsUseLightTheme")
     message(FATAL_ERROR
         "Following the system theme must read AppsUseLightTheme; GetSysColor still "

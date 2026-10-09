@@ -127,31 +127,31 @@ void test_defaults_and_round_trip() {
         "default command hotkey avoids the VS Code terminal shortcut");
     check(!defaults.commands.middle_dot_alias,
         "middle-dot command aliases are opt-in");
-    check(defaults.custom_shortcuts.size() == 9U &&
+    check(defaults.custom_shortcuts.size() == 6U &&
             defaults.custom_shortcuts[0].aliases == "fh,fuhao,fuh,fuhc" &&
             defaults.custom_shortcuts[0].icon == "Ω" &&
             defaults.custom_shortcuts[3].target == "system:calculator" &&
             defaults.custom_shortcuts[5].target == "system:mspaint",
         "default shortcut table exposes all built-in tools as editable rows");
-    // 配色三挡各占一个候选位，而且三种拼法都要能到：zt/zhuti 是全拼与简拼，
-    // vuti 是小鹤双拼下「主题」的拼法。换了方案的人找不到它等于这个功能不存在。
-    check(defaults.custom_shortcuts[6].target == "system:theme_system" &&
-            defaults.custom_shortcuts[7].target == "system:theme_light" &&
-            defaults.custom_shortcuts[8].target == "system:theme_dark" &&
-            defaults.custom_shortcuts[6].position == 2U &&
-            defaults.custom_shortcuts[7].position == 3U &&
-            defaults.custom_shortcuts[8].position == 4U,
-        "the three theme rows sit at candidates two through four");
-    for (const auto& spelling : {"zt", "zhuti", "vuti"}) {
-        check(piinput::shortcut_alias_matches(defaults.custom_shortcuts[6].aliases, spelling),
-            "every supported spelling of 主题 reaches the theme rows");
+    // 配色三挡是内置项，**不在**用户可编辑的快捷表里。放进去过一次，结果是任何
+    // 存过设置的用户都拿不到：[shortcuts] 段带着 count=，解析时把表截成那个长度，
+    // 新增的内置行整个消失。这条断言钉住它不许再回到那张表里。
+    for (const auto& row : defaults.custom_shortcuts) {
+        check(row.target.find("theme_") == std::string::npos,
+            "theme switching must not live in the user-editable shortcut table");
     }
-    // 三条的位置必须严格递增且各不相同。此前按位置插入是从后往前走的，行比配置的
-    // 位置短时会把顺序弄反——三条要 2、3、4 位而行里只有一条占位候选时，浅色和暗色
-    // 对调了。这条断言钉住「配置的顺序就是看到的顺序」。
-    check(defaults.custom_shortcuts[6].position < defaults.custom_shortcuts[7].position &&
-            defaults.custom_shortcuts[7].position < defaults.custom_shortcuts[8].position,
-        "the theme rows ask for strictly increasing candidate numbers");
+    for (const auto& spelling : {"zt", "zhut", "zhuti", "vut", "vuti"}) {
+        check(piinput::is_theme_shortcut(spelling),
+            "every supported spelling of 主题 reaches the theme entries");
+    }
+    check(!piinput::is_theme_shortcut("zhu") && !piinput::is_theme_shortcut("z"),
+        "but a bare prefix does not, or it would shadow ordinary words");
+    {
+        const auto themes = piinput::theme_shortcuts();
+        check(themes.size() == 3U && themes[0].position == 2U &&
+                themes[1].position == 3U && themes[2].position == 4U,
+            "the three themes ask for strictly increasing candidate numbers");
+    }
     check(defaults.punctuation == piinput::PunctuationMode::chinese, "default punctuation mode");
     check(defaults.punctuation_bracket_style == piinput::PunctuationBracketStyle::sogou,
         "default Chinese bracket style follows Sogou");
@@ -394,7 +394,7 @@ void test_valid_values_and_boundaries() {
         "target_1=https://github.com\n",
         previous);
     check(legacy_shortcut.errors.empty() &&
-            legacy_shortcut.settings.custom_shortcuts.size() == 10U &&
+            legacy_shortcut.settings.custom_shortcuts.size() == 7U &&
             legacy_shortcut.settings.custom_shortcuts.back().aliases == "github,gh" &&
             legacy_shortcut.settings.custom_shortcuts.back().target == "https://github.com",
         "legacy three-slot settings append user rows after the new built-in table");

@@ -796,6 +796,16 @@ void Engine::splice_symbol_shortcuts(
                 shortcut_action_target(shortcut), {}, key,
                 static_cast<std::size_t>(shortcut.position)});
         }
+        // 配色开关是内置项，与日期时间那组一样不经用户可编辑的快捷表——理由见
+        // theme_shortcuts() 的注释：那张表被保存过之后带着 count=，新增的内置行
+        // 永远到不了存过设置的用户手上。
+        if (is_theme_shortcut(key)) {
+            for (const auto& theme : theme_shortcuts()) {
+                add_positioned({CandidateKind::launch_action,
+                    std::string(theme.label), key, std::string(theme.target), {}, key,
+                    static_cast<std::size_t>(theme.position)});
+            }
+        }
         for (const auto& phrase : settings.custom_phrases) {
             if (phrase.text.empty()) continue;
             if (!phrase_matches_key(phrase, key)) continue;

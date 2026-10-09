@@ -1734,7 +1734,12 @@ void test_theme_rows_sit_in_configured_order_and_switch_rather_than_commit() {
     piinput::Engine engine;
     const auto lexicon_path = write_chinese_lexicon();
     engine.load_lexicon(lexicon_path);
-    const auto settings = piinput::default_settings();
+    // 快捷表**清空**，配色仍必须出现。这不是假设出来的情形：[shortcuts] 段一旦被
+    // 保存过就带着 count=，解析时把表严格截成那个长度。配色曾经是默认快捷行之一，
+    // 于是 v0.9.2 装到任何存过设置的机器上，打 zt 是零候选——新增的内置行被旧的
+    // count 整个挡掉了。现在它建在引擎里，与用户表的长度无关。
+    auto settings = piinput::default_settings();
+    settings.custom_shortcuts.clear();
     piinput::HostSession session(engine, nullptr, settings, "full");
 
     type(session, "zt");

@@ -669,13 +669,30 @@ std::vector<CustomShortcutSettings> default_custom_shortcuts() {
         {"jisuanqi,jisrqi,jsq,jisrq,calc,reg", 3U, "🖩", "程序员计算器",
             "package:regcalc64"},
         {"hxtu,ht,huatu,mspaint,msp", 2U, "🎨", "画图", "system:mspaint"},
-        // 配色开关。zt / zhuti 是全拼与简拼，vuti 是小鹤双拼下「主题」的拼法——
-        // 三种打法都要能到，否则换了方案的人就找不到它。三挡各占一个候选位，
-        // 省掉「打开设置、翻到候选窗页、改完保存」这一串。
-        {"zt,zhuti,zhut,vuti,vut", 2U, "🌗", "配色：跟随系统", "system:theme_system"},
-        {"zt,zhuti,zhut,vuti,vut", 3U, "☀", "配色：浅色", "system:theme_light"},
-        {"zt,zhuti,zhut,vuti,vut", 4U, "🌙", "配色：暗色", "system:theme_dark"},
     };
+}
+
+bool is_theme_shortcut(const std::string_view key) noexcept {
+    // zt / zhut / zhuti 是全拼与简拼，vut / vuti 是小鹤双拼下「主题」的拼法。
+    // 三种打法都要能到，否则换了方案的人就找不到它。
+    return key == "zt" || key == "zhut" || key == "zhuti" ||
+           key == "vut" || key == "vuti";
+}
+
+std::span<const ThemeShortcut> theme_shortcuts() noexcept {
+    // 内置项，不进用户可编辑的快捷表——这一条是被升级缺陷逼出来的。
+    //
+    // 原本这三行是 default_custom_shortcuts() 的一部分，而 [shortcuts] 段一旦被
+    // 保存过就带着 count=，解析时会把表严格截成那个长度。于是任何存过设置的用户
+    // 都拿不到新增的内置行：v0.9.2 装上去之后打 zt 是零候选。日期时间那组入口
+    // (riqi / shijian) 从一开始就建在引擎里，正是因为它们不该受用户表长度的摆布，
+    // 配色同理。
+    static constexpr std::array<ThemeShortcut, 3U> entries{{
+        {2U, "🌗配色：跟随系统", "system:theme_system"},
+        {3U, "☀配色：浅色", "system:theme_light"},
+        {4U, "🌙配色：暗色", "system:theme_dark"},
+    }};
+    return entries;
 }
 
 bool shortcut_alias_matches(
